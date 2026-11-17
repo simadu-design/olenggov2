@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLENG GO / SIMADU GO - Ojek & Makanan Lengkong</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0ea5e9', // Biru Muda
+                        secondary: '#f59e0b', // Kuning Emas
+                        accent: '#10b981'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Leaflet CSS & JS untuk Peta -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Konfigurasi PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0ea5e9">
+    <style>
+        #map { height: 230px; border-radius: 0.75rem; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- HEADER / NAVBAR -->
+    <header class="bg-primary text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+            <div>
+                <h1 class="font-bold text-lg tracking-wide flex items-center gap-1">
+                    🛵 OLENG GO <span class="text-secondary text-xs bg-white px-1.5 py-0.5 rounded font-bold">SIMADU</span>
+                </h1>
+                <p class="text-xs text-sky-100">Kecamatan Lengkong, Sukabumi</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- Role Selector -->
+                <select id="roleSelector" class="bg-white text-slate-800 text-xs font-semibold px-2 py-1 rounded shadow">
+                    <option value="customer">Panel: Pelanggan</option>
+                    <option value="driver">Panel: Driver Ojol</option>
+                    <option value="merchant">Panel: Toko / Warung</option>
+                    <option value="admin">Panel: Admin</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-md mx-auto w-full p-4 flex-grow pb-24">
+        
+        <!-- SALDO CARD -->
+        <div class="bg-gradient-to-r from-primary to-sky-400 text-white p-4 rounded-2xl shadow-lg mb-4">
+            <p class="text-xs text-sky-100">Saldo Dompet SIMADU</p>
+            <div class="flex justify-between items-center mt-1">
+                <h2 class="text-2xl font-extrabold">Rp 75.000</h2>
+                <button class="bg-secondary text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow hover:bg-amber-400 transition">+ Top Up</button>
+            </div>
+        </div>
+
+        <!-- MENU UTAMA -->
+        <div class="grid grid-cols-3 gap-2 mb-4">
+            <div class="bg-white p-3 rounded-xl shadow text-center border border-slate-100">
+                <span class="text-2xl">🏍️</span>
+                <p class="text-xs font-semibold mt-1">Ojek Online</p>
+            </div>
+            <div class="bg-white p-3 rounded-xl shadow text-center border border-slate-100">
+                <span class="text-2xl">🍜</span>
+                <p class="text-xs font-semibold mt-1">SIMADU Food</p>
+            </div>
+            <div class="bg-white p-3 rounded-xl shadow text-center border border-slate-100">
+                <span class="text-2xl">📦</span>
+                <p class="text-xs font-semibold mt-1">Kirim Barang</p>
+            </div>
+        </div>
+
+        <!-- PETA LEAFLET LENGKONG -->
+        <div class="bg-white p-3 rounded-2xl shadow mb-4 border border-slate-100">
+            <p class="text-xs font-bold text-slate-700 mb-2">📍 Lokasi Penjemputan di Lengkong</p>
+            <div id="map"></div>
+        </div>
+
+        <!-- TOMBOL AKSI -->
+        <button class="w-full bg-primary text-white font-bold py-3 rounded-xl shadow-lg hover:bg-sky-600 transition mb-4">
+            Pesan Ojol Sekarang
+        </button>
+
+    </main>
+
+    <!-- INISIALISASI PETA -->
+    <script>
+        // Koordinat Kecamatan Lengkong, Sukabumi
+        const map = L.map('map').setView([-7.155, 106.855], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+        L.marker([-7.155, 106.855]).addTo(map)
+            .bindPopup('<b>Titik Jemput:</b> Alun-Alun Lengkong')
+            .openPopup();
+
+        // Registrasi Service Worker untuk PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(() => console.log('Service Worker Berhasil Terdaftar'))
+                    .catch(err => console.log('Gagal Daftar Service Worker:', err));
+            });
+        }
+    </script>
+</body>
+</html>
