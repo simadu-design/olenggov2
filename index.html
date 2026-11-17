@@ -71,14 +71,14 @@
                     </div>
 
                     <!-- Login Form -->
-                    <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3">
+                    <div id="form-login" class="space-y-3">
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">No. WhatsApp / Email</label>
-                            <input type="text" id="login-identifier" value="085624736602" required class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm font-medium" placeholder="0856xxxxxxxx">
+                            <input type="text" id="login-identifier" value="085624736602" class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm font-medium" placeholder="0856xxxxxxxx">
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Kata Sandi</label>
-                            <input type="password" id="login-password" value="123" required class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm font-medium" placeholder="••••••••">
+                            <input type="password" id="login-password" value="123" class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm font-medium" placeholder="••••••••">
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Peran (Role Akses)</label>
@@ -89,22 +89,22 @@
                                 <option value="admin">Admin SIMADU (Full Panel)</option>
                             </select>
                         </div>
-                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition mt-2 text-sm">Masuk Aplikasi</button>
-                    </form>
+                        <button type="button" onclick="executeLogin()" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition mt-2 text-sm">Masuk Aplikasi</button>
+                    </div>
 
                     <!-- Register Form -->
-                    <form id="form-register" onsubmit="handleRegister(event)" class="space-y-3 hidden">
+                    <div id="form-register" class="space-y-3 hidden">
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nama Lengkap</label>
-                            <input type="text" id="reg-name" required class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="Nama Anda">
+                            <input type="text" id="reg-name" class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="Nama Anda">
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nomor WhatsApp</label>
-                            <input type="text" id="reg-phone" required class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="08xxxxxxxxxx">
+                            <input type="text" id="reg-phone" class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="08xxxxxxxxxx">
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Daftar Sebagai</label>
-                            <select id="reg-role" class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm bg-white font-bold">
+                            <select id="reg-role" onchange="toggleRegMerchant(this)" class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm bg-white font-bold">
                                 <option value="customer">Customer (Konsumen)</option>
                                 <option value="driver">Driver (Ojol / Kurir)</option>
                                 <option value="merchant">Merchant (Mitra Toko)</option>
@@ -115,10 +115,10 @@
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Kata Sandi</label>
-                            <input type="password" id="reg-password" value="123" required class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="••••••••">
+                            <input type="password" id="reg-password" value="123" class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="••••••••">
                         </div>
-                        <button type="submit" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold rounded-2xl shadow-lg transition mt-2 text-sm">Daftar Sekarang</button>
-                    </form>
+                        <button type="button" onclick="executeRegister()" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold rounded-2xl shadow-lg transition mt-2 text-sm">Daftar Sekarang</button>
+                    </div>
                 </div>
             </div>
             <div class="text-center text-[10px] text-sky-200 mt-4 font-black uppercase tracking-widest">
@@ -128,8 +128,6 @@
 
         <!-- ================= MAIN APP SHELL ================= -->
         <div id="view-dashboard" class="flex-1 flex flex-col hidden bg-slate-50 relative overflow-hidden">
-            
-            <!-- Admin Unified Multi-Role Switcher Bar -->
             <div id="admin-switcher-bar" class="bg-slate-900 text-white px-3 py-2 flex items-center justify-between text-xs z-30 shadow-inner hidden">
                 <span class="font-bold text-yellow-400 text-[10px] uppercase"><i class="fa-solid fa-shield-halved"></i> Admin Mode:</span>
                 <div class="flex gap-1.5 overflow-x-auto hide-scrollbar">
@@ -140,25 +138,14 @@
                 </div>
             </div>
 
-            <!-- Dynamic Content Area -->
-            <main id="main-content" class="flex-1 overflow-y-auto pb-24 hide-scrollbar">
-                <!-- Dynamically rendered -->
-            </main>
+            <main id="main-content" class="flex-1 overflow-y-auto pb-24 hide-scrollbar"></main>
 
-            <!-- Bottom Navigation Bar -->
-            <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center z-30 shadow-2xl">
-                <!-- Dynamically rendered -->
-            </nav>
+            <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center z-30 shadow-2xl"></nav>
         </div>
 
         <!-- ================= MODALS & SUB-VIEWS ================= -->
+        <div id="view-merchant-detail" class="absolute inset-0 bg-slate-50 z-40 hidden flex flex-col overflow-y-auto"></div>
 
-        <!-- Merchant Detail View Modal -->
-        <div id="view-merchant-detail" class="absolute inset-0 bg-slate-50 z-40 hidden flex flex-col overflow-y-auto">
-            <!-- Rendered dynamically -->
-        </div>
-
-        <!-- Interactive Cart & Checkout Modal with Distance Sorting & Map -->
         <div id="modal-cart" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
                 <div class="flex justify-between items-center border-b pb-3">
@@ -185,9 +172,7 @@
                     <label class="text-[11px] font-extrabold text-yellow-900 uppercase tracking-wider block">
                         <i class="fa-solid fa-motorcycle text-yellow-600 mr-1"></i> Pilih Ojek Online Terdekat (Urut Jarak)
                     </label>
-                    <select id="checkout-driver-select" class="w-full p-2.5 bg-white border border-yellow-300 rounded-xl text-xs font-bold text-slate-800 shadow-xs">
-                        <!-- Filled dynamically -->
-                    </select>
+                    <select id="checkout-driver-select" class="w-full p-2.5 bg-white border border-yellow-300 rounded-xl text-xs font-bold text-slate-800 shadow-xs"></select>
                 </div>
 
                 <div id="cart-items-container" class="space-y-2 divide-y divide-slate-100 max-h-40 overflow-y-auto pr-1"></div>
@@ -214,7 +199,6 @@
             </div>
         </div>
 
-        <!-- Top-Up Saldo Modal -->
         <div id="modal-topup" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 space-y-4 shadow-2xl">
                 <div class="flex justify-between items-center border-b pb-3">
@@ -242,7 +226,6 @@
             </div>
         </div>
 
-        <!-- Notification Modal -->
         <div id="modal-notif" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 max-h-[75vh] overflow-y-auto space-y-4">
                 <div class="flex justify-between items-center border-b pb-3">
@@ -254,7 +237,6 @@
             </div>
         </div>
 
-        <!-- Live Chat View -->
         <div id="view-chat" class="absolute inset-0 bg-white z-40 hidden flex flex-col">
             <div class="bg-sky-600 text-white p-4 flex items-center justify-between shadow">
                 <div class="flex items-center space-x-3">
@@ -357,7 +339,7 @@
                 { id: 'ORD-9021', type: 'food', customer: 'Budi Santoso', merchant: 'Warung Nasi Sunda', items: 'Nasi Liwet (2x)', total: 55000, status: 'Menunggu Driver', address: 'Kp. Lengkong RT 02/01', ongkir: 5000, driver: 'Asep Supriatna' }
             ],
             notifications: [
-                { id: 1, title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Layanan ojek & food delivery khusus wilayah Kecamatan Lengkong, Sukabumi[span_8](start_span)[span_8](end_span)[span_9](start_span)[span_9](end_span).' }
+                { id: 1, title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Layanan ojek & food delivery khusus wilayah Kecamatan Lengkong, Sukabumi.' }
             ],
             chats: [
                 { sender: 'Admin SIMADU', text: 'Halo warga Lengkong! Ada yang bisa kami bantu hari ini?', time: '08:00' }
@@ -407,24 +389,23 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const regRoleSelect = document.getElementById('reg-role');
-            if(regRoleSelect) {
-                regRoleSelect.addEventListener('change', function(e) {
-                    const mFields = document.getElementById('reg-merchant-fields');
-                    if(mFields) {
-                        if(e.target.value === 'merchant') mFields.classList.remove('hidden');
-                        else mFields.classList.add('hidden');
-                    }
-                });
+        function toggleRegMerchant(selectEl) {
+            const mFields = document.getElementById('reg-merchant-fields');
+            if(mFields) {
+                if(selectEl.value === 'merchant') mFields.classList.remove('hidden');
+                else mFields.classList.add('hidden');
             }
-        });
+        }
 
-        function handleLogin(e) {
-            e.preventDefault();
+        function executeLogin() {
             const identifier = document.getElementById('login-identifier').value.trim();
             const role = document.getElementById('login-role').value;
             
+            if(!identifier) {
+                showToast('Masukkan nomor WhatsApp atau Email!', 'error');
+                return;
+            }
+
             let foundUser = db.users.find(u => u.phone === identifier && u.role === role);
             if(!foundUser) {
                 foundUser = {
@@ -447,13 +428,17 @@
             enterDashboard();
         }
 
-        function handleRegister(e) {
-            e.preventDefault();
+        function executeRegister() {
             const name = document.getElementById('reg-name').value.trim();
             const phone = document.getElementById('reg-phone').value.trim();
             const role = document.getElementById('reg-role').value;
             const shopName = document.getElementById('reg-shopname') ? document.getElementById('reg-shopname').value.trim() : '';
             const password = document.getElementById('reg-password').value;
+
+            if(!name || !phone) {
+                showToast('Nama dan Nomor WhatsApp wajib diisi!', 'error');
+                return;
+            }
 
             const newUser = {
                 id: Date.now(),
@@ -510,7 +495,8 @@
             adminViewMode = null;
             document.getElementById('view-auth').classList.remove('hidden');
             document.getElementById('view-dashboard').classList.add('hidden');
-            document.getElementById('view-merchant-detail').classList.add('hidden');
+            const detailView = document.getElementById('view-merchant-detail');
+            if(detailView) detailView.classList.add('hidden');
             showToast('Anda telah keluar.', 'info');
         }
 
@@ -556,7 +542,6 @@
 
         function checkAccessAndNavigate(targetFeature) {
             const effectiveRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-
             let isAllowed = false;
             let allowedRolesMsg = '';
 
@@ -732,9 +717,9 @@
                             </div>
                             <div>
                                 <div class="text-[11px] font-extrabold flex items-center gap-1 text-yellow-300">
-                                    <i class="fa-solid fa-location-dot"></i> Lengkong, Sukabumi[span_10](start_span)[span_10](end_span)[span_11](start_span)[span_11](end_span)
+                                    <i class="fa-solid fa-location-dot"></i> Lengkong, Sukabumi[span_8](start_span)[span_8](end_span)[span_9](start_span)[span_9](end_span)
                                 </div>
-                                <p class="text-[10px] text-sky-100 font-medium">Kecamatan Lengkong[span_12](start_span)[span_12](end_span)[span_13](start_span)[span_13](end_span)</p>
+                                <p class="text-[10px] text-sky-100 font-medium">Kecamatan Lengkong[span_10](start_span)[span_10](end_span)[span_11](start_span)[span_11](end_span)</p>
                             </div>
                         </div>
                         <div class="w-12 h-12 bg-yellow-400 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-2xl animate-bounce">
@@ -800,7 +785,7 @@
                     <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-2.5">
                         <div class="flex justify-between items-center">
                             <h3 class="font-extrabold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                                <i class="fa-solid fa-map-location-dot text-sky-600"></i> Peta Wilayah Lengkong[span_14](start_span)[span_14](end_span)[span_15](start_span)[span_15](end_span)
+                                <i class="fa-solid fa-map-location-dot text-sky-600"></i> Peta Wilayah Lengkong[span_12](start_span)[span_12](end_span)[span_13](start_span)[span_13](end_span)
                             </h3>
                             <span class="text-[10px] bg-sky-100 text-sky-800 px-2.5 py-1 rounded-full font-extrabold flex items-center gap-1">
                                 <i class="fa-solid fa-location-crosshairs text-sky-600"></i> GPS Aktif
@@ -811,7 +796,7 @@
 
                     <div class="space-y-3">
                         <div class="flex justify-between items-center">
-                            <h3 class="font-extrabold text-sm text-slate-900">Daftar List Toko Kuliner Lengkong[span_16](start_span)[span_16](end_span)[span_17](start_span)[span_17](end_span)</h3>
+                            <h3 class="font-extrabold text-sm text-slate-900">Daftar List Toko Kuliner Lengkong[span_14](start_span)[span_14](end_span)[span_15](start_span)[span_15](end_span)</h3>
                             <button type="button" onclick="checkAccessAndNavigate('food')" class="text-xs font-extrabold text-sky-600 hover:underline">Lihat Semua</button>
                         </div>
                         <div class="space-y-3">
@@ -850,7 +835,7 @@
                 <div class="p-4 space-y-4">
                     <div class="flex justify-between items-center">
                         <div>
-                            <h2 class="font-extrabold text-base text-slate-900">OLENG Food Lengkong[span_18](start_span)[span_18](end_span)[span_19](start_span)[span_19](end_span)</h2>
+                            <h2 class="font-extrabold text-base text-slate-900">OLENG Food Lengkong[span_16](start_span)[span_16](end_span)[span_17](start_span)[span_17](end_span)</h2>
                             <p class="text-[11px] text-slate-500 font-medium">Klik toko untuk melihat profil, menu, dan chat WhatsApp</p>
                         </div>
                         <button type="button" onclick="openCartModal()" class="relative bg-sky-600 text-white px-3.5 py-2 rounded-2xl text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-sky-600/30">
@@ -971,11 +956,11 @@
                             <input type="text" id="ojek-from" value="Alun-Alun Lengkong" class="w-full mt-1 p-2.5 border border-slate-200 rounded-2xl text-xs font-semibold">
                         </div>
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Lokasi Tujuan / Antar di Lengkong[span_20](start_span)[span_20](end_span)[span_21](start_span)[span_21](end_span)</label>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Lokasi Tujuan / Antar di Lengkong[span_18](start_span)[span_18](end_span)[span_19](start_span)[span_19](end_span)</label>
                             <input type="text" id="ojek-to" placeholder="Contoh: Kantor Desa Lengkong" class="w-full mt-1 p-2.5 border border-slate-200 rounded-2xl text-xs font-semibold">
                         </div>
                         <div class="bg-slate-50 p-3 rounded-2xl flex justify-between items-center border border-slate-100">
-                            <span class="text-[11px] text-slate-600 font-bold">Estimasi Tarif Wilayah Lengkong:[span_22](start_span)[span_22](end_span)[span_23](start_span)[span_23](end_span)</span>
+                            <span class="text-[11px] text-slate-600 font-bold">Estimasi Tarif Wilayah Lengkong:[span_20](start_span)[span_20](end_span)[span_21](start_span)[span_21](end_span)</span>
                             <span class="text-xs font-black text-sky-600">Rp 10.000 - Rp 15.000</span>
                         </div>
                         <button type="button" onclick="orderOjek()" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition text-xs">
@@ -1088,7 +1073,7 @@
                     <option value="${d.name}">
                         📍 ${d.name} (${d.distanceToDest} km dari lokasi Anda) - ${d.vehicle}
                     </option>
-                `).join('') : '<option value="Driver Umum">Driver Umum Lengkong[span_24](start_span)[span_24](end_span)[span_25](start_span)[span_25](end_span)</option>';
+                `).join('') : '<option value="Driver Umum">Driver Umum Lengkong[span_22](start_span)[span_22](end_span)[span_23](start_span)[span_23](end_span)</option>';
             }
 
             if(!container) return;
@@ -1191,7 +1176,7 @@
             const toInput = document.getElementById('ojek-to');
             const to = toInput ? toInput.value.trim() : '';
             if(!to) {
-                showToast('Tolong masukkan lokasi tujuan di Lengkong!', 'error');[span_26](start_span)[span_26](end_span)[span_27](start_span)[span_27](end_span)
+                showToast('Tolong masukkan lokasi tujuan di Lengkong!', 'error');[span_24](start_span)[span_24](end_span)[span_25](start_span)[span_25](end_span)
                 return;
             }
             db.orders.unshift({
@@ -1221,7 +1206,7 @@
                         <button type="button" onclick="toggleDriverStatus()" class="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-xs hover:bg-emerald-600 transition">Ubah Status</button>
                     </div>
 
-                    <h3 class="font-extrabold text-sm text-slate-900">Daftar Orderan Masuk di Lengkong[span_28](start_span)[span_28](end_span)[span_29](start_span)[span_29](end_span)</h3>
+                    <h3 class="font-extrabold text-sm text-slate-900">Daftar Orderan Masuk di Lengkong[span_26](start_span)[span_26](end_span)[span_27](start_span)[span_27](end_span)</h3>
                     <div class="space-y-3">
                         ${db.orders.map((o, idx) => `
                             <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-2.5">
@@ -1251,10 +1236,10 @@
         function renderDriverMap(container) {
             container.innerHTML = `
                 <div class="p-4 space-y-4">
-                    <h2 class="font-extrabold text-base text-slate-900">Navigasi Peta Rute Lengkong[span_30](start_span)[span_30](end_span)[span_31](start_span)[span_31](end_span)</h2>
+                    <h2 class="font-extrabold text-base text-slate-900">Navigasi Peta Rute Lengkong[span_28](start_span)[span_28](end_span)[span_29](start_span)[span_29](end_span)</h2>
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
                         <div id="map" class="map-container shadow-inner"></div>
-                        <p class="text-[11px] text-slate-500 text-center font-medium">GPS Terkunci di Wilayah Kecamatan Lengkong, Sukabumi[span_32](start_span)[span_32](end_span)[span_33](start_span)[span_33](end_span).</p>
+                        <p class="text-[11px] text-slate-500 text-center font-medium">GPS Terkunci di Wilayah Kecamatan Lengkong, Sukabumi.[span_30](start_span)[span_30](end_span)[span_31](start_span)[span_31](end_span)</p>
                     </div>
                     <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
                         POWERED BY SIMADU
@@ -1325,7 +1310,7 @@
                 merchantId: merchantId,
                 name: name,
                 price: price,
-                desc: 'Menu lezat khas Lengkong Sukabumi[span_34](start_span)[span_34](end_span)[span_35](start_span)[span_35](end_span).',
+                desc: 'Menu lezat khas Lengkong Sukabumi.[span_32](start_span)[span_32](end_span)[span_33](start_span)[span_33](end_span)',
                 stock: stock,
                 image: 'https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name)
             });
@@ -1398,7 +1383,7 @@
 
                     <div class="bg-gradient-to-r from-sky-600 to-sky-800 text-white p-4 rounded-3xl shadow-md space-y-2">
                         <span class="text-[10px] text-sky-100 font-extrabold uppercase">Kontrol Cepat Sistem</span>
-                        <h3 class="font-bold text-sm">Semua Layanan Lengkong Sukabumi Berjalan Normal[span_36](start_span)[span_36](end_span)[span_37](start_span)[span_37](end_span)</h3>
+                        <h3 class="font-bold text-sm">Semua Layanan Lengkong Sukabumi Berjalan Normal[span_34](start_span)[span_34](end_span)[span_35](start_span)[span_35](end_span)</h3>
                         <p class="text-[11px] text-sky-100">Gunakan tab bawah untuk mengelola user, menambah/mengurangi saldo mitra & ojol, atau memantau lokasi akurat.</p>
                     </div>
                     <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
@@ -1517,7 +1502,7 @@
                 phone: phone,
                 role: role,
                 status: 'Aktif',
-                address: 'Kecamatan Lengkong, Sukabumi',[span_38](start_span)[span_38](end_span)[span_39](start_span)[span_39](end_span)
+                address: 'Kecamatan Lengkong, Sukabumi',[span_36](start_span)[span_36](end_span)[span_37](start_span)[span_37](end_span)
                 balance: 50000,
                 password: '123'
             });
@@ -1689,7 +1674,7 @@
             renderChatMessages();
 
             setTimeout(() => {
-                db.chats.push({ sender: 'Admin SIMADU', text: 'Pesan Anda telah diterima. Warga Lengkong selalu siap dilayani[span_40](start_span)[span_40](end_span)[span_41](start_span)[span_41](end_span)!', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+                db.chats.push({ sender: 'Admin SIMADU', text: 'Pesan Anda telah diterima. Warga Lengkong selalu siap dilayani[span_38](start_span)[span_38](end_span)[span_39](start_span)[span_39](end_span)!', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
                 saveDB();
                 renderChatMessages();
             }, 1000);
@@ -1720,7 +1705,7 @@
             }).addTo(mapInstance);
 
             L.marker([-7.1234, 106.8456]).addTo(mapInstance)
-                .bindPopup('<b>Pusat Kecamatan Lengkong</b><br>Wilayah Operasional OLENG GO.')[span_42](start_span)[span_42](end_span)[span_43](start_span)[span_43](end_span)
+                .bindPopup('<b>Pusat Kecamatan Lengkong</b><br>Wilayah Operasional OLENG GO.')[span_40](start_span)[span_40](end_span)[span_41](start_span)[span_41](end_span)
                 .openPopup();
         }
     </script>
