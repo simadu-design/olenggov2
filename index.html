@@ -66,19 +66,19 @@
                 <!-- Auth Card -->
                 <div class="bg-white text-slate-800 p-6 rounded-3xl shadow-2xl text-left space-y-4">
                     <div class="flex border-b border-slate-100 pb-2 mb-4">
-                        <button type="button" onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1 text-sm">Masuk</button>
-                        <button type="button" onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1 text-sm">Daftar Akun</button>
+                        <button onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1 text-sm">Masuk</button>
+                        <button onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1 text-sm">Daftar Akun</button>
                     </div>
 
                     <!-- Login Form -->
-                    <div id="form-login" class="space-y-3">
+                    <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3">
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">No. WhatsApp / Email</label>
-                            <input type="text" id="login-identifier" value="085624736602" class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm font-medium" placeholder="0856xxxxxxxx">
+                            <input type="text" id="login-identifier" required class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm font-medium" placeholder="0856xxxxxxxx">
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Kata Sandi</label>
-                            <input type="password" id="login-password" value="123" class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm font-medium" placeholder="••••••••">
+                            <input type="password" id="login-password" required class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm font-medium" placeholder="••••••••">
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Peran (Role Akses)</label>
@@ -89,22 +89,22 @@
                                 <option value="admin">Admin SIMADU (Full Panel)</option>
                             </select>
                         </div>
-                        <button type="button" onclick="executeLogin()" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition mt-2 text-sm">Masuk Aplikasi</button>
-                    </div>
+                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition mt-2 text-sm">Masuk Aplikasi</button>
+                    </form>
 
                     <!-- Register Form -->
-                    <div id="form-register" class="space-y-3 hidden">
+                    <form id="form-register" onsubmit="handleRegister(event)" class="space-y-3 hidden">
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nama Lengkap</label>
-                            <input type="text" id="reg-name" class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="Nama Anda">
+                            <input type="text" id="reg-name" required class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="Nama Anda">
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nomor WhatsApp</label>
-                            <input type="text" id="reg-phone" class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="08xxxxxxxxxx">
+                            <input type="text" id="reg-phone" required class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="08xxxxxxxxxx">
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Daftar Sebagai</label>
-                            <select id="reg-role" onchange="toggleRegMerchant(this)" class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm bg-white font-bold">
+                            <select id="reg-role" class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm bg-white font-bold">
                                 <option value="customer">Customer (Konsumen)</option>
                                 <option value="driver">Driver (Ojol / Kurir)</option>
                                 <option value="merchant">Merchant (Mitra Toko)</option>
@@ -115,10 +115,10 @@
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Kata Sandi</label>
-                            <input type="password" id="reg-password" value="123" class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="••••••••">
+                            <input type="password" id="reg-password" required class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="••••••••">
                         </div>
-                        <button type="button" onclick="executeRegister()" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold rounded-2xl shadow-lg transition mt-2 text-sm">Daftar Sekarang</button>
-                    </div>
+                        <button type="submit" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold rounded-2xl shadow-lg transition mt-2 text-sm">Daftar Sekarang</button>
+                    </form>
                 </div>
             </div>
             <div class="text-center text-[10px] text-sky-200 mt-4 font-black uppercase tracking-widest">
@@ -128,55 +128,64 @@
 
         <!-- ================= MAIN APP SHELL ================= -->
         <div id="view-dashboard" class="flex-1 flex flex-col hidden bg-slate-50 relative overflow-hidden">
+            
+            <!-- Admin Unified Multi-Role Switcher Bar -->
             <div id="admin-switcher-bar" class="bg-slate-900 text-white px-3 py-2 flex items-center justify-between text-xs z-30 shadow-inner hidden">
                 <span class="font-bold text-yellow-400 text-[10px] uppercase"><i class="fa-solid fa-shield-halved"></i> Admin Mode:</span>
                 <div class="flex gap-1.5 overflow-x-auto hide-scrollbar">
-                    <button type="button" onclick="adminSwitchViewMode('customer')" id="mode-btn-customer" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold transition">Konsumen</button>
-                    <button type="button" onclick="adminSwitchViewMode('driver')" id="mode-btn-driver" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold transition">Driver</button>
-                    <button type="button" onclick="adminSwitchViewMode('merchant')" id="mode-btn-merchant" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold transition">Toko</button>
-                    <button type="button" onclick="adminSwitchViewMode('admin')" id="mode-btn-admin" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 rounded-lg text-[10px] font-extrabold transition">Master Control</button>
+                    <button onclick="adminSwitchViewMode('customer')" id="mode-btn-customer" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold transition">Konsumen</button>
+                    <button onclick="adminSwitchViewMode('driver')" id="mode-btn-driver" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold transition">Driver</button>
+                    <button onclick="adminSwitchViewMode('merchant')" id="mode-btn-merchant" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold transition">Toko</button>
+                    <button onclick="adminSwitchViewMode('admin')" id="mode-btn-admin" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 rounded-lg text-[10px] font-extrabold transition">Master Control</button>
                 </div>
             </div>
 
-            <main id="main-content" class="flex-1 overflow-y-auto pb-24 hide-scrollbar"></main>
+            <!-- Dynamic Content Area -->
+            <main id="main-content" class="flex-1 overflow-y-auto pb-24 hide-scrollbar">
+                <!-- Dynamically rendered -->
+            </main>
 
-            <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center z-30 shadow-2xl"></nav>
+            <!-- Bottom Navigation Bar -->
+            <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center z-30 shadow-2xl">
+                <!-- Dynamically rendered -->
+            </nav>
         </div>
 
         <!-- ================= MODALS & SUB-VIEWS ================= -->
-        <div id="view-merchant-detail" class="absolute inset-0 bg-slate-50 z-40 hidden flex flex-col overflow-y-auto"></div>
 
-        <!-- Modal Keranjang Canggih -->
+        <!-- Merchant Detail View Modal -->
+        <div id="view-merchant-detail" class="absolute inset-0 bg-slate-50 z-40 hidden flex flex-col overflow-y-auto">
+            <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Interactive Cart & Checkout Modal -->
         <div id="modal-cart" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
-            <div class="bg-white rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div class="bg-white rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
                 <div class="flex justify-between items-center border-b pb-3">
                     <h3 class="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                        <i class="fa-solid fa-cart-shopping text-sky-600"></i> Keranjang & Hitung Ongkir Akurat
+                        <i class="fa-solid fa-cart-shopping text-sky-600"></i> Keranjang & Hitung Ongkir
                     </h3>
-                    <button type="button" onclick="closeCartModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+                    <button onclick="closeCartModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
                 </div>
                 
-                <div class="bg-sky-50/80 p-3.5 rounded-2xl border border-sky-100 space-y-2">
-                    <label class="text-[11px] font-extrabold text-sky-800 uppercase tracking-wider block">
-                        <i class="fa-solid fa-map-location-dot text-sky-600"></i> Pilih Lokasi Tujuan Anda di Lengkong[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span)
-                    </label>
-                    <select id="delivery-destination" onchange="recalculateShipping()" class="w-full p-2.5 bg-white border border-sky-200 rounded-xl text-xs font-bold text-slate-800 shadow-xs">
+                <div class="bg-sky-50/60 p-3.5 rounded-2xl border border-sky-100 space-y-2">
+                    <label class="text-[11px] font-extrabold text-sky-800 uppercase tracking-wider block">Pilih Lokasi Tujuan Anda di Lengkong[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span)</label>
+                    <select id="delivery-destination" onchange="recalculateShipping()" class="w-full p-2.5 bg-white border border-sky-200 rounded-xl text-xs font-bold text-slate-800">
                         <option value="-7.1234,106.8456,Alun-Alun Lengkong">Alun-Alun Lengkong (0.5 km)</option>
                         <option value="-7.1290,106.8520,Kp. Cijangkar Lengkong">Kp. Cijangkar (2.1 km)</option>
                         <option value="-7.1150,106.8320,Desa Lengkong Kulon">Desa Lengkong Kulon (3.8 km)</option>
                         <option value="-7.1400,106.8650,Kp. Lebaksari Lengkong">Kp. Lebaksari (5.2 km)</option>
                     </select>
-                    <div id="cart-map-preview" class="w-full h-28 rounded-xl border border-sky-200 mt-2"></div>
                 </div>
 
-                <div class="bg-yellow-50/80 p-3.5 rounded-2xl border border-yellow-200 space-y-2">
-                    <label class="text-[11px] font-extrabold text-yellow-900 uppercase tracking-wider block">
-                        <i class="fa-solid fa-motorcycle text-yellow-600 mr-1"></i> Pilih Ojek Online Terdekat (Urut Jarak)
-                    </label>
-                    <select id="checkout-driver-select" class="w-full p-2.5 bg-white border border-yellow-300 rounded-xl text-xs font-bold text-slate-800 shadow-xs"></select>
+                <div class="bg-yellow-50/60 p-3.5 rounded-2xl border border-yellow-200 space-y-2">
+                    <label class="text-[11px] font-extrabold text-yellow-900 uppercase tracking-wider block"><i class="fa-solid fa-motorcycle text-yellow-600 mr-1"></i> Pilih Ojek / Driver Terdekat</label>
+                    <select id="checkout-driver-select" class="w-full p-2.5 bg-white border border-yellow-300 rounded-xl text-xs font-bold text-slate-800">
+                        <!-- Filled dynamically -->
+                    </select>
                 </div>
 
-                <div id="cart-items-container" class="space-y-2 divide-y divide-slate-100 max-h-40 overflow-y-auto pr-1"></div>
+                <div id="cart-items-container" class="space-y-3 divide-y divide-slate-100 max-h-48 overflow-y-auto pr-1"></div>
 
                 <div class="bg-slate-50 p-4 rounded-2xl space-y-2 border border-slate-200">
                     <div class="flex justify-between text-xs font-medium">
@@ -184,29 +193,30 @@
                         <span id="cart-subtotal" class="font-bold text-slate-900">Rp 0</span>
                     </div>
                     <div class="flex justify-between text-xs font-medium">
-                        <span class="text-slate-600" id="shipping-distance-label">Ongkir Berdasarkan Jarak</span>
-                        <span id="cart-ongkir" class="font-bold text-sky-600">Rp 0</span>
+                        <span class="text-slate-600" id="shipping-distance-label">Jarak & Ongkir Akurat</span>
+                        <span id="cart-ongkir" class="font-bold text-sky-600">Rp 5.000</span>
                     </div>
                     <div class="flex justify-between text-sm border-t border-slate-200 pt-2 font-black text-slate-900">
-                        <span>Total Pembayaran (Belanja + Ongkir)</span>
+                        <span>Total Pembayaran</span>
                         <span id="cart-total" class="text-sky-600 text-base">Rp 0</span>
                     </div>
                 </div>
 
-                <button type="button" onclick="submitOrder()" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition text-sm flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-check-to-slot"></i> Buat Pesanan Makanan Sekarang
+                <button onclick="submitOrder()" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition text-sm">
+                    Buat Pesanan Makanan Sekarang
                 </button>
-                <div class="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest pt-1">POWERED BY SIMADU</div>
+                <div class="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest pt-2">POWERED BY SIMADU</div>
             </div>
         </div>
 
+        <!-- Top-Up Saldo Modal -->
         <div id="modal-topup" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 space-y-4 shadow-2xl">
                 <div class="flex justify-between items-center border-b pb-3">
                     <h3 class="font-extrabold text-base text-slate-900 flex items-center gap-2">
                         <i class="fa-solid fa-wallet text-yellow-500"></i> Top-Up Dompet Mitra / Driver
                     </h3>
-                    <button type="button" onclick="closeTopUpModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+                    <button onclick="closeTopUpModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
                 </div>
                 <p class="text-xs text-slate-600">Top-up saldo diproses instan melalui konfirmasi WhatsApp ke Admin OLENG GO (085624736602)[span_4](start_span)[span_4](end_span)[span_5](start_span)[span_5](end_span).</p>
                 <div class="space-y-3">
@@ -219,7 +229,7 @@
                             <option value="500000">Rp 500.000</option>
                         </select>
                     </div>
-                    <button type="button" onclick="processTopUpWhatsApp()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl shadow-lg shadow-emerald-600/30 transition text-sm flex items-center justify-center gap-2">
+                    <button onclick="processTopUpWhatsApp()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl shadow-lg shadow-emerald-600/30 transition text-sm flex items-center justify-center gap-2">
                         <i class="fa-brands fa-whatsapp text-lg"></i> Konfirmasi Top-Up via WhatsApp
                     </button>
                 </div>
@@ -227,21 +237,23 @@
             </div>
         </div>
 
+        <!-- Notification Modal -->
         <div id="modal-notif" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 max-h-[75vh] overflow-y-auto space-y-4">
                 <div class="flex justify-between items-center border-b pb-3">
                     <h3 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-bell text-yellow-500 mr-2"></i>Notifikasi Sistem</h3>
-                    <button type="button" onclick="closeNotificationModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+                    <button onclick="closeNotificationModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
                 </div>
                 <div id="notification-list" class="space-y-3"></div>
                 <div class="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest pt-2">POWERED BY SIMADU</div>
             </div>
         </div>
 
+        <!-- Live Chat View -->
         <div id="view-chat" class="absolute inset-0 bg-white z-40 hidden flex flex-col">
             <div class="bg-sky-600 text-white p-4 flex items-center justify-between shadow">
                 <div class="flex items-center space-x-3">
-                    <button type="button" onclick="closeChat()" class="text-white text-lg"><i class="fa-solid fa-arrow-left"></i></button>
+                    <button onclick="closeChat()" class="text-white text-lg"><i class="fa-solid fa-arrow-left"></i></button>
                     <div>
                         <h3 class="font-bold text-sm">Live Chat Bantuan OLENG GO</h3>
                         <p class="text-[10px] text-sky-100">Kecamatan Lengkong, Sukabumi[span_6](start_span)[span_6](end_span)[span_7](start_span)[span_7](end_span)</p>
@@ -251,7 +263,7 @@
             <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-100"></div>
             <div class="p-3 bg-white border-t flex items-center space-x-2">
                 <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 border border-slate-200 rounded-full px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium">
-                <button type="button" onclick="sendChatMessage()" class="bg-sky-600 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-sky-700 transition shadow">
+                <button onclick="sendChatMessage()" class="bg-sky-600 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-sky-700 transition shadow">
                     <i class="fa-solid fa-paper-plane text-xs"></i>
                 </button>
             </div>
@@ -268,7 +280,6 @@
         let currentUser = null; 
         let currentSubTab = 'home';
         let adminViewMode = null;
-        let searchQuery = '';
 
         const defaultDB = {
             users: [
@@ -391,23 +402,17 @@
             }
         }
 
-        function toggleRegMerchant(selectEl) {
+        document.getElementById('reg-role').addEventListener('change', function(e) {
             const mFields = document.getElementById('reg-merchant-fields');
-            if(mFields) {
-                if(selectEl.value === 'merchant') mFields.classList.remove('hidden');
-                else mFields.classList.add('hidden');
-            }
-        }
+            if(e.target.value === 'merchant') mFields.classList.remove('hidden');
+            else mFields.classList.add('hidden');
+        });
 
-        function executeLogin() {
-            const identifier = document.getElementById('login-identifier').value.trim();
+        function handleLogin(e) {
+            e.preventDefault();
+            const identifier = document.getElementById('login-identifier').value;
             const role = document.getElementById('login-role').value;
             
-            if(!identifier) {
-                showToast('Masukkan nomor WhatsApp atau Email!', 'error');
-                return;
-            }
-
             let foundUser = db.users.find(u => u.phone === identifier && u.role === role);
             if(!foundUser) {
                 foundUser = {
@@ -430,17 +435,13 @@
             enterDashboard();
         }
 
-        function executeRegister() {
-            const name = document.getElementById('reg-name').value.trim();
-            const phone = document.getElementById('reg-phone').value.trim();
+        function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value;
+            const phone = document.getElementById('reg-phone').value;
             const role = document.getElementById('reg-role').value;
-            const shopName = document.getElementById('reg-shopname') ? document.getElementById('reg-shopname').value.trim() : '';
+            const shopName = document.getElementById('reg-shopname').value;
             const password = document.getElementById('reg-password').value;
-
-            if(!name || !phone) {
-                showToast('Nama dan Nomor WhatsApp wajib diisi!', 'error');
-                return;
-            }
 
             const newUser = {
                 id: Date.now(),
@@ -451,7 +452,7 @@
                 address: 'Kecamatan Lengkong, Sukabumi',
                 balance: (role === 'merchant' || role === 'driver') ? 50000 : 100000,
                 shopName: shopName || 'Toko Baru Lengkong',
-                password: password || '123'
+                password: password
             };
 
             db.users.push(newUser);
@@ -497,8 +498,7 @@
             adminViewMode = null;
             document.getElementById('view-auth').classList.remove('hidden');
             document.getElementById('view-dashboard').classList.add('hidden');
-            const detailView = document.getElementById('view-merchant-detail');
-            if(detailView) detailView.classList.add('hidden');
+            document.getElementById('view-merchant-detail').classList.add('hidden');
             showToast('Anda telah keluar.', 'info');
         }
 
@@ -585,75 +585,75 @@
 
             if(activeRole === 'customer') {
                 html = `
-                    <button type="button" onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-home">
+                    <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-home">
                         <i class="fa-solid fa-house text-base"></i><span class="text-[10px] mt-1 font-semibold">Beranda</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('food')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-food">
+                    <button onclick="checkAccessAndNavigate('food')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-food">
                         <i class="fa-solid fa-utensils text-base"></i><span class="text-[10px] mt-1 font-semibold">Pesanan</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('ojek')" class="flex flex-col items-center py-1 px-3 text-white" id="nav-btn-ojek">
+                    <button onclick="checkAccessAndNavigate('ojek')" class="flex flex-col items-center py-1 px-3 text-white" id="nav-btn-ojek">
                         <div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-white">
                             <i class="fa-solid fa-motorcycle text-lg"></i>
                         </div>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('driver-list')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-driver-list">
+                    <button onclick="checkAccessAndNavigate('driver-list')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-driver-list">
                         <i class="fa-solid fa-helmet-safety text-base"></i><span class="text-[10px] mt-1 font-semibold">Driver</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
+                    <button onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
                         <i class="fa-solid fa-user text-base"></i><span class="text-[10px] mt-1 font-semibold">Akun</span>
                     </button>
                 `;
             } else if(activeRole === 'driver') {
                 html = `
-                    <button type="button" onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-home">
+                    <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-home">
                         <i class="fa-solid fa-house text-base"></i><span class="text-[9px] mt-1 font-semibold">Home</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('driver-orders')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-driver-orders">
+                    <button onclick="checkAccessAndNavigate('driver-orders')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-driver-orders">
                         <i class="fa-solid fa-list-check text-base"></i><span class="text-[9px] mt-1 font-semibold">Orderan</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('driver-map')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-driver-map">
+                    <button onclick="checkAccessAndNavigate('driver-map')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-driver-map">
                         <i class="fa-solid fa-map-location-dot text-base"></i><span class="text-[9px] mt-1 font-semibold">Peta</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('merchant-menu')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600">
+                    <button onclick="checkAccessAndNavigate('merchant-menu')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600">
                         <i class="fa-solid fa-burger text-base"></i><span class="text-[9px] mt-1 font-semibold">Toko</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
+                    <button onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
                         <i class="fa-solid fa-wallet text-base"></i><span class="text-[9px] mt-1 font-semibold">Akun</span>
                     </button>
                 `;
             } else if(activeRole === 'merchant') {
                 html = `
-                    <button type="button" onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-home">
+                    <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-home">
                         <i class="fa-solid fa-house text-base"></i><span class="text-[9px] mt-1 font-semibold">Home</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('merchant-menu')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-merchant-menu">
+                    <button onclick="checkAccessAndNavigate('merchant-menu')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-merchant-menu">
                         <i class="fa-solid fa-burger text-base"></i><span class="text-[9px] mt-1 font-semibold">Menu Toko</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('merchant-orders')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-merchant-orders">
+                    <button onclick="checkAccessAndNavigate('merchant-orders')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-merchant-orders">
                         <i class="fa-solid fa-bell-concierge text-base"></i><span class="text-[9px] mt-1 font-semibold">Order Toko</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('driver-orders')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600">
+                    <button onclick="checkAccessAndNavigate('driver-orders')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600">
                         <i class="fa-solid fa-motorcycle text-base"></i><span class="text-[9px] mt-1 font-semibold">Driver</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
+                    <button onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
                         <i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1 font-semibold">Akun</span>
                     </button>
                 `;
             } else if(activeRole === 'admin') {
                 html = `
-                    <button type="button" onclick="checkAccessAndNavigate('admin-dash')" class="flex flex-col items-center py-1 px-2 text-sky-600 font-bold" id="nav-btn-admin-dash">
+                    <button onclick="checkAccessAndNavigate('admin-dash')" class="flex flex-col items-center py-1 px-2 text-sky-600 font-bold" id="nav-btn-admin-dash">
                         <i class="fa-solid fa-chart-pie text-base"></i><span class="text-[8px] mt-1 font-semibold">Monitor</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('admin-users')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600" id="nav-btn-admin-users">
+                    <button onclick="checkAccessAndNavigate('admin-users')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600" id="nav-btn-admin-users">
                         <i class="fa-solid fa-users-gear text-base"></i><span class="text-[8px] mt-1 font-semibold">User</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('admin-stores')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600" id="nav-btn-admin-stores">
+                    <button onclick="checkAccessAndNavigate('admin-stores')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600" id="nav-btn-admin-stores">
                         <i class="fa-solid fa-store text-base"></i><span class="text-[8px] mt-1 font-semibold">Toko</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('admin-drivers')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600" id="nav-btn-admin-drivers">
+                    <button onclick="checkAccessAndNavigate('admin-drivers')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600" id="nav-btn-admin-drivers">
                         <i class="fa-solid fa-motorcycle text-base"></i><span class="text-[8px] mt-1 font-semibold">Ojek</span>
                     </button>
-                    <button type="button" onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600">
+                    <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600">
                         <i class="fa-solid fa-house text-base"></i><span class="text-[8px] mt-1 font-semibold">Aplikasi</span>
                     </button>
                 `;
@@ -663,8 +663,7 @@
 
         function renderDashboardContent(tab) {
             currentSubTab = tab;
-            const detailView = document.getElementById('view-merchant-detail');
-            if(detailView) detailView.classList.add('hidden');
+            document.getElementById('view-merchant-detail').classList.add('hidden');
             const container = document.getElementById('main-content');
             
             document.querySelectorAll('#bottom-nav button').forEach(btn => {
@@ -710,8 +709,6 @@
         }
 
         function renderCustomerHome(container) {
-            const filteredMerchants = db.merchants.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || m.category.toLowerCase().includes(searchQuery.toLowerCase()));
-
             container.innerHTML = `
                 <div class="p-4 space-y-4 bg-gradient-to-b from-sky-600 to-slate-50 min-h-full pb-20">
                     <div class="flex items-center justify-between text-white pt-2">
@@ -731,14 +728,6 @@
                         </div>
                     </div>
 
-                    <!-- Fitur Canggih: Live Search Kuliner -->
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
-                        </span>
-                        <input type="text" id="live-search-input" value="${searchQuery}" oninput="handleLiveSearch(this)" placeholder="Cari makanan atau toko di Lengkong..." class="w-full pl-10 pr-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl text-xs font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-yellow-400 text-slate-800">
-                    </div>
-
                     <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-4 rounded-3xl shadow-xl border border-sky-400/30 flex items-center justify-between">
                         <div class="flex items-center space-x-3">
                             <div class="w-12 h-12 bg-sky-500/50 rounded-2xl flex items-center justify-center text-yellow-400 text-2xl shadow-inner border border-sky-400/40">
@@ -750,28 +739,47 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <button type="button" onclick="openNotificationModal()" class="relative p-2.5 bg-sky-800/80 hover:bg-sky-700 rounded-2xl text-white transition shadow">
+                            <button onclick="openNotificationModal()" class="relative p-2.5 bg-sky-800/80 hover:bg-sky-700 rounded-2xl text-white transition shadow">
                                 <i class="fa-solid fa-bell text-sm"></i>
                                 <span class="absolute top-1 right-1 bg-yellow-400 text-slate-900 text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">2</span>
                             </button>
-                            <button type="button" onclick="switchView('chat')" class="p-2.5 bg-sky-800/80 hover:bg-sky-700 rounded-2xl text-white transition shadow">
+                            <button onclick="switchView('chat')" class="p-2.5 bg-sky-800/80 hover:bg-sky-700 rounded-2xl text-white transition shadow">
                                 <i class="fa-solid fa-comments text-sm"></i>
                             </button>
-                            <button type="button" onclick="handleLogout()" class="p-2.5 bg-rose-600/80 hover:bg-rose-600 rounded-2xl text-white transition shadow">
+                            <button onclick="handleLogout()" class="p-2.5 bg-rose-600/80 hover:bg-rose-600 rounded-2xl text-white transition shadow">
                                 <i class="fa-solid fa-power-off text-sm"></i>
                             </button>
                         </div>
                     </div>
 
                     <div class="bg-white/80 backdrop-blur-md p-1.5 rounded-2xl shadow-xs flex justify-between border border-white">
-                        <button type="button" onclick="checkAccessAndNavigate('ojek')" class="flex-1 py-2.5 bg-yellow-400 text-slate-900 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md">
+                        <button onclick="checkAccessAndNavigate('ojek')" class="flex-1 py-2.5 bg-yellow-400 text-slate-900 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md">
                             <i class="fa-solid fa-motorcycle text-sm"></i> Ojol
                         </button>
-                        <button type="button" onclick="checkAccessAndNavigate('food')" class="flex-1 py-2.5 text-slate-700 hover:bg-white rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition">
+                        <button onclick="checkAccessAndNavigate('food')" class="flex-1 py-2.5 text-slate-700 hover:bg-white rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition">
                             <i class="fa-solid fa-utensils text-sm text-sky-600"></i> Food
                         </button>
-                        <button type="button" onclick="openNotificationModal()" class="flex-1 py-2.5 text-slate-700 hover:bg-white rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition">
+                        <button onclick="openNotificationModal()" class="flex-1 py-2.5 text-slate-700 hover:bg-white rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition">
                             <i class="fa-solid fa-tag text-sm text-sky-600"></i> Promo
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-2.5">
+                        <button onclick="checkAccessAndNavigate('ojek')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
+                            <div class="w-12 h-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-motorcycle"></i></div>
+                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Pesan Ojek</span>
+                        </button>
+                        <button onclick="checkAccessAndNavigate('food')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
+                            <div class="w-12 h-12 bg-yellow-100 text-yellow-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-utensils"></i></div>
+                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Pesan Makanan</span>
+                        </button>
+                        <button onclick="openNotificationModal()" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
+                            <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-percent"></i></div>
+                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Promo Menarik</span>
+                        </button>
+                        <button onclick="openNotificationModal()" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
+                            <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-gift"></i></div>
+                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Info Terbaru</span>
                         </button>
                     </div>
 
@@ -790,10 +798,10 @@
                     <div class="space-y-3">
                         <div class="flex justify-between items-center">
                             <h3 class="font-extrabold text-sm text-slate-900">Daftar List Toko Kuliner Lengkong[span_14](start_span)[span_14](end_span)[span_15](start_span)[span_15](end_span)</h3>
-                            <button type="button" onclick="checkAccessAndNavigate('food')" class="text-xs font-extrabold text-sky-600 hover:underline">Lihat Semua</button>
+                            <button onclick="checkAccessAndNavigate('food')" class="text-xs font-extrabold text-sky-600 hover:underline">Lihat Semua</button>
                         </div>
                         <div class="space-y-3">
-                            ${filteredMerchants.length ? filteredMerchants.map(m => {
+                            ${db.merchants.map(m => {
                                 const dist = calculateDistance(-7.1234, 106.8456, m.lat, m.lng);
                                 return `
                                     <div onclick="openMerchantDetail(${m.id})" class="bg-white p-3.5 rounded-2xl shadow-xs border border-slate-100 flex items-center space-x-3.5 cursor-pointer hover:border-sky-500 transition">
@@ -812,7 +820,7 @@
                                         </div>
                                     </div>
                                 `;
-                            }).join('') : '<p class="text-xs text-slate-400 text-center py-4">Toko atau menu tidak ditemukan.</p>'}
+                            }).join('')}
                         </div>
                     </div>
                     <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200">
@@ -823,19 +831,6 @@
             setTimeout(initMap, 200);
         }
 
-        function handleLiveSearch(input) {
-            searchQuery = input.value;
-            const container = document.getElementById('main-content');
-            renderCustomerHome(container);
-            setTimeout(() => {
-                const searchEl = document.getElementById('live-search-input');
-                if(searchEl) {
-                    searchEl.focus();
-                    searchEl.setSelectionRange(searchEl.value.length, searchEl.value.length);
-                }
-            }, 50);
-        }
-
         function renderCustomerFood(container) {
             container.innerHTML = `
                 <div class="p-4 space-y-4">
@@ -844,7 +839,7 @@
                             <h2 class="font-extrabold text-base text-slate-900">OLENG Food Lengkong[span_16](start_span)[span_16](end_span)[span_17](start_span)[span_17](end_span)</h2>
                             <p class="text-[11px] text-slate-500 font-medium">Klik toko untuk melihat profil, menu, dan chat WhatsApp</p>
                         </div>
-                        <button type="button" onclick="openCartModal()" class="relative bg-sky-600 text-white px-3.5 py-2 rounded-2xl text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-sky-600/30">
+                        <button onclick="openCartModal()" class="relative bg-sky-600 text-white px-3.5 py-2 rounded-2xl text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-sky-600/30">
                             <i class="fa-solid fa-cart-shopping"></i> Keranjang <span id="cart-counter" class="bg-yellow-400 text-slate-900 px-1.5 py-0.5 rounded-full text-[10px] font-black">${db.cart.length}</span>
                         </button>
                     </div>
@@ -891,7 +886,7 @@
             detailView.innerHTML = `
                 <div class="relative bg-sky-800 text-white">
                     <img src="${merchant.banner}" class="w-full h-48 object-cover opacity-80" alt="Banner Toko">
-                    <button type="button" onclick="closeMerchantDetail()" class="absolute top-4 left-4 w-10 h-10 bg-white/80 backdrop-blur-md text-slate-900 rounded-full flex items-center justify-center font-bold shadow-lg">
+                    <button onclick="closeMerchantDetail()" class="absolute top-4 left-4 w-10 h-10 bg-white/80 backdrop-blur-md text-slate-900 rounded-full flex items-center justify-center font-bold shadow-lg">
                         <i class="fa-solid fa-arrow-left"></i>
                     </button>
                     <div class="absolute -bottom-8 left-4 flex items-end space-x-3">
@@ -932,7 +927,7 @@
                                         <p class="text-[11px] text-slate-500 line-clamp-2">${f.desc}</p>
                                         <div class="font-black text-sky-600 text-xs">Rp ${f.price.toLocaleString()}</div>
                                     </div>
-                                    <button type="button" onclick="addToCart(${f.id})" class="w-10 h-10 bg-yellow-400 hover:bg-yellow-500 text-slate-900 rounded-2xl font-black flex items-center justify-center shadow-xs transition">
+                                    <button onclick="addToCart(${f.id})" class="w-10 h-10 bg-yellow-400 hover:bg-yellow-500 text-slate-900 rounded-2xl font-black flex items-center justify-center shadow-xs transition">
                                         <i class="fa-solid fa-plus text-xs"></i>
                                     </button>
                                 </div>
@@ -947,8 +942,7 @@
         }
 
         function closeMerchantDetail() {
-            const detailView = document.getElementById('view-merchant-detail');
-            if(detailView) detailView.classList.add('hidden');
+            document.getElementById('view-merchant-detail').classList.add('hidden');
         }
 
         function renderCustomerOjek(container) {
@@ -969,7 +963,7 @@
                             <span class="text-[11px] text-slate-600 font-bold">Estimasi Tarif Wilayah Lengkong:[span_20](start_span)[span_20](end_span)[span_21](start_span)[span_21](end_span)</span>
                             <span class="text-xs font-black text-sky-600">Rp 10.000 - Rp 15.000</span>
                         </div>
-                        <button type="button" onclick="orderOjek()" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition text-xs">
+                        <button onclick="orderOjek()" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition text-xs">
                             Cari Driver Terdekat Sekarang
                         </button>
                     </div>
@@ -1044,14 +1038,13 @@
 
         function openCartModal() {
             const modal = document.getElementById('modal-cart');
-            if(modal) modal.classList.remove('hidden');
+            modal.classList.remove('hidden');
             updateCartModalUI();
             setTimeout(initCartMap, 300);
         }
 
         function closeCartModal() {
-            const modal = document.getElementById('modal-cart');
-            if(modal) modal.classList.add('hidden');
+            document.getElementById('modal-cart').classList.add('hidden');
         }
 
         function updateCartModalUI() {
@@ -1074,21 +1067,17 @@
                 })
                 .sort((a, b) => a.distanceToDest - b.distanceToDest);
 
-            if(driverSelect) {
-                driverSelect.innerHTML = onlineDrivers.length ? onlineDrivers.map(d => `
-                    <option value="${d.name}">
-                        📍 ${d.name} (${d.distanceToDest} km dari lokasi Anda) - ${d.vehicle}
-                    </option>
-                `).join('') : '<option value="Driver Umum">Driver Umum Lengkong[span_22](start_span)[span_22](end_span)[span_23](start_span)[span_23](end_span)</option>';
-            }
-
-            if(!container) return;
+            driverSelect.innerHTML = onlineDrivers.length ? onlineDrivers.map(d => `
+                <option value="${d.name}">
+                    📍 ${d.name} (${d.distanceToDest} km dari lokasi Anda) - ${d.vehicle}
+                </option>
+            `).join('') : '<option value="Driver Umum">Driver Umum Lengkong[span_22](start_span)[span_22](end_span)[span_23](start_span)[span_23](end_span)</option>';
 
             if(db.cart.length === 0) {
                 container.innerHTML = `<p class="text-center text-slate-400 py-3 text-xs font-medium">Keranjang belanja masih kosong.</p>`;
-                if(subtotalEl) subtotalEl.innerText = 'Rp 0';
-                if(ongkirEl) ongkirEl.innerText = 'Rp 0';
-                if(totalEl) totalEl.innerText = 'Rp 0';
+                subtotalEl.innerText = 'Rp 0';
+                ongkirEl.innerText = 'Rp 0';
+                totalEl.innerText = 'Rp 0';
                 return;
             }
 
@@ -1098,7 +1087,7 @@
                         <h4 class="font-bold text-slate-900">${item.name}</h4>
                         <p class="text-[11px] text-sky-600 font-extrabold">Rp ${item.price.toLocaleString()}</p>
                     </div>
-                    <button type="button" onclick="removeFromCart(${idx})" class="text-rose-500 hover:text-rose-700 text-xs font-bold p-1"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="removeFromCart(${idx})" class="text-rose-500 hover:text-rose-700 text-xs font-bold p-1"><i class="fa-solid fa-trash"></i></button>
                 </div>
             `).join('');
 
@@ -1106,10 +1095,10 @@
             const distanceKm = calculateDistance(merchant.lat, merchant.lng, destLat, destLng);
             const calculatedOngkir = calculateShippingCost(distanceKm);
 
-            if(distanceLabel) distanceLabel.innerText = `Ongkir (${distanceKm} km dari ${merchant.name})`;
-            if(subtotalEl) subtotalEl.innerText = `Rp ${subtotal.toLocaleString()}`;
-            if(ongkirEl) ongkirEl.innerText = `Rp ${calculatedOngkir.toLocaleString()}`;
-            if(totalEl) totalEl.innerText = `Rp ${(subtotal + calculatedOngkir).toLocaleString()}`;
+            distanceLabel.innerText = `Ongkir (${distanceKm} km dari ${merchant.name})`;
+            subtotalEl.innerText = `Rp ${subtotal.toLocaleString()}`;
+            ongkirEl.innerText = `Rp ${calculatedOngkir.toLocaleString()}`;
+            totalEl.innerText = `Rp ${(subtotal + calculatedOngkir).toLocaleString()}`;
         }
 
         function recalculateShipping() { 
@@ -1151,8 +1140,7 @@
             }
             const destSelect = document.getElementById('delivery-destination');
             const [, , destName] = destSelect.value.split(',');
-            const driverSelectElement = document.getElementById('checkout-driver-select');
-            const driverSelect = driverSelectElement ? driverSelectElement.value : 'Driver Umum';
+            const driverSelect = document.getElementById('checkout-driver-select').value;
             const subtotal = db.cart.reduce((sum, item) => sum + item.price, 0);
             const merchant = db.activeMerchant || db.merchants[0];
             const calculatedOngkir = 7500;
@@ -1179,8 +1167,7 @@
         }
 
         function orderOjek() {
-            const toInput = document.getElementById('ojek-to');
-            const to = toInput ? toInput.value.trim() : '';
+            const to = document.getElementById('ojek-to').value;
             if(!to) {
                 showToast('Tolong masukkan lokasi tujuan di Lengkong!', 'error');[span_24](start_span)[span_24](end_span)[span_25](start_span)[span_25](end_span)
                 return;
@@ -1209,7 +1196,7 @@
                             <h3 class="font-extrabold text-xs text-slate-800 uppercase tracking-wider">Status Driver Ojol</h3>
                             <p class="text-xs text-emerald-600 font-bold mt-0.5"><i class="fa-solid fa-circle text-[8px]"></i> ${driverProfile.status} & Siap Menerima Order</p>
                         </div>
-                        <button type="button" onclick="toggleDriverStatus()" class="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-xs hover:bg-emerald-600 transition">Ubah Status</button>
+                        <button onclick="toggleDriverStatus()" class="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-xs hover:bg-emerald-600 transition">Ubah Status</button>
                     </div>
 
                     <h3 class="font-extrabold text-sm text-slate-900">Daftar Orderan Masuk di Lengkong[span_26](start_span)[span_26](end_span)[span_27](start_span)[span_27](end_span)</h3>
@@ -1226,8 +1213,8 @@
                                     ${o.address ? `<p class="text-[11px] text-slate-600 font-medium mt-1"><i class="fa-solid fa-location-dot"></i> Alamat: ${o.address}</p>` : ''}
                                 </div>
                                 <div class="flex gap-2 pt-2 border-t border-slate-100">
-                                    <button type="button" onclick="updateOrderStatus(${idx}, 'Diterima Driver')" class="flex-1 py-2.5 bg-sky-600 text-white rounded-xl text-xs font-extrabold shadow-xs hover:bg-sky-700 transition">Terima Order</button>
-                                    <button type="button" onclick="updateOrderStatus(${idx}, 'Ditolak')" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-extrabold hover:bg-slate-200 transition">Tolak</button>
+                                    <button onclick="updateOrderStatus(${idx}, 'Diterima Driver')" class="flex-1 py-2.5 bg-sky-600 text-white rounded-xl text-xs font-extrabold shadow-xs hover:bg-sky-700 transition">Terima Order</button>
+                                    <button onclick="updateOrderStatus(${idx}, 'Ditolak')" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-extrabold hover:bg-slate-200 transition">Tolak</button>
                                 </div>
                             </div>
                         `).join('')}
@@ -1245,7 +1232,7 @@
                     <h2 class="font-extrabold text-base text-slate-900">Navigasi Peta Rute Lengkong[span_28](start_span)[span_28](end_span)[span_29](start_span)[span_29](end_span)</h2>
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
                         <div id="map" class="map-container shadow-inner"></div>
-                        <p class="text-[11px] text-slate-500 text-center font-medium">GPS Terkunci di Wilayah Kecamatan Lengkong, Sukabumi.[span_30](start_span)[span_30](end_span)[span_31](start_span)[span_31](end_span)</p>
+                        <p class="text-[11px] text-slate-500 text-center font-medium">GPS Terkunci di Wilayah Kecamatan Lengkong, Sukabumi[span_30](start_span)[span_30](end_span)[span_31](start_span)[span_31](end_span).</p>
                     </div>
                     <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
                         POWERED BY SIMADU
@@ -1281,7 +1268,7 @@
                             <h2 class="font-extrabold text-base text-slate-900">Kelola Menu Toko</h2>
                             <p class="text-[11px] text-slate-500 font-medium">${merchant.name}</p>
                         </div>
-                        <button type="button" onclick="openAddMenuModal(${merchant.id})" class="bg-yellow-400 text-slate-900 px-3.5 py-2 rounded-2xl text-xs font-extrabold shadow-xs">+ Tambah Menu</button>
+                        <button onclick="openAddMenuModal(${merchant.id})" class="bg-yellow-400 text-slate-900 px-3.5 py-2 rounded-2xl text-xs font-extrabold shadow-xs">+ Tambah Menu</button>
                     </div>
                     <div class="space-y-3">
                         ${merchantFoods.map(f => `
@@ -1294,7 +1281,7 @@
                                         <div class="font-black text-sky-600 text-xs mt-0.5">Rp ${f.price.toLocaleString()}</div>
                                     </div>
                                 </div>
-                                <button type="button" onclick="deleteFood(${f.id})" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-[11px] font-bold"><i class="fa-solid fa-trash"></i></button>
+                                <button onclick="deleteFood(${f.id})" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-[11px] font-bold"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         `).join('')}
                     </div>
@@ -1316,7 +1303,7 @@
                 merchantId: merchantId,
                 name: name,
                 price: price,
-                desc: 'Menu lezat khas Lengkong Sukabumi.[span_32](start_span)[span_32](end_span)[span_33](start_span)[span_33](end_span)',
+                desc: 'Menu lezat khas Lengkong Sukabumi[span_32](start_span)[span_32](end_span)[span_33](start_span)[span_33](end_span).',
                 stock: stock,
                 image: 'https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name)
             });
@@ -1404,7 +1391,7 @@
                 <div class="p-4 space-y-4">
                     <div class="flex justify-between items-center">
                         <h2 class="font-extrabold text-base text-slate-900">Manajemen Pengguna Terpusat</h2>
-                        <button type="button" onclick="openAdminAddUserModal()" class="bg-sky-600 text-white px-3 py-2 rounded-xl text-xs font-extrabold">+ User</button>
+                        <button onclick="openAdminAddUserModal()" class="bg-sky-600 text-white px-3 py-2 rounded-xl text-xs font-extrabold">+ User</button>
                     </div>
                     <div class="space-y-3">
                         ${db.users.map(u => `
@@ -1420,10 +1407,10 @@
                                 ${u.role === 'merchant' || u.role === 'driver' || u.role === 'customer' ? `<p class="text-xs font-black text-yellow-600">Saldo Dompet: Rp ${(u.balance || 0).toLocaleString()}</p>` : ''}
                                 
                                 <div class="flex gap-2 pt-2 border-t border-slate-100">
-                                    <button type="button" onclick="openAdminEditUser(${u.id})" class="px-3 py-1.5 bg-sky-50 text-sky-700 rounded-xl text-[11px] font-extrabold">Edit</button>
-                                    <button type="button" onclick="openAdminBalanceModal(${u.id})" class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-xl text-[11px] font-extrabold">Atur Saldo</button>
-                                    <button type="button" onclick="adminResetPassword(${u.id})" class="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-xl text-[11px] font-extrabold">Reset Sandi</button>
-                                    <button type="button" onclick="adminDeleteUser(${u.id})" class="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-xl text-[11px] font-extrabold"><i class="fa-solid fa-trash"></i></button>
+                                    <button onclick="openAdminEditUser(${u.id})" class="px-3 py-1.5 bg-sky-50 text-sky-700 rounded-xl text-[11px] font-extrabold">Edit</button>
+                                    <button onclick="openAdminBalanceModal(${u.id})" class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-xl text-[11px] font-extrabold">Atur Saldo</button>
+                                    <button onclick="adminResetPassword(${u.id})" class="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-xl text-[11px] font-extrabold">Reset Sandi</button>
+                                    <button onclick="adminDeleteUser(${u.id})" class="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-xl text-[11px] font-extrabold"><i class="fa-solid fa-trash"></i></button>
                                 </div>
                             </div>
                         `).join('')}
@@ -1571,7 +1558,7 @@
                 <div class="bg-gradient-to-r from-sky-600 to-sky-700 text-white p-4 rounded-3xl shadow-md space-y-2">
                     <span class="text-[10px] text-sky-100 uppercase tracking-wider font-extrabold">Dompet Saldo OLENG</span>
                     <h2 class="text-2xl font-black">Rp ${(currentUser.balance || 100000).toLocaleString()}</h2>
-                    <button type="button" onclick="openTopUpModal()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold rounded-2xl text-xs shadow-xs transition flex items-center justify-center gap-1.5">
+                    <button onclick="openTopUpModal()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold rounded-2xl text-xs shadow-xs transition flex items-center justify-center gap-1.5">
                         <i class="fa-solid fa-wallet text-sm"></i> Top-Up Saldo Instan
                     </button>
                 </div>
@@ -1594,7 +1581,7 @@
                         <h3 class="font-extrabold text-xs text-slate-800 uppercase tracking-wider">Pengaturan Akun</h3>
                         <input type="text" value="${currentUser.name}" class="w-full p-2.5 border border-slate-200 rounded-2xl text-xs font-semibold" id="prof-name">
                         <input type="text" value="${currentUser.phone}" class="w-full p-2.5 border border-slate-200 rounded-2xl text-xs font-semibold" id="prof-phone">
-                        <button type="button" onclick="showToast('Profil berhasil disimpan!', 'success')" class="w-full py-2.5 bg-sky-600 text-white rounded-2xl text-xs font-extrabold shadow-xs">Simpan Perubahan</button>
+                        <button onclick="showToast('Profil berhasil disimpan!', 'success')" class="w-full py-2.5 bg-sky-600 text-white rounded-2xl text-xs font-extrabold shadow-xs">Simpan Perubahan</button>
                     </div>
                     <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
                         POWERED BY SIMADU
@@ -1603,14 +1590,8 @@
             `;
         }
 
-        function openTopUpModal() { 
-            const modal = document.getElementById('modal-topup');
-            if(modal) modal.classList.remove('hidden'); 
-        }
-        function closeTopUpModal() { 
-            const modal = document.getElementById('modal-topup');
-            if(modal) modal.classList.add('hidden'); 
-        }
+        function openTopUpModal() { document.getElementById('modal-topup').classList.remove('hidden'); }
+        function closeTopUpModal() { document.getElementById('modal-topup').classList.add('hidden'); }
 
         function processTopUpWhatsApp() {
             const nominal = document.getElementById('topup-nominal').value;
@@ -1623,41 +1604,31 @@
         function openNotificationModal() {
             const modal = document.getElementById('modal-notif');
             const list = document.getElementById('notification-list');
-            if(list) {
-                list.innerHTML = db.notifications.map(n => `
-                    <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
-                        <div class="flex justify-between text-xs font-extrabold text-slate-800">
-                            <span>${n.title}</span>
-                            <span class="text-slate-400 font-medium text-[10px]">${n.time}</span>
-                        </div>
-                        <p class="text-[11px] text-slate-600 font-medium">${n.desc}</p>
+            list.innerHTML = db.notifications.map(n => `
+                <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
+                    <div class="flex justify-between text-xs font-extrabold text-slate-800">
+                        <span>${n.title}</span>
+                        <span class="text-slate-400 font-medium text-[10px]">${n.time}</span>
                     </div>
-                `).join('');
-            }
-            if(modal) modal.classList.remove('hidden');
+                    <p class="text-[11px] text-slate-600 font-medium">${n.desc}</p>
+                </div>
+            `).join('');
+            modal.classList.remove('hidden');
         }
 
-        function closeNotificationModal() { 
-            const modal = document.getElementById('modal-notif');
-            if(modal) modal.classList.add('hidden'); 
-        }
+        function closeNotificationModal() { document.getElementById('modal-notif').classList.add('hidden'); }
 
         function switchView(view) {
             if(view === 'chat') {
-                const chatView = document.getElementById('view-chat');
-                if(chatView) chatView.classList.remove('hidden');
+                document.getElementById('view-chat').classList.remove('hidden');
                 renderChatMessages();
             }
         }
 
-        function closeChat() { 
-            const chatView = document.getElementById('view-chat');
-            if(chatView) chatView.classList.add('hidden'); 
-        }
+        function closeChat() { document.getElementById('view-chat').classList.add('hidden'); }
 
         function renderChatMessages() {
             const container = document.getElementById('chat-messages');
-            if(!container) return;
             container.innerHTML = db.chats.map(c => `
                 <div class="flex flex-col space-y-0.5">
                     <div class="bg-white p-3 rounded-2xl shadow-xs border border-slate-100 max-w-[85%] text-xs text-slate-800">
@@ -1672,7 +1643,7 @@
 
         function sendChatMessage() {
             const input = document.getElementById('chat-input');
-            if(!input || !input.value.trim()) return;
+            if(!input.value.trim()) return;
             
             db.chats.push({ sender: currentUser.name, text: input.value, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
             saveDB();
@@ -1680,7 +1651,7 @@
             renderChatMessages();
 
             setTimeout(() => {
-                db.chats.push({ sender: 'Admin SIMADU', text: 'Pesan Anda telah diterima. Warga Lengkong selalu siap dilayani[span_38](start_span)[span_38](end_span)[span_39](start_span)[span_39](end_span)!', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+                db.chats.push({ sender: 'Admin SIMADU', text: 'Pesan Anda telah diterima. Warga Lengkong selalu siap dilayani!', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
                 saveDB();
                 renderChatMessages();
             }, 1000);
@@ -1688,7 +1659,6 @@
 
         function showToast(message, type='success') {
             const container = document.getElementById('toast-container');
-            if(!container) return;
             const toast = document.createElement('div');
             toast.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold pointer-events-auto transition transform translate-y-2 flex items-center gap-2 ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-sky-600'}`;
             toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-info'} text-sm"></i> ${message}`;
@@ -1711,7 +1681,7 @@
             }).addTo(mapInstance);
 
             L.marker([-7.1234, 106.8456]).addTo(mapInstance)
-                .bindPopup('<b>Pusat Kecamatan Lengkong</b><br>Wilayah Operasional OLENG GO.')[span_40](start_span)[span_40](end_span)[span_41](start_span)[span_41](end_span)
+                .bindPopup('<b>Pusat Kecamatan Lengkong</b><br>Wilayah Operasional OLENG GO.')[span_38](start_span)[span_38](end_span)[span_39](start_span)[span_39](end_span)
                 .openPopup();
         }
     </script>
