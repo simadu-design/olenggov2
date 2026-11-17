@@ -146,6 +146,7 @@
         <!-- ================= MODALS & SUB-VIEWS ================= -->
         <div id="view-merchant-detail" class="absolute inset-0 bg-slate-50 z-40 hidden flex flex-col overflow-y-auto"></div>
 
+        <!-- Modal Keranjang Canggih -->
         <div id="modal-cart" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
                 <div class="flex justify-between items-center border-b pb-3">
@@ -267,6 +268,7 @@
         let currentUser = null; 
         let currentSubTab = 'home';
         let adminViewMode = null;
+        let searchQuery = '';
 
         const defaultDB = {
             users: [
@@ -708,6 +710,8 @@
         }
 
         function renderCustomerHome(container) {
+            const filteredMerchants = db.merchants.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || m.category.toLowerCase().includes(searchQuery.toLowerCase()));
+
             container.innerHTML = `
                 <div class="p-4 space-y-4 bg-gradient-to-b from-sky-600 to-slate-50 min-h-full pb-20">
                     <div class="flex items-center justify-between text-white pt-2">
@@ -725,6 +729,14 @@
                         <div class="w-12 h-12 bg-yellow-400 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-2xl animate-bounce">
                             🐝
                         </div>
+                    </div>
+
+                    <!-- Fitur Canggih: Live Search Kuliner -->
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </span>
+                        <input type="text" id="live-search-input" value="${searchQuery}" oninput="handleLiveSearch(this)" placeholder="Cari makanan atau toko di Lengkong..." class="w-full pl-10 pr-4 py-3 bg-white/90 backdrop-blur-md rounded-2xl text-xs font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-yellow-400 text-slate-800">
                     </div>
 
                     <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-4 rounded-3xl shadow-xl border border-sky-400/30 flex items-center justify-between">
@@ -763,25 +775,6 @@
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-4 gap-2.5">
-                        <button type="button" onclick="checkAccessAndNavigate('ojek')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
-                            <div class="w-12 h-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-motorcycle"></i></div>
-                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Pesan Ojek</span>
-                        </button>
-                        <button type="button" onclick="checkAccessAndNavigate('food')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
-                            <div class="w-12 h-12 bg-yellow-100 text-yellow-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-utensils"></i></div>
-                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Pesan Makanan</span>
-                        </button>
-                        <button type="button" onclick="openNotificationModal()" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
-                            <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-percent"></i></div>
-                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Promo Menarik</span>
-                        </button>
-                        <button type="button" onclick="openNotificationModal()" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
-                            <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-gift"></i></div>
-                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Info Terbaru</span>
-                        </button>
-                    </div>
-
                     <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-2.5">
                         <div class="flex justify-between items-center">
                             <h3 class="font-extrabold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -800,7 +793,7 @@
                             <button type="button" onclick="checkAccessAndNavigate('food')" class="text-xs font-extrabold text-sky-600 hover:underline">Lihat Semua</button>
                         </div>
                         <div class="space-y-3">
-                            ${db.merchants.map(m => {
+                            ${filteredMerchants.length ? filteredMerchants.map(m => {
                                 const dist = calculateDistance(-7.1234, 106.8456, m.lat, m.lng);
                                 return `
                                     <div onclick="openMerchantDetail(${m.id})" class="bg-white p-3.5 rounded-2xl shadow-xs border border-slate-100 flex items-center space-x-3.5 cursor-pointer hover:border-sky-500 transition">
@@ -819,7 +812,7 @@
                                         </div>
                                     </div>
                                 `;
-                            }).join('')}
+                            }).join('') : '<p class="text-xs text-slate-400 text-center py-4">Toko atau menu tidak ditemukan.</p>'}
                         </div>
                     </div>
                     <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200">
@@ -828,6 +821,20 @@
                 </div>
             `;
             setTimeout(initMap, 200);
+        }
+
+        function handleLiveSearch(input) {
+            searchQuery = input.value;
+            const container = document.getElementById('main-content');
+            renderCustomerHome(container);
+            // Pertahankan fokus input pencarian
+            setTimeout(() => {
+                const searchEl = document.getElementById('live-search-input');
+                if(searchEl) {
+                    searchEl.focus();
+                    searchEl.setSelectionRange(searchEl.value.length, searchEl.value.length);
+                }
+            }, 50);
         }
 
         function renderCustomerFood(container) {
