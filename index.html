@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="id" class="h-full">
 <head>
@@ -54,7 +55,7 @@
                         <div class="text-left">
                             <h1 class="text-2xl font-black italic tracking-wider text-yellow-300 drop-shadow">OLENG GO</h1>
                             <p class="text-[10px] text-sky-100 font-bold flex items-center gap-1">
-                                <i class="fa-solid fa-location-dot text-yellow-400"></i> Lengkong, Sukabumi[span_0](start_span)[span_0](end_span)[span_1](start_span)[span_1](end_span)
+                                <i class="fa-solid fa-location-dot text-yellow-400"></i> Lengkong, Sukabumi
                             </p>
                         </div>
                     </div>
@@ -169,7 +170,7 @@
                 </div>
                 
                 <div class="bg-sky-50/60 p-3.5 rounded-2xl border border-sky-100 space-y-2">
-                    <label class="text-[11px] font-extrabold text-sky-800 uppercase tracking-wider block">Pilih Lokasi Tujuan Anda di Lengkong[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span)</label>
+                    <label class="text-[11px] font-extrabold text-sky-800 uppercase tracking-wider block">Pilih Lokasi Tujuan Anda di Lengkong</label>
                     <select id="delivery-destination" onchange="recalculateShipping()" class="w-full p-2.5 bg-white border border-sky-200 rounded-xl text-xs font-bold text-slate-800">
                         <option value="-7.1234,106.8456,Alun-Alun Lengkong">Alun-Alun Lengkong (0.5 km)</option>
                         <option value="-7.1290,106.8520,Kp. Cijangkar Lengkong">Kp. Cijangkar (2.1 km)</option>
@@ -209,7 +210,7 @@
             </div>
         </div>
 
-        <!-- Top-Up Saldo Modal -->
+        <!-- Top-Up Saldo Modal (Eksklusif Mitra Toko & Driver) -->
         <div id="modal-topup" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 space-y-4 shadow-2xl">
                 <div class="flex justify-between items-center border-b pb-3">
@@ -218,7 +219,7 @@
                     </h3>
                     <button onclick="closeTopUpModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
                 </div>
-                <p class="text-xs text-slate-600">Top-up saldo diproses instan melalui konfirmasi WhatsApp ke Admin OLENG GO (085624736602)[span_4](start_span)[span_4](end_span)[span_5](start_span)[span_5](end_span).</p>
+                <p class="text-xs text-slate-600">Top-up saldo diproses instan melalui konfirmasi WhatsApp ke Admin OLENG GO (085624736602).</p>
                 <div class="space-y-3">
                     <div>
                         <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nominal Top-Up (Rp)</label>
@@ -256,7 +257,7 @@
                     <button onclick="closeChat()" class="text-white text-lg"><i class="fa-solid fa-arrow-left"></i></button>
                     <div>
                         <h3 class="font-bold text-sm">Live Chat Bantuan OLENG GO</h3>
-                        <p class="text-[10px] text-sky-100">Kecamatan Lengkong, Sukabumi[span_6](start_span)[span_6](end_span)[span_7](start_span)[span_7](end_span)</p>
+                        <p class="text-[10px] text-sky-100">Kecamatan Lengkong, Sukabumi</p>
                     </div>
                 </div>
             </div>
@@ -522,6 +523,7 @@
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             renderDashboardNavigation(activeRole);
             
+            // Set default landing tab based on role
             let defaultTab = 'home';
             if(activeRole === 'driver') defaultTab = 'driver-orders';
             else if(activeRole === 'merchant') defaultTab = 'merchant-menu';
@@ -542,8 +544,16 @@
             updateDashboardShell();
         }
 
+        // --- STRICT ACCESS CONTROL (RBAC) WITH NOTIFICATION WARNINGS ---
         function checkAccessAndNavigate(targetFeature) {
             const effectiveRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+
+            // Define allowed features per role
+            // Customer: consumer features (home, food, ojek, driver-list, profile)
+            // Driver: consumer + driver features (driver-orders, driver-map, profile)
+            // Merchant: consumer + merchant features (merchant-menu, merchant-orders, profile)
+            // Admin: all features
+
             let isAllowed = false;
             let allowedRolesMsg = '';
 
@@ -565,6 +575,7 @@
                 else allowedRolesMsg = 'Mitra Toko hanya dapat mengakses fitur Konsumen dan Toko.';
             }
 
+            // Check if attempting admin features without admin role
             if (adminFeatures.includes(targetFeature) && effectiveRole !== 'admin') {
                 isAllowed = false;
                 allowedRolesMsg = 'AKSES DITOLAK! Fitur Panel Admin hanya dapat diakses oleh akun Admin SIMADU.';
@@ -614,7 +625,7 @@
                     <button onclick="checkAccessAndNavigate('driver-map')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-driver-map">
                         <i class="fa-solid fa-map-location-dot text-base"></i><span class="text-[9px] mt-1 font-semibold">Peta</span>
                     </button>
-                    <button onclick="checkAccessAndNavigate('merchant-menu')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600">
+                    <button onclick="checkAccessAndNavigate('merchant-menu')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" onclick="checkAccessAndNavigate('merchant-menu')">
                         <i class="fa-solid fa-burger text-base"></i><span class="text-[9px] mt-1 font-semibold">Toko</span>
                     </button>
                     <button onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
@@ -680,7 +691,10 @@
                 else if(tab === 'ojek') renderCustomerOjek(container);
                 else if(tab === 'driver-list') renderCustomerDriverList(container);
                 else if(tab === 'profile') renderProfile(container);
-                else renderCustomerHome(container);
+                else {
+                    showToast('Akses Ditolak: Konsumen hanya dapat mengakses fitur Konsumen!', 'error');
+                    renderCustomerHome(container);
+                }
             } else if(activeRole === 'driver') {
                 if(tab === 'home') renderCustomerHome(container);
                 else if(tab === 'food') renderCustomerFood(container);
@@ -689,7 +703,10 @@
                 else if(tab === 'driver-orders') renderDriverOrders(container);
                 else if(tab === 'driver-map') renderDriverMap(container);
                 else if(tab === 'profile') renderProfile(container);
-                else renderDriverOrders(container);
+                else {
+                    showToast('Akses Ditolak: Driver hanya dapat mengakses fitur Konsumen dan Driver Ojol!', 'error');
+                    renderDriverOrders(container);
+                }
             } else if(activeRole === 'merchant') {
                 if(tab === 'home') renderCustomerHome(container);
                 else if(tab === 'food') renderCustomerFood(container);
@@ -698,13 +715,18 @@
                 else if(tab === 'merchant-menu') renderMerchantMenu(container);
                 else if(tab === 'merchant-orders') renderMerchantOrders(container);
                 else if(tab === 'profile') renderProfile(container);
-                else renderMerchantMenu(container);
+                else {
+                    showToast('Akses Ditolak: Toko hanya dapat mengakses fitur Konsumen dan Toko!', 'error');
+                    renderMerchantMenu(container);
+                }
             } else if(activeRole === 'admin') {
                 if(tab === 'admin-dash') renderAdminDash(container);
                 else if(tab === 'admin-users') renderAdminUsers(container);
                 else if(tab === 'admin-stores') renderAdminStoresList(container);
                 else if(tab === 'admin-drivers') renderAdminDriversList(container);
-                else renderCustomerHome(container);
+                else {
+                    renderCustomerHome(container);
+                }
             }
         }
 
@@ -718,9 +740,9 @@
                             </div>
                             <div>
                                 <div class="text-[11px] font-extrabold flex items-center gap-1 text-yellow-300">
-                                    <i class="fa-solid fa-location-dot"></i> Lengkong, Sukabumi[span_8](start_span)[span_8](end_span)[span_9](start_span)[span_9](end_span)
+                                    <i class="fa-solid fa-location-dot"></i> Lengkong Sukabumi
                                 </div>
-                                <p class="text-[10px] text-sky-100 font-medium">Kecamatan Lengkong[span_10](start_span)[span_10](end_span)[span_11](start_span)[span_11](end_span)</p>
+                                <p class="text-[10px] text-sky-100 font-medium">Kecamatan Lengkong</p>
                             </div>
                         </div>
                         <div class="w-12 h-12 bg-yellow-400 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-2xl animate-bounce">
@@ -734,7 +756,9 @@
                                 <i class="fa-solid fa-wallet"></i>
                             </div>
                             <div>
-                                <span class="text-[11px] text-sky-200 font-extrabold flex items-center gap-1.5">Saldo Anda</span>
+                                <span class="text-[11px] text-sky-200 font-extrabold flex items-center gap-1.5">
+                                    Saldo Anda
+                                </span>
                                 <h3 class="text-lg font-black text-white tracking-tight">Rp ${(currentUser.balance || 100000).toLocaleString()}</h3>
                             </div>
                         </div>
@@ -786,7 +810,7 @@
                     <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-2.5">
                         <div class="flex justify-between items-center">
                             <h3 class="font-extrabold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                                <i class="fa-solid fa-map-location-dot text-sky-600"></i> Peta Wilayah Lengkong[span_12](start_span)[span_12](end_span)[span_13](start_span)[span_13](end_span)
+                                <i class="fa-solid fa-map-location-dot text-sky-600"></i> Peta Wilayah Lengkong
                             </h3>
                             <span class="text-[10px] bg-sky-100 text-sky-800 px-2.5 py-1 rounded-full font-extrabold flex items-center gap-1">
                                 <i class="fa-solid fa-location-crosshairs text-sky-600"></i> GPS Aktif
@@ -797,7 +821,7 @@
 
                     <div class="space-y-3">
                         <div class="flex justify-between items-center">
-                            <h3 class="font-extrabold text-sm text-slate-900">Daftar List Toko Kuliner Lengkong[span_14](start_span)[span_14](end_span)[span_15](start_span)[span_15](end_span)</h3>
+                            <h3 class="font-extrabold text-sm text-slate-900">Daftar List Toko Kuliner Lengkong</h3>
                             <button onclick="checkAccessAndNavigate('food')" class="text-xs font-extrabold text-sky-600 hover:underline">Lihat Semua</button>
                         </div>
                         <div class="space-y-3">
@@ -836,7 +860,7 @@
                 <div class="p-4 space-y-4">
                     <div class="flex justify-between items-center">
                         <div>
-                            <h2 class="font-extrabold text-base text-slate-900">OLENG Food Lengkong[span_16](start_span)[span_16](end_span)[span_17](start_span)[span_17](end_span)</h2>
+                            <h2 class="font-extrabold text-base text-slate-900">OLENG Food Lengkong</h2>
                             <p class="text-[11px] text-slate-500 font-medium">Klik toko untuk melihat profil, menu, dan chat WhatsApp</p>
                         </div>
                         <button onclick="openCartModal()" class="relative bg-sky-600 text-white px-3.5 py-2 rounded-2xl text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-sky-600/30">
@@ -956,11 +980,11 @@
                             <input type="text" id="ojek-from" value="Alun-Alun Lengkong" class="w-full mt-1 p-2.5 border border-slate-200 rounded-2xl text-xs font-semibold">
                         </div>
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Lokasi Tujuan / Antar di Lengkong[span_18](start_span)[span_18](end_span)[span_19](start_span)[span_19](end_span)</label>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Lokasi Tujuan / Antar di Lengkong</label>
                             <input type="text" id="ojek-to" placeholder="Contoh: Kantor Desa Lengkong" class="w-full mt-1 p-2.5 border border-slate-200 rounded-2xl text-xs font-semibold">
                         </div>
                         <div class="bg-slate-50 p-3 rounded-2xl flex justify-between items-center border border-slate-100">
-                            <span class="text-[11px] text-slate-600 font-bold">Estimasi Tarif Wilayah Lengkong:[span_20](start_span)[span_20](end_span)[span_21](start_span)[span_21](end_span)</span>
+                            <span class="text-[11px] text-slate-600 font-bold">Estimasi Tarif Wilayah Lengkong:</span>
                             <span class="text-xs font-black text-sky-600">Rp 10.000 - Rp 15.000</span>
                         </div>
                         <button onclick="orderOjek()" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition text-xs">
@@ -1034,13 +1058,10 @@
             if(counter) counter.innerText = db.cart.length;
         }
 
-        let cartMapInstance = null;
-
         function openCartModal() {
             const modal = document.getElementById('modal-cart');
-            modal.classList.remove('hidden');
             updateCartModalUI();
-            setTimeout(initCartMap, 300);
+            modal.classList.remove('hidden');
         }
 
         function closeCartModal() {
@@ -1055,26 +1076,11 @@
             const distanceLabel = document.getElementById('shipping-distance-label');
             const driverSelect = document.getElementById('checkout-driver-select');
 
-            const destSelect = document.getElementById('delivery-destination');
-            const [destLat, destLng] = destSelect.value.split(',').map(Number);
-            const merchant = db.activeMerchant || db.merchants[0];
-
-            const onlineDrivers = db.drivers
-                .filter(d => d.status === 'Online')
-                .map(d => {
-                    const distToDest = calculateDistance(destLat, destLng, d.lat, d.lng);
-                    return { ...d, distanceToDest: distToDest };
-                })
-                .sort((a, b) => a.distanceToDest - b.distanceToDest);
-
-            driverSelect.innerHTML = onlineDrivers.length ? onlineDrivers.map(d => `
-                <option value="${d.name}">
-                    📍 ${d.name} (${d.distanceToDest} km dari lokasi Anda) - ${d.vehicle}
-                </option>
-            `).join('') : '<option value="Driver Umum">Driver Umum Lengkong[span_22](start_span)[span_22](end_span)[span_23](start_span)[span_23](end_span)</option>';
+            const onlineDrivers = db.drivers.filter(d => d.status === 'Online');
+            driverSelect.innerHTML = onlineDrivers.length ? onlineDrivers.map(d => `<option value="${d.name}">${d.name} (${d.vehicle} - Posisi: ${d.location})</option>`).join('') : '<option value="Driver Umum">Driver Umum Lengkong</option>';
 
             if(db.cart.length === 0) {
-                container.innerHTML = `<p class="text-center text-slate-400 py-3 text-xs font-medium">Keranjang belanja masih kosong.</p>`;
+                container.innerHTML = `<p class="text-center text-slate-400 py-4 text-xs font-medium">Keranjang belanja masih kosong.</p>`;
                 subtotalEl.innerText = 'Rp 0';
                 ongkirEl.innerText = 'Rp 0';
                 totalEl.innerText = 'Rp 0';
@@ -1082,7 +1088,7 @@
             }
 
             container.innerHTML = db.cart.map((item, idx) => `
-                <div class="flex justify-between items-center py-1.5 text-xs">
+                <div class="flex justify-between items-center py-2 text-xs">
                     <div>
                         <h4 class="font-bold text-slate-900">${item.name}</h4>
                         <p class="text-[11px] text-sky-600 font-extrabold">Rp ${item.price.toLocaleString()}</p>
@@ -1092,39 +1098,20 @@
             `).join('');
 
             const subtotal = db.cart.reduce((sum, item) => sum + item.price, 0);
-            const distanceKm = calculateDistance(merchant.lat, merchant.lng, destLat, destLng);
+            const destSelect = document.getElementById('delivery-destination');
+            const [latStr, lonStr] = destSelect.value.split(',');
+            const merchant = db.activeMerchant || db.merchants[0];
+            
+            const distanceKm = calculateDistance(merchant.lat, merchant.lng, parseFloat(latStr), parseFloat(lonStr));
             const calculatedOngkir = calculateShippingCost(distanceKm);
 
-            distanceLabel.innerText = `Ongkir (${distanceKm} km dari ${merchant.name})`;
+            distanceLabel.innerText = `Ongkir Akurat (${distanceKm} km dari Toko)`;
             subtotalEl.innerText = `Rp ${subtotal.toLocaleString()}`;
             ongkirEl.innerText = `Rp ${calculatedOngkir.toLocaleString()}`;
             totalEl.innerText = `Rp ${(subtotal + calculatedOngkir).toLocaleString()}`;
         }
 
-        function recalculateShipping() { 
-            updateCartModalUI(); 
-            initCartMap();
-        }
-
-        function initCartMap() {
-            const mapEl = document.getElementById('cart-map-preview');
-            if(!mapEl) return;
-            if(cartMapInstance) cartMapInstance.remove();
-
-            const destSelect = document.getElementById('delivery-destination');
-            const [lat, lng] = destSelect.value.split(',').map(Number);
-            const merchant = db.activeMerchant || db.merchants[0];
-
-            cartMapInstance = L.map('cart-map-preview', { zoomControl: false, attributionControl: false }).setView([lat, lng], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(cartMapInstance);
-
-            L.marker([merchant.lat, merchant.lng]).addTo(cartMapInstance)
-                .bindPopup(`<b>${merchant.name}</b> (Titik Toko)`);
-
-            L.marker([lat, lng]).addTo(cartMapInstance)
-                .bindPopup('<b>Lokasi Tujuan Anda</b>')
-                .openPopup();
-        }
+        function recalculateShipping() { updateCartModalUI(); }
 
         function removeFromCart(index) {
             db.cart.splice(index, 1);
@@ -1169,7 +1156,7 @@
         function orderOjek() {
             const to = document.getElementById('ojek-to').value;
             if(!to) {
-                showToast('Tolong masukkan lokasi tujuan di Lengkong!', 'error');[span_24](start_span)[span_24](end_span)[span_25](start_span)[span_25](end_span)
+                showToast('Tolong masukkan lokasi tujuan di Lengkong!', 'error');
                 return;
             }
             db.orders.unshift({
@@ -1199,7 +1186,7 @@
                         <button onclick="toggleDriverStatus()" class="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-xs hover:bg-emerald-600 transition">Ubah Status</button>
                     </div>
 
-                    <h3 class="font-extrabold text-sm text-slate-900">Daftar Orderan Masuk di Lengkong[span_26](start_span)[span_26](end_span)[span_27](start_span)[span_27](end_span)</h3>
+                    <h3 class="font-extrabold text-sm text-slate-900">Daftar Orderan Masuk di Lengkong</h3>
                     <div class="space-y-3">
                         ${db.orders.map((o, idx) => `
                             <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-2.5">
@@ -1229,10 +1216,10 @@
         function renderDriverMap(container) {
             container.innerHTML = `
                 <div class="p-4 space-y-4">
-                    <h2 class="font-extrabold text-base text-slate-900">Navigasi Peta Rute Lengkong[span_28](start_span)[span_28](end_span)[span_29](start_span)[span_29](end_span)</h2>
+                    <h2 class="font-extrabold text-base text-slate-900">Navigasi Peta Rute Lengkong</h2>
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
                         <div id="map" class="map-container shadow-inner"></div>
-                        <p class="text-[11px] text-slate-500 text-center font-medium">GPS Terkunci di Wilayah Kecamatan Lengkong, Sukabumi[span_30](start_span)[span_30](end_span)[span_31](start_span)[span_31](end_span).</p>
+                        <p class="text-[11px] text-slate-500 text-center font-medium">GPS Terkunci di Wilayah Kecamatan Lengkong, Sukabumi.</p>
                     </div>
                     <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
                         POWERED BY SIMADU
@@ -1303,7 +1290,7 @@
                 merchantId: merchantId,
                 name: name,
                 price: price,
-                desc: 'Menu lezat khas Lengkong Sukabumi[span_32](start_span)[span_32](end_span)[span_33](start_span)[span_33](end_span).',
+                desc: 'Menu lezat khas Lengkong Sukabumi.',
                 stock: stock,
                 image: 'https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name)
             });
@@ -1376,7 +1363,7 @@
 
                     <div class="bg-gradient-to-r from-sky-600 to-sky-800 text-white p-4 rounded-3xl shadow-md space-y-2">
                         <span class="text-[10px] text-sky-100 font-extrabold uppercase">Kontrol Cepat Sistem</span>
-                        <h3 class="font-bold text-sm">Semua Layanan Lengkong Sukabumi Berjalan Normal[span_34](start_span)[span_34](end_span)[span_35](start_span)[span_35](end_span)</h3>
+                        <h3 class="font-bold text-sm">Semua Layanan Lengkong Sukabumi Berjalan Normal</h3>
                         <p class="text-[11px] text-sky-100">Gunakan tab bawah untuk mengelola user, menambah/mengurangi saldo mitra & ojol, atau memantau lokasi akurat.</p>
                     </div>
                     <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
@@ -1495,7 +1482,7 @@
                 phone: phone,
                 role: role,
                 status: 'Aktif',
-                address: 'Kecamatan Lengkong, Sukabumi',[span_36](start_span)[span_36](end_span)[span_37](start_span)[span_37](end_span)
+                address: 'Kecamatan Lengkong, Sukabumi',
                 balance: 50000,
                 password: '123'
             });
@@ -1681,9 +1668,10 @@
             }).addTo(mapInstance);
 
             L.marker([-7.1234, 106.8456]).addTo(mapInstance)
-                .bindPopup('<b>Pusat Kecamatan Lengkong</b><br>Wilayah Operasional OLENG GO.')[span_38](start_span)[span_38](end_span)[span_39](start_span)[span_39](end_span)
+                .bindPopup('<b>Pusat Kecamatan Lengkong</b><br>Wilayah Operasional OLENG GO.')
                 .openPopup();
         }
     </script>
 </body>
 </html>
+```
