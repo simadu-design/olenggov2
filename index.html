@@ -522,7 +522,14 @@
         function updateDashboardShell() {
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             renderDashboardNavigation(activeRole);
-            renderDashboardContent(activeRole === 'customer' ? 'home' : activeRole === 'driver' ? 'driver-orders' : activeRole === 'merchant' ? 'merchant-menu' : 'admin-dash');
+            
+            // Set default landing tab based on role
+            let defaultTab = 'home';
+            if(activeRole === 'driver') defaultTab = 'driver-orders';
+            else if(activeRole === 'merchant') defaultTab = 'merchant-menu';
+            else if(activeRole === 'admin') defaultTab = 'admin-dash';
+            
+            renderDashboardContent(defaultTab);
         }
 
         function adminSwitchViewMode(mode) {
@@ -537,67 +544,128 @@
             updateDashboardShell();
         }
 
+        // --- STRICT ACCESS CONTROL (RBAC) WITH NOTIFICATION WARNINGS ---
+        function checkAccessAndNavigate(targetFeature) {
+            const effectiveRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+
+            // Define allowed features per role
+            // Customer: consumer features (home, food, ojek, driver-list, profile)
+            // Driver: consumer + driver features (driver-orders, driver-map, profile)
+            // Merchant: consumer + merchant features (merchant-menu, merchant-orders, profile)
+            // Admin: all features
+
+            let isAllowed = false;
+            let allowedRolesMsg = '';
+
+            const consumerFeatures = ['home', 'food', 'ojek', 'driver-list', 'profile'];
+            const driverFeatures = ['driver-orders', 'driver-map', 'profile'];
+            const merchantFeatures = ['merchant-menu', 'merchant-orders', 'profile'];
+            const adminFeatures = ['admin-dash', 'admin-users', 'admin-stores', 'admin-drivers'];
+
+            if (effectiveRole === 'admin') {
+                isAllowed = true;
+            } else if (effectiveRole === 'customer') {
+                if (consumerFeatures.includes(targetFeature)) isAllowed = true;
+                else allowedRolesMsg = 'Fitur ini hanya untuk Konsumen, Mitra Toko, atau Driver.';
+            } else if (effectiveRole === 'driver') {
+                if (consumerFeatures.includes(targetFeature) || driverFeatures.includes(targetFeature)) isAllowed = true;
+                else allowedRolesMsg = 'Driver hanya dapat mengakses fitur Konsumen dan Driver Ojol.';
+            } else if (effectiveRole === 'merchant') {
+                if (consumerFeatures.includes(targetFeature) || merchantFeatures.includes(targetFeature)) isAllowed = true;
+                else allowedRolesMsg = 'Mitra Toko hanya dapat mengakses fitur Konsumen dan Toko.';
+            }
+
+            // Check if attempting admin features without admin role
+            if (adminFeatures.includes(targetFeature) && effectiveRole !== 'admin') {
+                isAllowed = false;
+                allowedRolesMsg = 'AKSES DITOLAK! Fitur Panel Admin hanya dapat diakses oleh akun Admin SIMADU.';
+            }
+
+            if (!isAllowed) {
+                showToast(allowedRolesMsg || 'Maaf, Anda tidak memiliki hak akses ke fitur ini!', 'error');
+                return false;
+            }
+
+            renderDashboardContent(targetFeature);
+            return true;
+        }
+
         function renderDashboardNavigation(activeRole) {
             const nav = document.getElementById('bottom-nav');
             let html = '';
 
             if(activeRole === 'customer') {
                 html = `
-                    <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-home">
+                    <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-home">
                         <i class="fa-solid fa-house text-base"></i><span class="text-[10px] mt-1 font-semibold">Beranda</span>
                     </button>
-                    <button onclick="renderDashboardContent('food')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-food">
+                    <button onclick="checkAccessAndNavigate('food')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-food">
                         <i class="fa-solid fa-utensils text-base"></i><span class="text-[10px] mt-1 font-semibold">Pesanan</span>
                     </button>
-                    <button onclick="renderDashboardContent('ojek')" class="flex flex-col items-center py-1 px-3 text-white" id="nav-btn-ojek">
+                    <button onclick="checkAccessAndNavigate('ojek')" class="flex flex-col items-center py-1 px-3 text-white" id="nav-btn-ojek">
                         <div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-white">
                             <i class="fa-solid fa-motorcycle text-lg"></i>
                         </div>
                     </button>
-                    <button onclick="renderDashboardContent('driver-list')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-driver-list">
+                    <button onclick="checkAccessAndNavigate('driver-list')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-driver-list">
                         <i class="fa-solid fa-helmet-safety text-base"></i><span class="text-[10px] mt-1 font-semibold">Driver</span>
                     </button>
-                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
+                    <button onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
                         <i class="fa-solid fa-user text-base"></i><span class="text-[10px] mt-1 font-semibold">Akun</span>
                     </button>
                 `;
             } else if(activeRole === 'driver') {
                 html = `
-                    <button onclick="renderDashboardContent('driver-orders')" class="flex flex-col items-center py-1 px-4 text-sky-600 font-bold" id="nav-btn-driver-orders">
-                        <i class="fa-solid fa-list-check text-base"></i><span class="text-[10px] mt-1 font-semibold">Orderan</span>
+                    <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-home">
+                        <i class="fa-solid fa-house text-base"></i><span class="text-[9px] mt-1 font-semibold">Home</span>
                     </button>
-                    <button onclick="renderDashboardContent('driver-map')" class="flex flex-col items-center py-1 px-4 text-slate-400 hover:text-sky-600" id="nav-btn-driver-map">
-                        <i class="fa-solid fa-map-location-dot text-base"></i><span class="text-[10px] mt-1 font-semibold">Peta Rute</span>
+                    <button onclick="checkAccessAndNavigate('driver-orders')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-driver-orders">
+                        <i class="fa-solid fa-list-check text-base"></i><span class="text-[9px] mt-1 font-semibold">Orderan</span>
                     </button>
-                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-4 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
-                        <i class="fa-solid fa-wallet text-base"></i><span class="text-[10px] mt-1 font-semibold">Saldo & Akun</span>
+                    <button onclick="checkAccessAndNavigate('driver-map')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-driver-map">
+                        <i class="fa-solid fa-map-location-dot text-base"></i><span class="text-[9px] mt-1 font-semibold">Peta</span>
+                    </button>
+                    <button onclick="checkAccessAndNavigate('merchant-menu')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" onclick="checkAccessAndNavigate('merchant-menu')">
+                        <i class="fa-solid fa-burger text-base"></i><span class="text-[9px] mt-1 font-semibold">Toko</span>
+                    </button>
+                    <button onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
+                        <i class="fa-solid fa-wallet text-base"></i><span class="text-[9px] mt-1 font-semibold">Akun</span>
                     </button>
                 `;
             } else if(activeRole === 'merchant') {
                 html = `
-                    <button onclick="renderDashboardContent('merchant-menu')" class="flex flex-col items-center py-1 px-4 text-sky-600 font-bold" id="nav-btn-merchant-menu">
-                        <i class="fa-solid fa-burger text-base"></i><span class="text-[10px] mt-1 font-semibold">Kelola Menu</span>
+                    <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-home">
+                        <i class="fa-solid fa-house text-base"></i><span class="text-[9px] mt-1 font-semibold">Home</span>
                     </button>
-                    <button onclick="renderDashboardContent('merchant-orders')" class="flex flex-col items-center py-1 px-4 text-slate-400 hover:text-sky-600" id="nav-btn-merchant-orders">
-                        <i class="fa-solid fa-bell-concierge text-base"></i><span class="text-[10px] mt-1 font-semibold">Pesanan</span>
+                    <button onclick="checkAccessAndNavigate('merchant-menu')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-merchant-menu">
+                        <i class="fa-solid fa-burger text-base"></i><span class="text-[9px] mt-1 font-semibold">Menu Toko</span>
                     </button>
-                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-4 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
-                        <i class="fa-solid fa-store text-base"></i><span class="text-[10px] mt-1 font-semibold">Saldo & Toko</span>
+                    <button onclick="checkAccessAndNavigate('merchant-orders')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-merchant-orders">
+                        <i class="fa-solid fa-bell-concierge text-base"></i><span class="text-[9px] mt-1 font-semibold">Order Toko</span>
+                    </button>
+                    <button onclick="checkAccessAndNavigate('driver-orders')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600">
+                        <i class="fa-solid fa-motorcycle text-base"></i><span class="text-[9px] mt-1 font-semibold">Driver</span>
+                    </button>
+                    <button onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
+                        <i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1 font-semibold">Akun</span>
                     </button>
                 `;
             } else if(activeRole === 'admin') {
                 html = `
-                    <button onclick="renderDashboardContent('admin-dash')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-admin-dash">
-                        <i class="fa-solid fa-chart-pie text-base"></i><span class="text-[9px] mt-1 font-semibold">Monitoring</span>
+                    <button onclick="checkAccessAndNavigate('admin-dash')" class="flex flex-col items-center py-1 px-2 text-sky-600 font-bold" id="nav-btn-admin-dash">
+                        <i class="fa-solid fa-chart-pie text-base"></i><span class="text-[8px] mt-1 font-semibold">Monitor</span>
                     </button>
-                    <button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-admin-users">
-                        <i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] mt-1 font-semibold">Kelola User</span>
+                    <button onclick="checkAccessAndNavigate('admin-users')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600" id="nav-btn-admin-users">
+                        <i class="fa-solid fa-users-gear text-base"></i><span class="text-[8px] mt-1 font-semibold">User</span>
                     </button>
-                    <button onclick="renderDashboardContent('admin-stores')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-admin-stores">
-                        <i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1 font-semibold">List Toko</span>
+                    <button onclick="checkAccessAndNavigate('admin-stores')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600" id="nav-btn-admin-stores">
+                        <i class="fa-solid fa-store text-base"></i><span class="text-[8px] mt-1 font-semibold">Toko</span>
                     </button>
-                    <button onclick="renderDashboardContent('admin-drivers')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-admin-drivers">
-                        <i class="fa-solid fa-motorcycle text-base"></i><span class="text-[9px] mt-1 font-semibold">List Ojek</span>
+                    <button onclick="checkAccessAndNavigate('admin-drivers')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600" id="nav-btn-admin-drivers">
+                        <i class="fa-solid fa-motorcycle text-base"></i><span class="text-[8px] mt-1 font-semibold">Ojek</span>
+                    </button>
+                    <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600">
+                        <i class="fa-solid fa-house text-base"></i><span class="text-[8px] mt-1 font-semibold">Aplikasi</span>
                     </button>
                 `;
             }
@@ -623,19 +691,42 @@
                 else if(tab === 'ojek') renderCustomerOjek(container);
                 else if(tab === 'driver-list') renderCustomerDriverList(container);
                 else if(tab === 'profile') renderProfile(container);
+                else {
+                    showToast('Akses Ditolak: Konsumen hanya dapat mengakses fitur Konsumen!', 'error');
+                    renderCustomerHome(container);
+                }
             } else if(activeRole === 'driver') {
-                if(tab === 'driver-orders') renderDriverOrders(container);
+                if(tab === 'home') renderCustomerHome(container);
+                else if(tab === 'food') renderCustomerFood(container);
+                else if(tab === 'ojek') renderCustomerOjek(container);
+                else if(tab === 'driver-list') renderCustomerDriverList(container);
+                else if(tab === 'driver-orders') renderDriverOrders(container);
                 else if(tab === 'driver-map') renderDriverMap(container);
                 else if(tab === 'profile') renderProfile(container);
+                else {
+                    showToast('Akses Ditolak: Driver hanya dapat mengakses fitur Konsumen dan Driver Ojol!', 'error');
+                    renderDriverOrders(container);
+                }
             } else if(activeRole === 'merchant') {
-                if(tab === 'merchant-menu') renderMerchantMenu(container);
+                if(tab === 'home') renderCustomerHome(container);
+                else if(tab === 'food') renderCustomerFood(container);
+                else if(tab === 'ojek') renderCustomerOjek(container);
+                else if(tab === 'driver-list') renderCustomerDriverList(container);
+                else if(tab === 'merchant-menu') renderMerchantMenu(container);
                 else if(tab === 'merchant-orders') renderMerchantOrders(container);
                 else if(tab === 'profile') renderProfile(container);
+                else {
+                    showToast('Akses Ditolak: Toko hanya dapat mengakses fitur Konsumen dan Toko!', 'error');
+                    renderMerchantMenu(container);
+                }
             } else if(activeRole === 'admin') {
                 if(tab === 'admin-dash') renderAdminDash(container);
                 else if(tab === 'admin-users') renderAdminUsers(container);
                 else if(tab === 'admin-stores') renderAdminStoresList(container);
                 else if(tab === 'admin-drivers') renderAdminDriversList(container);
+                else {
+                    renderCustomerHome(container);
+                }
             }
         }
 
@@ -686,10 +777,10 @@
                     </div>
 
                     <div class="bg-white/80 backdrop-blur-md p-1.5 rounded-2xl shadow-xs flex justify-between border border-white">
-                        <button onclick="renderDashboardContent('ojek')" class="flex-1 py-2.5 bg-yellow-400 text-slate-900 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md">
+                        <button onclick="checkAccessAndNavigate('ojek')" class="flex-1 py-2.5 bg-yellow-400 text-slate-900 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md">
                             <i class="fa-solid fa-motorcycle text-sm"></i> Ojol
                         </button>
-                        <button onclick="renderDashboardContent('food')" class="flex-1 py-2.5 text-slate-700 hover:bg-white rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition">
+                        <button onclick="checkAccessAndNavigate('food')" class="flex-1 py-2.5 text-slate-700 hover:bg-white rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition">
                             <i class="fa-solid fa-utensils text-sm text-sky-600"></i> Food
                         </button>
                         <button onclick="openNotificationModal()" class="flex-1 py-2.5 text-slate-700 hover:bg-white rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition">
@@ -698,11 +789,11 @@
                     </div>
 
                     <div class="grid grid-cols-4 gap-2.5">
-                        <button onclick="renderDashboardContent('ojek')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
+                        <button onclick="checkAccessAndNavigate('ojek')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
                             <div class="w-12 h-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-motorcycle"></i></div>
                             <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Pesan Ojek</span>
                         </button>
-                        <button onclick="renderDashboardContent('food')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
+                        <button onclick="checkAccessAndNavigate('food')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition">
                             <div class="w-12 h-12 bg-yellow-100 text-yellow-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-utensils"></i></div>
                             <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Pesan Makanan</span>
                         </button>
@@ -731,7 +822,7 @@
                     <div class="space-y-3">
                         <div class="flex justify-between items-center">
                             <h3 class="font-extrabold text-sm text-slate-900">Daftar List Toko Kuliner Lengkong</h3>
-                            <button onclick="renderDashboardContent('food')" class="text-xs font-extrabold text-sky-600 hover:underline">Lihat Semua</button>
+                            <button onclick="checkAccessAndNavigate('food')" class="text-xs font-extrabold text-sky-600 hover:underline">Lihat Semua</button>
                         </div>
                         <div class="space-y-3">
                             ${db.merchants.map(m => {
@@ -1450,7 +1541,7 @@
 
         function renderProfile(container) {
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            let saldoSection = `
+            let saldoSection = (activeRole === 'driver' || activeRole === 'merchant') ? `
                 <div class="bg-gradient-to-r from-sky-600 to-sky-700 text-white p-4 rounded-3xl shadow-md space-y-2">
                     <span class="text-[10px] text-sky-100 uppercase tracking-wider font-extrabold">Dompet Saldo OLENG</span>
                     <h2 class="text-2xl font-black">Rp ${(currentUser.balance || 100000).toLocaleString()}</h2>
@@ -1458,7 +1549,7 @@
                         <i class="fa-solid fa-wallet text-sm"></i> Top-Up Saldo Instan
                     </button>
                 </div>
-            `;
+            ` : '';
 
             container.innerHTML = `
                 <div class="p-4 space-y-4">
