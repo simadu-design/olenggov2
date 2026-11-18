@@ -577,7 +577,7 @@
             currentUser = newUser;
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
 
-            showToast('Akun berhasil didaftarkan!', 'success');
+            showToast('Perubahan & akun baru berhasil disimpan!', 'success');
             enterDashboard();
         }
 
@@ -1280,7 +1280,7 @@
             saveDB();
             closeCartModal();
             closeMerchantDetail();
-            showToast(`Pesanan berhasil dibuat! Driver ${selectedDriverName} segera menuju toko.`, 'success');
+            showToast(`Perubahan & Pesanan berhasil disimpan! Driver ${selectedDriverName} segera menuju toko.`, 'success');
             renderDashboardContent('home');
         }
 
@@ -1301,7 +1301,7 @@
                 status: 'Dalam Perjalanan'
             });
             saveDB();
-            showToast(`Ojek berhasil dipesan dengan driver ${selectedDriverName}!`, 'success');
+            showToast('Perubahan & Pesanan ojek berhasil disimpan!', 'success');
             renderDashboardContent('home');
         }
 
@@ -1331,7 +1331,6 @@
                                     ${o.address ? `<p class="text-[11px] text-slate-600 font-medium mt-1"><i class="fa-solid fa-location-dot"></i> Alamat: ${o.address}</p>` : ''}
                                 </div>
                                 
-                                <!-- Peta Khusus Setiap Pesanan dengan Ikon Toko & Ojol Real-Time -->
                                 <div class="space-y-1">
                                     <span class="text-[10px] font-extrabold text-slate-500 uppercase">Peta Pelacakan Pesanan:</span>
                                     <div id="order-map-${idx}" class="map-container shadow-inner border border-slate-200" style="height: 160px;"></div>
@@ -1431,19 +1430,19 @@
             const d = db.drivers.find(x => x.name === currentUser.name) || db.drivers[0];
             d.status = d.status === 'Online' ? 'Offline' : 'Online';
             saveDB();
-            showToast(`Status driver diubah menjadi ${d.status}`, 'success');
+            showToast(`Perubahan disimpan: Status driver diubah menjadi ${d.status}`, 'success');
             renderDashboardContent(currentSubTab);
         }
 
         function updateOrderStatus(index, status) {
             db.orders[index].status = status;
             saveDB();
-            showToast(`Status order diubah: ${status}`, 'success');
+            showToast(`Perubahan disimpan: Status order diubah menjadi ${status}`, 'success');
             renderDashboardContent(currentSubTab);
         }
 
         function renderMerchantMenu(container) {
-            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName) || db.merchants[0];
+            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName || m.name === currentUser.name) || db.merchants[0];
             const merchantFoods = db.foods.filter(f => f.merchantId === merchant.id);
 
             container.innerHTML = `
@@ -1478,14 +1477,22 @@
         }
 
         function renderMerchantProfileEdit(container) {
-            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName) || db.merchants[0];
+            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName || m.name === currentUser.name) || db.merchants[0];
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-20">
-                    <h2 class="font-extrabold text-base text-slate-900">Kelola Profil & Foto Toko</h2>
+                    <h2 class="font-extrabold text-base text-slate-900">Kelola Nama & Profil Toko</h2>
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nama Toko</label>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nama Toko / Warung</label>
                             <input type="text" id="edit-store-name" value="${merchant.name}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Kategori Toko</label>
+                            <input type="text" id="edit-store-category" value="${merchant.category}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Jam Operasional</label>
+                            <input type="text" id="edit-store-hours" value="${merchant.operationalHours}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">Foto Profil Toko (Upload Galeri)</label>
@@ -1536,16 +1543,28 @@
         function saveMerchantProfile(merchantId) {
             const merchant = db.merchants.find(m => m.id === merchantId);
             if(merchant) {
-                merchant.name = document.getElementById('edit-store-name').value;
+                const newName = document.getElementById('edit-store-name').value;
+                merchant.name = newName;
+                merchant.category = document.getElementById('edit-store-category').value;
+                merchant.operationalHours = document.getElementById('edit-store-hours').value;
                 if(tempStoreImage) merchant.image = tempStoreImage;
                 if(tempStoreBanner) merchant.banner = tempStoreBanner;
+
+                // Update juga pada data user jika sinkron
+                const userObj = db.users.find(u => u.phone === currentUser.phone);
+                if(userObj) {
+                    userObj.shopName = newName;
+                    userObj.name = newName;
+                }
+                currentUser.name = newName;
+                localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
+
                 saveDB();
-                showToast('Profil toko berhasil diperbarui!', 'success');
+                showToast('Perubahan & Nama Toko berhasil disimpan!', 'success');
                 renderDashboardContent('merchant-menu');
             }
         }
 
-        // --- TAMBAH MENU DENGAN UPLOAD FOTO MAKANAN DARI GALERI ---
         let tempFoodImage = null;
 
         function openAddMenuModal(merchantId) {
@@ -1621,19 +1640,19 @@
             });
             saveDB();
             document.getElementById('modal-add-menu').remove();
-            showToast('Menu makanan berhasil ditambahkan!', 'success');
+            showToast('Perubahan Disimpan: Menu makanan baru berhasil ditambahkan!', 'success');
             renderDashboardContent('merchant-menu');
         }
 
         function deleteFood(foodId) {
             db.foods = db.foods.filter(f => f.id !== foodId);
             saveDB();
-            showToast('Menu dihapus', 'info');
+            showToast('Perubahan Disimpan: Menu dihapus.', 'info');
             renderDashboardContent('merchant-menu');
         }
 
         function renderMerchantOrders(container) {
-            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName) || db.merchants[0];
+            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName || m.name === currentUser.name) || db.merchants[0];
             const merchantOrders = db.orders.filter(o => o.merchant === merchant.name || o.type === 'food');
 
             container.innerHTML = `
@@ -1817,7 +1836,7 @@
                 photo: 'https://placehold.co/150x150/0284c7/ffffff?text=' + name.charAt(0)
             });
             saveDB();
-            showToast('User baru berhasil ditambahkan!', 'success');
+            showToast('Perubahan Disimpan: User baru berhasil ditambahkan!', 'success');
             renderDashboardContent('admin-users');
         }
 
@@ -1828,7 +1847,7 @@
             if(!newName) return;
             user.name = newName;
             saveDB();
-            showToast('Data user diperbarui', 'success');
+            showToast('Perubahan Disimpan: Data user diperbarui.', 'success');
             renderDashboardContent('admin-users');
         }
 
@@ -1837,14 +1856,14 @@
             if(!user) return;
             user.password = '123';
             saveDB();
-            showToast(`Password untuk ${user.name} berhasil direset menjadi '123'`, 'success');
+            showToast(`Perubahan Disimpan: Password untuk ${user.name} direset menjadi '123'`, 'success');
         }
 
         function adminDeleteUser(userId) {
             if(!confirm('Yakin ingin menghapus pengguna ini?')) return;
             db.users = db.users.filter(u => u.id !== userId);
             saveDB();
-            showToast('User dihapus', 'info');
+            showToast('Perubahan Disimpan: User dihapus.', 'info');
             renderDashboardContent('admin-users');
         }
 
@@ -1865,12 +1884,53 @@
             }
 
             saveDB();
-            showToast(`Saldo ${user.name} berhasil diperbarui! Mutasi: Rp ${amount.toLocaleString()}`, 'success');
+            showToast(`Perubahan Disimpan: Saldo ${user.name} diperbarui! Mutasi: Rp ${amount.toLocaleString()}`, 'success');
             renderDashboardContent('admin-users');
         }
 
         function renderProfile(container) {
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            
+            // Informasi Khusus Berdasarkan Role Masing-Masing User
+            let specificRoleInfoHTML = '';
+            if (activeRole === 'driver') {
+                const driverData = db.drivers.find(d => d.phone === currentUser.phone || d.name === currentUser.name) || {};
+                specificRoleInfoHTML = `
+                    <div class="bg-sky-50 p-4 rounded-3xl border border-sky-200 space-y-2 text-xs">
+                        <h4 class="font-extrabold text-sky-900 uppercase"><i class="fa-solid fa-helmet-safety text-sky-600 mr-1"></i> Informasi Profil Driver</h4>
+                        <p class="text-slate-700"><b>No. KTP:</b> ${currentUser.ktp || driverData.ktp || '3202111222330001'}</p>
+                        <p class="text-slate-700"><b>Jenis Kendaraan:</b> ${currentUser.vehicle || driverData.vehicle || 'Honda Beat Lengkong'}</p>
+                        <p class="text-slate-700"><b>Status Ojol:</b> <span class="text-emerald-600 font-bold">${driverData.status || 'Online'}</span></p>
+                    </div>
+                `;
+            } else if (activeRole === 'merchant') {
+                const merchantData = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName || m.name === currentUser.name) || {};
+                specificRoleInfoHTML = `
+                    <div class="bg-yellow-50 p-4 rounded-3xl border border-yellow-200 space-y-2 text-xs">
+                        <h4 class="font-extrabold text-yellow-900 uppercase"><i class="fa-solid fa-store text-yellow-600 mr-1"></i> Informasi Profil Toko / Warung</h4>
+                        <p class="text-slate-700"><b>Nama Toko:</b> ${currentUser.shopName || merchantData.name || currentUser.name}</p>
+                        <p class="text-slate-700"><b>Kategori:</b> ${merchantData.category || 'Kuliner Umum'}</p>
+                        <p class="text-slate-700"><b>Jam Buka:</b> ${merchantData.operationalHours || '08:00 - 21:00 WIB'}</p>
+                        <p class="text-slate-700"><b>Alamat Toko:</b> ${merchantData.address || currentUser.address || 'Kecamatan Lengkong, Sukabumi'}</p>
+                    </div>
+                `;
+            } else if (activeRole === 'customer') {
+                specificRoleInfoHTML = `
+                    <div class="bg-blue-50 p-4 rounded-3xl border border-blue-200 space-y-2 text-xs">
+                        <h4 class="font-extrabold text-blue-900 uppercase"><i class="fa-solid fa-user-check text-blue-600 mr-1"></i> Informasi Akun Konsumen</h4>
+                        <p class="text-slate-700"><b>Alamat Utama:</b> ${currentUser.address || 'Kecamatan Lengkong, Sukabumi'}</p>
+                        <p class="text-slate-700"><b>Status Akun:</b> <span class="text-emerald-600 font-bold">Aktif & Terverifikasi SIMADU</span></p>
+                    </div>
+                `;
+            } else {
+                specificRoleInfoHTML = `
+                    <div class="bg-slate-100 p-4 rounded-3xl border border-slate-200 space-y-2 text-xs">
+                        <h4 class="font-extrabold text-slate-900 uppercase"><i class="fa-solid fa-shield-halved text-slate-700 mr-1"></i> Informasi Admin Master</h4>
+                        <p class="text-slate-700"><b>Hak Akses:</b> Kontrol Penuh Seluruh Sistem OLENG GO</p>
+                    </div>
+                `;
+            }
+
             let saldoSection = (activeRole === 'driver' || activeRole === 'merchant') ? `
                 <div class="bg-gradient-to-r from-sky-600 to-sky-700 text-white p-4 rounded-3xl shadow-md space-y-2">
                     <span class="text-[10px] text-sky-100 uppercase tracking-wider font-extrabold">Dompet Saldo OLENG</span>
@@ -1882,7 +1942,7 @@
             ` : '';
 
             container.innerHTML = `
-                <div class="p-4 space-y-4">
+                <div class="p-4 space-y-4 pb-20">
                     <div class="bg-white p-5 rounded-3xl shadow-xs border border-slate-100 text-center space-y-3">
                         <img id="profile-avatar-display" src="${currentUser.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=User'}" class="w-24 h-24 rounded-3xl object-cover mx-auto shadow-md border-2 border-sky-500">
                         <div>
@@ -1891,6 +1951,8 @@
                             <p class="text-xs text-slate-500 font-medium"><i class="fa-solid fa-phone"></i> ${currentUser.phone}</p>
                         </div>
                     </div>
+
+                    ${specificRoleInfoHTML}
 
                     ${saldoSection}
 
@@ -1955,7 +2017,7 @@
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
 
             saveDB();
-            showToast('Informasi profil, foto & kata sandi berhasil diperbarui!', 'success');
+            showToast('Perubahan Disimpan: Informasi profil & kata sandi berhasil diperbarui!', 'success');
             renderDashboardContent('profile');
         }
 
@@ -2007,7 +2069,6 @@
 
         function renderChatContacts() {
             const container = document.getElementById('chat-contact-selector');
-            // Ambil daftar kontak unik (Admin, Toko, Driver, atau Customer lain)
             const contacts = ['Admin SIMADU', ...db.merchants.map(m => m.name), ...db.drivers.map(d => d.name)];
             
             container.innerHTML = contacts.map(name => {
@@ -2030,7 +2091,6 @@
             const container = document.getElementById('chat-messages');
             document.getElementById('chat-title').innerText = `Chat dengan: ${activeChatTarget}`;
             
-            // Filter pesan antara user saat ini dan activeChatTarget
             const thread = db.chats.filter(c => 
                 (c.from === currentUser.name && c.to === activeChatTarget) || 
                 (c.from === activeChatTarget && c.to === currentUser.name)
@@ -2072,7 +2132,6 @@
             input.value = '';
             renderPersonalChatMessages();
 
-            // Simulasi balasan otomatis dari penerima setelah 1 detik
             setTimeout(() => {
                 db.chats.push({
                     id: Date.now() + 1,
