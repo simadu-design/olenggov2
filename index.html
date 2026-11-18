@@ -6,28 +6,9 @@
     <title>OLENG GO (Powered by SIMADU) - Lengkong Sukabumi</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        oleng: {
-                            blue: '#0284c7',
-                            darkblue: '#0369a1',
-                            yellow: '#facc15',
-                            dark: '#0f172a'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- Google Fonts Plus Jakarta Sans -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Leaflet CSS for Map -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0284c7; }
         .map-container { height: 220px; width: 100%; border-radius: 1.25rem; z-index: 1 !important; position: relative; }
@@ -38,13 +19,11 @@
 </head>
 <body class="h-full flex flex-col items-center justify-center">
 
-    <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-    <!-- MAIN APP CONTAINER -->
     <div id="app" class="flex-1 flex flex-col h-full max-w-md mx-auto w-full bg-slate-50 shadow-2xl relative overflow-hidden">
         
-        <!-- ================= AUTH VIEW ================= -->
+        <!-- AUTH VIEW -->
         <div id="view-auth" class="flex-1 flex flex-col justify-between p-6 bg-gradient-to-br from-sky-500 via-sky-700 to-sky-900 text-white overflow-y-auto z-30">
             <div class="my-auto text-center space-y-6">
                 <div class="flex items-center justify-between px-2">
@@ -54,192 +33,97 @@
                         </div>
                         <div class="text-left">
                             <h1 class="text-2xl font-black italic tracking-wider text-yellow-300 drop-shadow">OLENG GO</h1>
-                            <p class="text-[10px] text-sky-100 font-bold flex items-center gap-1">
-                                <i class="fa-solid fa-location-dot text-yellow-400"></i> Lengkong, Sukabumi
-                            </p>
+                            <p class="text-[10px] text-sky-100 font-bold"><i class="fa-solid fa-location-dot text-yellow-400"></i> Lengkong, Sukabumi</p>
                         </div>
                     </div>
-                    <div class="w-14 h-14 bg-yellow-400 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-2xl">
-                        🐝
-                    </div>
+                    <div class="w-14 h-14 bg-yellow-400 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-2xl">🐝</div>
                 </div>
 
-                <!-- Auth Card -->
                 <div class="bg-white text-slate-800 p-6 rounded-3xl shadow-2xl text-left space-y-4">
                     <div class="flex border-b border-slate-100 pb-2 mb-4">
                         <button onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1 text-sm cursor-pointer">Masuk</button>
-                        <button onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1 text-sm cursor-pointer">Daftar Akun</button>
+                        <button onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1 text-sm cursor-pointer">Daftar</button>
                     </div>
 
-                    <!-- Login Form -->
                     <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3">
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">No. WhatsApp / Email</label>
-                            <input type="text" id="login-identifier" required class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm font-medium" placeholder="0856xxxxxxxx">
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">No. WhatsApp / Email</label>
+                            <input type="text" id="login-identifier" required class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl text-sm" placeholder="0856xxxxxxxx">
                         </div>
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Kata Sandi</label>
-                            <input type="password" id="login-password" required class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm font-medium" placeholder="••••••••">
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Kata Sandi</label>
+                            <input type="password" id="login-password" required class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl text-sm" placeholder="••••••••">
                         </div>
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Peran (Role Akses)</label>
-                            <select id="login-role" class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-sky-500 focus:outline-none text-sm bg-white font-bold text-sky-700">
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Peran (Role Akses)</label>
+                            <select id="login-role" class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl text-sm bg-white font-bold text-sky-700">
                                 <option value="customer">Customer (Konsumen)</option>
                                 <option value="driver">Driver (Ojol / Kurir)</option>
                                 <option value="merchant">Merchant (Mitra Toko)</option>
                                 <option value="admin">Admin SIMADU (Full Panel)</option>
                             </select>
                         </div>
-                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition mt-2 text-sm cursor-pointer">Masuk Aplikasi</button>
+                        <button type="submit" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-lg transition text-sm cursor-pointer">Masuk Aplikasi</button>
                     </form>
 
-                    <!-- Register Form -->
                     <form id="form-register" onsubmit="handleRegister(event)" class="space-y-3 hidden">
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nama Lengkap</label>
-                            <input type="text" id="reg-name" required class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="Nama Anda">
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nama Lengkap</label>
+                            <input type="text" id="reg-name" required class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm" placeholder="Nama Anda">
                         </div>
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Nomor WhatsApp</label>
-                            <input type="text" id="reg-phone" required class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="08xxxxxxxxxx">
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nomor WhatsApp</label>
+                            <input type="text" id="reg-phone" required class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm" placeholder="08xxxxxxxxxx">
                         </div>
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Daftar Sebagai</label>
-                            <select id="reg-role" onchange="onRegisterRoleChange(this.value)" class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm bg-white font-bold">
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Daftar Sebagai</label>
+                            <select id="reg-role" class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm bg-white font-bold">
                                 <option value="customer">Customer (Konsumen)</option>
                                 <option value="driver">Driver (Ojol / Kurir)</option>
                                 <option value="merchant">Merchant (Mitra Toko)</option>
                             </select>
                         </div>
-                        
-                        <div id="reg-driver-fields" class="hidden space-y-2 pt-1 border-t border-slate-100">
-                            <input type="text" id="reg-driver-ktp" placeholder="Nomor KTP (16 Digit)" class="w-full px-3.5 py-2 border border-slate-200 rounded-2xl text-sm">
-                            <input type="text" id="reg-driver-plat" placeholder="Nomor Pelat Motor (Cth: F 1234 XX)" class="w-full px-3.5 py-2 border border-slate-200 rounded-2xl text-sm">
-                            <input type="text" id="reg-driver-vehicle" placeholder="Jenis Motor (Cth: Honda Beat)" class="w-full px-3.5 py-2 border border-slate-200 rounded-2xl text-sm">
-                        </div>
-
-                        <div id="reg-merchant-fields" class="hidden space-y-2 pt-1 border-t border-slate-100">
-                            <input type="text" id="reg-shopname" placeholder="Nama Toko / Warung" class="w-full px-3.5 py-2 border border-slate-200 rounded-2xl text-sm">
-                            <input type="text" id="reg-merchant-owner" placeholder="Nama Pemilik Toko" class="w-full px-3.5 py-2 border border-slate-200 rounded-2xl text-sm">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-500 block mb-1">Titik Lokasi Toko di Peta Lengkong</label>
-                                <div id="register-store-map" style="height: 140px; border-radius: 12px;" class="border border-slate-200"></div>
-                                <input type="hidden" id="reg-merchant-lat" value="-7.1234">
-                                <input type="hidden" id="reg-merchant-lng" value="106.8456">
-                            </div>
-                        </div>
-
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Kata Sandi</label>
-                            <input type="password" id="reg-password" required class="w-full mt-1 px-3.5 py-2 border border-slate-200 rounded-2xl text-sm" placeholder="••••••••">
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Kata Sandi</label>
+                            <input type="password" id="reg-password" required class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm" placeholder="••••••••">
                         </div>
-                        <button type="submit" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold rounded-2xl shadow-lg transition mt-2 text-sm cursor-pointer">Daftar Sekarang</button>
+                        <button type="submit" class="w-full py-3.5 bg-yellow-400 text-slate-900 font-extrabold rounded-2xl shadow-lg cursor-pointer text-sm">Daftar Sekarang</button>
                     </form>
                 </div>
             </div>
-            <div class="text-center text-[10px] text-sky-200 mt-4 font-black uppercase tracking-widest">
-                POWERED BY SIMADU
-            </div>
+            <div class="text-center text-[10px] text-sky-200 mt-4 font-black uppercase tracking-widest">POWERED BY SIMADU</div>
         </div>
 
-        <!-- ================= MAIN APP SHELL ================= -->
+        <!-- MAIN APP SHELL -->
         <div id="view-dashboard" class="flex-1 flex flex-col hidden bg-slate-50 relative overflow-hidden">
             
             <div id="admin-switcher-bar" class="bg-slate-900 text-white px-3 py-2 flex items-center justify-between text-xs z-30 shadow-inner hidden">
                 <span class="font-bold text-yellow-400 text-[10px] uppercase"><i class="fa-solid fa-shield-halved"></i> ADMIN MODE:</span>
                 <div class="flex gap-1.5 overflow-x-auto hide-scrollbar">
-                    <button onclick="adminSwitchViewMode('customer')" id="mode-btn-customer" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold transition cursor-pointer">Konsumen</button>
-                    <button onclick="adminSwitchViewMode('driver')" id="mode-btn-driver" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold transition cursor-pointer">Driver</button>
-                    <button onclick="adminSwitchViewMode('merchant')" id="mode-btn-merchant" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold transition cursor-pointer">Toko</button>
-                    <button onclick="adminSwitchViewMode('admin')" id="mode-btn-admin" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 rounded-lg text-[10px] font-extrabold transition cursor-pointer">Master Control</button>
+                    <button onclick="adminSwitchViewMode('customer')" id="mode-btn-customer" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold cursor-pointer">Konsumen</button>
+                    <button onclick="adminSwitchViewMode('driver')" id="mode-btn-driver" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold cursor-pointer">Driver</button>
+                    <button onclick="adminSwitchViewMode('merchant')" id="mode-btn-merchant" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 rounded-lg text-[10px] font-extrabold cursor-pointer">Toko</button>
+                    <button onclick="adminSwitchViewMode('admin')" id="mode-btn-admin" class="px-2.5 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-extrabold cursor-pointer">Master Control</button>
                 </div>
             </div>
 
-            <main id="main-content" class="flex-1 overflow-y-auto pb-28 hide-scrollbar">
-                <!-- Dynamically rendered -->
-            </main>
+            <main id="main-content" class="flex-1 overflow-y-auto pb-28 hide-scrollbar"></main>
 
-            <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center z-35 shadow-2xl">
-                <!-- Dynamically rendered -->
-            </nav>
+            <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center z-35 shadow-2xl"></nav>
         </div>
 
-        <!-- ================= MODALS & SUB-VIEWS ================= -->
+        <!-- MODALS -->
         <div id="view-merchant-detail" class="absolute inset-0 bg-slate-50 z-40 hidden flex flex-col overflow-y-auto"></div>
-
-        <!-- Cart & Checkout Modal -->
-        <div id="modal-cart" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
-            <div class="bg-white rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
-                <div class="flex justify-between items-center border-b pb-3">
-                    <h3 class="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                        <i class="fa-solid fa-map-location-dot text-sky-600"></i> Checkout & Peta Presisi
-                    </h3>
-                    <button onclick="closeCartModal()" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
-                </div>
-                <div class="space-y-2">
-                    <div class="flex justify-between items-center">
-                        <label class="text-[11px] font-extrabold text-slate-700 uppercase">Titik Pengantaran</label>
-                        <button onclick="useCurrentGPSLocation()" class="px-2.5 py-1 bg-sky-100 text-sky-700 rounded-lg text-[10px] font-extrabold flex items-center gap-1 cursor-pointer">
-                            <i class="fa-solid fa-crosshairs"></i> Gunakan GPS Saat Ini
-                        </button>
-                    </div>
-                    <div id="checkout-map" class="map-container shadow-inner border border-slate-200"></div>
-                </div>
-                <div class="bg-yellow-50/60 p-3.5 rounded-2xl border border-yellow-200 space-y-2">
-                    <label class="text-[11px] font-extrabold text-yellow-900 uppercase block"><i class="fa-solid fa-motorcycle text-yellow-600 mr-1"></i> Pilih Driver Terdekat</label>
-                    <div id="checkout-driver-list-container" class="space-y-2 max-h-32 overflow-y-auto pr-1"></div>
-                </div>
-                <div id="cart-items-container" class="space-y-3 divide-y divide-slate-100 max-h-36 overflow-y-auto pr-1"></div>
-                <div class="bg-slate-50 p-4 rounded-2xl space-y-2 border border-slate-200">
-                    <div class="flex justify-between text-xs font-medium">
-                        <span class="text-slate-600">Subtotal Makanan</span>
-                        <span id="cart-subtotal" class="font-bold text-slate-900">Rp 0</span>
-                    </div>
-                    <div class="flex justify-between text-xs font-medium">
-                        <span class="text-slate-600" id="shipping-distance-label">Ongkir Presisi</span>
-                        <span id="cart-ongkir" class="font-bold text-sky-600">Rp 5.000</span>
-                    </div>
-                    <div class="flex justify-between text-sm border-t border-slate-200 pt-2 font-black text-slate-900">
-                        <span>Total Pembayaran</span>
-                        <span id="cart-total" class="text-sky-600 text-base">Rp 0</span>
-                    </div>
-                </div>
-                <button onclick="submitOrder()" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-lg cursor-pointer text-sm">
-                    Bayar & Buat Pesanan Sekarang
-                </button>
-            </div>
-        </div>
-
-        <!-- Top-Up Modal -->
-        <div id="modal-topup" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
-            <div class="bg-white rounded-t-3xl p-6 space-y-4 shadow-2xl">
-                <div class="flex justify-between items-center border-b pb-3">
-                    <h3 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-wallet text-yellow-500 mr-2"></i>Top-Up Saldo</h3>
-                    <button onclick="closeTopUpModal()" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
-                </div>
-                <select id="topup-nominal" class="w-full p-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold">
-                    <option value="50000">Rp 50.000</option>
-                    <option value="100000">Rp 100.000</option>
-                    <option value="200000">Rp 200.000</option>
-                </select>
-                <button onclick="processSystemTopUp()" class="w-full py-3.5 bg-emerald-600 text-white font-extrabold rounded-2xl shadow-lg cursor-pointer text-sm">
-                    Proses Top-Up Instan
-                </button>
-            </div>
-        </div>
-
-        <!-- Notification Modal -->
-        <div id="modal-notif" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
+        <div id="modal-notif" class="absolute inset-0 bg-black/60 z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 max-h-[75vh] overflow-y-auto space-y-4">
                 <div class="flex justify-between items-center border-b pb-3">
-                    <h3 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-bell text-yellow-500 mr-2"></i>Notifikasi</h3>
+                    <h3 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-bell text-yellow-500 mr-2"></i>Notifikasi Sistem</h3>
                     <button onclick="closeNotificationModal()" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
                 </div>
                 <div id="notification-list" class="space-y-3"></div>
             </div>
         </div>
 
-        <!-- Live Chat View -->
         <div id="view-chat" class="absolute inset-0 bg-white z-50 hidden flex flex-col">
             <div class="bg-sky-600 text-white p-4 flex items-center justify-between shadow">
                 <div class="flex items-center space-x-3">
@@ -250,144 +134,82 @@
             <div id="chat-contact-selector" class="p-3 bg-slate-100 border-b flex gap-2 overflow-x-auto hide-scrollbar"></div>
             <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50"></div>
             <div class="p-3 bg-white border-t flex items-center space-x-2">
-                <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 border border-slate-200 rounded-full px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500">
-                <button onclick="sendPersonalChatMessage()" class="bg-sky-600 text-white w-10 h-10 rounded-full flex items-center justify-center cursor-pointer shadow">
-                    <i class="fa-solid fa-paper-plane text-xs"></i>
-                </button>
+                <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 border rounded-full px-4 py-2.5 text-xs">
+                <button onclick="sendPersonalChatMessage()" class="bg-sky-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow cursor-pointer"><i class="fa-solid fa-paper-plane text-xs"></i></button>
             </div>
         </div>
 
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <!-- App Logic Script -->
     <script>
         let currentUser = null; 
         let currentSubTab = 'home';
         let adminViewMode = null;
-        let selectedDriverName = 'Asep Supriatna';
         let activeChatTarget = 'Admin SIMADU';
         let mapInstance = null;
-        let checkoutMapInstance = null;
-        let registerMapInstance = null;
-        let pickupLatLng = [-7.1234, 106.8456];
-        let destLatLng = [-7.1290, 106.8520];
+        let customMainBanner = 'https://placehold.co/600x300/0284c7/ffffff?text=OLENG+GO+OJEK+ONLINE+LENGKONG';
 
         const defaultDB = {
             users: [
-                { id: 1, name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', balance: 250000, password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Budi' },
-                { id: 2, name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Asep' },
-                { id: 3, name: 'Warung Nasi Sunda Lengkong', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12', balance: 350000, password: '123', shopName: 'Warung Nasi Sunda Lengkong', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS' },
-                { id: 4, name: 'Admin SIMADU', phone: '085624736602', role: 'admin', status: 'Aktif', address: 'Kantor Pusat Lengkong', balance: 1200000, password: '123', photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin' }
+                { id: 1, name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong', balance: 250000, password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Budi' },
+                { id: 2, name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', balance: 150000, password: '123', vehicle: 'Honda Beat', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Asep' },
+                { id: 3, name: 'Warung Nasi Sunda Lengkong', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12', balance: 350000, password: '123', shopName: 'MADU TOKO', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS' },
+                { id: 4, name: 'Admin SIMADU', phone: '085624736602', role: 'admin', status: 'Aktif', address: 'Kantor Pusat', balance: 1200000, password: '123', photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin' }
             ],
             merchants: [
-                { id: 1, name: 'Warung Nasi Sunda Lengkong', category: 'Makanan Berat', status: 'Buka', banner: 'https://placehold.co/600x300/0284c7/ffffff?text=Banner+Warung+Nasi', image: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS', rating: 4.8, lat: -7.1240, lng: 106.8460, address: 'Jl. Raya Lengkong No. 12, Sukabumi', operationalHours: '08:00 - 21:00 WIB', whatsapp: '6285624736602', balance: 350000 }
+                { id: 1, name: 'MADU TOKO', category: 'Makanan Berat', status: 'Buka', banner: 'https://placehold.co/600x300/0284c7/ffffff?text=Banner', image: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS', rating: 4.8, lat: -7.1240, lng: 106.8460, address: 'Jl. Raya Lengkong No. 12, Sukabumi', operationalHours: '08:00 - 21:00 WIB', whatsapp: '6285624736602', balance: 350000 },
+                { id: 2, name: 'Seblak & Bakso Bledor Lengkong', category: 'Snack & Pedas', status: 'Buka', banner: 'https://placehold.co/600x300/f59e0b/ffffff?text=Banner', image: 'https://placehold.co/150x150/f59e0b/ffffff?text=SBB', rating: 4.6, lat: -7.1220, lng: 106.8440, address: 'Kp. Pasar Lengkong', operationalHours: '10:00 - 22:00 WIB', whatsapp: '6285624736602', balance: 200000 },
+                { id: 3, name: 'Kopi & Roti Bakar Titik Sentral', category: 'Minuman & Roti', status: 'Buka', banner: 'https://placehold.co/600x300/0f172a/ffffff?text=Banner', image: 'https://placehold.co/150x150/0f172a/ffffff?text=KTS', rating: 4.9, lat: -7.1250, lng: 106.8475, address: 'Depan Alun-Alun Lengkong', operationalHours: '15:00 - 23:00 WIB', whatsapp: '6285624736602', balance: 450000 }
             ],
             foods: [
-                { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap Komplit', price: 25000, desc: 'Nasi liwet hangat, ikan asin jambal, tahu tempe, lalapan segar.', stock: 15, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Nasi+Liwet' }
+                { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap Komplit', price: 25000, desc: 'Nasi liwet hangat dan lauk komplit.', stock: 15, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Nasi+Liwet' },
+                { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung bakar madu gurih.', stock: 10, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Ayam+Bakar' }
             ],
             drivers: [
-                { id: 1, name: 'Asep Supriatna', status: 'Online', vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, location: 'Alun-Alun Lengkong', lat: -7.1230, lng: 106.8450, phone: '6285624736602', balance: 150000 }
+                { id: 1, name: 'Asep Supriatna', status: 'Online', vehicle: 'Honda Beat', rating: 4.9, location: 'Alun-Alun', phone: '6285624736602', balance: 150000 }
             ],
             orders: [
-                { id: 'ORD-9021', type: 'food', customer: 'Budi Santoso', merchant: 'Warung Nasi Sunda Lengkong', merchantLat: -7.1240, merchantLng: 106.8460, items: 'Nasi Liwet (2x)', total: 55000, status: 'Menunggu Driver', address: 'Kp. Lengkong RT 02/01', destLat: -7.1250, destLng: 106.8470, ongkir: 5000, driver: 'Asep Supriatna' }
+                { id: 'ORD-9853', type: 'food', customer: '66', merchant: 'MADU TOKO', total: 106500, status: 'Menunggu Driver', items: 'Paket Nasi Liwet Lengkap Komplit (4x)' }
             ],
             notifications: [
-                { id: 1, title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Aplikasi ojek & food delivery resmi warga Lengkong Sukabumi.' }
+                { id: 1, title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Sistem super-app Lengkong Sukabumi aktif.' }
             ],
             chats: [
-                { id: 1, from: 'Budi Santoso', to: 'Admin SIMADU', text: 'Halo Admin, sistem siap digunakan.', time: '08:00' }
+                { id: 1, from: 'Budi Santoso', to: 'Admin SIMADU', text: 'Halo Admin, sistem siap.', time: '08:00' }
             ],
-            cart: [],
-            activeMerchant: null
+            cart: []
         };
 
         let db = JSON.parse(localStorage.getItem('oleng_go_db')) || defaultDB;
-
-        function saveDB() {
-            localStorage.setItem('oleng_go_db', JSON.stringify(db));
-        }
+        function saveDB() { localStorage.setItem('oleng_go_db', JSON.stringify(db)); }
 
         document.addEventListener("DOMContentLoaded", function() {
             const savedSession = localStorage.getItem('oleng_user_session');
             if (savedSession) {
-                try {
-                    currentUser = JSON.parse(savedSession);
-                    enterDashboard();
-                } catch (e) {
-                    localStorage.removeItem('oleng_user_session');
-                }
+                try { currentUser = JSON.parse(savedSession); enterDashboard(); } 
+                catch (e) { localStorage.removeItem('oleng_user_session'); }
             }
         });
 
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2); 
-            return Math.round((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))) * 10) / 10;
-        }
-
-        function calculateShippingCost(distanceKm) {
-            return Math.max(5000, Math.round((4000 + (distanceKm * 2500)) / 500) * 500);
-        }
-
         function switchAuthTab(tab) {
-            const loginForm = document.getElementById('form-login');
-            const regForm = document.getElementById('form-register');
-            const loginBtn = document.getElementById('tab-login-btn');
-            const regBtn = document.getElementById('tab-register-btn');
-
-            if(tab === 'login') {
-                loginForm.classList.remove('hidden');
-                regForm.classList.add('hidden');
-                loginBtn.className = "flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1 text-sm cursor-pointer";
-                regBtn.className = "flex-1 font-semibold text-center text-slate-400 pb-1 text-sm cursor-pointer";
-            } else {
-                loginForm.classList.add('hidden');
-                regForm.classList.remove('hidden');
-                regBtn.className = "flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1 text-sm cursor-pointer";
-                loginBtn.className = "flex-1 font-semibold text-center text-slate-400 pb-1 text-sm cursor-pointer";
-                setTimeout(initRegisterMap, 200);
-            }
-        }
-
-        function onRegisterRoleChange(role) {
-            document.getElementById('reg-driver-fields').classList.toggle('hidden', role !== 'driver');
-            const mFields = document.getElementById('reg-merchant-fields');
-            mFields.classList.toggle('hidden', role !== 'merchant');
-            if(role === 'merchant') setTimeout(initRegisterMap, 200);
+            document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+            document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
         }
 
         function handleLogin(e) {
             e.preventDefault();
             const identifier = document.getElementById('login-identifier').value.trim();
             const role = document.getElementById('login-role').value;
-            
             let foundUser = db.users.find(u => u.phone === identifier && u.role === role);
             if(!foundUser) {
-                foundUser = {
-                    id: Date.now(),
-                    name: identifier,
-                    phone: identifier,
-                    role: role,
-                    status: 'Aktif',
-                    address: 'Kecamatan Lengkong, Sukabumi',
-                    balance: 100000,
-                    password: '123',
-                    photo: 'https://placehold.co/150x150/0284c7/ffffff?text=' + identifier.charAt(0)
-                };
-                db.users.push(foundUser);
-                saveDB();
+                foundUser = { id: Date.now(), name: identifier, phone: identifier, role, status: 'Aktif', address: 'Lengkong', balance: 100000, password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text='+identifier.charAt(0) };
+                db.users.push(foundUser); saveDB();
             }
-
-            currentUser = foundUser;
-            adminViewMode = null;
+            currentUser = foundUser; adminViewMode = null;
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            showToast(`Berhasil masuk sebagai ${role.toUpperCase()}!`, 'success');
-            enterDashboard();
+            showToast('Berhasil masuk!', 'success'); enterDashboard();
         }
 
         function handleRegister(e) {
@@ -396,188 +218,136 @@
             const phone = document.getElementById('reg-phone').value;
             const role = document.getElementById('reg-role').value;
             const password = document.getElementById('reg-password').value;
-
-            let extraData = {};
-            if(role === 'merchant') {
-                extraData.shopName = document.getElementById('reg-shopname').value || 'Toko Baru Lengkong';
-                extraData.lat = parseFloat(document.getElementById('reg-merchant-lat').value);
-                extraData.lng = parseFloat(document.getElementById('reg-merchant-lng').value);
-            }
-
-            const newUser = {
-                id: Date.now(), name, phone, role, status: 'Aktif', address: 'Lengkong Sukabumi', balance: 100000, password, photo: 'https://placehold.co/150x150/0284c7/ffffff?text=' + name.charAt(0), ...extraData
-            };
-            db.users.push(newUser);
-            if(role === 'merchant') {
-                db.merchants.push({ id: Date.now(), name: newUser.shopName, category: 'Kuliner', status: 'Buka', banner: 'https://placehold.co/600x300/0284c7/ffffff?text=Banner', image: 'https://placehold.co/150x150/0284c7/ffffff?text=Toko', rating: 5.0, lat: newUser.lat, lng: newUser.lng, address: 'Lengkong', operationalHours: '09:00 - 21:00', whatsapp: phone, balance: 50000 });
-            }
-            saveDB();
-            currentUser = newUser;
-            localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            showToast('Akun berhasil didaftarkan!', 'success');
-            enterDashboard();
+            const newUser = { id: Date.now(), name, phone, role, status: 'Aktif', address: 'Lengkong', balance: 100000, password, photo: 'https://placehold.co/150x150/0284c7/ffffff?text='+name.charAt(0) };
+            db.users.push(newUser); saveDB();
+            currentUser = newUser; localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
+            showToast('Pendaftaran berhasil!', 'success'); enterDashboard();
         }
 
         function handleLogout() {
-            currentUser = null;
-            adminViewMode = null;
-            localStorage.removeItem('oleng_user_session');
+            currentUser = null; adminViewMode = null; localStorage.removeItem('oleng_user_session');
             document.getElementById('view-auth').classList.remove('hidden');
             document.getElementById('view-dashboard').classList.add('hidden');
-            document.getElementById('view-merchant-detail').classList.add('hidden');
-            showToast('Anda telah keluar.', 'info');
+            showToast('Keluar akun.', 'info');
         }
 
         function enterDashboard() {
             document.getElementById('view-auth').classList.add('hidden');
             document.getElementById('view-dashboard').classList.remove('hidden');
             const switcherBar = document.getElementById('admin-switcher-bar');
-            if(currentUser.role === 'admin') {
-                switcherBar.classList.remove('hidden');
-                adminViewMode = 'admin';
-            } else {
-                switcherBar.classList.add('hidden');
-                adminViewMode = null;
-            }
+            if(currentUser.role === 'admin') { switcherBar.classList.remove('hidden'); adminViewMode = 'admin'; } 
+            else { switcherBar.classList.add('hidden'); adminViewMode = null; }
             updateDashboardShell();
         }
 
         function updateDashboardShell() {
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             renderDashboardNavigation(activeRole);
-            let defaultTab = 'home';
-            if(activeRole === 'driver') defaultTab = 'driver-orders';
-            else if(activeRole === 'merchant') defaultTab = 'merchant-menu';
-            else if(activeRole === 'admin') defaultTab = 'admin-dash';
-            renderDashboardContent(defaultTab);
+            let def = 'home';
+            if(activeRole === 'merchant') def = 'merchant-menu';
+            else if(activeRole === 'admin') def = 'admin-dash';
+            renderDashboardContent(def);
         }
 
         function adminSwitchViewMode(mode) {
             adminViewMode = mode;
             ['customer', 'driver', 'merchant', 'admin'].forEach(m => {
                 const btn = document.getElementById(`mode-btn-${m}`);
-                if(btn) btn.className = m === mode ? "px-2.5 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-extrabold shadow cursor-pointer" : "px-2.5 py-1 bg-slate-800 hover:bg-sky-600 text-slate-300 rounded-lg text-[10px] font-extrabold cursor-pointer";
+                if(btn) btn.className = m === mode ? "px-2.5 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-extrabold cursor-pointer" : "px-2.5 py-1 bg-slate-800 hover:bg-sky-600 text-slate-300 rounded-lg text-[10px] font-extrabold cursor-pointer";
             });
             updateDashboardShell();
         }
 
-        function checkAccessAndNavigate(targetFeature) {
-            renderDashboardContent(targetFeature);
-            return true;
-        }
+        function checkAccessAndNavigate(target) { renderDashboardContent(target); return true; }
 
         function renderDashboardNavigation(activeRole) {
             const nav = document.getElementById('bottom-nav');
             if(activeRole === 'admin') {
                 nav.innerHTML = `
-                    <button onclick="checkAccessAndNavigate('admin-dash')" class="flex flex-col items-center py-1 px-2 text-sky-600 font-bold cursor-pointer" id="nav-btn-admin-dash"><i class="fa-solid fa-chart-pie text-base"></i><span class="text-[8px] mt-1">Monitor</span></button>
-                    <button onclick="checkAccessAndNavigate('admin-users')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-admin-users"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[8px] mt-1">User</span></button>
-                    <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-2 text-white cursor-pointer"><div class="w-11 h-11 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-white"><i class="fa-solid fa-house text-base"></i></div></button>
-                    <button onclick="checkAccessAndNavigate('admin-stores')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-admin-stores"><i class="fa-solid fa-store text-base"></i><span class="text-[8px] mt-1">Toko</span></button>
-                    <button onclick="checkAccessAndNavigate('admin-drivers')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-admin-drivers"><i class="fa-solid fa-motorcycle text-base"></i><span class="text-[8px] mt-1">Ojek</span></button>
+                    <button onclick="renderAdminDash(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-2 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-chart-pie text-base"></i><span class="text-[8px] mt-1">Monitor</span></button>
+                    <button onclick="renderAdminUsers(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[8px] mt-1">User</span></button>
+                    <button onclick="renderCustomerHome(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-2 text-white cursor-pointer"><div class="w-11 h-11 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-white"><i class="fa-solid fa-house text-base"></i></div></button>
+                    <button onclick="renderAdminStores(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-store text-base"></i><span class="text-[8px] mt-1">Toko</span></button>
+                    <button onclick="renderAdminBanner(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-image text-base"></i><span class="text-[8px] mt-1">Banner</span></button>
+                `;
+            } else if(activeRole === 'merchant') {
+                nav.innerHTML = `
+                    <button onclick="renderMerchantMenu(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-burger text-base"></i><span class="text-[10px] mt-1">Menu</span></button>
+                    <button onclick="renderCustomerHome(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-white"><i class="fa-solid fa-house text-lg"></i></div></button>
+                    <button onclick="renderProfile(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[10px] mt-1">Akun</span></button>
                 `;
             } else {
                 nav.innerHTML = `
-                    <button onclick="checkAccessAndNavigate('food')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-food"><i class="fa-solid fa-utensils text-base"></i><span class="text-[10px] mt-1">Pesanan</span></button>
-                    <button onclick="checkAccessAndNavigate('ojek')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-ojek"><i class="fa-solid fa-motorcycle text-base"></i><span class="text-[10px] mt-1">Ojek</span></button>
-                    <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer" id="nav-btn-home"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-white"><i class="fa-solid fa-house text-lg"></i></div></button>
-                    <button onclick="switchView('chat')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-comments text-base"></i><span class="text-[10px] mt-1">Chat</span></button>
-                    <button onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-profile"><i class="fa-solid fa-user text-base"></i><span class="text-[10px] mt-1">Akun</span></button>
+                    <button onclick="renderCustomerFood(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-utensils text-base"></i><span class="text-[10px] mt-1">Pesanan</span></button>
+                    <button onclick="renderCustomerHome(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-white"><i class="fa-solid fa-house text-lg"></i></div></button>
+                    <button onclick="renderCustomerOjek(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-motorcycle text-base"></i><span class="text-[10px] mt-1">Ojek</span></button>
+                    <button onclick="renderProfile(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[10px] mt-1">Akun</span></button>
                 `;
             }
         }
 
         function renderDashboardContent(tab) {
             if (mapInstance) { mapInstance.remove(); mapInstance = null; }
-            if (checkoutMapInstance) { checkoutMapInstance.remove(); checkoutMapInstance = null; }
-            currentSubTab = tab;
-            document.getElementById('view-merchant-detail').classList.add('hidden');
             const container = document.getElementById('main-content');
-            const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-
-            if(activeRole === 'admin' && tab.startsWith('admin-')) {
-                if(tab === 'admin-dash') renderAdminDash(container);
-                else if(tab === 'admin-users') renderAdminUsers(container);
-                else renderAdminDash(container);
-            } else {
-                if(tab === 'home') renderCustomerHome(container);
-                else if(tab === 'food') renderCustomerFood(container);
-                else if(tab === 'ojek') renderCustomerOjek(container);
-                else if(tab === 'merchant-menu') renderMerchantMenu(container);
-                else if(tab === 'merchant-edit') renderMerchantProfileEdit(container);
-                else if(tab === 'profile') renderProfile(container);
-                else renderCustomerHome(container);
-            }
+            if(tab === 'home') renderCustomerHome(container);
+            else if(tab === 'food') renderCustomerFood(container);
+            else if(tab === 'ojek') renderCustomerOjek(container);
+            else if(tab === 'merchant-menu') renderMerchantMenu(container);
+            else if(tab === 'admin-dash') renderAdminDash(container);
+            else if(tab === 'admin-users') renderAdminUsers(container);
+            else if(tab === 'admin-stores') renderAdminStores(container);
+            else if(tab === 'admin-banner') renderAdminBanner(container);
+            else if(tab === 'profile') renderProfile(container);
+            else renderCustomerHome(container);
         }
 
         function renderCustomerHome(container) {
             container.innerHTML = `
                 <div class="p-4 space-y-4 bg-gradient-to-b from-sky-600 to-slate-50 min-h-full pb-20">
-                    <!-- Banner Kustom SIMADU -->
-                    <div class="bg-gradient-to-r from-sky-500 via-blue-600 to-sky-700 p-2 rounded-3xl shadow-xl border-2 border-yellow-400 relative overflow-hidden flex items-center justify-between text-white">
-                        <div class="p-2 space-y-1 z-10">
-                            <span class="bg-yellow-400 text-slate-900 text-[9px] font-black px-2 py-0.5 rounded-md uppercase">Resmi Warga Lengkong</span>
-                            <h2 class="text-xl font-black italic tracking-wider text-yellow-300 drop-shadow">OLENG GO</h2>
-                            <p class="text-[11px] font-bold text-sky-100">Ojek Online & Kuliner UMKM Lengkong</p>
-                        </div>
-                        <div class="text-4xl px-3 bg-yellow-400/20 rounded-2xl py-2 border border-yellow-300/40">🐝</div>
+                    <div class="rounded-3xl shadow-xl overflow-hidden border-2 border-yellow-400 bg-white">
+                        <img src="${customMainBanner}" class="w-full h-36 object-cover" alt="Banner Utama">
                     </div>
 
-                    <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-4 rounded-3xl shadow-xl flex items-center justify-between">
+                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-between">
                         <div class="flex items-center space-x-3">
-                            <img src="${currentUser.photo}" class="w-12 h-12 rounded-2xl object-cover border-2 border-yellow-400">
+                            <div class="w-10 h-10 bg-sky-100 text-sky-700 rounded-xl flex items-center justify-center font-bold">User</div>
                             <div>
-                                <span class="text-[11px] text-sky-200 font-extrabold">Halo, ${currentUser.name}</span>
-                                <h3 class="text-base font-black">Rp ${(currentUser.balance || 100000).toLocaleString()}</h3>
+                                <span class="text-[11px] text-slate-500 font-extrabold">Halo, ${currentUser.name} (${currentUser.role.toUpperCase()})</span>
+                                <h3 class="text-base font-black text-slate-900">Rp ${(currentUser.balance || 100000).toLocaleString()}</h3>
                             </div>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="openNotificationModal()" class="p-2.5 bg-sky-800 rounded-2xl text-white cursor-pointer"><i class="fa-solid fa-bell"></i></button>
-                            <button onclick="switchView('chat')" class="p-2.5 bg-sky-800 rounded-2xl text-white cursor-pointer"><i class="fa-solid fa-comments"></i></button>
-                            <button onclick="handleLogout()" class="p-2.5 bg-rose-600 rounded-2xl text-white cursor-pointer"><i class="fa-solid fa-power-off"></i></button>
+                            <button onclick="openNotificationModal()" class="p-2.5 bg-slate-100 rounded-2xl text-slate-700 cursor-pointer"><i class="fa-solid fa-bell"></i></button>
+                            <button onclick="switchView('chat')" class="p-2.5 bg-slate-100 rounded-2xl text-slate-700 cursor-pointer"><i class="fa-solid fa-comments"></i></button>
+                            <button onclick="handleLogout()" class="p-2.5 bg-rose-100 rounded-2xl text-rose-600 cursor-pointer"><i class="fa-solid fa-power-off"></i></button>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-4 gap-2">
-                        <button onclick="checkAccessAndNavigate('ojek')" class="bg-white p-3 rounded-2xl shadow-xs flex flex-col items-center justify-center cursor-pointer">
+                        <button onclick="renderCustomerOjek(document.getElementById('main-content'))" class="bg-white p-3 rounded-2xl shadow-xs flex flex-col items-center cursor-pointer">
                             <div class="w-12 h-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-xl mb-1"><i class="fa-solid fa-motorcycle"></i></div>
-                            <span class="text-[10px] font-extrabold text-slate-800">Ojek</span>
+                            <span class="text-[10px] font-extrabold text-slate-800">Pesan Ojek</span>
                         </button>
-                        <button onclick="checkAccessAndNavigate('food')" class="bg-white p-3 rounded-2xl shadow-xs flex flex-col items-center justify-center cursor-pointer">
+                        <button onclick="renderCustomerFood(document.getElementById('main-content'))" class="bg-white p-3 rounded-2xl shadow-xs flex flex-col items-center cursor-pointer">
                             <div class="w-12 h-12 bg-yellow-100 text-yellow-700 rounded-2xl flex items-center justify-center text-xl mb-1"><i class="fa-solid fa-utensils"></i></div>
-                            <span class="text-[10px] font-extrabold text-slate-800">Food</span>
+                            <span class="text-[10px] font-extrabold text-slate-800">Pesan Makanan</span>
                         </button>
-                        <button onclick="switchView('chat')" class="bg-white p-3 rounded-2xl shadow-xs flex flex-col items-center justify-center cursor-pointer">
-                            <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-2xl flex items-center justify-center text-xl mb-1"><i class="fa-solid fa-comments"></i></div>
-                            <span class="text-[10px] font-extrabold text-slate-800">Chat</span>
+                        <button onclick="showToast('Riwayat pesanan kosong', 'info')" class="bg-white p-3 rounded-2xl shadow-xs flex flex-col items-center cursor-pointer">
+                            <div class="w-12 h-12 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center text-xl mb-1"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                            <span class="text-[10px] font-extrabold text-slate-800">Riwayat</span>
                         </button>
-                        <button onclick="openNotificationModal()" class="bg-white p-3 rounded-2xl shadow-xs flex flex-col items-center justify-center cursor-pointer">
+                        <button onclick="openNotificationModal()" class="bg-white p-3 rounded-2xl shadow-xs flex flex-col items-center cursor-pointer">
                             <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl mb-1"><i class="fa-solid fa-gift"></i></div>
-                            <span class="text-[10px] font-extrabold text-slate-800">Info</span>
+                            <span class="text-[10px] font-extrabold text-slate-800">Info Terbaru</span>
                         </button>
                     </div>
 
                     <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-2">
                         <div class="flex justify-between items-center">
                             <h3 class="font-extrabold text-xs text-slate-800 uppercase"><i class="fa-solid fa-map-location-dot text-sky-600 mr-1"></i> Peta Wilayah Lengkong</h3>
-                            <span class="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full font-extrabold">GPS Aktif</span>
+                            <span class="text-[10px] bg-sky-100 text-sky-800 px-2.5 py-1 rounded-full font-extrabold">GPS Aktif</span>
                         </div>
                         <div id="map" class="map-container shadow-inner"></div>
-                    </div>
-
-                    <div class="space-y-3">
-                        <h3 class="font-extrabold text-sm text-slate-900">Daftar Toko Kuliner Pilihan</h3>
-                        <div class="space-y-3">
-                            ${db.merchants.map(m => `
-                                <div onclick="openMerchantDetail(${m.id})" class="bg-white p-3.5 rounded-2xl shadow-xs border border-slate-100 flex items-center space-x-3.5 cursor-pointer">
-                                    <img src="${m.image}" class="w-16 h-16 rounded-2xl object-cover shadow-xs">
-                                    <div class="flex-1">
-                                        <h4 class="font-bold text-xs text-slate-900">${m.name}</h4>
-                                        <p class="text-[11px] text-slate-500">${m.category} • <span class="text-emerald-600 font-bold">${m.status}</span></p>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
                     </div>
                 </div>
             `;
@@ -588,15 +358,21 @@
             container.innerHTML = `
                 <div class="p-4 space-y-4">
                     <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-slate-900">OLENG Food Lengkong</h2>
-                        <button onclick="openCartModal()" class="bg-sky-600 text-white px-3.5 py-2 rounded-2xl text-xs font-extrabold shadow-md cursor-pointer">
-                            <i class="fa-solid fa-cart-shopping"></i> Keranjang (<span id="cart-counter">${db.cart.length}</span>)
+                        <div>
+                            <h2 class="font-extrabold text-base text-slate-900">OLENG Food Lengkong</h2>
+                            <p class="text-[11px] text-slate-500">Klik toko untuk melihat profil dan menu</p>
+                        </div>
+                        <button onclick="showToast('Keranjang kosong', 'info')" class="bg-sky-600 text-white px-3.5 py-2 rounded-2xl text-xs font-extrabold shadow-md cursor-pointer">
+                            <i class="fa-solid fa-cart-shopping"></i> Keranjang (<span id="cart-counter">0</span>)
                         </button>
                     </div>
                     <div class="space-y-3">
                         ${db.merchants.map(m => `
-                            <div onclick="openMerchantDetail(${m.id})" class="bg-white p-4 rounded-3xl border border-slate-100 shadow-xs cursor-pointer space-y-2">
-                                <h4 class="font-bold text-sm text-slate-900">${m.name}</h4>
+                            <div onclick="openMerchantDetail(${m.id})" class="bg-white p-4 rounded-3xl border shadow-xs cursor-pointer space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-bold text-sm text-slate-900">${m.name}</h4>
+                                    <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md font-extrabold">${m.status}</span>
+                                </div>
                                 <p class="text-xs text-slate-500"><i class="fa-solid fa-location-dot"></i> ${m.address}</p>
                             </div>
                         `).join('')}
@@ -607,7 +383,6 @@
 
         function openMerchantDetail(merchantId) {
             const merchant = db.merchants.find(m => m.id === merchantId);
-            db.activeMerchant = merchant;
             const foods = db.foods.filter(f => f.merchantId === merchantId);
             const detailView = document.getElementById('view-merchant-detail');
             detailView.classList.remove('hidden');
@@ -619,15 +394,15 @@
                 </div>
                 <div class="p-4 space-y-3 overflow-y-auto flex-1 pb-20">
                     <div class="bg-white p-4 rounded-3xl shadow-xs space-y-3">
-                        <h4 class="font-black text-sm text-slate-900">Menu Makanan</h4>
+                        <h4 class="font-black text-sm text-slate-900">Daftar Menu Makanan & Minuman</h4>
                         <div class="space-y-2">
                             ${foods.map(f => `
-                                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-2xl border">
                                     <div>
                                         <h5 class="font-bold text-xs text-slate-900">${f.name}</h5>
                                         <span class="text-xs font-black text-sky-600">Rp ${f.price.toLocaleString()}</span>
                                     </div>
-                                    <button onclick="addToCart(${f.id})" class="px-3 py-2 bg-yellow-400 rounded-xl text-xs font-black shadow-xs cursor-pointer">+</button>
+                                    <button onclick="showToast('Ditambahkan ke keranjang', 'success')" class="w-8 h-8 bg-yellow-400 rounded-xl font-black cursor-pointer">+</button>
                                 </div>
                             `).join('')}
                         </div>
@@ -636,45 +411,14 @@
             `;
         }
 
-        function addToCart(foodId) {
-            db.cart.push(db.foods.find(f => f.id === foodId));
-            showToast('Menu ditambahkan ke keranjang!', 'success');
-            document.getElementById('cart-counter').innerText = db.cart.length;
-        }
-
-        function openCartModal() {
-            document.getElementById('modal-cart').classList.remove('hidden');
-            const container = document.getElementById('cart-items-container');
-            container.innerHTML = db.cart.map((item, idx) => `
-                <div class="flex justify-between items-center text-xs py-1">
-                    <span>${item.name}</span>
-                    <span class="font-bold text-sky-600">Rp ${item.price.toLocaleString()}</span>
-                </div>
-            `).join('') || '<p class="text-xs text-slate-400">Keranjang kosong</p>';
-            const subtotal = db.cart.reduce((s, i) => s + i.price, 0);
-            document.getElementById('cart-subtotal').innerText = 'Rp ' + subtotal.toLocaleString();
-            document.getElementById('cart-total').innerText = 'Rp ' + (subtotal + 5000).toLocaleString();
-            setTimeout(initCheckoutMap, 200);
-        }
-
-        function closeCartModal() { document.getElementById('modal-cart').classList.add('hidden'); }
-
-        function submitOrder() {
-            if(db.cart.length === 0) return showToast('Keranjang kosong!', 'error');
-            db.orders.unshift({ id: 'ORD-' + Math.floor(1000+Math.random()*9000), type: 'food', customer: currentUser.name, total: 55000, status: 'Menunggu Driver' });
-            db.cart = [];
-            saveDB();
-            closeCartModal();
-            showToast('Pesanan berhasil dibuat!', 'success');
-        }
-
         function renderCustomerOjek(container) {
             container.innerHTML = `
                 <div class="p-4 space-y-4">
                     <h2 class="font-extrabold text-base text-slate-900">Pesan Ojek Online</h2>
-                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
-                        <input type="text" id="ojek-to" placeholder="Tujuan di Lengkong..." class="w-full p-2.5 border rounded-2xl text-xs font-semibold">
-                        <button onclick="showToast('Ojek dipesan!', 'success')" class="w-full py-3 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md">Pesan Sekarang</button>
+                    <div class="bg-white p-4 rounded-3xl shadow-xs border space-y-3">
+                        <input type="text" placeholder="Titik Jemput..." class="w-full p-2.5 border rounded-2xl text-xs font-semibold" value="Alun-Alun Lengkong">
+                        <input type="text" placeholder="Tujuan di Lengkong..." class="w-full p-2.5 border rounded-2xl text-xs font-semibold">
+                        <button onclick="showToast('Ojek berhasil dipesan!', 'success')" class="w-full py-3.5 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md">Pesan Ojek Sekarang</button>
                     </div>
                 </div>
             `;
@@ -683,12 +427,15 @@
         function renderMerchantMenu(container) {
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-20">
-                    <h2 class="font-extrabold text-base text-slate-900">Kelola Menu Toko</h2>
-                    <button onclick="openAddMenuModal()" class="bg-yellow-400 text-slate-900 px-3.5 py-2 rounded-2xl text-xs font-extrabold cursor-pointer">+ Tambah Menu</button>
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-extrabold text-base text-slate-900">Kelola Menu Toko</h2>
+                        <button onclick="openAddMenuModal()" class="bg-yellow-400 text-slate-900 px-3.5 py-2 rounded-2xl text-xs font-extrabold cursor-pointer">+ Tambah Menu</button>
+                    </div>
                     <div class="space-y-3">
                         ${db.foods.map(f => `
-                            <div class="bg-white p-3 rounded-2xl border flex justify-between items-center text-xs font-bold">
+                            <div class="bg-white p-3.5 rounded-2xl border flex justify-between items-center text-xs font-bold">
                                 <span>${f.name} (Rp ${f.price.toLocaleString()})</span>
+                                <span class="text-sky-600">Stok: ${f.stock}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -697,17 +444,11 @@
         }
 
         function openAddMenuModal() {
-            const name = prompt('Nama Makanan:');
+            const name = prompt('Nama Makanan / Minuman:');
             if(!name) return;
             const price = parseInt(prompt('Harga (Rp):', '15000')) || 15000;
-            db.foods.push({ id: Date.now(), merchantId: 1, name, price, desc: 'Enak', stock: 20, image: 'https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name) });
-            saveDB();
-            showToast('Menu baru ditambahkan!', 'success');
-            renderDashboardContent('merchant-menu');
-        }
-
-        function renderMerchantProfileEdit(container) {
-            container.innerHTML = `<div class="p-4"><h2 class="font-extrabold text-base">Profil Toko</h2></div>`;
+            db.foods.push({ id: Date.now(), merchantId: 1, name, price, desc: 'Enak', stock: 20, image: 'https://placehold.co/200x200/0284c7/ffffff?text='+encodeURIComponent(name) });
+            saveDB(); showToast('Menu ditambahkan!', 'success'); renderMerchantMenu(document.getElementById('main-content'));
         }
 
         function renderAdminDash(container) {
@@ -715,14 +456,76 @@
                 <div class="p-4 space-y-4">
                     <h2 class="font-extrabold text-base text-slate-900">Panel Admin Master Control</h2>
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-white p-4 rounded-3xl border"><span class="text-xs text-slate-500">Total User</span><h3 class="text-xl font-black text-sky-600">${db.users.length}</h3></div>
-                        <div class="bg-white p-4 rounded-3xl border"><span class="text-xs text-slate-500">Total Toko</span><h3 class="text-xl font-black text-yellow-500">${db.merchants.length}</h3></div>
+                        <div class="bg-white p-4 rounded-3xl border"><span class="text-[10px] text-slate-500 uppercase font-extrabold">Total Pengguna</span><h3 class="text-xl font-black text-sky-600 mt-1">${db.users.length} User</h3></div>
+                        <div class="bg-white p-4 rounded-3xl border"><span class="text-[10px] text-slate-500 uppercase font-extrabold">Mitra Toko</span><h3 class="text-xl font-black text-yellow-500 mt-1">${db.merchants.length} Toko</h3></div>
+                        <div class="bg-white p-4 rounded-3xl border"><span class="text-[10px] text-slate-500 uppercase font-extrabold">Total Ojol</span><h3 class="text-xl font-black text-emerald-600 mt-1">${db.drivers.length} Driver</h3></div>
+                        <div class="bg-white p-4 rounded-3xl border"><span class="text-[10px] text-slate-500 uppercase font-extrabold">Pesanan Masuk</span><h3 class="text-xl font-black text-purple-600 mt-1">${db.orders.length} Pesanan</h3></div>
                     </div>
                 </div>
             `;
         }
 
-        function renderAdminUsers(container) { renderAdminDash(container); }
+        function renderAdminUsers(container) {
+            container.innerHTML = `
+                <div class="p-4 space-y-4">
+                    <h2 class="font-extrabold text-base text-slate-900">Daftar Seluruh Pengguna</h2>
+                    <div class="space-y-3">
+                        ${db.users.map(u => `
+                            <div class="bg-white p-4 rounded-3xl border space-y-1">
+                                <h4 class="font-bold text-xs text-slate-900">${u.name} (<span class="text-sky-600">${u.role}</span>)</h4>
+                                <p class="text-[10px] text-slate-500">${u.phone}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAdminStores(container) {
+            container.innerHTML = `
+                <div class="p-4 space-y-4">
+                    <h2 class="font-extrabold text-base text-slate-900">Daftar List Toko & Saldo Dompet</h2>
+                    <div class="space-y-3">
+                        ${db.merchants.map(m => `
+                            <div class="bg-white p-4 rounded-3xl border space-y-2">
+                                <h4 class="font-bold text-sm text-slate-900">${m.name}</h4>
+                                <p class="text-xs font-black text-yellow-600">Saldo Toko: Rp ${m.balance.toLocaleString()}</p>
+                                <button onclick="atursaldo(${m.id})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-xs font-bold cursor-pointer">Atur Saldo</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function atursaldo(id) {
+            const m = db.merchants.find(x => x.id === id);
+            const add = parseInt(prompt(`Atur saldo baru untuk ${m.name}:`, m.balance));
+            if(!isNaN(add)) { m.balance = add; saveDB(); showToast('Saldo diperbarui!', 'success'); renderAdminStores(document.getElementById('main-content')); }
+        }
+
+        function renderAdminBanner(container) {
+            container.innerHTML = `
+                <div class="p-4 space-y-4">
+                    <h2 class="font-extrabold text-base text-slate-900">Kontrol Banner Panjang Utama</h2>
+                    <div class="bg-white p-4 rounded-3xl border space-y-3">
+                        <label class="text-[11px] font-extrabold text-slate-500 uppercase">Upload Foto Banner dari Galeri</label>
+                        <input type="file" accept="image/*" class="w-full p-2 border rounded-2xl text-xs" onchange="previewNewBanner(event)">
+                        <img id="banner-preview" src="${customMainBanner}" class="w-full h-32 object-cover rounded-2xl border">
+                        <button onclick="showToast('Banner berhasil diterapkan ke semua user!', 'success')" class="w-full py-3 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md">Simpan & Terapkan ke Semua User</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function previewNewBanner(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) { customMainBanner = evt.target.result; document.getElementById('banner-preview').src = customMainBanner; };
+                reader.readAsDataURL(file);
+            }
+        }
 
         function renderProfile(container) {
             container.innerHTML = `
@@ -730,55 +533,38 @@
                     <div class="bg-white p-5 rounded-3xl text-center space-y-3 border">
                         <img src="${currentUser.photo}" class="w-20 h-20 rounded-2xl mx-auto border-2 border-sky-500 object-cover">
                         <h2 class="font-extrabold text-sm text-slate-900">${currentUser.name}</h2>
-                        <p class="text-xs text-sky-600 font-bold uppercase">${currentUser.role}</p>
+                        <p class="text-xs text-sky-600 font-bold uppercase">Peran: ${currentUser.role}</p>
                     </div>
                 </div>
             `;
         }
 
-        function openNotificationModal() {
-            document.getElementById('modal-notif').classList.remove('hidden');
-            document.getElementById('notification-list').innerHTML = db.notifications.map(n => `<div class="p-3 bg-slate-50 rounded-2xl text-xs"><b>${n.title}</b><p>${n.desc}</p></div>`).join('');
-        }
+        function openNotificationModal() { document.getElementById('modal-notif').classList.remove('hidden'); document.getElementById('notification-list').innerHTML = db.notifications.map(n => `<div class="p-3 bg-slate-50 rounded-2xl text-xs"><b>${n.title}</b><p>${n.desc}</p></div>`).join(''); }
         function closeNotificationModal() { document.getElementById('modal-notif').classList.add('hidden'); }
 
         function switchView(view) {
-            if(view === 'chat') {
-                document.getElementById('view-chat').classList.remove('hidden');
-                renderChatContacts();
-                renderPersonalChatMessages();
-            }
+            if(view === 'chat') { document.getElementById('view-chat').classList.remove('hidden'); renderChatContacts(); renderPersonalChatMessages(); }
         }
         function closeChat() { document.getElementById('view-chat').classList.add('hidden'); }
-
         function renderChatContacts() {
-            const container = document.getElementById('chat-contact-selector');
-            const contacts = ['Admin SIMADU', ...db.merchants.map(m => m.name)];
-            container.innerHTML = contacts.map(n => `<button onclick="activeChatTarget='${n}';renderPersonalChatMessages();" class="px-3 py-1.5 rounded-xl text-xs font-bold ${activeChatTarget===n?'bg-sky-600 text-white':'bg-white border'}">${n}</button>`).join('');
+            document.getElementById('chat-contact-selector').innerHTML = ['Admin SIMADU', ...db.merchants.map(m => m.name)].map(n => `<button onclick="activeChatTarget='${n}';renderPersonalChatMessages();" class="px-3 py-1.5 rounded-xl text-xs font-bold ${activeChatTarget===n?'bg-sky-600 text-white':'bg-white border'}">${n}</button>`).join('');
         }
-
         function renderPersonalChatMessages() {
-            const container = document.getElementById('chat-messages');
             document.getElementById('chat-title').innerText = `Chat: ${activeChatTarget}`;
-            const thread = db.chats.filter(c => c.from === currentUser.name || c.to === currentUser.name);
-            container.innerHTML = thread.length ? thread.map(c => `<div class="p-2 rounded-xl text-xs bg-sky-100">${c.text}</div>`).join('') : '<p class="text-xs text-slate-400 text-center py-4">Mulai percakapan...</p>';
+            document.getElementById('chat-messages').innerHTML = db.chats.map(c => `<div class="p-2 rounded-xl text-xs bg-sky-100">${c.text}</div>`).join('') || '<p class="text-xs text-slate-400 text-center py-4">Mulai percakapan...</p>';
         }
-
         function sendPersonalChatMessage() {
             const input = document.getElementById('chat-input');
             if(!input.value.trim()) return;
             db.chats.push({ id: Date.now(), from: currentUser.name, to: activeChatTarget, text: input.value, time: 'Baru saja' });
-            saveDB();
-            input.value = '';
-            renderPersonalChatMessages();
+            saveDB(); input.value = ''; renderPersonalChatMessages();
         }
 
         function showToast(msg, type='success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold ${type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'}`;
-            toast.innerText = msg;
-            container.appendChild(toast);
+            toast.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold ${type === 'success' ? 'bg-emerald-600' : 'bg-sky-600'}`;
+            toast.innerText = msg; container.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
 
@@ -788,25 +574,7 @@
             if(mapInstance) mapInstance.remove();
             mapInstance = L.map('map', { zoomControl: false }).setView([-7.1234, 106.8456], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
-            L.marker([-7.1234, 106.8456]).addTo(mapInstance).bindPopup('Pusat Lengkong').openPopup();
-        }
-
-        function initCheckoutMap() {
-            const mapEl = document.getElementById('checkout-map');
-            if(!mapEl) return;
-            if(checkoutMapInstance) checkoutMapInstance.remove();
-            checkoutMapInstance = L.map('checkout-map', { zoomControl: false }).setView(pickupLatLng, 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(checkoutMapInstance);
-            L.marker(pickupLatLng).addTo(checkoutMapInstance);
-        }
-
-        function initRegisterMap() {
-            const mapEl = document.getElementById('register-store-map');
-            if(!mapEl) return;
-            if(registerMapInstance) registerMapInstance.remove();
-            registerMapInstance = L.map('register-store-map', { zoomControl: false }).setView([-7.1234, 106.8456], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(registerMapInstance);
-            L.marker([-7.1234, 106.8456], {draggable: true}).addTo(registerMapInstance);
+            L.marker([-7.1234, 106.8456]).addTo(mapInstance).bindPopup('Pusat Kecamatan Lengkong').openPopup();
         }
     </script>
 </body>
