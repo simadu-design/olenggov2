@@ -47,20 +47,9 @@
         <!-- ================= AUTH VIEW ================= -->
         <div id="view-auth" class="flex-1 flex flex-col justify-between p-6 bg-gradient-to-br from-sky-500 via-sky-700 to-sky-900 text-white overflow-y-auto z-30">
             <div class="my-auto text-center space-y-6">
-                <div class="flex items-center justify-between px-2">
-                    <div class="flex items-center gap-2">
-                        <div class="w-14 h-14 bg-yellow-400 rounded-2xl flex items-center justify-center text-sky-900 font-black text-2xl shadow-xl transform -rotate-3 overflow-hidden border-2 border-white">
-                            <img src="https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=150&auto=format&fit=crop&q=80" class="w-full h-full object-cover" alt="Banner Image">
-                        </div>
-                        <div class="text-left">
-                            <h1 id="auth-brand-title" class="text-2xl font-black italic tracking-wider text-yellow-300 drop-shadow">OLENG GO</h1>
-                            <p class="text-[10px] text-sky-100 font-bold flex items-center gap-1">
-                                <i class="fa-solid fa-location-dot text-yellow-400"></i> Lengkong, Sukabumi
-                            </p>
-                        </div>
-                    </div>
-                    <div id="auth-bee-logo" class="w-16 h-16 bg-yellow-400 rounded-full border-2 border-white shadow-lg flex items-center justify-center overflow-hidden">
-                        <img src="https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80" class="w-full h-full object-cover" alt="Maskot Lebah">
+                <div class="px-2">
+                    <div class="w-full h-24 bg-yellow-400 rounded-3xl shadow-2xl overflow-hidden border-2 border-white flex items-center justify-center">
+                        <img src="https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80" class="w-full h-full object-cover" alt="Banner Login">
                     </div>
                 </div>
 
@@ -376,15 +365,12 @@
             cart: [],
             activeMerchant: null,
             branding: {
-                bannerType: 'image', // 'text' atau 'image'
-                bannerText: 'GO OLENG',
-                bannerImage: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80',
-                beeLogo: 'https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80'
+                bannerImage: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80'
             }
         };
 
         let db = JSON.parse(localStorage.getItem('oleng_go_db')) || defaultDB;
-        if(!db.branding) db.branding = { bannerType: 'image', bannerText: 'GO OLENG', bannerImage: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80', beeLogo: 'https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80' };
+        if(!db.branding) db.branding = { bannerImage: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80' };
 
         function saveDB() {
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
@@ -475,7 +461,6 @@
             }
         }
 
-        // --- VALIDASI LOGIN: WAJIB TERDAFTAR & ADMIN DIKUNCI 085624736602 ---
         function handleLogin(e) {
             e.preventDefault();
             const identifier = document.getElementById('login-identifier').value.trim();
@@ -507,7 +492,6 @@
             enterDashboard();
         }
 
-        // --- REGISTRASI: WAJIB TERDAFTAR & ADMIN DIKUNCI 085624736602 ---
         function handleRegister(e) {
             e.preventDefault();
             const name = document.getElementById('reg-name').value;
@@ -766,7 +750,7 @@
                         <i class="fa-solid fa-store text-base"></i><span class="text-[8px] mt-1 font-semibold">Toko</span>
                     </button>
                     <button onclick="checkAccessAndNavigate('admin-branding')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-admin-branding">
-                        <i class="fa-solid fa-wand-magic-sparkles text-base"></i><span class="text-[8px] mt-1 font-semibold">Branding</span>
+                        <i class="fa-solid fa-wand-magic-sparkles text-base"></i><span class="text-[8px] mt-1 font-semibold">Banner</span>
                     </button>
                 `;
             }
@@ -830,32 +814,14 @@
         }
 
         function renderCustomerHome(container) {
-            const bannerType = db.branding?.bannerType || 'image';
-            const bannerText = db.branding?.bannerText || 'GO OLENG';
             const bannerImage = db.branding?.bannerImage || 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80';
-            const beeLogo = db.branding?.beeLogo || 'https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80';
-
-            let bannerHTML = bannerType === 'image' 
-                ? `<div class="bg-white px-3 py-1.5 rounded-2xl shadow-lg border-2 border-yellow-400 overflow-hidden h-10 flex items-center justify-center"><img src="${bannerImage}" class="h-full object-cover"></div>`
-                : `<div class="bg-white px-3 py-1.5 rounded-2xl shadow-lg border-2 border-yellow-400 transform -rotate-2"><span class="text-xl font-black italic text-sky-600 tracking-tighter">${bannerText}</span></div>`;
-
             let hasWallet = currentUser.role === 'driver' || currentUser.role === 'merchant';
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 bg-gradient-to-b from-sky-600 to-slate-50 min-h-full pb-20">
-                    <div class="flex items-center justify-between text-white pt-2">
-                        <div class="flex items-center space-x-2">
-                            ${bannerHTML}
-                            <div>
-                                <div class="text-[11px] font-extrabold flex items-center gap-1 text-yellow-300">
-                                    <i class="fa-solid fa-location-dot"></i> Lengkong Sukabumi
-                                </div>
-                                <p class="text-[10px] text-sky-100 font-medium">Kecamatan Lengkong</p>
-                            </div>
-                        </div>
-                        <div class="w-16 h-16 bg-yellow-400 rounded-full border-2 border-white shadow-xl flex items-center justify-center overflow-hidden animate-bounce">
-                            <img src="${beeLogo}" class="w-full h-full object-cover" alt="Logo Lebah">
-                        </div>
+                    <!-- 1 BANNER PANJANG UTAMA MENYERUPAI CONTOH GAMBAR -->
+                    <div class="w-full h-28 bg-white rounded-3xl shadow-xl border-2 border-yellow-400 overflow-hidden flex items-center justify-center">
+                        <img src="${bannerImage}" class="w-full h-full object-cover" alt="Banner Utama Lengkong">
                     </div>
 
                     <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-4 rounded-3xl shadow-xl border border-sky-400/30 flex items-center justify-between">
@@ -1776,7 +1742,6 @@
             `;
         }
 
-        // --- ADMIN DASHBOARD DENGAN KOTAK KLIKABEL & PENGELOLAAN SALDO KHUSUS ADMIN ---
         function renderAdminDash(container) {
             const totalUsers = db.users.length;
             const totalMerchants = db.merchants.length;
@@ -1810,10 +1775,10 @@
 
                     <div class="bg-gradient-to-r from-sky-600 to-sky-800 text-white p-4 rounded-3xl shadow-md space-y-2 mt-4">
                         <span class="text-[10px] text-sky-100 font-extrabold uppercase">Kontrol Cepat Sistem & Branding</span>
-                        <h3 class="font-bold text-sm">Kelola Logo Lebah & Banner Gambar Global</h3>
-                        <p class="text-[11px] text-sky-100">Klik tombol di bawah untuk mengubah foto maskot lebah dan banner grafis OLENG GO.</p>
+                        <h3 class="font-bold text-sm">Kelola Banner Panjang Utama</h3>
+                        <p class="text-[11px] text-sky-100">Klik tombol di bawah untuk mengunggah banner gambar panjang dari galeri perangkat Anda.</p>
                         <button onclick="checkAccessAndNavigate('admin-branding')" class="mt-2 px-4 py-2 bg-yellow-400 text-slate-900 rounded-xl text-xs font-extrabold shadow cursor-pointer">
-                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Atur Banner & Logo Foto Lebah
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Atur Banner Panjang Utama
                         </button>
                     </div>
 
@@ -1822,10 +1787,9 @@
                     </div>
                 </div>
             `;
-            renderAdminDetailList('users'); // Default view
+            renderAdminDetailList('users');
         }
 
-        // --- FUNGSI KLIK PANEL ADMIN ---
         function renderAdminDetailList(type) {
             const container = document.getElementById('admin-detail-container');
             if(!container) return;
@@ -1888,38 +1852,26 @@
             renderDashboardContent('admin-dash');
         }
 
-        // --- KONTROL BRANDING: UPLOAD/LINK FOTO LEBAH & BANNER GAMBAR ---
+        // --- KONTROL BRANDING: UPLOAD BANNER PANJANG DARI GALERI ---
+        let tempBrandingBanner = null;
+
         function renderAdminBranding(container) {
-            const currentBanner = db.branding?.bannerText || 'GO OLENG';
             const currentBannerImg = db.branding?.bannerImage || 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80';
-            const currentBee = db.branding?.beeLogo || 'https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80';
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-20">
-                    <h2 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-wand-magic-sparkles text-sky-600 mr-1.5"></i> Kontrol Branding Global (Banner & Foto Lebah)</h2>
-                    <p class="text-[11px] text-slate-500 font-medium">Ubah logo lebah menjadi foto asli dan banner OLENG GO menjadi gambar/foto.</p>
+                    <h2 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-wand-magic-sparkles text-sky-600 mr-1.5"></i> Kontrol Banner Panjang Utama</h2>
+                    <p class="text-[11px] text-slate-500 font-medium">Unggah foto banner panjang baru langsung dari galeri perangkat Anda untuk menggantikan banner utama.</p>
 
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">URL Gambar / Foto Banner OLENG GO</label>
-                            <input type="text" id="admin-banner-img-input" value="${currentBannerImg}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold" placeholder="URL Gambar Banner">
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Upload Banner Panjang (Dari Galeri)</label>
+                            <input type="file" id="admin-banner-file" accept="image/*" class="w-full mt-1 p-2 border rounded-2xl text-xs" onchange="previewBrandingBanner(event)">
                         </div>
-                        <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">URL Foto Asli Maskot Lebah</label>
-                            <input type="text" id="admin-bee-input" value="${currentBee}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold" placeholder="URL Foto Lebah">
-                        </div>
-                        <div class="pt-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <span class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Pratinjau Banner:</span>
-                                <div class="w-full h-16 bg-white border rounded-xl overflow-hidden flex items-center justify-center">
-                                    <img src="${currentBannerImg}" class="h-full object-cover">
-                                </div>
-                            </div>
-                            <div>
-                                <span class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Pratinjau Foto Lebah:</span>
-                                <div class="w-16 h-16 bg-yellow-400 rounded-full border-2 border-white shadow flex items-center justify-center overflow-hidden">
-                                    <img src="${currentBee}" class="w-full h-full object-cover">
-                                </div>
+                        <div class="pt-2 space-y-2">
+                            <span class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Pratinjau Banner Panjang Utama:</span>
+                            <div class="w-full h-28 bg-white border-2 border-yellow-400 rounded-3xl overflow-hidden flex items-center justify-center shadow-lg">
+                                <img id="preview-branding-banner-img" src="${currentBannerImg}" class="w-full h-full object-cover">
                             </div>
                         </div>
                         <button onclick="saveAdminBranding()" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer mt-4">Simpan & Terapkan ke Semua User</button>
@@ -1930,20 +1882,27 @@
                     </div>
                 </div>
             `;
+            tempBrandingBanner = null;
+        }
+
+        function previewBrandingBanner(event) {
+            const file = event.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    tempBrandingBanner = e.target.result;
+                    document.getElementById('preview-branding-banner-img').src = tempBrandingBanner;
+                };
+                reader.readAsDataURL(file);
+            }
         }
 
         function saveAdminBranding() {
-            const newBannerImg = document.getElementById('admin-banner-img-input').value.trim();
-            const newBee = document.getElementById('admin-bee-input').value.trim();
-
-            db.branding = {
-                bannerType: 'image',
-                bannerText: 'GO OLENG',
-                bannerImage: newBannerImg || 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80',
-                beeLogo: newBee || 'https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80'
-            };
+            if(!db.branding) db.branding = {};
+            if(tempBrandingBanner) db.branding.bannerImage = tempBrandingBanner;
+            
             saveDB();
-            showToast('Perubahan Disimpan: Banner Gambar & Foto Lebah berhasil diperbarui untuk semua user!', 'success');
+            showToast('Perubahan Disimpan: Banner panjang utama berhasil diperbarui secara permanen untuk semua user!', 'success');
             renderDashboardContent('admin-dash');
         }
 
