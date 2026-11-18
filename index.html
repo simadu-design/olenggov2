@@ -30,7 +30,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0284c7; }
-        .map-container { height: 200px; width: 100%; border-radius: 1.25rem; z-index: 1 !important; position: relative; }
+        .map-container { height: 220px; width: 100%; border-radius: 1.25rem; z-index: 1 !important; position: relative; }
         .leaflet-container { z-index: 1 !important; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -159,34 +159,38 @@
             <!-- Rendered dynamically -->
         </div>
 
-        <!-- Interactive Cart & Checkout Modal -->
+        <!-- Interactive Cart & Precise Map Checkout Modal -->
         <div id="modal-cart" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
-            <div class="bg-white rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div class="bg-white rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
                 <div class="flex justify-between items-center border-b pb-3">
                     <h3 class="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                        <i class="fa-solid fa-cart-shopping text-sky-600"></i> Keranjang & Hitung Ongkir Akurat
+                        <i class="fa-solid fa-map-location-dot text-sky-600"></i> Peta Presisi, Ongkir & Driver
                     </h3>
                     <button onclick="closeCartModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
                 </div>
                 
-                <div class="bg-sky-50/60 p-3.5 rounded-2xl border border-sky-100 space-y-2">
-                    <label class="text-[11px] font-extrabold text-sky-800 uppercase tracking-wider block">Pilih Lokasi Tujuan Anda di Lengkong</label>
-                    <select id="delivery-destination" onchange="recalculateShipping()" class="w-full p-2.5 bg-white border border-sky-200 rounded-xl text-xs font-bold text-slate-800">
-                        <option value="-7.1234,106.8456,Alun-Alun Lengkong">Alun-Alun Lengkong (0.5 km)</option>
-                        <option value="-7.1290,106.8520,Kp. Cijangkar Lengkong">Kp. Cijangkar (2.1 km)</option>
-                        <option value="-7.1150,106.8320,Desa Lengkong Kulon">Desa Lengkong Kulon (3.8 km)</option>
-                        <option value="-7.1400,106.8650,Kp. Lebaksari Lengkong">Kp. Lebaksari (5.2 km)</option>
-                    </select>
+                <!-- Precise Map Picker for Current & Destination -->
+                <div class="space-y-2">
+                    <label class="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">Pilih Titik Lokasi di Peta Presisi Lengkong</label>
+                    <div id="checkout-map" class="map-container shadow-inner border border-slate-200"></div>
+                    <div class="grid grid-cols-2 gap-2 text-[11px]">
+                        <div class="bg-sky-50 p-2 rounded-xl border border-sky-100">
+                            <span class="font-bold text-sky-800 block">Titik Jemput:</span>
+                            <span id="map-pickup-label" class="text-slate-700 font-medium truncate block">Alun-Alun Lengkong</span>
+                        </div>
+                        <div class="bg-yellow-50 p-2 rounded-xl border border-yellow-200">
+                            <span class="font-bold text-yellow-800 block">Titik Tujuan:</span>
+                            <span id="map-dest-label" class="text-slate-700 font-medium truncate block">Kp. Cijangkar Lengkong</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="bg-yellow-50/60 p-3.5 rounded-2xl border border-yellow-200 space-y-2">
                     <label class="text-[11px] font-extrabold text-yellow-900 uppercase tracking-wider block"><i class="fa-solid fa-motorcycle text-yellow-600 mr-1"></i> Pilih Ojek / Driver Terdekat (Online)</label>
-                    <div id="checkout-driver-list-container" class="space-y-2 max-h-40 overflow-y-auto pr-1">
-                        <!-- Filled dynamically -->
-                    </div>
+                    <div id="checkout-driver-list-container" class="space-y-2 max-h-36 overflow-y-auto pr-1"></div>
                 </div>
 
-                <div id="cart-items-container" class="space-y-3 divide-y divide-slate-100 max-h-48 overflow-y-auto pr-1"></div>
+                <div id="cart-items-container" class="space-y-3 divide-y divide-slate-100 max-h-40 overflow-y-auto pr-1"></div>
 
                 <div class="bg-slate-50 p-4 rounded-2xl space-y-2 border border-slate-200">
                     <div class="flex justify-between text-xs font-medium">
@@ -194,7 +198,7 @@
                         <span id="cart-subtotal" class="font-bold text-slate-900">Rp 0</span>
                     </div>
                     <div class="flex justify-between text-xs font-medium">
-                        <span class="text-slate-600" id="shipping-distance-label">Jarak & Ongkir Akurat</span>
+                        <span class="text-slate-600" id="shipping-distance-label">Jarak & Ongkir Presisi</span>
                         <span id="cart-ongkir" class="font-bold text-sky-600">Rp 5.000</span>
                     </div>
                     <div class="flex justify-between text-sm border-t border-slate-200 pt-2 font-black text-slate-900">
@@ -283,13 +287,16 @@
         let adminViewMode = null;
         let selectedDriverName = 'Asep Supriatna';
         let mapInstance = null;
+        let checkoutMapInstance = null;
+        let pickupLatLng = [-7.1234, 106.8456];
+        let destLatLng = [-7.1290, 106.8520];
 
         const defaultDB = {
             users: [
-                { id: 1, name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', balance: 100000, password: '123' },
-                { id: 2, name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC' },
-                { id: 3, name: 'Warung Nasi Sunda Lengkong', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12', balance: 350000, password: '123', shopName: 'Warung Nasi Sunda Lengkong' },
-                { id: 4, name: 'Admin SIMADU', phone: '085624736602', role: 'admin', status: 'Aktif', address: 'Kantor Pusat Lengkong', balance: 1200000, password: '123' }
+                { id: 1, name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', balance: 100000, password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Budi' },
+                { id: 2, name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Asep' },
+                { id: 3, name: 'Warung Nasi Sunda Lengkong', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12', balance: 350000, password: '123', shopName: 'Warung Nasi Sunda Lengkong', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS' },
+                { id: 4, name: 'Admin SIMADU', phone: '085624736602', role: 'admin', status: 'Aktif', address: 'Kantor Pusat Lengkong', balance: 1200000, password: '123', photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin' }
             ],
             merchants: [
                 { 
@@ -426,7 +433,8 @@
                     status: 'Aktif',
                     address: 'Kecamatan Lengkong, Sukabumi',
                     balance: (role === 'merchant' || role === 'driver') ? 150000 : 100000,
-                    password: '123'
+                    password: '123',
+                    photo: 'https://placehold.co/150x150/0284c7/ffffff?text=' + identifier.charAt(0)
                 };
                 db.users.push(foundUser);
                 saveDB();
@@ -455,7 +463,8 @@
                 address: 'Kecamatan Lengkong, Sukabumi',
                 balance: (role === 'merchant' || role === 'driver') ? 50000 : 100000,
                 shopName: shopName || 'Toko Baru Lengkong',
-                password: password
+                password: password,
+                photo: 'https://placehold.co/150x150/0284c7/ffffff?text=' + name.charAt(0)
             };
 
             db.users.push(newUser);
@@ -502,6 +511,10 @@
             if (mapInstance) {
                 mapInstance.remove();
                 mapInstance = null;
+            }
+            if (checkoutMapInstance) {
+                checkoutMapInstance.remove();
+                checkoutMapInstance = null;
             }
             document.getElementById('view-auth').classList.remove('hidden');
             document.getElementById('view-dashboard').classList.add('hidden');
@@ -558,7 +571,7 @@
 
             const consumerFeatures = ['home', 'food', 'ojek', 'driver-list', 'profile'];
             const driverFeatures = ['driver-orders', 'driver-map', 'profile'];
-            const merchantFeatures = ['merchant-menu', 'merchant-orders', 'profile'];
+            const merchantFeatures = ['merchant-menu', 'merchant-orders', 'profile', 'merchant-edit'];
             const adminFeatures = ['admin-dash', 'admin-users', 'admin-stores', 'admin-drivers'];
 
             if (effectiveRole === 'admin') {
@@ -637,8 +650,8 @@
                     <button onclick="checkAccessAndNavigate('merchant-menu')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold" id="nav-btn-merchant-menu">
                         <i class="fa-solid fa-burger text-base"></i><span class="text-[9px] mt-1 font-semibold">Menu Toko</span>
                     </button>
-                    <button onclick="checkAccessAndNavigate('merchant-orders')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-merchant-orders">
-                        <i class="fa-solid fa-bell-concierge text-base"></i><span class="text-[9px] mt-1 font-semibold">Order Toko</span>
+                    <button onclick="checkAccessAndNavigate('merchant-edit')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-merchant-edit">
+                        <i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1 font-semibold">Profil Toko</span>
                     </button>
                     <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-white" id="nav-btn-home">
                         <div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-white">
@@ -649,7 +662,7 @@
                         <i class="fa-solid fa-motorcycle text-base"></i><span class="text-[9px] mt-1 font-semibold">Driver</span>
                     </button>
                     <button onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600" id="nav-btn-profile">
-                        <i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1 font-semibold">Akun</span>
+                        <i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1 font-semibold">Akun</span>
                     </button>
                 `;
             } else if(activeRole === 'admin') {
@@ -677,10 +690,14 @@
         }
 
         function renderDashboardContent(tab) {
-            // Remove previous map instance to prevent stacking/overflow bugs
+            // Remove previous map instances to prevent stacking/overflow bugs
             if (mapInstance) {
                 mapInstance.remove();
                 mapInstance = null;
+            }
+            if (checkoutMapInstance) {
+                checkoutMapInstance.remove();
+                checkoutMapInstance = null;
             }
 
             currentSubTab = tab;
@@ -723,6 +740,7 @@
                 else if(tab === 'ojek') renderCustomerOjek(container);
                 else if(tab === 'driver-list') renderCustomerDriverList(container);
                 else if(tab === 'merchant-menu') renderMerchantMenu(container);
+                else if(tab === 'merchant-edit') renderMerchantProfileEdit(container);
                 else if(tab === 'merchant-orders') renderMerchantOrders(container);
                 else if(tab === 'profile') renderProfile(container);
                 else {
@@ -763,14 +781,12 @@
 
                     <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-4 rounded-3xl shadow-xl border border-sky-400/30 flex items-center justify-between">
                         <div class="flex items-center space-x-3">
-                            <div class="w-12 h-12 bg-sky-500/50 rounded-2xl flex items-center justify-center text-yellow-400 text-2xl shadow-inner border border-sky-400/40">
-                                <i class="fa-solid fa-wallet"></i>
-                            </div>
+                            <img src="${currentUser.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=User'}" class="w-12 h-12 rounded-2xl object-cover border-2 border-yellow-400 shadow-inner">
                             <div>
                                 <span class="text-[11px] text-sky-200 font-extrabold flex items-center gap-1.5">
-                                    Saldo Anda
+                                    Halo, ${currentUser.name}
                                 </span>
-                                <h3 class="text-lg font-black text-white tracking-tight">Rp ${(currentUser.balance || 100000).toLocaleString()}</h3>
+                                <h3 class="text-base font-black text-white tracking-tight">Rp ${(currentUser.balance || 100000).toLocaleString()}</h3>
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -1039,696 +1055,3 @@
                                     </div>
                                 `;
                             }).join('')}
-                        </div>
-                    </div>
-                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
-                        POWERED BY SIMADU
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderCustomerDriverList(container) {
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <h2 class="font-extrabold text-base text-slate-900">Daftar List Ojek OLENG GO Terdekat</h2>
-                    <div class="space-y-3">
-                        ${db.drivers.map(d => {
-                            const dist = calculateDistance(-7.1234, 106.8456, d.lat, d.lng);
-                            return `
-                                <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 flex items-center justify-between">
-                                    <div class="flex items-center space-x-3">
-                                        <div class="w-12 h-12 bg-yellow-100 text-yellow-700 rounded-2xl flex items-center justify-center text-lg font-bold shadow-xs">
-                                            <i class="fa-solid fa-motorcycle"></i>
-                                        </div>
-                                        <div>
-                                            <h4 class="font-bold text-xs text-slate-900">${d.name}</h4>
-                                            <p class="text-[10px] text-slate-500">${d.vehicle} • <span class="text-yellow-600 font-bold"><i class="fa-solid fa-star"></i> ${d.rating}</span></p>
-                                            <p class="text-[10px] text-sky-600 font-bold mt-0.5"><i class="fa-solid fa-location-dot"></i> Jarak terdekat: ${dist} km (${d.location})</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex gap-1.5">
-                                        <a href="https://wa.me/${d.phone}?text=${encodeURIComponent('Halo ' + d.name + ', saya ingin memesan ojek.')}" target="_blank" class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-xs"><i class="fa-brands fa-whatsapp"></i> WA</a>
-                                        <button onclick="switchView('chat')" class="px-3 py-1.5 bg-sky-600 text-white rounded-xl text-xs font-bold shadow-xs"><i class="fa-solid fa-comments"></i> Chat</button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
-                        POWERED BY SIMADU
-                    </div>
-                </div>
-            `;
-        }
-
-        function addToCart(foodId) {
-            const food = db.foods.find(f => f.id === foodId);
-            db.cart.push(food);
-            showToast(`${food.name} ditambahkan ke keranjang`, 'success');
-            const counter = document.getElementById('cart-counter');
-            if(counter) counter.innerText = db.cart.length;
-        }
-
-        function openCartModal() {
-            const modal = document.getElementById('modal-cart');
-            updateCartModalUI();
-            modal.classList.remove('hidden');
-        }
-
-        function closeCartModal() {
-            document.getElementById('modal-cart').classList.add('hidden');
-        }
-
-        function updateCartModalUI() {
-            const container = document.getElementById('cart-items-container');
-            const subtotalEl = document.getElementById('cart-subtotal');
-            const ongkirEl = document.getElementById('cart-ongkir');
-            const totalEl = document.getElementById('cart-total');
-            const distanceLabel = document.getElementById('shipping-distance-label');
-            const driverContainer = document.getElementById('checkout-driver-list-container');
-
-            const onlineDrivers = db.drivers.filter(d => d.status === 'Online');
-            
-            driverContainer.innerHTML = onlineDrivers.map(d => {
-                const dist = calculateDistance(-7.1234, 106.8456, d.lat, d.lng);
-                const isSelected = selectedDriverName === d.name;
-                return `
-                    <div onclick="selectCheckoutDriver('${d.name}')" class="p-2.5 rounded-2xl border transition cursor-pointer flex items-center justify-between ${isSelected ? 'border-sky-600 bg-sky-50' : 'border-slate-200 bg-white'}">
-                        <div class="flex items-center space-x-2.5">
-                            <input type="radio" name="selected_driver_radio" ${isSelected ? 'checked' : ''} class="text-sky-600">
-                            <div>
-                                <h4 class="font-bold text-xs text-slate-900">${d.name}</h4>
-                                <p class="text-[10px] text-slate-500">Jarak terdekat: <span class="font-bold text-sky-600">${dist} km</span> (${d.location})</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-1" onclick="event.stopPropagation()">
-                            <a href="https://wa.me/${d.phone}?text=${encodeURIComponent('Halo ' + d.name + ', saya mau order makanan.')}" target="_blank" class="px-2 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold"><i class="fa-brands fa-whatsapp"></i> WA</a>
-                            <button onclick="switchView('chat')" class="px-2 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-bold"><i class="fa-solid fa-comments"></i> Chat</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            if(db.cart.length === 0) {
-                container.innerHTML = `<p class="text-center text-slate-400 py-4 text-xs font-medium">Keranjang belanja masih kosong.</p>`;
-                subtotalEl.innerText = 'Rp 0';
-                ongkirEl.innerText = 'Rp 0';
-                totalEl.innerText = 'Rp 0';
-                return;
-            }
-
-            container.innerHTML = db.cart.map((item, idx) => `
-                <div class="flex justify-between items-center py-2 text-xs">
-                    <div>
-                        <h4 class="font-bold text-slate-900">${item.name}</h4>
-                        <p class="text-[11px] text-sky-600 font-extrabold">Rp ${item.price.toLocaleString()}</p>
-                    </div>
-                    <button onclick="removeFromCart(${idx})" class="text-rose-500 hover:text-rose-700 text-xs font-bold p-1"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            `).join('');
-
-            const subtotal = db.cart.reduce((sum, item) => sum + item.price, 0);
-            const destSelect = document.getElementById('delivery-destination');
-            const [latStr, lonStr] = destSelect.value.split(',');
-            const merchant = db.activeMerchant || db.merchants[0];
-            
-            const distanceKm = calculateDistance(merchant.lat, merchant.lng, parseFloat(latStr), parseFloat(lonStr));
-            const calculatedOngkir = calculateShippingCost(distanceKm);
-
-            distanceLabel.innerText = `Ongkir Akurat (${distanceKm} km dari Toko)`;
-            subtotalEl.innerText = `Rp ${subtotal.toLocaleString()}`;
-            ongkirEl.innerText = `Rp ${calculatedOngkir.toLocaleString()}`;
-            totalEl.innerText = `Rp ${(subtotal + calculatedOngkir).toLocaleString()}`;
-        }
-
-        function selectCheckoutDriver(name) {
-            selectedDriverName = name;
-            updateCartModalUI();
-        }
-
-        function recalculateShipping() { updateCartModalUI(); }
-
-        function removeFromCart(index) {
-            db.cart.splice(index, 1);
-            updateCartModalUI();
-            const counter = document.getElementById('cart-counter');
-            if(counter) counter.innerText = db.cart.length;
-        }
-
-        function submitOrder() {
-            if(db.cart.length === 0) {
-                showToast('Keranjang belanja kosong!', 'error');
-                return;
-            }
-            const destSelect = document.getElementById('delivery-destination');
-            const [, , destName] = destSelect.value.split(',');
-            const subtotal = db.cart.reduce((sum, item) => sum + item.price, 0);
-            const merchant = db.activeMerchant || db.merchants[0];
-            const distanceKm = calculateDistance(merchant.lat, merchant.lng, -7.1234, 106.8456);
-            const calculatedOngkir = calculateShippingCost(distanceKm);
-            
-            db.orders.unshift({
-                id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
-                type: 'food',
-                customer: currentUser.name,
-                merchant: merchant.name,
-                driver: selectedDriverName,
-                items: db.cart.map(i => i.name).join(', '),
-                total: subtotal + calculatedOngkir,
-                status: 'Menunggu Driver',
-                address: destName,
-                ongkir: calculatedOngkir
-            });
-
-            db.cart = [];
-            saveDB();
-            closeCartModal();
-            closeMerchantDetail();
-            showToast(`Pesanan berhasil dibuat! Driver ${selectedDriverName} segera menuju toko.`, 'success');
-            renderDashboardContent('home');
-        }
-
-        function orderOjek() {
-            const to = document.getElementById('ojek-to').value;
-            if(!to) {
-                showToast('Tolong masukkan lokasi tujuan di Lengkong!', 'error');
-                return;
-            }
-            db.orders.unshift({
-                id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
-                type: 'ride',
-                customer: currentUser.name,
-                driver: selectedDriverName,
-                from: 'Alun-Alun Lengkong',
-                to: to,
-                total: 12000,
-                status: 'Dalam Perjalanan'
-            });
-            saveDB();
-            showToast('Ojek berhasil dipesan! Driver sedang menuju penjemputan.', 'success');
-            renderDashboardContent('home');
-        }
-
-        function renderDriverOrders(container) {
-            const driverProfile = db.drivers.find(d => d.name === currentUser.name) || db.drivers[0];
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 flex justify-between items-center">
-                        <div>
-                            <h3 class="font-extrabold text-xs text-slate-800 uppercase tracking-wider">Status Driver Ojol</h3>
-                            <p class="text-xs text-emerald-600 font-bold mt-0.5"><i class="fa-solid fa-circle text-[8px]"></i> ${driverProfile.status} & Siap Menerima Order</p>
-                        </div>
-                        <button onclick="toggleDriverStatus()" class="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-xs font-extrabold shadow-xs hover:bg-emerald-600 transition">Ubah Status</button>
-                    </div>
-
-                    <h3 class="font-extrabold text-sm text-slate-900">Daftar Orderan Masuk di Lengkong</h3>
-                    <div class="space-y-3">
-                        ${db.orders.map((o, idx) => `
-                            <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-2.5">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] bg-sky-100 text-sky-800 font-extrabold px-2.5 py-0.5 rounded-md uppercase">${o.type} - ${o.id}</span>
-                                    <span class="text-xs font-black text-sky-600">Rp ${o.total.toLocaleString()}</span>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-xs text-slate-900">Customer: ${o.customer}</h4>
-                                    <p class="text-[11px] text-slate-500">${o.items ? 'Menu: ' + o.items + ' (Toko: ' + o.merchant + ')' : 'Rute: ' + o.from + ' -> ' + o.to}</p>
-                                    ${o.address ? `<p class="text-[11px] text-slate-600 font-medium mt-1"><i class="fa-solid fa-location-dot"></i> Alamat: ${o.address}</p>` : ''}
-                                </div>
-                                <div class="flex gap-2 pt-2 border-t border-slate-100">
-                                    <button onclick="updateOrderStatus(${idx}, 'Diterima Driver')" class="flex-1 py-2.5 bg-sky-600 text-white rounded-xl text-xs font-extrabold shadow-xs hover:bg-sky-700 transition">Terima Order</button>
-                                    <button onclick="updateOrderStatus(${idx}, 'Ditolak')" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-extrabold hover:bg-slate-200 transition">Tolak</button>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
-                        POWERED BY SIMADU
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderDriverMap(container) {
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <h2 class="font-extrabold text-base text-slate-900">Navigasi Peta Rute Lengkong</h2>
-                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
-                        <div id="map" class="map-container shadow-inner"></div>
-                        <p class="text-[11px] text-slate-500 text-center font-medium">GPS Terkunci di Wilayah Kecamatan Lengkong, Sukabumi.</p>
-                    </div>
-                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
-                        POWERED BY SIMADU
-                    </div>
-                </div>
-            `;
-            setTimeout(initMap, 200);
-        }
-
-        function toggleDriverStatus() {
-            const d = db.drivers.find(x => x.name === currentUser.name) || db.drivers[0];
-            d.status = d.status === 'Online' ? 'Offline' : 'Online';
-            saveDB();
-            showToast(`Status driver diubah menjadi ${d.status}`, 'success');
-            renderDashboardContent(currentSubTab);
-        }
-
-        function updateOrderStatus(index, status) {
-            db.orders[index].status = status;
-            saveDB();
-            showToast(`Status order diubah: ${status}`, 'success');
-            renderDashboardContent(currentSubTab);
-        }
-
-        function renderMerchantMenu(container) {
-            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName) || db.merchants[0];
-            const merchantFoods = db.foods.filter(f => f.merchantId === merchant.id);
-
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h2 class="font-extrabold text-base text-slate-900">Kelola Menu Toko</h2>
-                            <p class="text-[11px] text-slate-500 font-medium">${merchant.name}</p>
-                        </div>
-                        <button onclick="openAddMenuModal(${merchant.id})" class="bg-yellow-400 text-slate-900 px-3.5 py-2 rounded-2xl text-xs font-extrabold shadow-xs">+ Tambah Menu</button>
-                    </div>
-                    <div class="space-y-3">
-                        ${merchantFoods.map(f => `
-                            <div class="bg-white p-3.5 rounded-3xl shadow-xs border border-slate-100 flex items-center justify-between">
-                                <div class="flex items-center space-x-3">
-                                    <img src="${f.image}" class="w-16 h-16 rounded-2xl object-cover shadow-xs" alt="Menu">
-                                    <div>
-                                        <h4 class="font-bold text-xs text-slate-900">${f.name}</h4>
-                                        <p class="text-[10px] text-slate-500">Stok: ${f.stock} porsi</p>
-                                        <div class="font-black text-sky-600 text-xs mt-0.5">Rp ${f.price.toLocaleString()}</div>
-                                    </div>
-                                </div>
-                                <button onclick="deleteFood(${f.id})" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-[11px] font-bold"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
-                        POWERED BY SIMADU
-                    </div>
-                </div>
-            `;
-        }
-
-        function openAddMenuModal(merchantId) {
-            const name = prompt('Nama Menu Makanan / Minuman:');
-            if(!name) return;
-            const price = parseInt(prompt('Harga (Rp):', '15000')) || 10000;
-            const stock = parseInt(prompt('Stok Porsi:', '20')) || 20;
-
-            db.foods.push({
-                id: Date.now(),
-                merchantId: merchantId,
-                name: name,
-                price: price,
-                desc: 'Menu lezat khas Lengkong Sukabumi.',
-                stock: stock,
-                image: 'https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name)
-            });
-            saveDB();
-            showToast('Menu baru berhasil ditambahkan!', 'success');
-            renderDashboardContent('merchant-menu');
-        }
-
-        function deleteFood(foodId) {
-            db.foods = db.foods.filter(f => f.id !== foodId);
-            saveDB();
-            showToast('Menu dihapus', 'info');
-            renderDashboardContent('merchant-menu');
-        }
-
-        function renderMerchantOrders(container) {
-            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName) || db.merchants[0];
-            const merchantOrders = db.orders.filter(o => o.merchant === merchant.name || o.type === 'food');
-
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <h2 class="font-extrabold text-base text-slate-900">Pesanan Masuk ke Toko</h2>
-                    <div class="space-y-3">
-                        ${merchantOrders.map(o => `
-                            <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-2">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-xs font-extrabold text-sky-600">${o.id}</span>
-                                    <span class="text-[10px] bg-emerald-100 text-emerald-700 font-extrabold px-2 py-0.5 rounded-md">${o.status}</span>
-                                </div>
-                                <h4 class="font-bold text-xs text-slate-900">Pemesan: ${o.customer}</h4>
-                                <p class="text-[11px] text-slate-600 font-medium">${o.items}</p>
-                                <div class="text-xs font-black text-slate-900 pt-2 border-t border-slate-100">Total: Rp ${o.total.toLocaleString()}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
-                        POWERED BY SIMADU
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderAdminDash(container) {
-            const totalUsers = db.users.length;
-            const totalMerchants = db.merchants.length;
-            const totalDrivers = db.drivers.length;
-            const totalOrders = db.orders.length;
-
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <h2 class="font-extrabold text-base text-slate-900">Panel Admin Master Control</h2>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100">
-                            <span class="text-[10px] text-slate-500 font-extrabold uppercase">Total Pengguna</span>
-                            <h3 class="text-xl font-black text-sky-600 mt-1">${totalUsers} User</h3>
-                        </div>
-                        <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100">
-                            <span class="text-[10px] text-slate-500 font-extrabold uppercase">Mitra Toko Aktif</span>
-                            <h3 class="text-xl font-black text-yellow-500 mt-1">${totalMerchants} Toko</h3>
-                        </div>
-                        <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100">
-                            <span class="text-[10px] text-slate-500 font-extrabold uppercase">Total Ojol / Driver</span>
-                            <h3 class="text-xl font-black text-emerald-600 mt-1">${totalDrivers} Driver</h3>
-                        </div>
-                        <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100">
-                            <span class="text-[10px] text-slate-500 font-extrabold uppercase">Pesanan Masuk</span>
-                            <h3 class="text-xl font-black text-purple-600 mt-1">${totalOrders} Pesanan</h3>
-                        </div>
-                    </div>
-
-                    <div class="bg-gradient-to-r from-sky-600 to-sky-800 text-white p-4 rounded-3xl shadow-md space-y-2">
-                        <span class="text-[10px] text-sky-100 font-extrabold uppercase">Kontrol Cepat Sistem</span>
-                        <h3 class="font-bold text-sm">Semua Layanan Lengkong Sukabumi Berjalan Normal</h3>
-                        <p class="text-[11px] text-sky-100">Gunakan tab bawah untuk mengelola user, menambah/mengurangi saldo mitra & ojol, atau memantau lokasi akurat.</p>
-                    </div>
-                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
-                        POWERED BY SIMADU
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderAdminUsers(container) {
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-slate-900">Manajemen Pengguna Terpusat</h2>
-                        <button onclick="openAdminAddUserModal()" class="bg-sky-600 text-white px-3 py-2 rounded-xl text-xs font-extrabold">+ User</button>
-                    </div>
-                    <div class="space-y-3">
-                        ${db.users.map(u => `
-                            <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-2">
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <h4 class="font-bold text-xs text-slate-900">${u.name}</h4>
-                                        <p class="text-[10px] text-slate-500"><i class="fa-solid fa-phone"></i> ${u.phone} • Role: <span class="font-extrabold text-sky-600 uppercase">${u.role}</span></p>
-                                    </div>
-                                    <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md font-extrabold">${u.status}</span>
-                                </div>
-                                <p class="text-[11px] text-slate-600 font-medium"><i class="fa-solid fa-location-dot"></i> ${u.address || 'Lengkong'}</p>
-                                ${u.role === 'merchant' || u.role === 'driver' || u.role === 'customer' ? `<p class="text-xs font-black text-yellow-600">Saldo Dompet: Rp ${(u.balance || 0).toLocaleString()}</p>` : ''}
-                                
-                                <div class="flex gap-2 pt-2 border-t border-slate-100">
-                                    <button onclick="openAdminEditUser(${u.id})" class="px-3 py-1.5 bg-sky-50 text-sky-700 rounded-xl text-[11px] font-extrabold">Edit</button>
-                                    <button onclick="openAdminBalanceModal(${u.id})" class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-xl text-[11px] font-extrabold">Atur Saldo</button>
-                                    <button onclick="adminResetPassword(${u.id})" class="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-xl text-[11px] font-extrabold">Reset Sandi</button>
-                                    <button onclick="adminDeleteUser(${u.id})" class="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-xl text-[11px] font-extrabold"><i class="fa-solid fa-trash"></i></button>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
-                        POWERED BY SIMADU
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderAdminStoresList(container) {
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <h2 class="font-extrabold text-base text-slate-900">Daftar List Toko & Saldo Dompet</h2>
-                    <div class="space-y-3">
-                        ${db.merchants.map(m => `
-                            <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-2">
-                                <div class="flex justify-between items-start">
-                                    <div class="flex items-center space-x-3">
-                                        <img src="${m.image}" class="w-12 h-12 rounded-xl object-cover" alt="Toko">
-                                        <div>
-                                            <h4 class="font-bold text-xs text-slate-900">${m.name}</h4>
-                                            <p class="text-[10px] text-slate-500">${m.category} • WA: <a href="https://wa.me/${m.whatsapp}" target="_blank" class="text-emerald-600 font-bold">${m.whatsapp}</a></p>
-                                        </div>
-                                    </div>
-                                    <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md font-extrabold">${m.status}</span>
-                                </div>
-                                <p class="text-[11px] text-slate-600 font-medium"><i class="fa-solid fa-location-dot"></i> ${m.address} (<span class="text-sky-600 font-bold">Lat: ${m.lat}, Lng: ${m.lng}</span>)</p>
-                                <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
-                                    <span class="font-black text-yellow-600">Saldo Toko: Rp ${(m.balance || 0).toLocaleString()}</span>
-                                    <a href="https://wa.me/${m.whatsapp}?text=${encodeURIComponent('Halo ' + m.name + ', salam dari Admin OLENG GO.')}" target="_blank" class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-bold"><i class="fa-brands fa-whatsapp"></i> Chat</a>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
-                        POWERED BY SIMADU
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderAdminDriversList(container) {
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <h2 class="font-extrabold text-base text-slate-900">Daftar List Ojek / Driver & Saldo</h2>
-                    <div class="space-y-3">
-                        ${db.drivers.map(d => `
-                            <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-2">
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <h4 class="font-bold text-xs text-slate-900">${d.name}</h4>
-                                        <p class="text-[10px] text-slate-500">${d.vehicle} • WA: <a href="https://wa.me/${d.phone}" target="_blank" class="text-emerald-600 font-bold">${d.phone}</a></p>
-                                    </div>
-                                    <span class="text-[10px] ${d.status === 'Online' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'} px-2 py-0.5 rounded-md font-extrabold">${d.status}</span>
-                                </div>
-                                <p class="text-[11px] text-slate-600 font-medium"><i class="fa-solid fa-location-dot"></i> Posisi: ${d.location} (<span class="text-sky-600 font-bold">Lat: ${d.lat}, Lng: ${d.lng}</span>)</p>
-                                <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
-                                    <span class="font-black text-yellow-600">Saldo Driver: Rp ${(d.balance || 0).toLocaleString()}</span>
-                                    <a href="https://wa.me/${d.phone}?text=${encodeURIComponent('Halo ' + d.name + ', salam dari Admin OLENG GO.')}" target="_blank" class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-bold"><i class="fa-brands fa-whatsapp"></i> Chat</a>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
-                        POWERED BY SIMADU
-                    </div>
-                </div>
-            `;
-        }
-
-        function openAdminAddUserModal() {
-            const name = prompt('Nama User Baru:');
-            if(!name) return;
-            const phone = prompt('Nomor WhatsApp:', '0856xxxxxxxx');
-            const role = prompt('Role (customer / driver / merchant / admin):', 'customer');
-
-            db.users.push({
-                id: Date.now(),
-                name: name,
-                phone: phone,
-                role: role,
-                status: 'Aktif',
-                address: 'Kecamatan Lengkong, Sukabumi',
-                balance: 50000,
-                password: '123'
-            });
-            saveDB();
-            showToast('User baru berhasil ditambahkan!', 'success');
-            renderDashboardContent('admin-users');
-        }
-
-        function openAdminEditUser(userId) {
-            const user = db.users.find(u => u.id === userId);
-            if(!user) return;
-            const newName = prompt('Edit Nama User:', user.name);
-            if(!newName) return;
-            user.name = newName;
-            saveDB();
-            showToast('Data user diperbarui', 'success');
-            renderDashboardContent('admin-users');
-        }
-
-        function adminResetPassword(userId) {
-            const user = db.users.find(u => u.id === userId);
-            if(!user) return;
-            user.password = '123';
-            saveDB();
-            showToast(`Password untuk ${user.name} berhasil direset menjadi '123'`, 'success');
-        }
-
-        function adminDeleteUser(userId) {
-            if(!confirm('Yakin ingin menghapus pengguna ini?')) return;
-            db.users = db.users.filter(u => u.id !== userId);
-            saveDB();
-            showToast('User dihapus', 'info');
-            renderDashboardContent('admin-users');
-        }
-
-        function openAdminBalanceModal(userId) {
-            const user = db.users.find(u => u.id === userId);
-            if(!user) return;
-            const nominal = prompt(`Masukkan jumlah saldo untuk ${user.name} (Gunakan minus '-' untuk mengurangi, cth: 50000 atau -20000):`, '50000');
-            if(!nominal) return;
-            const amount = parseInt(nominal);
-            user.balance = (user.balance || 0) + amount;
-
-            if(user.role === 'merchant') {
-                const m = db.merchants.find(x => x.name === user.name || x.whatsapp === user.phone);
-                if(m) m.balance = user.balance;
-            } else if(user.role === 'driver') {
-                const d = db.drivers.find(x => x.name === user.name || x.phone === user.phone);
-                if(d) d.balance = user.balance;
-            }
-
-            saveDB();
-            showToast(`Saldo ${user.name} berhasil diperbarui! Mutasi: Rp ${amount.toLocaleString()}`, 'success');
-            renderDashboardContent('admin-users');
-        }
-
-        function renderProfile(container) {
-            const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            let saldoSection = (activeRole === 'driver' || activeRole === 'merchant') ? `
-                <div class="bg-gradient-to-r from-sky-600 to-sky-700 text-white p-4 rounded-3xl shadow-md space-y-2">
-                    <span class="text-[10px] text-sky-100 uppercase tracking-wider font-extrabold">Dompet Saldo OLENG</span>
-                    <h2 class="text-2xl font-black">Rp ${(currentUser.balance || 100000).toLocaleString()}</h2>
-                    <button onclick="openTopUpModal()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold rounded-2xl text-xs shadow-xs transition flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-wallet text-sm"></i> Top-Up Saldo Instan
-                    </button>
-                </div>
-            ` : '';
-
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <div class="bg-white p-5 rounded-3xl shadow-xs border border-slate-100 text-center space-y-2">
-                        <div class="w-20 h-20 bg-sky-100 text-sky-700 rounded-3xl mx-auto flex items-center justify-center text-3xl font-black shadow-inner">
-                            ${currentUser.name.charAt(0)}
-                        </div>
-                        <h2 class="font-extrabold text-base text-slate-900">${currentUser.name}</h2>
-                        <p class="text-[11px] text-sky-600 font-extrabold uppercase tracking-wider">Peran: ${activeRole}</p>
-                        <p class="text-xs text-slate-500 font-medium"><i class="fa-solid fa-phone"></i> ${currentUser.phone}</p>
-                    </div>
-
-                    ${saldoSection}
-
-                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
-                        <h3 class="font-extrabold text-xs text-slate-800 uppercase tracking-wider">Pengaturan Akun</h3>
-                        <input type="text" value="${currentUser.name}" class="w-full p-2.5 border border-slate-200 rounded-2xl text-xs font-semibold" id="prof-name">
-                        <input type="text" value="${currentUser.phone}" class="w-full p-2.5 border border-slate-200 rounded-2xl text-xs font-semibold" id="prof-phone">
-                        <button onclick="showToast('Profil berhasil disimpan!', 'success')" class="w-full py-2.5 bg-sky-600 text-white rounded-2xl text-xs font-extrabold shadow-xs">Simpan Perubahan</button>
-                    </div>
-                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
-                        POWERED BY SIMADU
-                    </div>
-                </div>
-            `;
-        }
-
-        function openTopUpModal() { document.getElementById('modal-topup').classList.remove('hidden'); }
-        function closeTopUpModal() { document.getElementById('modal-topup').classList.add('hidden'); }
-
-        function processTopUpWhatsApp() {
-            const nominal = document.getElementById('topup-nominal').value;
-            const waNumber = '6285624736602';
-            const msg = encodeURIComponent(`Halo Admin OLENG GO, saya ${currentUser.name} (${currentUser.role.toUpperCase()}) No WA ${currentUser.phone} ingin melakukan Top-Up Saldo Dompet sebesar Rp ${parseInt(nominal).toLocaleString()}. Mohon proses verifikasinya.`);
-            window.open(`https://wa.me/${waNumber}?text=${msg}`, '_blank');
-            closeTopUpModal();
-        }
-
-        function openNotificationModal() {
-            const modal = document.getElementById('modal-notif');
-            const list = document.getElementById('notification-list');
-            list.innerHTML = db.notifications.map(n => `
-                <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
-                    <div class="flex justify-between text-xs font-extrabold text-slate-800">
-                        <span>${n.title}</span>
-                        <span class="text-slate-400 font-medium text-[10px]">${n.time}</span>
-                    </div>
-                    <p class="text-[11px] text-slate-600 font-medium">${n.desc}</p>
-                </div>
-            `).join('');
-            modal.classList.remove('hidden');
-        }
-
-        function closeNotificationModal() { document.getElementById('modal-notif').classList.add('hidden'); }
-
-        function switchView(view) {
-            if(view === 'chat') {
-                document.getElementById('view-chat').classList.remove('hidden');
-                renderChatMessages();
-            }
-        }
-
-        function closeChat() { document.getElementById('view-chat').classList.add('hidden'); }
-
-        function renderChatMessages() {
-            const container = document.getElementById('chat-messages');
-            container.innerHTML = db.chats.map(c => `
-                <div class="flex flex-col space-y-0.5">
-                    <div class="bg-white p-3 rounded-2xl shadow-xs border border-slate-100 max-w-[85%] text-xs text-slate-800">
-                        <span class="font-extrabold text-sky-600 block mb-0.5 text-[10px] uppercase">${c.sender}</span>
-                        ${c.text}
-                    </div>
-                    <span class="text-[9px] text-slate-400 pl-1 font-medium">${c.time}</span>
-                </div>
-            `).join('');
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function sendChatMessage() {
-            const input = document.getElementById('chat-input');
-            if(!input.value.trim()) return;
-            
-            db.chats.push({ sender: currentUser.name, text: input.value, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
-            saveDB();
-            input.value = '';
-            renderChatMessages();
-
-            setTimeout(() => {
-                db.chats.push({ sender: 'Admin SIMADU', text: 'Pesan Anda telah diterima. Warga Lengkong selalu siap dilayani!', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
-                saveDB();
-                renderChatMessages();
-            }, 1000);
-        }
-
-        function showToast(message, type='success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold pointer-events-auto transition transform translate-y-2 flex items-center gap-2 ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-sky-600'}`;
-            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-info'} text-sm"></i> ${message}`;
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-2');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        function initMap() {
-            const mapEl = document.getElementById('map');
-            if(!mapEl) return;
-            if(mapInstance) {
-                mapInstance.remove();
-                mapInstance = null;
-            }
-            mapInstance = L.map('map', { zoomControl: true }).setView([-7.1234, 106.8456], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; OpenStreetMap'
-            }).addTo(mapInstance);
-
-            L.marker([-7.1234, 106.8456]).addTo(mapInstance)
-                .bindPopup('<b>Pusat Kecamatan Lengkong</b><br>Wilayah Operasional OLENG GO.')
-                .openPopup();
-        }
-    </script>
-</body>
-</html>
