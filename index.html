@@ -6,12 +6,28 @@
     <title>OLENG GO (Powered by SIMADU) - Lengkong Sukabumi</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        oleng: {
+                            blue: '#0284c7',
+                            darkblue: '#0369a1',
+                            yellow: '#facc15',
+                            dark: '#0f172a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0284c7; }
-        .map-container { height: 220px; width: 100%; border-radius: 1.25rem; z-index: 1 !important; position: relative; }
+        .map-container { height: 210px; width: 100%; border-radius: 1.25rem; z-index: 1 !important; position: relative; }
         .leaflet-container { z-index: 1 !important; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -19,11 +35,13 @@
 </head>
 <body class="h-full flex flex-col items-center justify-center">
 
+    <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
+    <!-- MAIN APP CONTAINER -->
     <div id="app" class="flex-1 flex flex-col h-full max-w-md mx-auto w-full bg-slate-50 shadow-2xl relative overflow-hidden">
         
-        <!-- AUTH VIEW -->
+        <!-- ================= AUTH VIEW ================= -->
         <div id="view-auth" class="flex-1 flex flex-col justify-between p-6 bg-gradient-to-br from-sky-500 via-sky-700 to-sky-900 text-white overflow-y-auto z-30">
             <div class="my-auto text-center space-y-6">
                 <div class="flex items-center justify-between px-2">
@@ -42,12 +60,12 @@
                 <div class="bg-white text-slate-800 p-6 rounded-3xl shadow-2xl text-left space-y-4">
                     <div class="flex border-b border-slate-100 pb-2 mb-4">
                         <button onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1 text-sm cursor-pointer">Masuk</button>
-                        <button onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1 text-sm cursor-pointer">Daftar</button>
+                        <button onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1 text-sm cursor-pointer">Daftar Akun</button>
                     </div>
 
                     <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3">
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">No. WhatsApp / Email</label>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">No. WhatsApp / Nama</label>
                             <input type="text" id="login-identifier" required class="w-full mt-1 px-4 py-2.5 border border-slate-200 rounded-2xl text-sm" placeholder="0856xxxxxxxx">
                         </div>
                         <div>
@@ -63,7 +81,7 @@
                                 <option value="admin">Admin SIMADU (Full Panel)</option>
                             </select>
                         </div>
-                        <button type="submit" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-lg transition text-sm cursor-pointer">Masuk Aplikasi</button>
+                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-sky-700 text-white font-extrabold rounded-2xl shadow-lg transition text-sm cursor-pointer">Masuk Aplikasi</button>
                     </form>
 
                     <form id="form-register" onsubmit="handleRegister(event)" class="space-y-3 hidden">
@@ -94,7 +112,7 @@
             <div class="text-center text-[10px] text-sky-200 mt-4 font-black uppercase tracking-widest">POWERED BY SIMADU</div>
         </div>
 
-        <!-- MAIN APP SHELL -->
+        <!-- ================= MAIN APP SHELL ================= -->
         <div id="view-dashboard" class="flex-1 flex flex-col hidden bg-slate-50 relative overflow-hidden">
             
             <!-- ADMIN SWITCHER HEADER -->
@@ -110,23 +128,89 @@
 
             <main id="main-content" class="flex-1 overflow-y-auto pb-28 hide-scrollbar"></main>
 
-            <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center z-35 shadow-2xl"></nav>
+            <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-white border-t-2 border-yellow-400 px-3 py-2 flex justify-around items-center z-35 shadow-2xl"></nav>
         </div>
 
-        <!-- MODALS -->
+        <!-- ================= MODALS & SUB-VIEWS ================= -->
+        <!-- Detail Toko Modal -->
         <div id="view-merchant-detail" class="absolute inset-0 bg-slate-50 z-40 hidden flex flex-col overflow-y-auto"></div>
+
+        <!-- Cart Checkout Modal -->
+        <div id="modal-cart" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
+            <div class="bg-white rounded-t-3xl p-5 max-h-[92vh] overflow-y-auto space-y-4 shadow-2xl border-t-4 border-yellow-400">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="font-extrabold text-base text-sky-800 flex items-center gap-2">
+                        <i class="fa-solid fa-cart-shopping text-yellow-500"></i> Checkout Pesanan & Peta GPS
+                    </h3>
+                    <button onclick="closeCartModal()" class="text-slate-400 text-2xl font-bold cursor-pointer">&times;</button>
+                </div>
+
+                <!-- Map Lokasi Terkini, Titik Awal & Tujuan -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[11px] font-extrabold text-slate-700 uppercase">Peta Rute & Titik Pengantaran</span>
+                        <button onclick="useCurrentGPSLocation('cart')" class="px-2.5 py-1 bg-sky-600 text-white rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shadow-xs">
+                            <i class="fa-solid fa-crosshairs"></i> Lokasi Terkini
+                        </button>
+                    </div>
+                    <div id="checkout-map" class="map-container shadow-inner border border-sky-200"></div>
+                    <div class="grid grid-cols-2 gap-2 text-[10px]">
+                        <div class="bg-sky-50 p-2 rounded-xl border border-sky-200">
+                            <span class="font-extrabold text-sky-800 block">Titik Awal (Toko):</span>
+                            <span id="cart-pickup-label" class="text-slate-700 font-semibold truncate block">Lokasi Toko</span>
+                        </div>
+                        <div class="bg-yellow-50 p-2 rounded-xl border border-yellow-300">
+                            <span class="font-extrabold text-yellow-800 block">Titik Tujuan Anda:</span>
+                            <span id="cart-dest-label" class="text-slate-700 font-semibold truncate block">Geser Pin Tujuan</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- List Ojek Online Terdekat Otomatis Paling Atas -->
+                <div class="bg-sky-50/70 p-3 rounded-2xl border border-sky-200 space-y-2">
+                    <label class="text-[11px] font-extrabold text-sky-900 uppercase block"><i class="fa-solid fa-motorcycle text-yellow-500 mr-1"></i> Pilih Driver Terdekat (Urutan Jarak Terdekat)</label>
+                    <div id="checkout-driver-list" class="space-y-2 max-h-32 overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- Item Keranjang -->
+                <div id="cart-items-container" class="space-y-2 divide-y divide-slate-100 max-h-36 overflow-y-auto"></div>
+
+                <!-- Ringkasan Biaya -->
+                <div class="bg-slate-50 p-3.5 rounded-2xl space-y-1.5 border border-slate-200">
+                    <div class="flex justify-between text-xs font-medium">
+                        <span class="text-slate-600">Subtotal Menu</span>
+                        <span id="cart-subtotal" class="font-bold text-slate-900">Rp 0</span>
+                    </div>
+                    <div class="flex justify-between text-xs font-medium">
+                        <span class="text-slate-600" id="cart-distance-label">Ongkos Kirim</span>
+                        <span id="cart-ongkir" class="font-bold text-sky-600">Rp 5.000</span>
+                    </div>
+                    <div class="flex justify-between text-sm border-t border-slate-200 pt-2 font-black text-slate-900">
+                        <span>Total Bayar</span>
+                        <span id="cart-total" class="text-sky-700 text-base">Rp 0</span>
+                    </div>
+                </div>
+
+                <button onclick="submitFoodOrder()" class="w-full py-3.5 bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white font-extrabold rounded-2xl shadow-lg cursor-pointer text-sm border-b-4 border-yellow-400">
+                    Konfirmasi & Kirim Pesanan
+                </button>
+            </div>
+        </div>
+
+        <!-- Notification Modal -->
         <div id="modal-notif" class="absolute inset-0 bg-black/60 z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 max-h-[75vh] overflow-y-auto space-y-4">
                 <div class="flex justify-between items-center border-b pb-3">
-                    <h3 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-bell text-yellow-500 mr-2"></i>Notifikasi Sistem</h3>
+                    <h3 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-bell text-yellow-500 mr-2"></i>Notifikasi & Riwayat</h3>
                     <button onclick="closeNotificationModal()" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
                 </div>
                 <div id="notification-list" class="space-y-3"></div>
             </div>
         </div>
 
+        <!-- Live Chat View -->
         <div id="view-chat" class="absolute inset-0 bg-white z-50 hidden flex flex-col">
-            <div class="bg-sky-600 text-white p-4 flex items-center justify-between shadow">
+            <div class="bg-sky-600 text-white p-4 flex items-center justify-between shadow border-b-2 border-yellow-400">
                 <div class="flex items-center space-x-3">
                     <button onclick="closeChat()" class="text-white text-lg cursor-pointer"><i class="fa-solid fa-arrow-left"></i></button>
                     <h3 id="chat-title" class="font-bold text-sm">Live Chat Bantuan</h3>
@@ -149,41 +233,124 @@
         let currentSubTab = 'home';
         let adminViewMode = null;
         let activeChatTarget = 'Admin SIMADU';
+        let selectedDriverId = 1;
+        
+        // Map Instances
         let mapInstance = null;
-        let customMainBanner = localStorage.getItem('oleng_global_banner') || 'https://placehold.co/600x300/0284c7/ffffff?text=OLENG+GO+OJEK+ONLINE+LENGKONG';
+        let checkoutMapInstance = null;
+        let ojekMapInstance = null;
+
+        // Koordinat Default Lengkong Sukabumi
+        let userCurrentLatLng = [-7.1234, 106.8456];
+        let destLatLng = [-7.1285, 106.8510];
+
+        // Banner Utama Global Tersinkron
+        let customMainBanner = localStorage.getItem('oleng_global_banner') || 'https://placehold.co/600x300/0284c7/facc15?text=OLENG+GO+OJEK+ONLINE+LENGKONG';
 
         const defaultDB = {
             users: [
-                { id: 1, name: '66', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong', balance: 100000, password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=66' },
-                { id: 2, name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', balance: 150000, password: '123', vehicle: 'Honda Beat', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Asep' },
-                { id: 3, name: 'Warung Nasi Sunda Lengkong', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12', balance: 350000, password: '123', shopName: 'MADU TOKO', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS' },
-                { id: 4, name: 'Admin SIMADU', phone: '085624736602', role: 'admin', status: 'Aktif', address: 'Kantor Pusat', balance: 1200000, password: '123', photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin' }
+                { id: 1, name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', balance: 250000, password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Budi' },
+                { id: 2, name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Asep' },
+                { id: 3, name: 'MADU TOKO', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12, Kec. Lengkong, Sukabumi', balance: 350000, password: '123', shopName: 'MADU TOKO', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS' },
+                { id: 4, name: 'Admin SIMADU', phone: '085624736602', role: 'admin', status: 'Aktif', address: 'Kantor Pusat Lengkong', balance: 1200000, password: '123', photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin' }
             ],
             merchants: [
-                { id: 1, name: 'MADU TOKO', category: 'Makanan Berat', status: 'Buka', banner: 'https://placehold.co/600x300/0284c7/ffffff?text=Banner', image: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS', rating: 4.8, lat: -7.1240, lng: 106.8460, address: 'Jl. Raya Lengkong No. 12, Sukabumi', operationalHours: '08:00 - 21:00 WIB', whatsapp: '6285624736602', balance: 350000 },
-                { id: 2, name: 'Seblak & Bakso Bledor Lengkong', category: 'Snack & Pedas', status: 'Buka', banner: 'https://placehold.co/600x300/f59e0b/ffffff?text=Banner', image: 'https://placehold.co/150x150/f59e0b/ffffff?text=SBB', rating: 4.6, lat: -7.1220, lng: 106.8440, address: 'Kp. Pasar Lengkong', operationalHours: '10:00 - 22:00 WIB', whatsapp: '6285624736602', balance: 200000 },
-                { id: 3, name: 'Kopi & Roti Bakar Titik Sentral', category: 'Minuman & Roti', status: 'Buka', banner: 'https://placehold.co/600x300/0f172a/ffffff?text=Banner', image: 'https://placehold.co/150x150/0f172a/ffffff?text=KTS', rating: 4.9, lat: -7.1250, lng: 106.8475, address: 'Depan Alun-Alun Lengkong', operationalHours: '15:00 - 23:00 WIB', whatsapp: '6285624736602', balance: 450000 }
+                { 
+                    id: 1, 
+                    name: 'MADU TOKO', 
+                    subtitle: 'Warung Nasi Sunda Lengkong',
+                    category: 'Makanan Berat', 
+                    status: 'Buka', 
+                    banner: 'https://placehold.co/600x300/0284c7/ffffff?text=Warung+Nasi+Sunda+Lengkong', 
+                    image: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS', 
+                    rating: 4.9, 
+                    lat: -7.1240, 
+                    lng: 106.8460, 
+                    address: 'Jl. Raya Lengkong No. 12, Kec. Lengkong, Sukabumi', 
+                    operationalHours: '08:00 - 21:00 WIB', 
+                    whatsapp: '6285624736602', 
+                    balance: 350000 
+                },
+                { 
+                    id: 2, 
+                    name: 'Seblak & Bakso Bledor Lengkong', 
+                    subtitle: 'Spesialis Pedas Lengkong',
+                    category: 'Snack & Pedas', 
+                    status: 'Buka', 
+                    banner: 'https://placehold.co/600x300/0369a1/facc15?text=Seblak+Bakso+Bledor', 
+                    image: 'https://placehold.co/150x150/f59e0b/ffffff?text=SBB', 
+                    rating: 4.7, 
+                    lat: -7.1220, 
+                    lng: 106.8440, 
+                    address: 'Kp. Pasar Lengkong RT 01/02, Sukabumi', 
+                    operationalHours: '10:00 - 22:00 WIB', 
+                    whatsapp: '6285624736602', 
+                    balance: 200000 
+                },
+                { 
+                    id: 3, 
+                    name: 'Kopi & Roti Bakar Titik Sentral', 
+                    subtitle: 'Nongkrong Asik Lengkong',
+                    category: 'Minuman & Roti', 
+                    status: 'Buka', 
+                    banner: 'https://placehold.co/600x300/0f172a/facc15?text=Kopi+Titik+Sentral', 
+                    image: 'https://placehold.co/150x150/0f172a/ffffff?text=KTS', 
+                    rating: 4.8, 
+                    lat: -7.1255, 
+                    lng: 106.8475, 
+                    address: 'Depan Alun-Alun Lengkong, Sukabumi', 
+                    operationalHours: '15:00 - 23:00 WIB', 
+                    whatsapp: '6285624736602', 
+                    balance: 450000 
+                }
             ],
             foods: [
-                { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap Komplit', price: 25000, desc: 'Nasi liwet hangat dan lauk komplit.', stock: 15, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Nasi+Liwet' }
+                { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap Komplit', price: 25000, desc: 'Nasi liwet hangat, ikan asin jambal, tahu tempe, lalapan...', stock: 15, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Nasi+Liwet' },
+                { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung asli bumbu rempah bakar madu manis...', stock: 12, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Ayam+Bakar' },
+                { id: 103, merchantId: 2, name: 'Seblak Ceker Mercon Jumbo', price: 15000, desc: 'Seblak kuah kencur pedas nampol dengan ceker empuk.', stock: 25, image: 'https://placehold.co/200x200/f59e0b/ffffff?text=Seblak' },
+                { id: 104, merchantId: 3, name: 'Kopi Susu Gula Aren Lengkong', price: 15000, desc: 'Kopi robusta lokal dengan gula aren murni.', stock: 30, image: 'https://placehold.co/200x200/0f172a/ffffff?text=Kopi+Susu' }
             ],
             drivers: [
-                { id: 1, name: 'Asep Supriatna', status: 'Online', vehicle: 'Honda Beat', rating: 4.9, location: 'Alun-Alun', phone: '6285624736602', balance: 150000 }
+                { id: 1, name: 'Asep Supriatna', status: 'Online', vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '6285624736602', balance: 150000 },
+                { id: 2, name: 'Ujang Hendra', status: 'Online', vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '6285624736602', balance: 120000 },
+                { id: 3, name: 'Dedi Kurniawan', status: 'Online', vehicle: 'Honda Vario - F 5512 KL', rating: 4.7, location: 'Kp. Cijangkar', lat: -7.1310, lng: 106.8540, phone: '6285624736602', balance: 95000 }
             ],
             orders: [
-                { id: 'ORD-9853', type: 'food', customer: '66', merchant: 'MADU TOKO', total: 106500, status: 'Menunggu Driver', items: 'Paket Nasi Liwet Lengkap Komplit (4x)' }
+                { id: 'ORD-9853', type: 'food', customer: 'Budi Santoso', merchant: 'MADU TOKO', driver: 'Asep Supriatna', total: 55000, status: 'Sedang Diproses', items: 'Paket Nasi Liwet Lengkap Komplit (2x)', pickup: 'MADU TOKO', dest: 'Kp. Lengkong RT 02/01' }
             ],
             notifications: [
-                { id: 1, title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Sistem super-app Lengkong Sukabumi aktif.' }
+                { id: 1, title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Aplikasi ojek & kuliner warga Lengkong Sukabumi siap digunakan.' }
             ],
             chats: [
-                { id: 1, from: '66', to: 'Admin SIMADU', text: 'Halo Admin, sistem siap.', time: '08:00' }
+                { id: 1, from: 'Budi Santoso', to: 'Admin SIMADU', text: 'Halo Admin, aplikasi berjalan lancar.', time: '08:00' }
             ],
-            cart: []
+            cart: [],
+            activeMerchant: null
         };
 
         let db = JSON.parse(localStorage.getItem('oleng_go_db')) || defaultDB;
         function saveDB() { localStorage.setItem('oleng_go_db', JSON.stringify(db)); }
+
+        // Kalkulasi Jarak Haversine (km)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2); 
+            return Math.max(0.1, Math.round((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))) * 10) / 10);
+        }
+
+        function calculateShippingCost(distanceKm) {
+            return Math.max(5000, Math.round((4000 + (distanceKm * 2500)) / 500) * 500);
+        }
+
+        // Urutkan Driver Berdasarkan Jarak Terdekat dari Titik Awal
+        function getSortedDriversByDistance(fromLat, fromLng) {
+            return db.drivers.map(d => {
+                const dist = calculateDistance(fromLat, fromLng, d.lat, d.lng);
+                return { ...d, distance: dist };
+            }).sort((a, b) => a.distance - b.distance);
+        }
 
         document.addEventListener("DOMContentLoaded", function() {
             const savedSession = localStorage.getItem('oleng_user_session');
@@ -202,14 +369,14 @@
             e.preventDefault();
             const identifier = document.getElementById('login-identifier').value.trim();
             const role = document.getElementById('login-role').value;
-            let foundUser = db.users.find(u => u.phone === identifier && u.role === role);
+            let foundUser = db.users.find(u => (u.phone === identifier || u.name === identifier) && u.role === role);
             if(!foundUser) {
-                foundUser = { id: Date.now(), name: identifier, phone: identifier, role, status: 'Aktif', address: 'Lengkong', balance: 100000, password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text='+identifier.charAt(0) };
+                foundUser = { id: Date.now(), name: identifier, phone: identifier, role, status: 'Aktif', address: 'Kecamatan Lengkong, Sukabumi', balance: 150000, password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text='+identifier.charAt(0).toUpperCase() };
                 db.users.push(foundUser); saveDB();
             }
             currentUser = foundUser; adminViewMode = null;
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            showToast('Berhasil masuk!', 'success'); enterDashboard();
+            showToast(`Berhasil masuk sebagai ${role.toUpperCase()}!`, 'success'); enterDashboard();
         }
 
         function handleRegister(e) {
@@ -218,17 +385,21 @@
             const phone = document.getElementById('reg-phone').value;
             const role = document.getElementById('reg-role').value;
             const password = document.getElementById('reg-password').value;
-            const newUser = { id: Date.now(), name, phone, role, status: 'Aktif', address: 'Lengkong', balance: 100000, password, photo: 'https://placehold.co/150x150/0284c7/ffffff?text='+name.charAt(0) };
-            db.users.push(newUser); saveDB();
+            const newUser = { id: Date.now(), name, phone, role, status: 'Aktif', address: 'Kecamatan Lengkong, Sukabumi', balance: 100000, password, photo: 'https://placehold.co/150x150/0284c7/ffffff?text='+name.charAt(0).toUpperCase() };
+            db.users.push(newUser);
+            if(role === 'merchant') {
+                db.merchants.push({ id: Date.now(), name: name, subtitle: 'Mitra UMKM Lengkong', category: 'Kuliner', status: 'Buka', banner: 'https://placehold.co/600x300/0284c7/facc15?text='+encodeURIComponent(name), image: newUser.photo, rating: 5.0, lat: -7.1245, lng: 106.8465, address: 'Kecamatan Lengkong, Sukabumi', operationalHours: '08:00 - 21:00 WIB', whatsapp: phone, balance: 50000 });
+            }
+            saveDB();
             currentUser = newUser; localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            showToast('Pendaftaran berhasil!', 'success'); enterDashboard();
+            showToast('Pendaftaran akun berhasil!', 'success'); enterDashboard();
         }
 
         function handleLogout() {
             currentUser = null; adminViewMode = null; localStorage.removeItem('oleng_user_session');
             document.getElementById('view-auth').classList.remove('hidden');
             document.getElementById('view-dashboard').classList.add('hidden');
-            showToast('Keluar akun.', 'info');
+            showToast('Anda telah keluar dari akun.', 'info');
         }
 
         function enterDashboard() {
@@ -244,8 +415,9 @@
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             renderDashboardNavigation(activeRole);
             let def = 'home';
-            if(activeRole === 'merchant') def = 'merchant-menu';
+            if(activeRole === 'merchant') def = 'merchant-manage';
             else if(activeRole === 'admin') def = 'admin-dash';
+            else if(activeRole === 'driver') def = 'driver-orders';
             renderDashboardContent(def);
         }
 
@@ -262,55 +434,71 @@
             const nav = document.getElementById('bottom-nav');
             if(activeRole === 'admin') {
                 nav.innerHTML = `
-                    <button onclick="renderAdminDash(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-2 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-chart-pie text-base"></i><span class="text-[8px] mt-1">Monitor</span></button>
-                    <button onclick="renderAdminUsers(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[8px] mt-1">User</span></button>
-                    <button onclick="renderCustomerHome(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-2 text-white cursor-pointer"><div class="w-11 h-11 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-white"><i class="fa-solid fa-house text-base"></i></div></button>
-                    <button onclick="renderAdminStores(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-store text-base"></i><span class="text-[8px] mt-1">Toko</span></button>
-                    <button onclick="renderAdminBanner(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-image text-base"></i><span class="text-[8px] mt-1">Banner</span></button>
+                    <button onclick="renderDashboardContent('admin-dash')" class="flex flex-col items-center py-1 px-2 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-chart-pie text-base"></i><span class="text-[9px] mt-1">Monitor</span></button>
+                    <button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] mt-1">User</span></button>
+                    <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-2 text-white cursor-pointer"><div class="w-11 h-11 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-yellow-400"><i class="fa-solid fa-house text-base"></i></div></button>
+                    <button onclick="renderDashboardContent('admin-stores')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1">Toko</span></button>
+                    <button onclick="renderDashboardContent('admin-banner')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-image text-base"></i><span class="text-[9px] mt-1">Banner</span></button>
                 `;
             } else if(activeRole === 'merchant') {
                 nav.innerHTML = `
-                    <button onclick="renderMerchantMenu(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-burger text-base"></i><span class="text-[10px] mt-1">Menu</span></button>
-                    <button onclick="renderCustomerHome(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-white"><i class="fa-solid fa-house text-lg"></i></div></button>
-                    <button onclick="renderProfile(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[10px] mt-1">Akun</span></button>
+                    <button onclick="renderDashboardContent('merchant-manage')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1">Kelola Toko</span></button>
+                    <button onclick="renderDashboardContent('merchant-orders')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-receipt text-base"></i><span class="text-[9px] mt-1">Pesanan</span></button>
+                    <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-yellow-400"><i class="fa-solid fa-house text-lg"></i></div></button>
+                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1">Akun</span></button>
+                `;
+            } else if(activeRole === 'driver') {
+                nav.innerHTML = `
+                    <button onclick="renderDashboardContent('driver-orders')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-list-check text-base"></i><span class="text-[9px] mt-1">Orderan</span></button>
+                    <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-yellow-400"><i class="fa-solid fa-house text-lg"></i></div></button>
+                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1">Akun</span></button>
                 `;
             } else {
                 nav.innerHTML = `
-                    <button onclick="renderCustomerFood(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-utensils text-base"></i><span class="text-[10px] mt-1">Pesanan</span></button>
-                    <button onclick="renderCustomerHome(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-white"><i class="fa-solid fa-house text-lg"></i></div></button>
-                    <button onclick="renderCustomerOjek(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-motorcycle text-base"></i><span class="text-[10px] mt-1">Ojek</span></button>
-                    <button onclick="renderProfile(document.getElementById('main-content'))" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[10px] mt-1">Akun</span></button>
+                    <button onclick="renderDashboardContent('food')" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-utensils text-base"></i><span class="text-[9px] mt-1 font-bold">Pesanan</span></button>
+                    <button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-clock-rotate-left text-base"></i><span class="text-[9px] mt-1 font-bold">Riwayat</span></button>
+                    <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-2 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-yellow-400"><i class="fa-solid fa-house text-lg"></i></div></button>
+                    <button onclick="renderDashboardContent('ojek')" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-motorcycle text-base"></i><span class="text-[9px] mt-1 font-bold">Ojek</span></button>
+                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1 font-bold">Akun</span></button>
                 `;
             }
         }
 
         function renderDashboardContent(tab) {
             if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+            if (ojekMapInstance) { ojekMapInstance.remove(); ojekMapInstance = null; }
+            if (checkoutMapInstance) { checkoutMapInstance.remove(); checkoutMapInstance = null; }
+
+            currentSubTab = tab;
+            document.getElementById('view-merchant-detail').classList.add('hidden');
             const container = document.getElementById('main-content');
+
             if(tab === 'home') renderCustomerHome(container);
             else if(tab === 'food') renderCustomerFood(container);
             else if(tab === 'ojek') renderCustomerOjek(container);
-            else if(tab === 'merchant-menu') renderMerchantMenu(container);
+            else if(tab === 'history') renderOrderHistory(container);
+            else if(tab === 'profile') renderProfile(container);
+            else if(tab === 'merchant-manage') renderMerchantManage(container);
+            else if(tab === 'merchant-orders') renderMerchantOrders(container);
+            else if(tab === 'driver-orders') renderDriverOrders(container);
             else if(tab === 'admin-dash') renderAdminDash(container);
             else if(tab === 'admin-users') renderAdminUsers(container);
             else if(tab === 'admin-stores') renderAdminStores(container);
             else if(tab === 'admin-drivers') renderAdminDrivers(container);
             else if(tab === 'admin-orders') renderAdminOrders(container);
             else if(tab === 'admin-banner') renderAdminBanner(container);
-            else if(tab === 'profile') renderProfile(container);
             else renderCustomerHome(container);
         }
 
+        // ================= BERANDA UTAMA (SESUAI BANNER OLENG GO) =================
         function renderCustomerHome(container) {
             container.innerHTML = `
-                <div class="p-4 space-y-4 bg-gradient-to-b from-sky-600 to-slate-50 min-h-full pb-20">
+                <div class="p-4 space-y-4 bg-gradient-to-b from-sky-600 via-sky-500 to-slate-50 min-h-full pb-20">
                     
-                    <!-- KARTU PROFIL & SALDO PERSIS SEPERTI GAMBAR -->
-                    <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-4 rounded-3xl shadow-xl flex items-center justify-between border border-sky-400/30">
+                    <!-- Kartu Profil & Saldo -->
+                    <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-4 rounded-3xl shadow-xl flex items-center justify-between border-2 border-yellow-400">
                         <div class="flex items-center space-x-3">
-                            <div class="w-14 h-14 bg-sky-500 rounded-2xl border-2 border-yellow-400 flex items-center justify-center font-black text-white text-lg shadow-inner">
-                                User
-                            </div>
+                            <img src="${currentUser.photo}" class="w-12 h-12 rounded-2xl object-cover border-2 border-yellow-400 shadow-inner">
                             <div>
                                 <span class="text-xs text-sky-200 font-extrabold block">Halo, ${currentUser.name}</span>
                                 <h3 class="text-lg font-black text-white tracking-tight">Rp ${(currentUser.balance || 100000).toLocaleString()}</h3>
@@ -319,7 +507,7 @@
                         <div class="flex items-center space-x-2">
                             <button onclick="openNotificationModal()" class="relative p-2.5 bg-sky-800 hover:bg-sky-700 rounded-2xl text-white transition shadow cursor-pointer">
                                 <i class="fa-solid fa-bell text-sm"></i>
-                                <span class="absolute top-1 right-1 bg-yellow-400 text-slate-900 text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">2</span>
+                                <span class="absolute top-1 right-1 bg-yellow-400 text-slate-900 text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">${db.orders.length}</span>
                             </button>
                             <button onclick="switchView('chat')" class="p-2.5 bg-sky-800 hover:bg-sky-700 rounded-2xl text-white transition shadow cursor-pointer">
                                 <i class="fa-solid fa-comments text-sm"></i>
@@ -330,100 +518,236 @@
                         </div>
                     </div>
 
-                    <!-- BANNER UTAMA (BISA DIUBAH ADMIN DAN BERUBAH KE SEMUA USER) -->
+                    <!-- Banner Utama Tersinkron -->
                     <div class="rounded-3xl shadow-xl overflow-hidden border-2 border-yellow-400 bg-white">
                         <img src="${customMainBanner}" class="w-full h-36 object-cover" alt="Banner Oleng Go">
                     </div>
 
-                    <!-- 4 KOTAK MENU UTAMA -->
+                    <!-- 4 Kotak Menu Utama -->
                     <div class="grid grid-cols-4 gap-2">
-                        <button onclick="renderCustomerOjek(document.getElementById('main-content'))" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center cursor-pointer hover:border-sky-500 transition">
+                        <button onclick="renderDashboardContent('ojek')" class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-400 transition">
                             <div class="w-12 h-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-motorcycle"></i></div>
                             <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Pesan Ojek</span>
                         </button>
-                        <button onclick="renderCustomerFood(document.getElementById('main-content'))" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center cursor-pointer hover:border-sky-500 transition">
+                        <button onclick="renderDashboardContent('food')" class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-400 transition">
                             <div class="w-12 h-12 bg-yellow-100 text-yellow-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-utensils"></i></div>
                             <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Pesan Makanan</span>
                         </button>
-                        <button onclick="switchView('chat')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center cursor-pointer hover:border-sky-500 transition">
+                        <button onclick="switchView('chat')" class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-400 transition">
                             <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-comments"></i></div>
                             <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Live Chat Bantuan</span>
                         </button>
-                        <button onclick="openNotificationModal()" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center cursor-pointer hover:border-sky-500 transition">
-                            <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-gift"></i></div>
-                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Info Terbaru</span>
+                        <button onclick="renderDashboardContent('history')" class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-400 transition">
+                            <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-receipt"></i></div>
+                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Riwayat Pesanan</span>
                         </button>
                     </div>
 
-                    <!-- PETA WILAYAH LENGKONG -->
-                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-2.5">
+                    <!-- Peta Wilayah Lengkong -->
+                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-sky-100 space-y-2.5">
                         <div class="flex justify-between items-center">
-                            <h3 class="font-extrabold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <h3 class="font-extrabold text-xs text-sky-900 uppercase tracking-wider flex items-center gap-1.5">
                                 <i class="fa-solid fa-map-location-dot text-sky-600"></i> Peta Wilayah Lengkong
                             </h3>
                             <span class="text-[10px] bg-sky-100 text-sky-800 px-2.5 py-1 rounded-full font-extrabold flex items-center gap-1">
                                 <i class="fa-solid fa-location-crosshairs text-sky-600"></i> GPS Aktif
                             </span>
                         </div>
-                        <div id="map" class="map-container shadow-inner"></div>
+                        <div id="map" class="map-container shadow-inner border border-sky-100"></div>
                     </div>
-                    <div class="text-center py-2 text-[10px] text-white font-black uppercase tracking-widest">
-                        POWERED BY SIMADU
+
+                    <!-- Daftar Toko Pilihan -->
+                    <div class="space-y-2.5">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-extrabold text-sm text-slate-900">Warung & Toko Kuliner Lengkong</h3>
+                            <button onclick="renderDashboardContent('food')" class="text-xs font-extrabold text-sky-700 hover:underline cursor-pointer">Lihat Semua</button>
+                        </div>
+                        <div class="space-y-2.5">
+                            ${db.merchants.map(m => {
+                                const dist = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], m.lat, m.lng);
+                                return `
+                                    <div onclick="openMerchantDetail(${m.id})" class="bg-white p-3.5 rounded-2xl shadow-xs border border-slate-100 flex items-center space-x-3.5 cursor-pointer hover:border-sky-500 transition">
+                                        <img src="${m.image}" class="w-16 h-16 rounded-2xl object-cover shadow-xs border border-sky-100">
+                                        <div class="flex-1">
+                                            <div class="flex justify-between items-start">
+                                                <h4 class="font-bold text-xs text-slate-900">${m.name}</h4>
+                                                <span class="text-[9px] px-2 py-0.5 rounded-md font-extrabold bg-emerald-100 text-emerald-700">${m.status}</span>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 mt-0.5">${m.category} • <span class="font-bold text-sky-600">${dist} km</span></p>
+                                            <p class="text-[10px] text-slate-600 truncate mt-0.5"><i class="fa-solid fa-location-dot text-sky-500"></i> ${m.address}</p>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
                     </div>
                 </div>
             `;
-            setTimeout(initMap, 200);
+            setTimeout(initHomeMap, 200);
         }
 
+        // ================= HALAMAN PESANAN MAKANAN (DENGAN PETA LOKASI & DRIVER TERDEKAT) =================
         function renderCustomerFood(container) {
+            const sortedDrivers = getSortedDriversByDistance(userCurrentLatLng[0], userCurrentLatLng[1]);
+
             container.innerHTML = `
-                <div class="p-4 space-y-4">
+                <div class="p-4 space-y-4 pb-24">
                     <div class="flex justify-between items-center">
                         <div>
-                            <h2 class="font-extrabold text-base text-slate-900">OLENG Food Lengkong</h2>
-                            <p class="text-[11px] text-slate-500">Klik toko untuk melihat profil dan menu</p>
+                            <h2 class="font-extrabold text-base text-sky-900">OLENG Food Lengkong</h2>
+                            <p class="text-[11px] text-slate-500">Pilih warung & atur lokasi pengiriman Anda</p>
                         </div>
-                        <button onclick="showToast('Keranjang kosong', 'info')" class="bg-sky-600 text-white px-3.5 py-2 rounded-2xl text-xs font-extrabold shadow-md cursor-pointer">
-                            <i class="fa-solid fa-cart-shopping"></i> Keranjang (<span id="cart-counter">0</span>)
+                        <button onclick="openCartModal()" class="bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-2 rounded-2xl text-xs font-extrabold shadow-md flex items-center gap-1.5 cursor-pointer border-b-2 border-yellow-400">
+                            <i class="fa-solid fa-cart-shopping"></i> Keranjang <span id="cart-counter" class="bg-yellow-400 text-slate-900 px-1.5 py-0.5 rounded-full text-[10px] font-black">${db.cart.length}</span>
                         </button>
                     </div>
-                    <div class="space-y-3">
-                        ${db.merchants.map(m => `
-                            <div onclick="openMerchantDetail(${m.id})" class="bg-white p-4 rounded-3xl border shadow-xs cursor-pointer space-y-2">
-                                <div class="flex justify-between items-start">
-                                    <h4 class="font-bold text-sm text-slate-900">${m.name}</h4>
-                                    <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md font-extrabold">${m.status}</span>
-                                </div>
-                                <p class="text-xs text-slate-500"><i class="fa-solid fa-location-dot"></i> ${m.address}</p>
+
+                    <!-- Map Lokasi Terkini, Titik Awal & Tujuan -->
+                    <div class="bg-white p-3.5 rounded-3xl shadow-xs border border-sky-200 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[11px] font-extrabold text-sky-800 uppercase"><i class="fa-solid fa-map-pin text-yellow-500 mr-1"></i> Peta Lokasi & Pengantaran</span>
+                            <button onclick="useCurrentGPSLocation('food')" class="px-2.5 py-1 bg-yellow-400 text-slate-900 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shadow-xs">
+                                <i class="fa-solid fa-crosshairs"></i> Lokasi Terkini
+                            </button>
+                        </div>
+                        <div id="food-map" class="map-container shadow-inner border border-slate-200" style="height: 170px;"></div>
+                        <div class="grid grid-cols-2 gap-2 text-[10px]">
+                            <div class="bg-sky-50 p-2 rounded-xl border border-sky-100">
+                                <span class="font-bold text-sky-800 block">Titik Awal (Posisi Anda):</span>
+                                <span id="food-pickup-label" class="text-slate-700 font-medium truncate block">Alun-Alun Lengkong</span>
                             </div>
-                        `).join('')}
+                            <div class="bg-yellow-50 p-2 rounded-xl border border-yellow-200">
+                                <span class="font-bold text-yellow-800 block">Titik Tujuan Antar:</span>
+                                <span id="food-dest-label" class="text-slate-700 font-medium truncate block">Kp. Cijangkar Lengkong</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Daftar List Toko -->
+                    <div class="space-y-3">
+                        <h3 class="font-extrabold text-xs text-sky-900 uppercase tracking-wider">Daftar List Toko & Warung Pilihan</h3>
+                        <div class="space-y-2.5">
+                            ${db.merchants.map(m => {
+                                const dist = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], m.lat, m.lng);
+                                return `
+                                    <div onclick="openMerchantDetail(${m.id})" class="bg-white p-4 rounded-3xl border border-slate-100 shadow-xs cursor-pointer hover:border-sky-500 transition flex items-center space-x-3.5">
+                                        <img src="${m.image}" class="w-16 h-16 rounded-2xl object-cover shadow-inner border border-sky-100">
+                                        <div class="flex-1">
+                                            <div class="flex justify-between items-start">
+                                                <h4 class="font-bold text-sm text-slate-900">${m.name}</h4>
+                                                <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md font-extrabold">${m.status}</span>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 mt-0.5">${m.category} • <span class="font-bold text-sky-600">${dist} km</span></p>
+                                            <p class="text-[10px] text-slate-600 font-medium mt-1"><i class="fa-solid fa-location-dot text-sky-500"></i> ${m.address}</p>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <!-- List Ojek Online Terdekat Otomatis Paling Atas -->
+                    <div class="space-y-2.5 pt-2">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-extrabold text-xs text-sky-900 uppercase tracking-wider">Driver Pengantar Terdekat</h3>
+                            <span class="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-md font-bold">Urutan Terdekat</span>
+                        </div>
+                        <div class="space-y-2">
+                            ${sortedDrivers.map((d, index) => {
+                                const isSelected = selectedDriverId === d.id;
+                                return `
+                                    <div onclick="selectDriver(${d.id})" class="bg-white p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between ${isSelected ? 'border-sky-600 bg-sky-50/60 shadow-sm' : 'border-slate-100'}">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 bg-sky-100 text-sky-700 rounded-xl flex items-center justify-center font-bold"><i class="fa-solid fa-helmet-safety"></i></div>
+                                            <div>
+                                                <h4 class="font-bold text-xs text-slate-900">${d.name} ${index === 0 ? '<span class="bg-emerald-500 text-white text-[8px] px-1.5 py-0.5 rounded ml-1">TERDEKAT</span>' : ''}</h4>
+                                                <p class="text-[10px] text-slate-500">${d.vehicle} • <span class="font-bold text-sky-600">${d.distance} km</span></p>
+                                            </div>
+                                        </div>
+                                        <span class="text-[10px] font-extrabold ${isSelected ? 'text-sky-600' : 'text-slate-400'}">${isSelected ? 'Dipilih ✓' : 'Pilih'}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
                     </div>
                 </div>
             `;
+            setTimeout(() => initInteractiveRouteMap('food-map', 'food-pickup-label', 'food-dest-label'), 250);
         }
 
+        // ================= DETAIL TOKO PERSIS SEPERTI GAMBAR =================
         function openMerchantDetail(merchantId) {
             const merchant = db.merchants.find(m => m.id === merchantId);
-            const foods = db.foods.filter(f => f.merchantId === merchantId);
+            db.activeMerchant = merchant;
+            const merchantFoods = db.foods.filter(f => f.merchantId === merchantId);
+            const dist = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], merchant.lat, merchant.lng);
+
             const detailView = document.getElementById('view-merchant-detail');
             detailView.classList.remove('hidden');
 
             detailView.innerHTML = `
-                <div class="bg-sky-700 text-white p-4 flex items-center justify-between">
-                    <button onclick="document.getElementById('view-merchant-detail').classList.add('hidden')" class="text-white font-bold cursor-pointer"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
-                    <h3 class="font-bold text-sm">${merchant.name}</h3>
+                <!-- Banner Atas Toko -->
+                <div class="relative bg-sky-700 text-white">
+                    <img src="${merchant.banner}" class="w-full h-44 object-cover opacity-90" alt="Banner Toko">
+                    <div class="absolute inset-0 bg-gradient-to-t from-sky-900/70 via-transparent to-black/20 flex items-center justify-center">
+                        <h3 class="text-white font-bold text-base drop-shadow">${merchant.subtitle || merchant.name}</h3>
+                    </div>
+                    <button onclick="closeMerchantDetail()" class="absolute top-4 left-4 w-10 h-10 bg-white/90 text-slate-900 rounded-full flex items-center justify-center font-bold shadow-lg cursor-pointer">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <button onclick="openCartModal()" class="absolute top-4 right-4 px-3.5 py-2 bg-yellow-400 text-slate-900 rounded-full font-extrabold text-xs shadow-lg flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-cart-shopping"></i> <span id="detail-cart-count">${db.cart.length}</span>
+                    </button>
+                    <!-- Foto Profil Toko Mengambang -->
+                    <div class="absolute -bottom-8 left-4">
+                        <img src="${merchant.image}" class="w-20 h-20 rounded-2xl object-cover border-4 border-white shadow-xl bg-white" alt="Profil Toko">
+                    </div>
                 </div>
-                <div class="p-4 space-y-3 overflow-y-auto flex-1 pb-20">
-                    <div class="bg-white p-4 rounded-3xl shadow-xs space-y-3">
-                        <h4 class="font-black text-sm text-slate-900">Daftar Menu Makanan & Minuman</h4>
-                        <div class="space-y-2">
-                            ${foods.map(f => `
-                                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-2xl border">
-                                    <div>
-                                        <h5 class="font-bold text-xs text-slate-900">${f.name}</h5>
-                                        <span class="text-xs font-black text-sky-600">Rp ${f.price.toLocaleString()}</span>
+
+                <!-- Konten Info Toko -->
+                <div class="p-4 pt-10 space-y-4 flex-1 pb-24 overflow-y-auto bg-slate-50">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h2 class="font-black text-lg text-slate-900 uppercase tracking-tight">${merchant.name}</h2>
+                            <p class="text-xs text-slate-500 font-medium mt-0.5">${merchant.category} • Buka: ${merchant.operationalHours}</p>
+                        </div>
+                        <span class="text-xs bg-emerald-100 text-emerald-700 font-extrabold px-3 py-1 rounded-xl">${merchant.status}</span>
+                    </div>
+
+                    <!-- Box Alamat & Tombol WA / Live Chat -->
+                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
+                        <div class="flex items-start space-x-2.5 text-xs text-slate-700">
+                            <i class="fa-solid fa-location-dot text-sky-600 mt-0.5 text-sm"></i>
+                            <div>
+                                <span class="font-extrabold block text-slate-900">Alamat Toko:</span>
+                                <span class="text-slate-600">${merchant.address} (${dist} km dari posisi Anda)</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2.5">
+                            <a href="https://wa.me/${merchant.whatsapp}?text=${encodeURIComponent('Halo ' + merchant.name + ', saya ingin memesan menu di OLENG GO...')}" target="_blank" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl shadow-sm flex items-center justify-center gap-2 text-xs transition">
+                                <i class="fa-brands fa-whatsapp text-base"></i> WhatsApp Toko
+                            </a>
+                            <button onclick="startPersonalChat('${merchant.name}')" class="flex-1 py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-sm flex items-center justify-center gap-1.5 text-xs transition cursor-pointer">
+                                <i class="fa-solid fa-comments"></i> Live Chat
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Daftar Menu Makanan & Minuman -->
+                    <div class="space-y-3 pt-1">
+                        <h3 class="font-extrabold text-sm text-slate-900">Daftar Menu Makanan & Minuman</h3>
+                        <div class="space-y-3">
+                            ${merchantFoods.map(f => `
+                                <div class="bg-white p-3.5 rounded-3xl shadow-xs border border-slate-100 flex items-center space-x-3.5">
+                                    <img src="${f.image}" class="w-20 h-20 rounded-2xl object-cover shadow-xs bg-sky-600" alt="Menu">
+                                    <div class="flex-1 space-y-1">
+                                        <h4 class="font-bold text-xs text-slate-900">${f.name}</h4>
+                                        <p class="text-[11px] text-slate-500 line-clamp-2">${f.desc}</p>
+                                        <div class="font-black text-sky-600 text-xs">Rp ${f.price.toLocaleString()}</div>
                                     </div>
-                                    <button onclick="showToast('Ditambahkan ke keranjang', 'success')" class="w-8 h-8 bg-yellow-400 rounded-xl font-black cursor-pointer">+</button>
+                                    <button onclick="addToCart(${f.id})" class="w-10 h-10 bg-yellow-400 hover:bg-yellow-500 text-slate-900 rounded-full font-black flex items-center justify-center shadow-sm transition cursor-pointer">
+                                        <i class="fa-solid fa-plus text-xs"></i>
+                                    </button>
                                 </div>
                             `).join('')}
                         </div>
@@ -432,31 +756,248 @@
             `;
         }
 
+        function closeMerchantDetail() {
+            document.getElementById('view-merchant-detail').classList.add('hidden');
+        }
+
+        // ================= HALAMAN PESAN OJEK (SELALU TAMPIL MAP + DRIVER TERDEKAT PALING ATAS) =================
         function renderCustomerOjek(container) {
+            const sortedDrivers = getSortedDriversByDistance(userCurrentLatLng[0], userCurrentLatLng[1]);
+            const distanceKm = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]);
+            const estFare = calculateShippingCost(distanceKm);
+
             container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <h2 class="font-extrabold text-base text-slate-900">Pesan Ojek Online</h2>
-                    <div class="bg-white p-4 rounded-3xl shadow-xs border space-y-3">
-                        <input type="text" placeholder="Titik Jemput..." class="w-full p-2.5 border rounded-2xl text-xs font-semibold" value="Alun-Alun Lengkong">
-                        <input type="text" placeholder="Tujuan di Lengkong..." class="w-full p-2.5 border rounded-2xl text-xs font-semibold">
-                        <button onclick="showToast('Ojek berhasil dipesan!', 'success')" class="w-full py-3.5 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md">Pesan Ojek Sekarang</button>
+                <div class="p-4 space-y-4 pb-24">
+                    <h2 class="font-extrabold text-base text-sky-900">Pesan Ojek Online & Kurir</h2>
+                    
+                    <!-- Map Lokasi Terkini, Titik Awal & Titik Tujuan -->
+                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-200 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[11px] font-extrabold text-sky-800 uppercase"><i class="fa-solid fa-route text-yellow-500 mr-1"></i> Peta Rute Penjemputan</span>
+                            <button onclick="useCurrentGPSLocation('ojek')" class="px-2.5 py-1 bg-sky-600 text-white rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shadow-xs">
+                                <i class="fa-solid fa-crosshairs"></i> Lokasi Terkini
+                            </button>
+                        </div>
+                        <div id="ojek-map" class="map-container shadow-inner border border-slate-200" style="height: 190px;"></div>
+                        
+                        <div class="space-y-2">
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-500 uppercase">Titik Awal (Lokasi Penjemputan)</label>
+                                <input type="text" id="ojek-from" value="Alun-Alun Lengkong" class="w-full mt-0.5 p-2.5 border border-slate-200 rounded-2xl text-xs font-semibold bg-sky-50/50">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-500 uppercase">Titik Tujuan (Antar di Lengkong)</label>
+                                <input type="text" id="ojek-to" placeholder="Contoh: Kantor Desa Lengkong" class="w-full mt-0.5 p-2.5 border border-slate-200 rounded-2xl text-xs font-semibold">
+                            </div>
+                        </div>
+
+                        <div class="bg-sky-50 p-3 rounded-2xl flex justify-between items-center border border-sky-100">
+                            <span class="text-[11px] text-slate-700 font-bold" id="ojek-dist-label">Estimasi Tarif (${distanceKm} km):</span>
+                            <span class="text-sm font-black text-sky-700" id="ojek-fare-label">Rp ${estFare.toLocaleString()}</span>
+                        </div>
+
+                        <button onclick="submitOjekOrder()" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold rounded-2xl shadow-md transition text-xs cursor-pointer">
+                            Pesan Ojek Sekarang
+                        </button>
+                    </div>
+
+                    <!-- Daftar List Ojek Online Terdekat (Urutan Terdekat Paling Atas) -->
+                    <div class="space-y-2.5">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-extrabold text-xs text-sky-900 uppercase">Daftar List Ojek Online Terdekat</h3>
+                            <span class="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded-md font-bold">Real-Time</span>
+                        </div>
+                        <div class="space-y-2.5">
+                            ${sortedDrivers.map((d, index) => {
+                                const isSelected = selectedDriverId === d.id;
+                                return `
+                                    <div onclick="selectDriver(${d.id})" class="bg-white p-3.5 rounded-2xl border transition cursor-pointer flex items-center justify-between ${isSelected ? 'border-sky-600 bg-yellow-50/50 shadow-sm' : 'border-slate-100'}">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-12 h-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-lg font-bold shadow-xs">
+                                                <i class="fa-solid fa-helmet-safety"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-bold text-xs text-slate-900">${d.name} <span class="text-[9px] text-emerald-600 font-extrabold">(${d.status})</span></h4>
+                                                ${index === 0 ? '<span class="bg-yellow-400 text-slate-900 px-2 py-0.5 rounded text-[9px] font-black inline-block my-0.5">Terdekat Paling Atas</span>' : ''}
+                                                <p class="text-[10px] text-slate-500">${d.vehicle}</p>
+                                                <p class="text-[10px] text-sky-600 font-bold mt-0.5"><i class="fa-solid fa-location-dot"></i> Jarak: ${d.distance} km (${d.location})</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-col gap-1" onclick="event.stopPropagation()">
+                                            <a href="https://wa.me/${d.phone}?text=${encodeURIComponent('Halo ' + d.name + ', saya pesan ojek di OLENG GO.')}" target="_blank" class="px-2.5 py-1 bg-emerald-600 text-white rounded-xl text-[10px] font-bold text-center"><i class="fa-brands fa-whatsapp"></i> WA</a>
+                                            <button onclick="startPersonalChat('${d.name}')" class="px-2.5 py-1 bg-sky-600 text-white rounded-xl text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments"></i> Chat</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
                     </div>
                 </div>
             `;
+            setTimeout(() => initInteractiveRouteMap('ojek-map', 'ojek-from', 'ojek-to', true), 250);
         }
 
-        function renderMerchantMenu(container) {
-            container.innerHTML = `
-                <div class="p-4 space-y-4 pb-20">
-                    <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-slate-900">Kelola Menu Toko</h2>
-                        <button onclick="openAddMenuModal()" class="bg-yellow-400 text-slate-900 px-3.5 py-2 rounded-2xl text-xs font-extrabold cursor-pointer">+ Tambah Menu</button>
+        function selectDriver(driverId) {
+            selectedDriverId = driverId;
+            const d = db.drivers.find(x => x.id === driverId);
+            showToast(`Driver ${d.name} (${d.distance || '0.1'} km) dipilih!`, 'success');
+            if(currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
+            else if(currentSubTab === 'food') renderCustomerFood(document.getElementById('main-content'));
+            else updateCartUI();
+        }
+
+        // ================= SINKRONISASI KERANJANG & PESANAN =================
+        function addToCart(foodId) {
+            const food = db.foods.find(f => f.id === foodId);
+            db.cart.push(food);
+            saveDB();
+            showToast(`${food.name} masuk keranjang!`, 'success');
+            const counter = document.getElementById('cart-counter');
+            if(counter) counter.innerText = db.cart.length;
+            const detailCounter = document.getElementById('detail-cart-count');
+            if(detailCounter) detailCounter.innerText = db.cart.length;
+        }
+
+        function openCartModal() {
+            const modal = document.getElementById('modal-cart');
+            modal.classList.remove('hidden');
+            updateCartUI();
+            setTimeout(() => initInteractiveRouteMap('checkout-map', 'cart-pickup-label', 'cart-dest-label'), 250);
+        }
+
+        function closeCartModal() {
+            if(checkoutMapInstance) { checkoutMapInstance.remove(); checkoutMapInstance = null; }
+            document.getElementById('modal-cart').classList.add('hidden');
+        }
+
+        function updateCartUI() {
+            const container = document.getElementById('cart-items-container');
+            const driverListEl = document.getElementById('checkout-driver-list');
+            const merchant = db.activeMerchant || db.merchants[0];
+            
+            document.getElementById('cart-pickup-label').innerText = merchant.name;
+
+            const sortedDrivers = getSortedDriversByDistance(merchant.lat, merchant.lng);
+            driverListEl.innerHTML = sortedDrivers.map((d, idx) => {
+                const isSel = selectedDriverId === d.id;
+                return `
+                    <div onclick="selectDriver(${d.id})" class="p-2 rounded-xl border flex justify-between items-center cursor-pointer ${isSel ? 'border-sky-600 bg-white shadow-xs' : 'border-slate-200 bg-slate-50'}">
+                        <div>
+                            <span class="font-bold text-xs text-slate-900">${d.name} ${idx === 0 ? '<span class="text-[9px] bg-yellow-400 px-1.5 rounded font-black">TERDEKAT</span>' : ''}</span>
+                            <span class="block text-[10px] text-sky-600 font-bold">Jarak ke toko: ${d.distance} km</span>
+                        </div>
+                        <input type="radio" ${isSel ? 'checked' : ''}>
                     </div>
+                `;
+            }).join('');
+
+            if(db.cart.length === 0) {
+                container.innerHTML = `<p class="text-center text-slate-400 py-3 text-xs">Keranjang masih kosong.</p>`;
+                document.getElementById('cart-subtotal').innerText = 'Rp 0';
+                document.getElementById('cart-total').innerText = 'Rp 0';
+                return;
+            }
+
+            container.innerHTML = db.cart.map((item, idx) => `
+                <div class="flex justify-between items-center py-2 text-xs">
+                    <div>
+                        <h4 class="font-bold text-slate-900">${item.name}</h4>
+                        <span class="text-sky-600 font-extrabold">Rp ${item.price.toLocaleString()}</span>
+                    </div>
+                    <button onclick="removeFromCart(${idx})" class="text-rose-500 p-1 cursor-pointer"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            `).join('');
+
+            const subtotal = db.cart.reduce((sum, i) => sum + i.price, 0);
+            const distKm = calculateDistance(merchant.lat, merchant.lng, destLatLng[0], destLatLng[1]);
+            const ongkir = calculateShippingCost(distKm);
+
+            document.getElementById('cart-distance-label').innerText = `Ongkir (${distKm} km)`;
+            document.getElementById('cart-subtotal').innerText = `Rp ${subtotal.toLocaleString()}`;
+            document.getElementById('cart-ongkir').innerText = `Rp ${ongkir.toLocaleString()}`;
+            document.getElementById('cart-total').innerText = `Rp ${(subtotal + ongkir).toLocaleString()}`;
+        }
+
+        function removeFromCart(idx) {
+            db.cart.splice(idx, 1);
+            saveDB();
+            updateCartUI();
+        }
+
+        function submitFoodOrder() {
+            if(db.cart.length === 0) return showToast('Keranjang masih kosong!', 'error');
+            const merchant = db.activeMerchant || db.merchants[0];
+            const driver = db.drivers.find(d => d.id === selectedDriverId) || db.drivers[0];
+            const subtotal = db.cart.reduce((sum, i) => sum + i.price, 0);
+            const distKm = calculateDistance(merchant.lat, merchant.lng, destLatLng[0], destLatLng[1]);
+            const ongkir = calculateShippingCost(distKm);
+
+            const newOrder = {
+                id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+                type: 'food',
+                customer: currentUser.name,
+                merchant: merchant.name,
+                driver: driver.name,
+                total: subtotal + ongkir,
+                status: 'Menunggu Driver',
+                items: db.cart.map(i => i.name).join(', '),
+                pickup: merchant.name,
+                dest: document.getElementById('cart-dest-label').innerText
+            };
+
+            db.orders.unshift(newOrder);
+            db.cart = [];
+            saveDB();
+            closeCartModal();
+            closeMerchantDetail();
+            showToast(`Pesanan ${newOrder.id} tersinkron & dikirim ke driver ${driver.name}!`, 'success');
+            renderDashboardContent('history');
+        }
+
+        function submitOjekOrder() {
+            const to = document.getElementById('ojek-to').value || 'Tujuan Lengkong';
+            const from = document.getElementById('ojek-from').value || 'Lokasi Terkini';
+            const driver = db.drivers.find(d => d.id === selectedDriverId) || db.drivers[0];
+            const distKm = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]);
+            const fare = calculateShippingCost(distKm);
+
+            const newOrder = {
+                id: 'OJK-' + Math.floor(1000 + Math.random() * 9000),
+                type: 'ojek',
+                customer: currentUser.name,
+                merchant: 'Layanan Ojek Online',
+                driver: driver.name,
+                total: fare,
+                status: 'Driver Menuju Lokasi',
+                items: `Ojek (${from} → ${to})`,
+                pickup: from,
+                dest: to
+            };
+
+            db.orders.unshift(newOrder);
+            saveDB();
+            showToast(`Order ojek tersinkron dengan driver ${driver.name}!`, 'success');
+            renderDashboardContent('history');
+        }
+
+        function renderOrderHistory(container) {
+            container.innerHTML = `
+                <div class="p-4 space-y-4 pb-24">
+                    <h2 class="font-extrabold text-base text-sky-900">Riwayat & Status Pesanan Sinkron</h2>
                     <div class="space-y-3">
-                        ${db.foods.map(f => `
-                            <div class="bg-white p-3.5 rounded-2xl border flex justify-between items-center text-xs font-bold">
-                                <span>${f.name} (Rp ${f.price.toLocaleString()})</span>
-                                <span class="text-sky-600">Stok: ${f.stock}</span>
+                        ${db.orders.map(o => `
+                            <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] bg-sky-100 text-sky-800 font-extrabold px-2.5 py-0.5 rounded-md uppercase">${o.id}</span>
+                                    <span class="text-[10px] bg-yellow-100 text-yellow-800 font-extrabold px-2.5 py-0.5 rounded-md">${o.status}</span>
+                                </div>
+                                <h4 class="font-bold text-xs text-slate-900">${o.merchant}</h4>
+                                <p class="text-[11px] text-slate-600">${o.items}</p>
+                                <p class="text-[10px] text-slate-500"><i class="fa-solid fa-motorcycle text-sky-600"></i> Driver: <b>${o.driver}</b></p>
+                                <div class="text-xs font-black text-sky-700 pt-2 border-t border-slate-100 flex justify-between">
+                                    <span>Total Pembayaran</span>
+                                    <span>Rp ${o.total.toLocaleString()}</span>
+                                </div>
                             </div>
                         `).join('')}
                     </div>
@@ -464,42 +1005,267 @@
             `;
         }
 
-        function openAddMenuModal() {
-            const name = prompt('Nama Makanan / Minuman:');
-            if(!name) return;
-            const price = parseInt(prompt('Harga (Rp):', '15000')) || 15000;
-            db.foods.push({ id: Date.now(), merchantId: 1, name, price, desc: 'Enak', stock: 20, image: 'https://placehold.co/200x200/0284c7/ffffff?text='+encodeURIComponent(name) });
-            saveDB(); showToast('Menu ditambahkan!', 'success'); renderMerchantMenu(document.getElementById('main-content'));
+        // ================= KELOLA TOKO (UPLOAD BANNER, PROFIL, RUBAH NAMA/ALAMAT, TAMBAH MENU GALERI) =================
+        let tempStoreBanner = null;
+        let tempStorePhoto = null;
+        let tempNewFoodPhoto = null;
+
+        function renderMerchantManage(container) {
+            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName) || db.merchants[0];
+            const foods = db.foods.filter(f => f.merchantId === merchant.id);
+
+            container.innerHTML = `
+                <div class="p-4 space-y-5 pb-24">
+                    <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-4 rounded-3xl shadow-md border-b-4 border-yellow-400">
+                        <span class="text-[10px] text-yellow-300 font-extrabold uppercase">Panel Mitra Toko OLENG GO</span>
+                        <h2 class="text-lg font-black">${merchant.name}</h2>
+                        <p class="text-xs text-sky-100">Saldo Dompet: Rp ${merchant.balance.toLocaleString()}</p>
+                    </div>
+
+                    <!-- Form Edit Profil, Banner, Nama & Alamat Toko -->
+                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
+                        <h3 class="font-extrabold text-xs text-sky-900 uppercase border-b pb-2"><i class="fa-solid fa-store text-yellow-500 mr-1"></i> Pengaturan Toko & Upload Galeri</h3>
+                        
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Nama Toko</label>
+                            <input type="text" id="edit-m-name" value="${merchant.name}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Alamat Lengkap Toko</label>
+                            <input type="text" id="edit-m-address" value="${merchant.address}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Jam Operasional</label>
+                            <input type="text" id="edit-m-hours" value="${merchant.operationalHours}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 pt-1">
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Foto Profil Toko</label>
+                                <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-m-photo', 'photo')">
+                                <img id="preview-m-photo" src="${merchant.image}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Banner Toko</label>
+                                <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-m-banner', 'banner')">
+                                <img id="preview-m-banner" src="${merchant.banner}" class="w-full h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
+                            </div>
+                        </div>
+
+                        <button onclick="saveMerchantSettings(${merchant.id})" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer mt-2 border-b-2 border-yellow-400">
+                            Simpan Perubahan Toko
+                        </button>
+                    </div>
+
+                    <!-- Tambah Menu & Upload Gambar Menu dari Galeri -->
+                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="font-extrabold text-xs text-sky-900 uppercase"><i class="fa-solid fa-utensils text-yellow-500 mr-1"></i> Kelola Daftar Menu</h3>
+                            <button onclick="openMerchantAddMenuModal(${merchant.id})" class="px-3 py-1.5 bg-yellow-400 text-slate-900 rounded-xl text-[11px] font-extrabold cursor-pointer shadow-xs">+ Tambah Menu</button>
+                        </div>
+                        <div class="space-y-2.5">
+                            ${foods.map(f => `
+                                <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div class="flex items-center space-x-3">
+                                        <img src="${f.image}" class="w-12 h-12 rounded-xl object-cover bg-sky-600">
+                                        <div>
+                                            <h4 class="font-bold text-xs text-slate-900">${f.name}</h4>
+                                            <span class="text-xs font-black text-sky-600">Rp ${f.price.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                    <button onclick="deleteMenuFood(${f.id})" class="text-rose-500 p-2 cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
-        // --- PANEL ADMIN MASTER CONTROL (KLIK PANEL MENAMPILKAN SESUAI KATEGORI) ---
+        function previewGalleryImage(e, previewId, type) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    if(type === 'photo') tempStorePhoto = evt.target.result;
+                    else if(type === 'banner') tempStoreBanner = evt.target.result;
+                    else if(type === 'food') tempNewFoodPhoto = evt.target.result;
+                    else if(type === 'user') tempUserProfilePhoto = evt.target.result;
+                    
+                    const imgEl = document.getElementById(previewId);
+                    if(imgEl) { imgEl.src = evt.target.result; imgEl.classList.remove('hidden'); }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveMerchantSettings(merchantId) {
+            const m = db.merchants.find(x => x.id === merchantId);
+            if(m) {
+                m.name = document.getElementById('edit-m-name').value;
+                m.address = document.getElementById('edit-m-address').value;
+                m.operationalHours = document.getElementById('edit-m-hours').value;
+                if(tempStorePhoto) m.image = tempStorePhoto;
+                if(tempStoreBanner) m.banner = tempStoreBanner;
+                saveDB();
+                showToast('Perubahan profil & foto toko telah berhasil disimpan!', 'success');
+                renderMerchantManage(document.getElementById('main-content'));
+            }
+        }
+
+        function openMerchantAddMenuModal(merchantId) {
+            tempNewFoodPhoto = null;
+            const modalHTML = `
+                <div id="modal-new-food" class="absolute inset-0 bg-black/60 z-50 flex flex-col justify-end">
+                    <div class="bg-white rounded-t-3xl p-6 space-y-3 shadow-2xl border-t-4 border-yellow-400">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="font-extrabold text-sm text-sky-900">Tambah Menu Makanan Baru</h3>
+                            <button onclick="document.getElementById('modal-new-food').remove()" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
+                        </div>
+                        <input type="text" id="add-f-name" placeholder="Nama Makanan / Minuman" class="w-full p-2.5 border rounded-2xl text-xs font-bold">
+                        <input type="number" id="add-f-price" placeholder="Harga (Rp)" class="w-full p-2.5 border rounded-2xl text-xs font-bold">
+                        <input type="text" id="add-f-desc" placeholder="Deskripsi Singkat" class="w-full p-2.5 border rounded-2xl text-xs">
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Upload Gambar Menu dari Galeri</label>
+                            <input type="file" accept="image/*" class="w-full text-xs" onchange="previewGalleryImage(event, 'preview-new-food', 'food')">
+                            <img id="preview-new-food" class="w-16 h-16 rounded-xl object-cover mt-2 hidden border">
+                        </div>
+                        <button onclick="saveNewFoodItem(${merchantId})" class="w-full py-3 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md">Simpan Menu Baru</button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function saveNewFoodItem(merchantId) {
+            const name = document.getElementById('add-f-name').value;
+            const price = parseInt(document.getElementById('add-f-price').value) || 15000;
+            const desc = document.getElementById('add-f-desc').value || 'Menu spesial khas Lengkong.';
+            if(!name) return showToast('Nama menu harus diisi!', 'error');
+
+            db.foods.push({
+                id: Date.now(),
+                merchantId: merchantId,
+                name: name,
+                price: price,
+                desc: desc,
+                stock: 20,
+                image: tempNewFoodPhoto || ('https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name))
+            });
+            saveDB();
+            document.getElementById('modal-new-food').remove();
+            showToast('Perubahan & gambar menu telah berhasil ditambahkan!', 'success');
+            renderMerchantManage(document.getElementById('main-content'));
+        }
+
+        function deleteMenuFood(foodId) {
+            db.foods = db.foods.filter(f => f.id !== foodId);
+            saveDB();
+            showToast('Menu berhasil dihapus!', 'info');
+            renderMerchantManage(document.getElementById('main-content'));
+        }
+
+        function renderMerchantOrders(container) {
+            renderOrderHistory(container);
+        }
+
+        function renderDriverOrders(container) {
+            renderOrderHistory(container);
+        }
+
+        // ================= MENU AKUN (SELURUH INFO USER BISA DIUBAH + GALERI + NOTIF BERHASIL) =================
+        let tempUserProfilePhoto = null;
+
+        function renderProfile(container) {
+            tempUserProfilePhoto = null;
+            container.innerHTML = `
+                <div class="p-4 space-y-4 pb-24">
+                    <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-5 rounded-3xl shadow-lg text-center space-y-2 border-b-4 border-yellow-400">
+                        <img id="user-prof-preview" src="${currentUser.photo}" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-yellow-400 shadow-md bg-white">
+                        <h2 class="font-black text-base">${currentUser.name}</h2>
+                        <span class="text-[10px] bg-yellow-400 text-slate-900 font-black px-3 py-0.5 rounded-full uppercase">${currentUser.role}</span>
+                        <p class="text-xs text-sky-200 font-bold pt-1">Saldo Dompet: Rp ${(currentUser.balance || 100000).toLocaleString()}</p>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
+                        <h3 class="font-extrabold text-xs text-sky-900 uppercase border-b pb-2"><i class="fa-solid fa-user-pen text-yellow-500 mr-1"></i> Ubah Informasi Akun & Foto Profil</h3>
+                        
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Nama Lengkap</label>
+                            <input type="text" id="acc-name" value="${currentUser.name}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Nomor WhatsApp</label>
+                            <input type="text" id="acc-phone" value="${currentUser.phone}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Alamat Lengkap</label>
+                            <input type="text" id="acc-address" value="${currentUser.address || 'Kecamatan Lengkong, Sukabumi'}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Upload Foto Profil (Dari Galeri)</label>
+                            <input type="file" accept="image/*" class="w-full mt-1 p-2 border rounded-2xl text-xs" onchange="previewGalleryImage(event, 'user-prof-preview', 'user')">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Kata Sandi Baru (Opsional)</label>
+                            <input type="password" id="acc-pass" placeholder="Kosongkan jika tidak diubah" class="w-full mt-1 p-2.5 border rounded-2xl text-xs">
+                        </div>
+
+                        <button onclick="saveFullAccountChanges()" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer border-b-2 border-yellow-400">
+                            Simpan Perubahan Akun
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveFullAccountChanges() {
+            currentUser.name = document.getElementById('acc-name').value;
+            currentUser.phone = document.getElementById('acc-phone').value;
+            currentUser.address = document.getElementById('acc-address').value;
+            const newPass = document.getElementById('acc-pass').value;
+            if(newPass) currentUser.password = newPass;
+            if(tempUserProfilePhoto) currentUser.photo = tempUserProfilePhoto;
+
+            const userIdx = db.users.findIndex(u => u.id === currentUser.id);
+            if(userIdx !== -1) db.users[userIdx] = { ...currentUser };
+
+            localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
+            saveDB();
+            showToast('Perubahan profil & foto galeri telah berhasil disimpan!', 'success');
+            renderProfile(document.getElementById('main-content'));
+        }
+
+        // ================= PANEL ADMIN MASTER CONTROL =================
         function renderAdminDash(container) {
             container.innerHTML = `
                 <div class="p-4 space-y-4">
-                    <h2 class="font-extrabold text-base text-slate-900">Panel Admin Master Control</h2>
+                    <h2 class="font-extrabold text-base text-sky-900">Panel Admin Master Control</h2>
                     <div class="grid grid-cols-2 gap-3">
-                        <div onclick="renderAdminUsers(document.getElementById('main-content'))" class="bg-white p-4 rounded-3xl border cursor-pointer hover:border-sky-500 transition shadow-xs">
+                        <div onclick="renderDashboardContent('admin-users')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-sky-500 transition shadow-xs">
                             <span class="text-[10px] text-slate-500 uppercase font-extrabold">TOTAL PENGGUNA</span>
                             <div class="flex justify-between items-center mt-1">
                                 <h3 class="text-xl font-black text-sky-600">${db.users.length} User</h3>
                                 <i class="fa-solid fa-arrow-right text-slate-400"></i>
                             </div>
                         </div>
-                        <div onclick="renderAdminStores(document.getElementById('main-content'))" class="bg-white p-4 rounded-3xl border cursor-pointer hover:border-yellow-500 transition shadow-xs">
+                        <div onclick="renderDashboardContent('admin-stores')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-yellow-500 transition shadow-xs">
                             <span class="text-[10px] text-slate-500 uppercase font-extrabold">MITRA TOKO AKTIF</span>
                             <div class="flex justify-between items-center mt-1">
                                 <h3 class="text-xl font-black text-yellow-500">${db.merchants.length} Toko</h3>
                                 <i class="fa-solid fa-arrow-right text-slate-400"></i>
                             </div>
                         </div>
-                        <div onclick="renderAdminDrivers(document.getElementById('main-content'))" class="bg-white p-4 rounded-3xl border cursor-pointer hover:border-emerald-500 transition shadow-xs">
+                        <div onclick="renderDashboardContent('admin-drivers')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-emerald-500 transition shadow-xs">
                             <span class="text-[10px] text-slate-500 uppercase font-extrabold">TOTAL OJOL / DRIVER</span>
                             <div class="flex justify-between items-center mt-1">
                                 <h3 class="text-xl font-black text-emerald-600">${db.drivers.length} Driver</h3>
                                 <i class="fa-solid fa-arrow-right text-slate-400"></i>
                             </div>
                         </div>
-                        <div onclick="renderAdminOrders(document.getElementById('main-content'))" class="bg-white p-4 rounded-3xl border cursor-pointer hover:border-purple-500 transition shadow-xs">
+                        <div onclick="renderDashboardContent('admin-orders')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-purple-500 transition shadow-xs">
                             <span class="text-[10px] text-slate-500 uppercase font-extrabold">PESANAN MASUK</span>
                             <div class="flex justify-between items-center mt-1">
                                 <h3 class="text-xl font-black text-purple-600">${db.orders.length} Pesanan</h3>
@@ -513,17 +1279,16 @@
 
         function renderAdminUsers(container) {
             container.innerHTML = `
-                <div class="p-4 space-y-4">
+                <div class="p-4 space-y-4 pb-24">
                     <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-slate-900">Manajemen Pengguna Terpusat</h2>
-                        <button onclick="renderAdminDash(document.getElementById('main-content'))" class="text-xs text-sky-600 font-bold hover:underline"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                        <h2 class="font-extrabold text-base text-sky-900">Daftar Seluruh Pengguna</h2>
+                        <button onclick="renderDashboardContent('admin-dash')" class="text-xs text-sky-600 font-bold"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
                     </div>
                     <div class="space-y-3">
                         ${db.users.map(u => `
                             <div class="bg-white p-4 rounded-3xl border space-y-1 shadow-xs">
                                 <h4 class="font-bold text-xs text-slate-900">${u.name} (<span class="text-sky-600 uppercase">${u.role}</span>)</h4>
-                                <p class="text-[10px] text-slate-500">${u.phone}</p>
-                                <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-extrabold inline-block mt-1">${u.status}</span>
+                                <p class="text-[10px] text-slate-500">${u.phone} • ${u.address || 'Lengkong'}</p>
                             </div>
                         `).join('')}
                     </div>
@@ -533,17 +1298,17 @@
 
         function renderAdminStores(container) {
             container.innerHTML = `
-                <div class="p-4 space-y-4">
+                <div class="p-4 space-y-4 pb-24">
                     <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-slate-900">Daftar List Toko & Saldo Dompet</h2>
-                        <button onclick="renderAdminDash(document.getElementById('main-content'))" class="text-xs text-sky-600 font-bold hover:underline"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                        <h2 class="font-extrabold text-base text-sky-900">Daftar List Toko & Saldo</h2>
+                        <button onclick="renderDashboardContent('admin-dash')" class="text-xs text-sky-600 font-bold"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
                     </div>
                     <div class="space-y-3">
                         ${db.merchants.map(m => `
                             <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
                                 <h4 class="font-bold text-sm text-slate-900">${m.name}</h4>
                                 <p class="text-xs font-black text-yellow-600">Saldo Toko: Rp ${m.balance.toLocaleString()}</p>
-                                <button onclick="atursaldo(${m.id})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-xs font-bold cursor-pointer shadow-xs">Atur Saldo</button>
+                                <button onclick="atursaldo(${m.id})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-xs font-bold cursor-pointer">Atur Saldo</button>
                             </div>
                         `).join('')}
                     </div>
@@ -553,16 +1318,16 @@
 
         function renderAdminDrivers(container) {
             container.innerHTML = `
-                <div class="p-4 space-y-4">
+                <div class="p-4 space-y-4 pb-24">
                     <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-slate-900">Daftar Ojol / Driver</h2>
-                        <button onclick="renderAdminDash(document.getElementById('main-content'))" class="text-xs text-sky-600 font-bold hover:underline"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                        <h2 class="font-extrabold text-base text-sky-900">Daftar Ojol / Driver</h2>
+                        <button onclick="renderDashboardContent('admin-dash')" class="text-xs text-sky-600 font-bold"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
                     </div>
                     <div class="space-y-3">
                         ${db.drivers.map(d => `
                             <div class="bg-white p-4 rounded-3xl border space-y-1 shadow-xs">
                                 <h4 class="font-bold text-xs text-slate-900">${d.name} (${d.status})</h4>
-                                <p class="text-[10px] text-slate-500">${d.vehicle} • Lokasi: ${d.location}</p>
+                                <p class="text-[10px] text-slate-500">${d.vehicle} • ${d.location}</p>
                             </div>
                         `).join('')}
                     </div>
@@ -570,44 +1335,23 @@
             `;
         }
 
-        function renderAdminOrders(container) {
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-slate-900">Daftar Pesanan Masuk</h2>
-                        <button onclick="renderAdminDash(document.getElementById('main-content'))" class="text-xs text-sky-600 font-bold hover:underline"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
-                    </div>
-                    <div class="space-y-3">
-                        ${db.orders.map(o => `
-                            <div class="bg-white p-4 rounded-3xl border space-y-1 shadow-xs">
-                                <h4 class="font-bold text-xs text-slate-900">${o.id} - ${o.merchant}</h4>
-                                <p class="text-[10px] text-slate-500">Pemesan: ${o.customer} • Status: <span class="font-bold text-purple-600">${o.status}</span></p>
-                                <p class="text-xs font-black text-sky-600">Total: Rp ${o.total.toLocaleString()}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
+        function renderAdminOrders(container) { renderOrderHistory(container); }
 
         function atursaldo(id) {
             const m = db.merchants.find(x => x.id === id);
             const add = parseInt(prompt(`Atur saldo baru untuk ${m.name}:`, m.balance));
-            if(!isNaN(add)) { m.balance = add; saveDB(); showToast('Saldo diperbarui!', 'success'); renderAdminStores(document.getElementById('main-content')); }
+            if(!isNaN(add)) { m.balance = add; saveDB(); showToast('Saldo berhasil diperbarui!', 'success'); renderAdminStores(document.getElementById('main-content')); }
         }
 
-        // --- KONTROL BANNER UTAMA (BERUBAH OTOMATIS KE SEMUA USER) ---
         function renderAdminBanner(container) {
             container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <h2 class="font-extrabold text-base text-slate-900">Kontrol Banner Panjang Utama</h2>
-                    <p class="text-xs text-slate-500">Unggah foto banner panjang baru dari galeri perangkat Anda. Perubahan akan otomatis terapresiasi ke beranda semua user secara real-time.</p>
+                <div class="p-4 space-y-4 pb-24">
+                    <h2 class="font-extrabold text-base text-sky-900">Kontrol Banner Panjang Utama</h2>
                     <div class="bg-white p-4 rounded-3xl border space-y-3 shadow-xs">
                         <label class="text-[11px] font-extrabold text-slate-500 uppercase">UPLOAD BANNER PANJANG (DARI GALERI)</label>
                         <input type="file" accept="image/*" class="w-full p-2 border rounded-2xl text-xs" onchange="previewNewBanner(event)">
-                        <label class="text-[11px] font-extrabold text-slate-500 uppercase block mt-2">PRATINJAU BANNER PANJANG UTAMA:</label>
                         <img id="banner-preview" src="${customMainBanner}" class="w-full h-32 object-cover rounded-2xl border">
-                        <button onclick="saveGlobalBanner()" class="w-full py-3.5 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md">Simpan & Terapkan ke Semua User</button>
+                        <button onclick="saveGlobalBanner()" class="w-full py-3.5 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md border-b-2 border-yellow-400">Simpan & Terapkan ke Semua User</button>
                     </div>
                 </div>
             `;
@@ -617,45 +1361,108 @@
             const file = e.target.files[0];
             if(file) {
                 const reader = new FileReader();
-                reader.onload = function(evt) {
-                    customMainBanner = evt.target.result;
-                    document.getElementById('banner-preview').src = customMainBanner;
-                };
+                reader.onload = function(evt) { customMainBanner = evt.target.result; document.getElementById('banner-preview').src = customMainBanner; };
                 reader.readAsDataURL(file);
             }
         }
 
         function saveGlobalBanner() {
             localStorage.setItem('oleng_global_banner', customMainBanner);
-            showToast('Banner utama berhasil disimpan & otomatis berubah untuk semua user!', 'success');
+            showToast('Perubahan banner utama telah berhasil disimpan & diterapkan ke semua user!', 'success');
             renderDashboardContent('home');
         }
 
-        function renderProfile(container) {
-            container.innerHTML = `
-                <div class="p-4 space-y-4">
-                    <div class="bg-white p-5 rounded-3xl text-center space-y-3 border shadow-xs">
-                        <img src="${currentUser.photo}" class="w-20 h-20 rounded-2xl mx-auto border-2 border-sky-500 object-cover">
-                        <h2 class="font-extrabold text-sm text-slate-900">${currentUser.name}</h2>
-                        <p class="text-xs text-sky-600 font-bold uppercase">Peran: ${currentUser.role}</p>
-                    </div>
-                </div>
-            `;
+        // ================= PETA INTERAKTIF LOKASI TERKINI, TITIK AWAL & TUJUAN =================
+        function initHomeMap() {
+            const mapEl = document.getElementById('map');
+            if(!mapEl) return;
+            if(mapInstance) mapInstance.remove();
+            mapInstance = L.map('map', { zoomControl: false }).setView(userCurrentLatLng, 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
+            L.marker(userCurrentLatLng).addTo(mapInstance).bindPopup('<b>Pusat Kecamatan Lengkong</b><br>Wilayah Operasional OLENG GO').openPopup();
         }
 
-        function openNotificationModal() { document.getElementById('modal-notif').classList.remove('hidden'); document.getElementById('notification-list').innerHTML = db.notifications.map(n => `<div class="p-3 bg-slate-50 rounded-2xl text-xs"><b>${n.title}</b><p>${n.desc}</p></div>`).join(''); }
+        function initInteractiveRouteMap(mapId, pickupInputId, destInputId, isOjek = false) {
+            const mapEl = document.getElementById(mapId);
+            if(!mapEl) return;
+
+            const map = L.map(mapId, { zoomControl: true }).setView(userCurrentLatLng, 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+            const pickupMarker = L.marker(userCurrentLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Awal / Lokasi Terkini</b><br>Geser pin ini').openPopup();
+            const destMarker = L.marker(destLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Tujuan Pengantaran</b><br>Geser pin ini');
+
+            pickupMarker.on('dragend', () => {
+                const pos = pickupMarker.getLatLng();
+                userCurrentLatLng = [pos.lat, pos.lng];
+                const el = document.getElementById(pickupInputId);
+                if(el) {
+                    if(el.tagName === 'INPUT') el.value = `GPS (${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)})`;
+                    else el.innerText = `Lat: ${pos.lat.toFixed(4)}, Lng: ${pos.lng.toFixed(4)}`;
+                }
+                if(isOjek) updateOjekFareUI();
+                else updateCartUI();
+            });
+
+            destMarker.on('dragend', () => {
+                const pos = destMarker.getLatLng();
+                destLatLng = [pos.lat, pos.lng];
+                const el = document.getElementById(destInputId);
+                if(el) {
+                    if(el.tagName === 'INPUT') el.value = `Tujuan (${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)})`;
+                    else el.innerText = `Lat: ${pos.lat.toFixed(4)}, Lng: ${pos.lng.toFixed(4)}`;
+                }
+                if(isOjek) updateOjekFareUI();
+                else updateCartUI();
+            });
+
+            if(mapId === 'checkout-map') checkoutMapInstance = map;
+            else if(mapId === 'ojek-map') ojekMapInstance = map;
+        }
+
+        function updateOjekFareUI() {
+            const distKm = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]);
+            const fare = calculateShippingCost(distKm);
+            const distEl = document.getElementById('ojek-dist-label');
+            const fareEl = document.getElementById('ojek-fare-label');
+            if(distEl) distEl.innerText = `Estimasi Tarif (${distKm} km):`;
+            if(fareEl) fareEl.innerText = `Rp ${fare.toLocaleString()}`;
+        }
+
+        function useCurrentGPSLocation(context) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    userCurrentLatLng = [position.coords.latitude, position.coords.longitude];
+                    showToast('Lokasi terkini GPS berhasil dikunci!', 'success');
+                    if(context === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
+                    else if(context === 'food') renderCustomerFood(document.getElementById('main-content'));
+                    else if(context === 'cart') openCartModal();
+                }, () => {
+                    showToast('GPS tidak aktif, menggunakan titik pusat Lengkong.', 'info');
+                });
+            }
+        }
+
+        // ================= NOTIFIKASI & LIVE CHAT =================
+        function openNotificationModal() {
+            document.getElementById('modal-notif').classList.remove('hidden');
+            document.getElementById('notification-list').innerHTML = db.notifications.map(n => `<div class="p-3 bg-sky-50 rounded-2xl text-xs border border-sky-100"><b>${n.title}</b><p class="text-slate-600 mt-0.5">${n.desc}</p></div>`).join('');
+        }
         function closeNotificationModal() { document.getElementById('modal-notif').classList.add('hidden'); }
 
         function switchView(view) {
             if(view === 'chat') { document.getElementById('view-chat').classList.remove('hidden'); renderChatContacts(); renderPersonalChatMessages(); }
         }
+        function startPersonalChat(target) { activeChatTarget = target; switchView('chat'); }
         function closeChat() { document.getElementById('view-chat').classList.add('hidden'); }
         function renderChatContacts() {
-            document.getElementById('chat-contact-selector').innerHTML = ['Admin SIMADU', ...db.merchants.map(m => m.name)].map(n => `<button onclick="activeChatTarget='${n}';renderPersonalChatMessages();" class="px-3 py-1.5 rounded-xl text-xs font-bold ${activeChatTarget===n?'bg-sky-600 text-white':'bg-white border'}">${n}</button>`).join('');
+            const list = ['Admin SIMADU', ...db.merchants.map(m => m.name), ...db.drivers.map(d => d.name)];
+            document.getElementById('chat-contact-selector').innerHTML = list.map(n => `<button onclick="activeChatTarget='${n}';renderChatContacts();renderPersonalChatMessages();" class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer ${activeChatTarget===n?'bg-sky-600 text-white shadow-xs':'bg-white text-slate-700 border'}">${n}</button>`).join('');
         }
         function renderPersonalChatMessages() {
             document.getElementById('chat-title').innerText = `Chat: ${activeChatTarget}`;
-            document.getElementById('chat-messages').innerHTML = db.chats.map(c => `<div class="p-2 rounded-xl text-xs bg-sky-100">${c.text}</div>`).join('') || '<p class="text-xs text-slate-400 text-center py-4">Mulai percakapan...</p>';
+            const msgs = db.chats.filter(c => (c.from === currentUser.name && c.to === activeChatTarget) || (c.from === activeChatTarget && c.to === currentUser.name));
+            document.getElementById('chat-messages').innerHTML = msgs.map(c => `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${c.from===currentUser.name?'bg-sky-600 text-white ml-auto':'bg-white border mr-auto'}">${c.text}</div>`).join('') || '<p class="text-xs text-slate-400 text-center py-6">Mulai obrolan dengan '+activeChatTarget+'...</p>';
         }
         function sendPersonalChatMessage() {
             const input = document.getElementById('chat-input');
@@ -667,19 +1474,12 @@
         function showToast(msg, type='success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold ${type === 'success' ? 'bg-emerald-600' : 'bg-sky-600'}`;
-            toast.innerText = msg; container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-
-        function initMap() {
-            const mapEl = document.getElementById('map');
-            if(!mapEl) return;
-            if(mapInstance) mapInstance.remove();
-            mapInstance = L.map('map', { zoomControl: false }).setView([-7.1234, 106.8456], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
-            L.marker([-7.1234, 106.8456]).addTo(mapInstance).bindPopup('Pusat Kecamatan Lengkong').openPopup();
+            toast.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold flex items-center gap-2 ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-sky-600'}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-info'}"></i> ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3200);
         }
     </script>
 </body>
 </html>
+
