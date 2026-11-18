@@ -177,12 +177,12 @@
             <!-- Rendered dynamically -->
         </div>
 
-        <!-- Interactive Cart & Precise Map Checkout Modal -->
+        <!-- Interactive Cart, Promo & Precise Map Checkout Modal -->
         <div id="modal-cart" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
                 <div class="flex justify-between items-center border-b pb-3">
                     <h3 class="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                        <i class="fa-solid fa-map-location-dot text-sky-600"></i> Peta Presisi, Ongkir & Driver
+                        <i class="fa-solid fa-map-location-dot text-sky-600"></i> Peta Presisi, Promo & Driver
                     </h3>
                     <button onclick="closeCartModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
                 </div>
@@ -208,6 +208,16 @@
                     </div>
                 </div>
 
+                <!-- Promo Voucher Input -->
+                <div class="bg-sky-50 p-3 rounded-2xl border border-sky-200 space-y-1.5">
+                    <label class="text-[10px] font-extrabold text-sky-900 uppercase">Kode Voucher Diskon (Cth: LENGKONGHEBAT)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="promo-code-input" placeholder="Masukkan kode promo..." class="flex-1 p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold uppercase">
+                        <button onclick="applyPromoCode()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-extrabold shadow-xs cursor-pointer">Gunakan</button>
+                    </div>
+                    <p id="promo-status-msg" class="text-[10px] text-emerald-600 font-bold hidden"><i class="fa-solid fa-circle-check"></i> Voucher LENGKONGHEBAT aktif (-Rp 5.000)</p>
+                </div>
+
                 <!-- Driver Selection Panel -->
                 <div class="bg-yellow-50/60 p-3.5 rounded-2xl border border-yellow-200 space-y-2">
                     <label class="text-[11px] font-extrabold text-yellow-900 uppercase tracking-wider block"><i class="fa-solid fa-motorcycle text-yellow-600 mr-1"></i> Pilih Ojek / Driver Terdekat (Klik untuk Pilih)</label>
@@ -224,6 +234,10 @@
                     <div class="flex justify-between text-xs font-medium">
                         <span class="text-slate-600" id="shipping-distance-label">Jarak & Ongkir Presisi</span>
                         <span id="cart-ongkir" class="font-bold text-sky-600">Rp 5.000</span>
+                    </div>
+                    <div id="discount-row" class="flex justify-between text-xs font-medium text-emerald-600 hidden">
+                        <span>Diskon Voucher LENGKONGHEBAT</span>
+                        <span id="cart-discount">- Rp 5.000</span>
                     </div>
                     <div class="flex justify-between text-sm border-t border-slate-200 pt-2 font-black text-slate-900">
                         <span>Total Pembayaran</span>
@@ -312,7 +326,8 @@
         let currentSubTab = 'home';
         let adminViewMode = null;
         let selectedDriverName = 'Asep Supriatna';
-        let activeChatTarget = 'Admin SIMADU'; // Target chat personal default
+        let activeChatTarget = 'Admin SIMADU';
+        let isPromoActive = false;
         let mapInstance = null;
         let checkoutMapInstance = null;
         let registerMapInstance = null;
@@ -388,7 +403,7 @@
                 { id: 3, name: 'Siti Rohimah', status: 'Online', vehicle: 'Honda Scoopy - F 1234 XX', rating: 4.8, location: 'Kp. Cijangkar', lat: -7.1290, lng: 106.8510, phone: '6285624736602', balance: 210000 }
             ],
             orders: [
-                { id: 'ORD-9021', type: 'food', customer: 'Budi Santoso', merchant: 'Warung Nasi Sunda Lengkong', merchantLat: -7.1240, merchantLng: 106.8460, items: 'Nasi Liwet (2x)', total: 55000, status: 'Menunggu Driver', address: 'Kp. Lengkong RT 02/01', destLat: -7.1250, destLng: 106.8470, ongkir: 5000, driver: 'Asep Supriatna' }
+                { id: 'ORD-9021', type: 'food', customer: 'Budi Santoso', merchant: 'Warung Nasi Sunda Lengkong', merchantLat: -7.1240, merchantLng: 106.8460, items: 'Nasi Liwet (2x)', total: 55000, status: 'Menunggu Driver', address: 'Kp. Lengkong RT 02/01', destLat: -7.1250, destLng: 106.8470, ongkir: 5000, driver: 'Asep Supriatna', rating: null, review: null }
             ],
             notifications: [
                 { id: 1, title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Layanan ojek & food delivery khusus wilayah Kecamatan Lengkong, Sukabumi.' }
@@ -407,7 +422,23 @@
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
         }
 
-        // --- FITUR PERSISTENT LOGIN (LocalStorage) ---
+        // --- AUDIO BEEP NOTIFICATION ---
+        function playBeepSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5 note
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.2);
+            } catch(e) {}
+        }
+
+        // --- PERSISTENT LOGIN ---
         document.addEventListener("DOMContentLoaded", function() {
             const savedSession = localStorage.getItem('oleng_user_session');
             if (savedSession) {
@@ -504,7 +535,7 @@
             adminViewMode = null;
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
 
-            showToast(`Berhasil masuk sebagai ${role.toUpperCase()}!`, 'success');
+            showToast(`Perubahan Disimpan: Berhasil masuk sebagai ${role.toUpperCase()}!`, 'success');
             enterDashboard();
         }
 
@@ -577,7 +608,7 @@
             currentUser = newUser;
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
 
-            showToast('Perubahan & akun baru berhasil disimpan!', 'success');
+            showToast('Perubahan Disimpan: Akun baru berhasil didaftarkan!', 'success');
             enterDashboard();
         }
 
@@ -641,7 +672,7 @@
             let isAllowed = false;
             let allowedRolesMsg = '';
 
-            const consumerFeatures = ['home', 'food', 'ojek', 'driver-list', 'profile'];
+            const consumerFeatures = ['home', 'food', 'ojek', 'driver-list', 'history', 'profile'];
             const driverFeatures = ['driver-orders', 'driver-map', 'profile'];
             const merchantFeatures = ['merchant-menu', 'merchant-orders', 'profile', 'merchant-edit'];
             const adminFeatures = ['admin-dash', 'admin-users', 'admin-stores', 'admin-drivers'];
@@ -682,16 +713,16 @@
                     <button onclick="checkAccessAndNavigate('food')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-food">
                         <i class="fa-solid fa-utensils text-base"></i><span class="text-[10px] mt-1 font-semibold">Pesanan</span>
                     </button>
-                    <button onclick="checkAccessAndNavigate('ojek')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-ojek">
-                        <i class="fa-solid fa-motorcycle text-base"></i><span class="text-[10px] mt-1 font-semibold">Ojek</span>
+                    <button onclick="checkAccessAndNavigate('history')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-history">
+                        <i class="fa-solid fa-clock-rotate-left text-base"></i><span class="text-[10px] mt-1 font-semibold">Riwayat</span>
                     </button>
                     <button onclick="checkAccessAndNavigate('home')" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer" id="nav-btn-home">
                         <div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-white">
                             <i class="fa-solid fa-house text-lg"></i>
                         </div>
                     </button>
-                    <button onclick="checkAccessAndNavigate('driver-list')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-driver-list">
-                        <i class="fa-solid fa-helmet-safety text-base"></i><span class="text-[10px] mt-1 font-semibold">Driver</span>
+                    <button onclick="checkAccessAndNavigate('ojek')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-ojek">
+                        <i class="fa-solid fa-motorcycle text-base"></i><span class="text-[10px] mt-1 font-semibold">Ojek</span>
                     </button>
                     <button onclick="checkAccessAndNavigate('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer" id="nav-btn-profile">
                         <i class="fa-solid fa-user text-base"></i><span class="text-[10px] mt-1 font-semibold">Akun</span>
@@ -783,11 +814,9 @@
                 else if(tab === 'food') renderCustomerFood(container);
                 else if(tab === 'ojek') renderCustomerOjek(container);
                 else if(tab === 'driver-list') renderCustomerDriverList(container);
+                else if(tab === 'history') renderCustomerHistory(container);
                 else if(tab === 'profile') renderProfile(container);
-                else {
-                    showToast('Akses Ditolak: Konsumen hanya dapat mengakses fitur Konsumen!', 'error');
-                    renderCustomerHome(container);
-                }
+                else renderCustomerHome(container);
             } else if(activeRole === 'driver') {
                 if(tab === 'home') renderCustomerHome(container);
                 else if(tab === 'food') renderCustomerFood(container);
@@ -795,11 +824,9 @@
                 else if(tab === 'driver-list') renderCustomerDriverList(container);
                 else if(tab === 'driver-orders') renderDriverOrders(container);
                 else if(tab === 'driver-map') renderDriverMap(container);
+                else if(tab === 'history') renderCustomerHistory(container);
                 else if(tab === 'profile') renderProfile(container);
-                else {
-                    showToast('Akses Ditolak: Driver hanya dapat mengakses fitur Konsumen dan Driver Ojol!', 'error');
-                    renderDriverOrders(container);
-                }
+                else renderDriverOrders(container);
             } else if(activeRole === 'merchant') {
                 if(tab === 'home') renderCustomerHome(container);
                 else if(tab === 'food') renderCustomerFood(container);
@@ -809,19 +836,14 @@
                 else if(tab === 'merchant-edit') renderMerchantProfileEdit(container);
                 else if(tab === 'merchant-orders') renderMerchantOrders(container);
                 else if(tab === 'profile') renderProfile(container);
-                else {
-                    showToast('Akses Ditolak: Toko hanya dapat mengakses fitur Konsumen dan Toko!', 'error');
-                    renderMerchantMenu(container);
-                }
+                else renderMerchantMenu(container);
             } else if(activeRole === 'admin') {
                 if(tab === 'admin-dash') renderAdminDash(container);
                 else if(tab === 'admin-users') renderAdminUsers(container);
                 else if(tab === 'admin-stores') renderAdminStoresList(container);
                 else if(tab === 'admin-drivers') renderAdminDriversList(container);
                 else if(tab === 'home') renderCustomerHome(container);
-                else {
-                    renderAdminDash(container);
-                }
+                else renderAdminDash(container);
             }
         }
 
@@ -876,8 +898,8 @@
                         <button onclick="checkAccessAndNavigate('food')" class="flex-1 py-2.5 text-slate-700 hover:bg-white rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer">
                             <i class="fa-solid fa-utensils text-sm text-sky-600"></i> Food
                         </button>
-                        <button onclick="switchView('chat')" class="flex-1 py-2.5 text-slate-700 hover:bg-white rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer">
-                            <i class="fa-solid fa-comments text-sm text-sky-600"></i> Live Chat
+                        <button onclick="checkAccessAndNavigate('history')" class="flex-1 py-2.5 text-slate-700 hover:bg-white rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer">
+                            <i class="fa-solid fa-clock-rotate-left text-sm text-sky-600"></i> Riwayat
                         </button>
                     </div>
 
@@ -890,9 +912,9 @@
                             <div class="w-12 h-12 bg-yellow-100 text-yellow-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-utensils"></i></div>
                             <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Pesan Makanan</span>
                         </button>
-                        <button onclick="switchView('chat')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition cursor-pointer">
-                            <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-comments"></i></div>
-                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Live Chat Bantuan</span>
+                        <button onclick="checkAccessAndNavigate('history')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition cursor-pointer">
+                            <div class="w-12 h-12 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                            <span class="text-[10px] font-extrabold text-slate-800 text-center leading-tight">Riwayat Pesanan</span>
                         </button>
                         <button onclick="openNotificationModal()" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center hover:border-sky-500 transition cursor-pointer">
                             <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-gift"></i></div>
@@ -989,6 +1011,68 @@
                     </div>
                 </div>
             `;
+        }
+
+        // --- RIWAYAT PESANAN & TRANSAKSI (FITUR BARU) ---
+        function renderCustomerHistory(container) {
+            const myOrders = db.orders.filter(o => o.customer === currentUser.name || currentUser.role === 'admin');
+
+            container.innerHTML = `
+                <div class="p-4 space-y-4 pb-20">
+                    <h2 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-clock-rotate-left text-sky-600 mr-1.5"></i> Riwayat Pesanan & Transaksi</h2>
+                    <p class="text-[11px] text-slate-500 font-medium">Daftar pesanan ojek dan makanan yang pernah Anda buat di wilayah Lengkong.</p>
+
+                    <div class="space-y-3">
+                        ${myOrders.length === 0 ? `<p class="text-center text-slate-400 text-xs py-8 font-medium">Belum ada riwayat pesanan.</p>` : myOrders.map((o, idx) => `
+                            <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-2.5">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] bg-sky-100 text-sky-800 font-extrabold px-2.5 py-0.5 rounded-md uppercase">${o.type} • ${o.id}</span>
+                                    <span class="text-[10px] px-2.5 py-0.5 rounded-md font-extrabold ${o.status === 'Selesai' ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-800'}">${o.status}</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-xs text-slate-900">${o.items ? 'Makanan: ' + o.items + ' (' + o.merchant + ')' : 'Ojek Rute: ' + o.from + ' -> ' + o.to}</h4>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">Driver: <span class="font-bold text-sky-600">${o.driver || 'Asep Supriatna'}</span></p>
+                                </div>
+                                <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
+                                    <span class="font-black text-sky-600">Total: Rp ${o.total.toLocaleString()}</span>
+                                    ${o.status === 'Selesai' && !o.rating ? `
+                                        <button onclick="openRatingModal('${o.id}')" class="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 rounded-xl font-extrabold text-[10px] cursor-pointer">Beri Ulasan</button>
+                                    ` : o.rating ? `
+                                        <span class="text-[11px] text-yellow-500 font-black"><i class="fa-solid fa-star"></i> ${o.rating}/5</span>
+                                    ` : `
+                                        <button onclick="completeOrder(${idx})" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-[10px] cursor-pointer">Selesaikan Pesanan</button>
+                                    `}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
+                        POWERED BY SIMADU
+                    </div>
+                </div>
+            `;
+        }
+
+        function completeOrder(idx) {
+            db.orders[idx].status = 'Selesai';
+            saveDB();
+            showToast('Perubahan Disimpan: Pesanan ditandai Selesai!', 'success');
+            renderDashboardContent('history');
+        }
+
+        function openRatingModal(orderId) {
+            const rating = prompt('Berikan rating bintang untuk driver & toko (1 sampai 5):', '5');
+            if(!rating) return;
+            const review = prompt('Tulis ulasan / kesan singkat pesanan:', 'Pelayanan sangat cepat dan mantap!');
+            
+            const order = db.orders.find(o => o.id === orderId);
+            if(order) {
+                order.rating = parseInt(rating);
+                order.review = review;
+                saveDB();
+                showToast('Perubahan Disimpan: Ulasan & rating berhasil dikirim!', 'success');
+                renderDashboardContent('history');
+            }
         }
 
         function openMerchantDetail(merchantId) {
@@ -1138,7 +1222,7 @@
         function addToCart(foodId) {
             const food = db.foods.find(f => f.id === foodId);
             db.cart.push(food);
-            showToast(`${food.name} ditambahkan ke keranjang`, 'success');
+            showToast(`Perubahan Disimpan: ${food.name} ditambahkan ke keranjang`, 'success');
             const counter = document.getElementById('cart-counter');
             if(counter) counter.innerText = db.cart.length;
         }
@@ -1158,10 +1242,27 @@
             document.getElementById('modal-cart').classList.add('hidden');
         }
 
+        function applyPromoCode() {
+            const code = document.getElementById('promo-code-input').value.trim().toUpperCase();
+            const msgEl = document.getElementById('promo-status-msg');
+            if(code === 'LENGKONGHEBAT') {
+                isPromoActive = true;
+                msgEl.classList.remove('hidden');
+                showToast('Perubahan Disimpan: Voucher LENGKONGHEBAT berhasil diterapkan!', 'success');
+                updateCartModalUI();
+            } else {
+                isPromoActive = false;
+                msgEl.classList.add('hidden');
+                showToast('Kode voucher tidak valid atau kedaluwarsa.', 'error');
+                updateCartModalUI();
+            }
+        }
+
         function updateCartModalUI() {
             const container = document.getElementById('cart-items-container');
             const subtotalEl = document.getElementById('cart-subtotal');
             const ongkirEl = document.getElementById('cart-ongkir');
+            const discountRow = document.getElementById('discount-row');
             const totalEl = document.getElementById('cart-total');
             const distanceLabel = document.getElementById('shipping-distance-label');
             const driverContainer = document.getElementById('checkout-driver-list-container');
@@ -1208,7 +1309,14 @@
 
             const subtotal = db.cart.reduce((sum, item) => sum + item.price, 0);
             const distanceKm = calculateDistance(pickupLatLng[0], pickupLatLng[1], destLatLng[0], destLatLng[1]);
-            const calculatedOngkir = calculateShippingCost(distanceKm);
+            let calculatedOngkir = calculateShippingCost(distanceKm);
+
+            if(isPromoActive) {
+                discountRow.classList.remove('hidden');
+                calculatedOngkir = Math.max(0, calculatedOngkir - 5000);
+            } else {
+                discountRow.classList.add('hidden');
+            }
 
             distanceLabel.innerText = `Ongkir Presisi (${distanceKm} km)`;
             subtotalEl.innerText = `Rp ${subtotal.toLocaleString()}`;
@@ -1219,7 +1327,7 @@
         function selectCheckoutDriver(name) {
             selectedDriverName = name;
             updateCartModalUI();
-            showToast(`Driver ${name} dipilih!`, 'success');
+            showToast(`Perubahan Disimpan: Driver ${name} dipilih!`, 'success');
         }
 
         function removeFromCart(index) {
@@ -1240,7 +1348,7 @@
                     }
                     document.getElementById('map-pickup-label').innerText = `GPS Aktif (Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)})`;
                     updateCartModalUI();
-                    showToast('Titik jemput diperbarui ke lokasi GPS Anda!', 'success');
+                    showToast('Perubahan Disimpan: Titik jemput diperbarui ke lokasi GPS Anda!', 'success');
                 }, () => {
                     showToast('Gagal Mendapatkan GPS. Menggunakan lokasi default Lengkong.', 'error');
                 });
@@ -1256,7 +1364,9 @@
             }
             const subtotal = db.cart.reduce((sum, item) => sum + item.price, 0);
             const distanceKm = calculateDistance(pickupLatLng[0], pickupLatLng[1], destLatLng[0], destLatLng[1]);
-            const calculatedOngkir = calculateShippingCost(distanceKm);
+            let calculatedOngkir = calculateShippingCost(distanceKm);
+            if(isPromoActive) calculatedOngkir = Math.max(0, calculatedOngkir - 5000);
+
             const merchant = db.activeMerchant || db.merchants[0];
             
             db.orders.unshift({
@@ -1273,14 +1383,17 @@
                 address: document.getElementById('map-dest-label').innerText,
                 destLat: destLatLng[0],
                 destLng: destLatLng[1],
-                ongkir: calculatedOngkir
+                ongkir: calculatedOngkir,
+                rating: null,
+                review: null
             });
 
             db.cart = [];
+            isPromoActive = false;
             saveDB();
             closeCartModal();
             closeMerchantDetail();
-            showToast(`Perubahan & Pesanan berhasil disimpan! Driver ${selectedDriverName} segera menuju toko.`, 'success');
+            showToast(`Perubahan Disimpan: Pesanan berhasil dibuat! Driver ${selectedDriverName} segera menuju toko.`, 'success');
             renderDashboardContent('home');
         }
 
@@ -1298,10 +1411,12 @@
                 from: document.getElementById('ojek-from').value || 'Alun-Alun Lengkong',
                 to: to,
                 total: 12000,
-                status: 'Dalam Perjalanan'
+                status: 'Dalam Perjalanan',
+                rating: null,
+                review: null
             });
             saveDB();
-            showToast('Perubahan & Pesanan ojek berhasil disimpan!', 'success');
+            showToast('Perubahan Disimpan: Ojek berhasil dipesan!', 'success');
             renderDashboardContent('home');
         }
 
@@ -1430,14 +1545,15 @@
             const d = db.drivers.find(x => x.name === currentUser.name) || db.drivers[0];
             d.status = d.status === 'Online' ? 'Offline' : 'Online';
             saveDB();
-            showToast(`Perubahan disimpan: Status driver diubah menjadi ${d.status}`, 'success');
+            showToast(`Perubahan Disimpan: Status driver diubah menjadi ${d.status}`, 'success');
             renderDashboardContent(currentSubTab);
         }
 
         function updateOrderStatus(index, status) {
             db.orders[index].status = status;
             saveDB();
-            showToast(`Perubahan disimpan: Status order diubah menjadi ${status}`, 'success');
+            playBeepSound();
+            showToast(`Perubahan Disimpan: Status order diubah menjadi ${status}`, 'success');
             renderDashboardContent(currentSubTab);
         }
 
@@ -1550,7 +1666,6 @@
                 if(tempStoreImage) merchant.image = tempStoreImage;
                 if(tempStoreBanner) merchant.banner = tempStoreBanner;
 
-                // Update juga pada data user jika sinkron
                 const userObj = db.users.find(u => u.phone === currentUser.phone);
                 if(userObj) {
                     userObj.shopName = newName;
@@ -1560,7 +1675,7 @@
                 localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
 
                 saveDB();
-                showToast('Perubahan & Nama Toko berhasil disimpan!', 'success');
+                showToast('Perubahan Disimpan: Nama & Profil Toko berhasil diperbarui!', 'success');
                 renderDashboardContent('merchant-menu');
             }
         }
@@ -1891,7 +2006,6 @@
         function renderProfile(container) {
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             
-            // Informasi Khusus Berdasarkan Role Masing-Masing User
             let specificRoleInfoHTML = '';
             if (activeRole === 'driver') {
                 const driverData = db.drivers.find(d => d.phone === currentUser.phone || d.name === currentUser.name) || {};
@@ -2049,7 +2163,7 @@
 
         function closeNotificationModal() { document.getElementById('modal-notif').classList.add('hidden'); }
 
-        // --- FITUR LIVE CHAT PERSONAL PER KONSUMEN / TARGET ---
+        // --- LIVE CHAT PERSONAL ---
         function switchView(view) {
             if(view === 'chat') {
                 document.getElementById('view-chat').classList.remove('hidden');
