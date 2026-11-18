@@ -258,8 +258,6 @@
             updateDashboardShell();
         }
 
-        function checkAccessAndNavigate(target) { renderDashboardContent(target); return true; }
-
         function renderDashboardNavigation(activeRole) {
             const nav = document.getElementById('bottom-nav');
             if(activeRole === 'admin') {
