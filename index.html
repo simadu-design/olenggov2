@@ -160,7 +160,7 @@
             </div>
 
             <!-- Dynamic Content Area -->
-            <main id="main-content" class="flex-1 overflow-y-auto pb-24 hide-scrollbar">
+            <main id="main-content" class="flex-1 overflow-y-auto pb-28 hide-scrollbar">
                 <!-- Dynamically rendered -->
             </main>
 
@@ -313,6 +313,7 @@
         let mapInstance = null;
         let checkoutMapInstance = null;
         let registerMapInstance = null;
+        let orderMapInstances = {};
         let pickupLatLng = [-7.1234, 106.8456];
         let destLatLng = [-7.1290, 106.8520];
 
@@ -384,7 +385,7 @@
                 { id: 3, name: 'Siti Rohimah', status: 'Online', vehicle: 'Honda Scoopy - F 1234 XX', rating: 4.8, location: 'Kp. Cijangkar', lat: -7.1290, lng: 106.8510, phone: '6285624736602', balance: 210000 }
             ],
             orders: [
-                { id: 'ORD-9021', type: 'food', customer: 'Budi Santoso', merchant: 'Warung Nasi Sunda', items: 'Nasi Liwet (2x)', total: 55000, status: 'Menunggu Driver', address: 'Kp. Lengkong RT 02/01', ongkir: 5000, driver: 'Asep Supriatna' }
+                { id: 'ORD-9021', type: 'food', customer: 'Budi Santoso', merchant: 'Warung Nasi Sunda Lengkong', merchantLat: -7.1240, merchantLng: 106.8460, items: 'Nasi Liwet (2x)', total: 55000, status: 'Menunggu Driver', address: 'Kp. Lengkong RT 02/01', destLat: -7.1250, destLng: 106.8470, ongkir: 5000, driver: 'Asep Supriatna' }
             ],
             notifications: [
                 { id: 1, title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Layanan ojek & food delivery khusus wilayah Kecamatan Lengkong, Sukabumi.' }
@@ -498,8 +499,6 @@
 
             currentUser = foundUser;
             adminViewMode = null;
-            
-            // Simpan sesi login ke localStorage agar tidak hilang saat reload
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
 
             showToast(`Berhasil masuk sebagai ${role.toUpperCase()}!`, 'success');
@@ -582,7 +581,6 @@
         function handleLogout() {
             currentUser = null;
             adminViewMode = null;
-            // Hapus sesi tersimpan di localStorage saat logout ditekan
             localStorage.removeItem('oleng_user_session');
 
             if (mapInstance) { mapInstance.remove(); mapInstance = null; }
@@ -1266,11 +1264,15 @@
                 type: 'food',
                 customer: currentUser.name,
                 merchant: merchant.name,
+                merchantLat: merchant.lat,
+                merchantLng: merchant.lng,
                 driver: selectedDriverName,
                 items: db.cart.map(i => i.name).join(', '),
                 total: subtotal + calculatedOngkir,
                 status: 'Menunggu Driver',
                 address: document.getElementById('map-dest-label').innerText,
+                destLat: destLatLng[0],
+                destLng: destLatLng[1],
                 ongkir: calculatedOngkir
             });
 
@@ -1316,9 +1318,9 @@
                     </div>
 
                     <h3 class="font-extrabold text-sm text-slate-900">Daftar Orderan Masuk di Lengkong</h3>
-                    <div class="space-y-3">
+                    <div class="space-y-4">
                         ${db.orders.map((o, idx) => `
-                            <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-2.5">
+                            <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
                                 <div class="flex justify-between items-center">
                                     <span class="text-[10px] bg-sky-100 text-sky-800 font-extrabold px-2.5 py-0.5 rounded-md uppercase">${o.type} - ${o.id}</span>
                                     <span class="text-xs font-black text-sky-600">Rp ${o.total.toLocaleString()}</span>
@@ -1328,6 +1330,13 @@
                                     <p class="text-[11px] text-slate-500">${o.items ? 'Menu: ' + o.items + ' (Toko: ' + o.merchant + ')' : 'Rute: ' + o.from + ' -> ' + o.to}</p>
                                     ${o.address ? `<p class="text-[11px] text-slate-600 font-medium mt-1"><i class="fa-solid fa-location-dot"></i> Alamat: ${o.address}</p>` : ''}
                                 </div>
+                                
+                                <!-- Peta Khusus Setiap Pesanan dengan Ikon Toko & Ojol Real-Time -->
+                                <div class="space-y-1">
+                                    <span class="text-[10px] font-extrabold text-slate-500 uppercase">Peta Pelacakan Pesanan:</span>
+                                    <div id="order-map-${idx}" class="map-container shadow-inner border border-slate-200" style="height: 160px;"></div>
+                                </div>
+
                                 <div class="flex gap-2 pt-2 border-t border-slate-100">
                                     <button onclick="updateOrderStatus(${idx}, 'Diterima Driver')" class="flex-1 py-2.5 bg-sky-600 text-white rounded-xl text-xs font-extrabold shadow-xs hover:bg-sky-700 transition cursor-pointer">Terima Order</button>
                                     <button onclick="updateOrderStatus(${idx}, 'Ditolak')" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-extrabold hover:bg-slate-200 transition cursor-pointer">Tolak</button>
@@ -1340,6 +1349,76 @@
                     </div>
                 </div>
             `;
+            
+            // Inisialisasi peta untuk setiap pesanan setelah elemen dirender
+            setTimeout(() => {
+                db.orders.forEach((o, idx) => {
+                    renderOrderMap(idx, o);
+                });
+            }, 300);
+        }
+
+        function renderOrderMap(idx, order) {
+            const mapId = `order-map-${idx}`;
+            const mapEl = document.getElementById(mapId);
+            if(!mapEl) return;
+
+            if (orderMapInstances[mapId]) {
+                orderMapInstances[mapId].remove();
+                delete orderMapInstances[mapId];
+            }
+
+            // Koordinat default toko dan tujuan jika tidak ada di order
+            const merchantLat = order.merchantLat || -7.1240;
+            const merchantLng = order.merchantLng || 106.8460;
+            const destLat = order.destLat || -7.1290;
+            const destLng = order.destLng || 106.8520;
+
+            const map = L.map(mapId, { zoomControl: false }).setView([merchantLat, merchantLng], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+            // Ikon Khusus Mitra Toko (Terkunci)
+            const storeIcon = L.divIcon({
+                className: 'custom-store-icon',
+                html: '<div style="background-color: #f59e0b; color: white; padding: 6px; border-radius: 50%; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); text-align: center;"><i class="fa-solid fa-store"></i></div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            // Ikon Khusus Driver Ojol (Real-Time GPS)
+            const driverIcon = L.divIcon({
+                className: 'custom-driver-icon',
+                html: '<div style="background-color: #0284c7; color: white; padding: 6px; border-radius: 50%; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); text-align: center;"><i class="fa-solid fa-motorcycle"></i></div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            // Tambahkan marker toko (terkunci di titik lokasi akurat)
+            L.marker([merchantLat, merchantLng], { icon: storeIcon }).addTo(map)
+                .bindPopup(`<b>${order.merchant || 'Mitra Toko'}</b><br>Lokasi Toko Terkunci`);
+
+            // Dapatkan posisi GPS real-time ojol / fallback ke koordinat driver terdekat
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const realLat = position.coords.latitude;
+                    const realLng = position.coords.longitude;
+                    L.marker([realLat, realLng], { icon: driverIcon }).addTo(map)
+                        .bindPopup(`<b>Driver: ${order.driver || 'Asep'}</b><br>Posisi GPS Real-Time`).openPopup();
+                    
+                    // Sesuaikan batas peta agar mencakup toko dan posisi ojol
+                    const group = new L.featureGroup([
+                        L.marker([merchantLat, merchantLng]),
+                        L.marker([realLat, realLng])
+                    ]);
+                    map.fitBounds(group.getBounds().pad(0.2));
+                }, () => {
+                    // Fallback jika GPS tidak aktif
+                    L.marker([merchantLat + 0.002, merchantLng + 0.002], { icon: driverIcon }).addTo(map)
+                        .bindPopup(`<b>Driver: ${order.driver || 'Asep'}</b><br>Posisi Ojol`).openPopup();
+                });
+            }
+
+            orderMapInstances[mapId] = map;
         }
 
         function renderDriverMap(container) {
@@ -1411,7 +1490,7 @@
         function renderMerchantProfileEdit(container) {
             const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName) || db.merchants[0];
             container.innerHTML = `
-                <div class="p-4 space-y-4">
+                <div class="p-4 space-y-4 pb-20">
                     <h2 class="font-extrabold text-base text-slate-900">Kelola Profil & Foto Toko</h2>
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
                         <div>
@@ -1428,7 +1507,7 @@
                             <input type="file" id="edit-store-banner" accept="image/*" class="w-full mt-1 p-2 border rounded-2xl text-xs" onchange="previewStoreBanner(event)">
                             <img id="preview-store-banner-img" src="${merchant.banner}" class="w-full h-24 rounded-2xl object-cover mt-2 shadow-xs">
                         </div>
-                        <button onclick="saveMerchantProfile(${merchant.id})" class="w-full py-3 bg-sky-600 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer">Simpan Perubahan Toko</button>
+                        <button onclick="saveMerchantProfile(${merchant.id})" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer mt-4">Simpan Perubahan Toko</button>
                     </div>
                     <div class="text-center py-4 text-[10px] text-slate-400 font-black uppercase tracking-widest border-t border-slate-200 mt-6">
                         POWERED BY SIMADU
@@ -1823,7 +1902,6 @@
                 if(currentUser.photo) dbUser.photo = currentUser.photo;
             }
 
-            // Perbarui juga data tersimpan di localStorage
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
 
             saveDB();
