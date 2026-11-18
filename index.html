@@ -25,14 +25,14 @@
         <!-- HEADER / BRANDING -->
         <div class="text-center mb-6">
             <h1 class="text-2xl font-bold text-gold">🛵 OLENG GO</h1>
-            <p class="text-xs text-slate-400 mt-1">Super-App Kecamatan Lengkong, Sukabumi</p>
+            <p class="text-xs text-slate-400 mt-1">Super-App Kecamatan Lengkong, Sukabumi (SIMADU)</p>
         </div>
 
-        <!-- HALAMAN LOGIN -->
+        <!-- HALAMAN LOGIN / AUTH -->
         <div id="login-section" class="space-y-4">
             <h2 class="text-lg font-semibold text-slate-200">Masuk / Masukkan Akun</h2>
             <div>
-                <label class="block text-xs text-slate-400 mb-1">Nomor WhatsApp</label>
+                <label class="block text-xs text-slate-400 mb-1">Nomor WhatsApp Admin / User</label>
                 <input type="text" id="login-phone" placeholder="Contoh: 085624736602" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-gold text-sm">
             </div>
             <div>
@@ -40,7 +40,7 @@
                 <select id="login-role" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-gold text-sm">
                     <option value="customer">Customer (Pengguna)</option>
                     <option value="driver">Driver (Ojol)</option>
-                    <option value="merchant">Merchant (Toko/Kuliner)</option>
+                    <option value="merchant">Merchant (Toko / Kuliner)</option>
                     <option value="admin">Admin Master</option>
                 </select>
             </div>
@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        <!-- DASHBOARD UTAMA (DISEMBUNYIKAN JIKA BELUM LOGIN) -->
+        <!-- DASHBOARD UTAMA (MULTI-ROLE & FITUR LENGKAP) -->
         <div id="dashboard-section" class="hidden space-y-4">
             <div class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-800">
                 <div>
@@ -65,31 +65,37 @@
                 </button>
             </div>
 
-            <!-- Konten Fitur Utama -->
-            <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 text-center space-y-3">
-                <p class="text-xs text-slate-300">📍 Layanan Aktif: <span class="text-gold font-bold">Kecamatan Lengkong & Sekitarnya</span></p>
-                <div class="grid grid-cols-2 gap-2 pt-2">
-                    <button class="p-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-white border border-slate-700 transition-all">
+            <!-- Fitur Navigasi / Layanan Utama -->
+            <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 space-y-3">
+                <p class="text-xs text-slate-300 text-center">📍 Wilayah Layanan: <span class="text-gold font-bold">Kecamatan Lengkong, Sukabumi</span></p>
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button onclick="alert('Fitur Lengkong Ojek Aktif!')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-white border border-slate-700 transition-all text-left">
                         🚀 Lengkong Ojek
                     </button>
-                    <button class="p-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-white border border-slate-700 transition-all">
+                    <button onclick="alert('Fitur Lengkong Food Aktif!')" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-white border border-slate-700 transition-all text-left">
                         🍜 Lengkong Food
                     </button>
                 </div>
             </div>
 
-            <!-- Peta Leaflet GPS -->
+            <!-- Panel Khusus / Voucher Info -->
+            <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 flex justify-between items-center">
+                <span class="text-xs text-slate-400">Voucher Diskon Aktif:</span>
+                <span class="text-xs font-bold text-gold px-2 py-1 bg-slate-800 rounded-lg border border-slate-700">LENGKONGHEBAT</span>
+            </div>
+
+            <!-- Peta Leaflet GPS Lengkong -->
             <div class="space-y-1">
-                <label class="text-xs text-slate-400">Lokasi Anda (Leaflet GPS Lengkong)</label>
-                <div id="map" class="w-full h-48 rounded-xl border border-slate-700 z-0"></div>
+                <label class="text-xs text-slate-400">Peta & Lokasi Real-time GPS</label>
+                <div id="map" class="w-full h-44 rounded-xl border border-slate-700 z-0"></div>
             </div>
         </div>
 
     </div>
 
-    <!-- SKRIP LOGIKA APLIKASI & PERSISTENT SESSION -->
+    <!-- SCRIPT APLIKASI & LOCALSTORAGE PERSISTENT SESSION -->
     <script>
-        // Cek Sesi Saat Halaman Dimuat (Persistent Login)
+        // Cek Sesi Tersimpan saat Halaman Dimuat / Reload
         document.addEventListener("DOMContentLoaded", function() {
             const savedSession = localStorage.getItem('oleng_user_session');
             if (savedSession) {
@@ -110,7 +116,7 @@
             }
 
             const userData = { phone: phone, role: role };
-            // Simpan ke localStorage agar tidak perlu login ulang saat reload
+            // Simpan sesi ke memori browser agar tidak hilang saat reload
             localStorage.setItem('oleng_user_session', JSON.stringify(userData));
             
             showDashboard(userData);
@@ -123,7 +129,7 @@
             document.getElementById('user-welcome').innerText = `No. WA: ${user.phone}`;
             document.getElementById('user-role-badge').innerText = `Role: ${user.role}`;
 
-            // Inisialisasi Peta Leaflet (Titik tengah Lengkong, Sukabumi)
+            // Inisialisasi Peta Leaflet GPS (Pusat Kecamatan Lengkong, Sukabumi)
             setTimeout(() => {
                 if (!window.mapInstance) {
                     window.mapInstance = L.map('map').setView([-7.155, 106.855], 13);
@@ -146,7 +152,7 @@
         }
 
         function handleLogout() {
-            // Hapus sesi tersimpan
+            // Hapus sesi tersimpan sehingga pengguna wajib login kembali saat reload berikutnya
             localStorage.removeItem('oleng_user_session');
             document.getElementById('login-phone').value = '';
             showLogin();
