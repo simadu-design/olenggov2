@@ -1,4 +1,4 @@
-e<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id" class="h-full">
 <head>
     <meta charset="UTF-8">
@@ -49,8 +49,8 @@ e<!DOCTYPE html>
             <div class="my-auto text-center space-y-6">
                 <div class="flex items-center justify-between px-2">
                     <div class="flex items-center gap-2">
-                        <div class="w-12 h-12 bg-yellow-400 rounded-2xl flex items-center justify-center text-sky-900 font-black text-2xl shadow-xl transform -rotate-3">
-                            <i class="fa-solid fa-motorcycle"></i>
+                        <div class="w-14 h-14 bg-yellow-400 rounded-2xl flex items-center justify-center text-sky-900 font-black text-2xl shadow-xl transform -rotate-3 overflow-hidden border-2 border-white">
+                            <img src="https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=150&auto=format&fit=crop&q=80" class="w-full h-full object-cover" alt="Banner Image">
                         </div>
                         <div class="text-left">
                             <h1 id="auth-brand-title" class="text-2xl font-black italic tracking-wider text-yellow-300 drop-shadow">OLENG GO</h1>
@@ -59,8 +59,8 @@ e<!DOCTYPE html>
                             </p>
                         </div>
                     </div>
-                    <div id="auth-bee-logo" class="w-14 h-14 bg-yellow-400 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-2xl">
-                        🐝
+                    <div id="auth-bee-logo" class="w-16 h-16 bg-yellow-400 rounded-full border-2 border-white shadow-lg flex items-center justify-center overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80" class="w-full h-full object-cover" alt="Maskot Lebah">
                     </div>
                 </div>
 
@@ -71,7 +71,7 @@ e<!DOCTYPE html>
                         <button onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1 text-sm cursor-pointer">Daftar Akun</button>
                     </div>
 
-                    <!-- Login Form (Wajib Terdaftar) -->
+                    <!-- Login Form -->
                     <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3">
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">No. WhatsApp / Email Terdaftar</label>
@@ -87,7 +87,7 @@ e<!DOCTYPE html>
                                 <option value="customer">Customer (Konsumen)</option>
                                 <option value="driver">Driver (Ojol / Kurir)</option>
                                 <option value="merchant">Merchant (Mitra Toko)</option>
-                                <option value="admin">Admin SIMADU (Full Panel)</option>
+                                <option value="admin">Admin SIMADU (Full Panel - 085624736602)</option>
                             </select>
                         </div>
                         <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 transition mt-2 text-sm cursor-pointer">Masuk Aplikasi</button>
@@ -109,17 +109,16 @@ e<!DOCTYPE html>
                                 <option value="customer">Customer (Konsumen)</option>
                                 <option value="driver">Driver (Ojol / Kurir)</option>
                                 <option value="merchant">Merchant (Mitra Toko)</option>
+                                <option value="admin">Admin SIMADU (Kunci: 085624736602)</option>
                             </select>
                         </div>
                         
-                        <!-- Driver Specific Fields -->
                         <div id="reg-driver-fields" class="hidden space-y-2 pt-1 border-t border-slate-100">
                             <input type="text" id="reg-driver-ktp" placeholder="Nomor KTP (16 Digit)" class="w-full px-3.5 py-2 border border-slate-200 rounded-2xl text-sm">
                             <input type="text" id="reg-driver-plat" placeholder="Nomor Pelat Motor (Cth: F 1234 XX)" class="w-full px-3.5 py-2 border border-slate-200 rounded-2xl text-sm">
                             <input type="text" id="reg-driver-vehicle" placeholder="Jenis Motor (Cth: Honda Beat)" class="w-full px-3.5 py-2 border border-slate-200 rounded-2xl text-sm">
                         </div>
 
-                        <!-- Merchant Specific Fields -->
                         <div id="reg-merchant-fields" class="hidden space-y-2 pt-1 border-t border-slate-100">
                             <input type="text" id="reg-shopname" placeholder="Nama Toko / Warung" class="w-full px-3.5 py-2 border border-slate-200 rounded-2xl text-sm">
                             <input type="text" id="reg-merchant-owner" placeholder="Nama Pemilik Toko" class="w-full px-3.5 py-2 border border-slate-200 rounded-2xl text-sm">
@@ -148,7 +147,6 @@ e<!DOCTYPE html>
         <!-- ================= MAIN APP SHELL ================= -->
         <div id="view-dashboard" class="flex-1 flex flex-col hidden bg-slate-50 relative overflow-hidden">
             
-            <!-- Admin Unified Multi-Role Switcher Bar -->
             <div id="admin-switcher-bar" class="bg-slate-900 text-white px-3 py-2 flex items-center justify-between text-xs z-30 shadow-inner hidden">
                 <span class="font-bold text-yellow-400 text-[10px] uppercase"><i class="fa-solid fa-shield-halved"></i> Admin Mode:</span>
                 <div class="flex gap-1.5 overflow-x-auto hide-scrollbar">
@@ -160,22 +158,15 @@ e<!DOCTYPE html>
             </div>
 
             <!-- Dynamic Content Area -->
-            <main id="main-content" class="flex-1 overflow-y-auto pb-28 hide-scrollbar">
-                <!-- Dynamically rendered -->
-            </main>
+            <main id="main-content" class="flex-1 overflow-y-auto pb-28 hide-scrollbar"></main>
 
             <!-- Bottom Navigation Bar -->
-            <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center z-35 shadow-2xl">
-                <!-- Dynamically rendered -->
-            </nav>
+            <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center z-35 shadow-2xl"></nav>
         </div>
 
         <!-- ================= MODALS & SUB-VIEWS ================= -->
-
-        <!-- Merchant Detail View Modal -->
         <div id="view-merchant-detail" class="absolute inset-0 bg-slate-50 z-40 hidden flex flex-col overflow-y-auto"></div>
 
-        <!-- Interactive Cart & Precise Map Checkout Modal -->
         <div id="modal-cart" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
                 <div class="flex justify-between items-center border-b pb-3">
@@ -205,7 +196,6 @@ e<!DOCTYPE html>
                     </div>
                 </div>
 
-                <!-- Promo Voucher Input -->
                 <div class="bg-sky-50 p-3 rounded-2xl border border-sky-200 space-y-1.5">
                     <label class="text-[10px] font-extrabold text-sky-900 uppercase">Kode Voucher Diskon (Cth: LENGKONGHEBAT)</label>
                     <div class="flex gap-2">
@@ -248,7 +238,6 @@ e<!DOCTYPE html>
             </div>
         </div>
 
-        <!-- Top-Up Saldo Modal -->
         <div id="modal-topup" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 space-y-4 shadow-2xl">
                 <div class="flex justify-between items-center border-b pb-3">
@@ -276,7 +265,6 @@ e<!DOCTYPE html>
             </div>
         </div>
 
-        <!-- Notification Modal -->
         <div id="modal-notif" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 max-h-[75vh] overflow-y-auto space-y-4">
                 <div class="flex justify-between items-center border-b pb-3">
@@ -288,7 +276,6 @@ e<!DOCTYPE html>
             </div>
         </div>
 
-        <!-- Live Chat View -->
         <div id="view-chat" class="absolute inset-0 bg-white z-50 hidden flex flex-col">
             <div class="bg-sky-600 text-white p-4 flex items-center justify-between shadow">
                 <div class="flex items-center space-x-3">
@@ -332,10 +319,10 @@ e<!DOCTYPE html>
 
         const defaultDB = {
             users: [
-                { id: 1, name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', balance: 100000, password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Budi' },
+                { id: 1, name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Budi' },
                 { id: 2, name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', ktp: '3202111222330001', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Asep' },
                 { id: 3, name: 'Warung Nasi Sunda Lengkong', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12', balance: 350000, password: '123', shopName: 'Warung Nasi Sunda Lengkong', ownerName: 'Ibu Sunda', ktp: '3202111444550002', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS' },
-                { id: 4, name: 'Admin SIMADU', phone: '085624736602', role: 'admin', status: 'Aktif', address: 'Kantor Pusat Lengkong', balance: 1200000, password: '123', photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin' }
+                { id: 4, name: 'Admin SIMADU', phone: '085624736602', role: 'admin', status: 'Aktif', address: 'Kantor Pusat Lengkong', password: '123', photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin' }
             ],
             merchants: [
                 { 
@@ -343,7 +330,7 @@ e<!DOCTYPE html>
                     name: 'Warung Nasi Sunda Lengkong', 
                     category: 'Makanan Berat', 
                     status: 'Buka', 
-                    banner: 'https://placehold.co/600x300/0284c7/ffffff?text=Warung+Nasi+Sunda+Lengkong',
+                    banner: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop&q=80',
                     image: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS', 
                     rating: 4.8, 
                     lat: -7.1240, 
@@ -358,7 +345,7 @@ e<!DOCTYPE html>
                     name: 'Seblak & Bakso Bledor Lengkong', 
                     category: 'Snack & Pedas', 
                     status: 'Buka', 
-                    banner: 'https://placehold.co/600x300/f59e0b/ffffff?text=Seblak+Bakso+Bledor',
+                    banner: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&auto=format&fit=crop&q=80',
                     image: 'https://placehold.co/150x150/f59e0b/ffffff?text=SBB', 
                     rating: 4.6, 
                     lat: -7.1220, 
@@ -367,35 +354,15 @@ e<!DOCTYPE html>
                     operationalHours: '10:00 - 22:00 WIB',
                     whatsapp: '6285624736602',
                     balance: 200000
-                },
-                { 
-                    id: 3, 
-                    name: 'Kopi & Roti Bakar Titik Sentral', 
-                    category: 'Minuman & Roti', 
-                    status: 'Buka', 
-                    banner: 'https://placehold.co/600x300/0f172a/ffffff?text=Kopi+Titik+Sentral',
-                    image: 'https://placehold.co/150x150/0f172a/ffffff?text=KTS', 
-                    rating: 4.9, 
-                    lat: -7.1250, 
-                    lng: 106.8475, 
-                    address: 'Depan Alun-Alun Lengkong, Sukabumi',
-                    operationalHours: '15:00 - 23:00 WIB',
-                    whatsapp: '6285624736602',
-                    balance: 450000
                 }
             ],
             foods: [
                 { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap Komplit', price: 25000, desc: 'Nasi liwet hangat, ikan asin jambal, tahu tempe, lalapan segar khas sunda.', stock: 15, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Nasi+Liwet' },
-                { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung asli bumbu rempah bakar madu manis gurih.', stock: 10, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Ayam+Bakar' },
-                { id: 103, merchantId: 2, name: 'Seblak Ceker Mercon Pedas Mampus', price: 15000, desc: 'Seblak kuah kencur rempah merah dengan ceker empuk ekstra pedas.', stock: 25, image: 'https://placehold.co/200x200/f59e0b/ffffff?text=Seblak' },
-                { id: 104, merchantId: 2, name: 'Bakso Beranak Jumbo', price: 18000, desc: 'Bakso sapi besar isi cincang daging urat mercon.', stock: 8, image: 'https://placehold.co/200x200/f59e0b/ffffff?text=Bakso' },
-                { id: 105, merchantId: 3, name: 'Kopi Susu Gula Aren Lengkong', price: 15000, desc: 'Espresso robusta lokal Sukabumi dengan susu segar dan gula aren murni.', stock: 30, image: 'https://placehold.co/200x200/0f172a/ffffff?text=Kopi+Susu' },
-                { id: 106, merchantId: 3, name: 'Roti Bakar Keju Cokelat Lumer', price: 12000, desc: 'Roti tebal panggang mentega dengan taburan keju cheddar parut melimpah.', stock: 20, image: 'https://placehold.co/200x200/0f172a/ffffff?text=Roti+Bakar' }
+                { id: 102, merchantId: 2, name: 'Seblak Ceker Mercon Pedas Mampus', price: 15000, desc: 'Seblak kuah kencur rempah merah dengan ceker empuk ekstra pedas.', stock: 25, image: 'https://placehold.co/200x200/f59e0b/ffffff?text=Seblak' }
             ],
             drivers: [
                 { id: 1, name: 'Asep Supriatna', status: 'Online', vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, location: 'Alun-Alun Lengkong', lat: -7.1230, lng: 106.8450, phone: '6285624736602', balance: 150000 },
-                { id: 2, name: 'Ujang Hendra', status: 'Online', vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.7, location: 'Pasar Lengkong', lat: -7.1260, lng: 106.8480, phone: '6285624736602', balance: 95000 },
-                { id: 3, name: 'Siti Rohimah', status: 'Online', vehicle: 'Honda Scoopy - F 1234 XX', rating: 4.8, location: 'Kp. Cijangkar', lat: -7.1290, lng: 106.8510, phone: '6285624736602', balance: 210000 }
+                { id: 2, name: 'Ujang Hendra', status: 'Online', vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.7, location: 'Pasar Lengkong', lat: -7.1260, lng: 106.8480, phone: '6285624736602', balance: 95000 }
             ],
             orders: [
                 { id: 'ORD-9021', type: 'food', customer: 'Budi Santoso', merchant: 'Warung Nasi Sunda Lengkong', merchantLat: -7.1240, merchantLng: 106.8460, items: 'Nasi Liwet (2x)', total: 55000, status: 'Menunggu Driver', address: 'Kp. Lengkong RT 02/01', destLat: -7.1250, destLng: 106.8470, ongkir: 5000, driver: 'Asep Supriatna', rating: null, review: null }
@@ -404,26 +371,25 @@ e<!DOCTYPE html>
                 { id: 1, title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Layanan ojek & food delivery khusus wilayah Kecamatan Lengkong, Sukabumi.' }
             ],
             chats: [
-                { id: 1, from: 'Budi Santoso', to: 'Admin SIMADU', text: 'Halo Admin, ada yang bisa dibantu?', time: '08:00' },
-                { id: 2, from: 'Budi Santoso', to: 'Warung Nasi Sunda Lengkong', text: 'Halo Kak, pesanan saya apakah sedang disiapkan?', time: '09:30' }
+                { id: 1, from: 'Budi Santoso', to: 'Admin SIMADU', text: 'Halo Admin, ada yang bisa dibantu?', time: '08:00' }
             ],
             cart: [],
             activeMerchant: null,
-            // Global Branding Config yang dapat dikontrol Admin
             branding: {
-                bannerText: 'OLENG GO',
-                beeLogo: '🐝'
+                bannerType: 'image', // 'text' atau 'image'
+                bannerText: 'GO OLENG',
+                bannerImage: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80',
+                beeLogo: 'https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80'
             }
         };
 
         let db = JSON.parse(localStorage.getItem('oleng_go_db')) || defaultDB;
-        if(!db.branding) db.branding = { bannerText: 'OLENG GO', beeLogo: '🐝' };
+        if(!db.branding) db.branding = { bannerType: 'image', bannerText: 'GO OLENG', bannerImage: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80', beeLogo: 'https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80' };
 
         function saveDB() {
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
         }
 
-        // --- AUDIO BEEP NOTIFICATION ---
         function playBeepSound() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -509,17 +475,22 @@ e<!DOCTYPE html>
             }
         }
 
-        // --- LOGIN Wajib Terdaftar ---
+        // --- VALIDASI LOGIN: WAJIB TERDAFTAR & ADMIN DIKUNCI 085624736602 ---
         function handleLogin(e) {
             e.preventDefault();
             const identifier = document.getElementById('login-identifier').value.trim();
             const password = document.getElementById('login-password').value;
             const role = document.getElementById('login-role').value;
             
+            if (role === 'admin' && identifier !== '085624736602') {
+                showToast('AKSES DITOLAK: Pendaftaran & Login Admin dikunci khusus nomor 085624736602!', 'error');
+                return;
+            }
+
             const foundUser = db.users.find(u => (u.phone === identifier || u.name.toLowerCase() === identifier.toLowerCase()) && u.role === role);
             
             if(!foundUser) {
-                showToast('Akun belum terdaftar! Silakan daftar terlebih dahulu pada tab "Daftar Akun".', 'error');
+                showToast('Akun belum terdaftar! Silakan daftar terlebih dahulu.', 'error');
                 return;
             }
 
@@ -536,7 +507,7 @@ e<!DOCTYPE html>
             enterDashboard();
         }
 
-        // --- REGISTRASI Wajib Tersimpan ---
+        // --- REGISTRASI: WAJIB TERDAFTAR & ADMIN DIKUNCI 085624736602 ---
         function handleRegister(e) {
             e.preventDefault();
             const name = document.getElementById('reg-name').value;
@@ -544,7 +515,11 @@ e<!DOCTYPE html>
             const role = document.getElementById('reg-role').value;
             const password = document.getElementById('reg-password').value;
 
-            // Cek apakah nomor sudah terdaftar
+            if (role === 'admin' && phone !== '085624736602') {
+                showToast('AKSES DITOLAK: Akun Admin hanya dapat didaftarkan dengan nomor 085624736602!', 'error');
+                return;
+            }
+
             const existing = db.users.find(u => u.phone === phone);
             if(existing) {
                 showToast('Nomor WhatsApp sudah terdaftar! Silakan langsung Masuk.', 'error');
@@ -572,7 +547,7 @@ e<!DOCTYPE html>
                 role: role,
                 status: 'Aktif',
                 address: 'Kecamatan Lengkong, Sukabumi',
-                balance: (role === 'merchant' || role === 'driver') ? 50000 : 100000,
+                balance: (role === 'merchant' || role === 'driver') ? 50000 : 0,
                 password: password,
                 photo: 'https://placehold.co/150x150/0284c7/ffffff?text=' + name.charAt(0),
                 ...extraData
@@ -585,7 +560,7 @@ e<!DOCTYPE html>
                     name: newUser.shopName,
                     category: 'Kuliner Umum',
                     status: 'Buka',
-                    banner: 'https://placehold.co/600x300/0284c7/ffffff?text=Banner+Toko',
+                    banner: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop&q=80',
                     image: 'https://placehold.co/150x150/0284c7/ffffff?text=Toko',
                     rating: 5.0,
                     lat: newUser.lat,
@@ -637,7 +612,7 @@ e<!DOCTYPE html>
             document.getElementById('view-dashboard').classList.remove('hidden');
             
             const switcherBar = document.getElementById('admin-switcher-bar');
-            if(currentUser.role === 'admin') {
+            if(currentUser.role === 'admin' || currentUser.phone === '085624736602') {
                 switcherBar.classList.remove('hidden');
                 adminViewMode = 'admin';
             } else {
@@ -855,18 +830,22 @@ e<!DOCTYPE html>
         }
 
         function renderCustomerHome(container) {
-            const bannerText = db.branding?.bannerText || 'OLENG GO';
-            const beeLogo = db.branding?.beeLogo || '🐝';
-            
-            let beeLogoHTML = beeLogo.startsWith('http') ? `<img src="${beeLogo}" class="w-full h-full object-cover rounded-full">` : beeLogo;
+            const bannerType = db.branding?.bannerType || 'image';
+            const bannerText = db.branding?.bannerText || 'GO OLENG';
+            const bannerImage = db.branding?.bannerImage || 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80';
+            const beeLogo = db.branding?.beeLogo || 'https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80';
+
+            let bannerHTML = bannerType === 'image' 
+                ? `<div class="bg-white px-3 py-1.5 rounded-2xl shadow-lg border-2 border-yellow-400 overflow-hidden h-10 flex items-center justify-center"><img src="${bannerImage}" class="h-full object-cover"></div>`
+                : `<div class="bg-white px-3 py-1.5 rounded-2xl shadow-lg border-2 border-yellow-400 transform -rotate-2"><span class="text-xl font-black italic text-sky-600 tracking-tighter">${bannerText}</span></div>`;
+
+            let hasWallet = currentUser.role === 'driver' || currentUser.role === 'merchant';
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 bg-gradient-to-b from-sky-600 to-slate-50 min-h-full pb-20">
                     <div class="flex items-center justify-between text-white pt-2">
                         <div class="flex items-center space-x-2">
-                            <div class="bg-white px-3 py-1.5 rounded-2xl shadow-lg border-2 border-yellow-400 transform -rotate-2">
-                                <span class="text-xl font-black italic text-sky-600 tracking-tighter">${bannerText}</span>
-                            </div>
+                            ${bannerHTML}
                             <div>
                                 <div class="text-[11px] font-extrabold flex items-center gap-1 text-yellow-300">
                                     <i class="fa-solid fa-location-dot"></i> Lengkong Sukabumi
@@ -874,8 +853,8 @@ e<!DOCTYPE html>
                                 <p class="text-[10px] text-sky-100 font-medium">Kecamatan Lengkong</p>
                             </div>
                         </div>
-                        <div class="w-12 h-12 bg-yellow-400 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-2xl animate-bounce overflow-hidden">
-                            ${beeLogoHTML}
+                        <div class="w-16 h-16 bg-yellow-400 rounded-full border-2 border-white shadow-xl flex items-center justify-center overflow-hidden animate-bounce">
+                            <img src="${beeLogo}" class="w-full h-full object-cover" alt="Logo Lebah">
                         </div>
                     </div>
 
@@ -884,9 +863,9 @@ e<!DOCTYPE html>
                             <img src="${currentUser.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=User'}" class="w-12 h-12 rounded-2xl object-cover border-2 border-yellow-400 shadow-inner">
                             <div>
                                 <span class="text-[11px] text-sky-200 font-extrabold flex items-center gap-1.5">
-                                    Halo, ${currentUser.name}
+                                    Halo, ${currentUser.name} (${currentUser.role.toUpperCase()})
                                 </span>
-                                <h3 class="text-base font-black text-white tracking-tight">Rp ${(currentUser.balance || 100000).toLocaleString()}</h3>
+                                ${hasWallet ? `<h3 class="text-base font-black text-yellow-300 tracking-tight">Rp ${(currentUser.balance || 0).toLocaleString()}</h3>` : `<p class="text-xs text-sky-100 font-medium">${currentUser.phone}</p>`}
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -1797,7 +1776,7 @@ e<!DOCTYPE html>
             `;
         }
 
-        // --- ADMIN DASHBOARD DENGAN KOTAK KLIKABEL ---
+        // --- ADMIN DASHBOARD DENGAN KOTAK KLIKABEL & PENGELOLAAN SALDO KHUSUS ADMIN ---
         function renderAdminDash(container) {
             const totalUsers = db.users.length;
             const totalMerchants = db.merchants.length;
@@ -1809,30 +1788,32 @@ e<!DOCTYPE html>
                     <h2 class="font-extrabold text-base text-slate-900">Panel Admin Master Control</h2>
                     
                     <div class="grid grid-cols-2 gap-3">
-                        <div onclick="checkAccessAndNavigate('admin-users')" class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 cursor-pointer hover:border-sky-500 transition">
+                        <div onclick="renderAdminDetailList('users')" class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 cursor-pointer hover:border-sky-500 transition">
                             <span class="text-[10px] text-slate-500 font-extrabold uppercase">Total Pengguna</span>
                             <h3 class="text-xl font-black text-sky-600 mt-1">${totalUsers} User <i class="fa-solid fa-arrow-right text-xs float-right mt-1 text-slate-400"></i></h3>
                         </div>
-                        <div onclick="checkAccessAndNavigate('admin-stores')" class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 cursor-pointer hover:border-sky-500 transition">
+                        <div onclick="renderAdminDetailList('merchants')" class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 cursor-pointer hover:border-sky-500 transition">
                             <span class="text-[10px] text-slate-500 font-extrabold uppercase">Mitra Toko Aktif</span>
                             <h3 class="text-xl font-black text-yellow-500 mt-1">${totalMerchants} Toko <i class="fa-solid fa-arrow-right text-xs float-right mt-1 text-slate-400"></i></h3>
                         </div>
-                        <div onclick="checkAccessAndNavigate('admin-drivers')" class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 cursor-pointer hover:border-sky-500 transition">
+                        <div onclick="renderAdminDetailList('drivers')" class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 cursor-pointer hover:border-sky-500 transition">
                             <span class="text-[10px] text-slate-500 font-extrabold uppercase">Total Ojol / Driver</span>
                             <h3 class="text-xl font-black text-emerald-600 mt-1">${totalDrivers} Driver <i class="fa-solid fa-arrow-right text-xs float-right mt-1 text-slate-400"></i></h3>
                         </div>
-                        <div onclick="checkAccessAndNavigate('history')" class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 cursor-pointer hover:border-sky-500 transition">
+                        <div onclick="renderAdminDetailList('orders')" class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 cursor-pointer hover:border-sky-500 transition">
                             <span class="text-[10px] text-slate-500 font-extrabold uppercase">Pesanan Masuk</span>
                             <h3 class="text-xl font-black text-purple-600 mt-1">${totalOrders} Pesanan <i class="fa-solid fa-arrow-right text-xs float-right mt-1 text-slate-400"></i></h3>
                         </div>
                     </div>
 
-                    <div class="bg-gradient-to-r from-sky-600 to-sky-800 text-white p-4 rounded-3xl shadow-md space-y-2">
+                    <div id="admin-detail-container" class="space-y-3 pt-2"></div>
+
+                    <div class="bg-gradient-to-r from-sky-600 to-sky-800 text-white p-4 rounded-3xl shadow-md space-y-2 mt-4">
                         <span class="text-[10px] text-sky-100 font-extrabold uppercase">Kontrol Cepat Sistem & Branding</span>
-                        <h3 class="font-bold text-sm">Kelola Logo Lebah & Banner Teks Global</h3>
-                        <p class="text-[11px] text-sky-100">Klik tombol di bawah untuk mengubah foto maskot lebah dan banner teks OLENG GO yang otomatis diterapkan ke semua user.</p>
+                        <h3 class="font-bold text-sm">Kelola Logo Lebah & Banner Gambar Global</h3>
+                        <p class="text-[11px] text-sky-100">Klik tombol di bawah untuk mengubah foto maskot lebah dan banner grafis OLENG GO.</p>
                         <button onclick="checkAccessAndNavigate('admin-branding')" class="mt-2 px-4 py-2 bg-yellow-400 text-slate-900 rounded-xl text-xs font-extrabold shadow cursor-pointer">
-                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Atur Banner & Logo Lebah
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Atur Banner & Logo Foto Lebah
                         </button>
                     </div>
 
@@ -1841,32 +1822,104 @@ e<!DOCTYPE html>
                     </div>
                 </div>
             `;
+            renderAdminDetailList('users'); // Default view
         }
 
-        // --- FITUR ADMIN: KONTROL LOGO LEBAH & BANNER TEKS ---
+        // --- FUNGSI KLIK PANEL ADMIN ---
+        function renderAdminDetailList(type) {
+            const container = document.getElementById('admin-detail-container');
+            if(!container) return;
+
+            let html = '';
+            if(type === 'users') {
+                html = `<h3 class="font-extrabold text-xs text-slate-800 uppercase">Daftar Seluruh Pengguna</h3>` + db.users.map(u => `
+                    <div class="bg-white p-3 rounded-2xl border border-slate-100 text-xs flex justify-between items-center">
+                        <div><b>${u.name}</b> (${u.role})<br><span class="text-[10px] text-slate-500">${u.phone}</span></div>
+                        <span class="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded font-bold">${u.status}</span>
+                    </div>
+                `).join('');
+            } else if(type === 'merchants') {
+                html = `<h3 class="font-extrabold text-xs text-slate-800 uppercase">Daftar Mitra Toko & Saldo Dompet</h3>` + db.merchants.map(m => `
+                    <div class="bg-white p-3 rounded-2xl border border-slate-100 text-xs flex justify-between items-center">
+                        <div><b>${m.name}</b><br><span class="text-[10px] text-yellow-600 font-black">Saldo: Rp ${(m.balance || 0).toLocaleString()}</span></div>
+                        <button onclick="adminAdjustBalanceByName('${m.name}', 'merchant')" class="px-2.5 py-1 bg-yellow-400 text-slate-900 rounded-lg text-[10px] font-bold cursor-pointer">Atur Saldo</button>
+                    </div>
+                `).join('');
+            } else if(type === 'drivers') {
+                html = `<h3 class="font-extrabold text-xs text-slate-800 uppercase">Daftar Ojol / Driver & Saldo</h3>` + db.drivers.map(d => `
+                    <div class="bg-white p-3 rounded-2xl border border-slate-100 text-xs flex justify-between items-center">
+                        <div><b>${d.name}</b> (${d.vehicle})<br><span class="text-[10px] text-yellow-600 font-black">Saldo: Rp ${(d.balance || 0).toLocaleString()}</span></div>
+                        <button onclick="adminAdjustBalanceByName('${d.name}', 'driver')" class="px-2.5 py-1 bg-yellow-400 text-slate-900 rounded-lg text-[10px] font-bold cursor-pointer">Atur Saldo</button>
+                    </div>
+                `).join('');
+            } else if(type === 'orders') {
+                html = `<h3 class="font-extrabold text-xs text-slate-800 uppercase">Daftar Pesanan Masuk</h3>` + db.orders.map(o => `
+                    <div class="bg-white p-3 rounded-2xl border border-slate-100 text-xs flex justify-between items-center">
+                        <div><b>${o.id}</b> • ${o.customer}<br><span class="text-[10px] text-slate-500">${o.items || o.from + ' -> ' + o.to}</span></div>
+                        <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">${o.status}</span>
+                    </div>
+                `).join('');
+            }
+            container.innerHTML = html;
+        }
+
+        function adminAdjustBalanceByName(name, roleType) {
+            const nominal = prompt(`Masukkan jumlah saldo untuk ${name} (Gunakan minus '-' untuk mengurangi, cth: 50000 atau -20000):`, '50000');
+            if(!nominal) return;
+            const amount = parseInt(nominal);
+
+            if(roleType === 'merchant') {
+                const m = db.merchants.find(x => x.name === name);
+                if(m) {
+                    m.balance = (m.balance || 0) + amount;
+                    const u = db.users.find(x => x.name === name || x.phone === m.whatsapp);
+                    if(u) u.balance = m.balance;
+                }
+            } else if(roleType === 'driver') {
+                const d = db.drivers.find(x => x.name === name);
+                if(d) {
+                    d.balance = (d.balance || 0) + amount;
+                    const u = db.users.find(x => x.name === name || x.phone === d.phone);
+                    if(u) u.balance = d.balance;
+                }
+            }
+            saveDB();
+            showToast(`Perubahan Disimpan: Saldo ${name} diperbarui! Mutasi: Rp ${amount.toLocaleString()}`, 'success');
+            renderDashboardContent('admin-dash');
+        }
+
+        // --- KONTROL BRANDING: UPLOAD/LINK FOTO LEBAH & BANNER GAMBAR ---
         function renderAdminBranding(container) {
-            const currentBanner = db.branding?.bannerText || 'OLENG GO';
-            const currentBee = db.branding?.beeLogo || '🐝';
+            const currentBanner = db.branding?.bannerText || 'GO OLENG';
+            const currentBannerImg = db.branding?.bannerImage || 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80';
+            const currentBee = db.branding?.beeLogo || 'https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80';
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-20">
-                    <h2 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-wand-magic-sparkles text-sky-600 mr-1.5"></i> Kontrol Branding Global (Banner & Lebah)</h2>
-                    <p class="text-[11px] text-slate-500 font-medium">Perubahan di sini akan langsung diterapkan ke beranda seluruh pengguna aplikasi secara real-time.</p>
+                    <h2 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-wand-magic-sparkles text-sky-600 mr-1.5"></i> Kontrol Branding Global (Banner & Foto Lebah)</h2>
+                    <p class="text-[11px] text-slate-500 font-medium">Ubah logo lebah menjadi foto asli dan banner OLENG GO menjadi gambar/foto.</p>
 
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-slate-100 space-y-3">
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Teks Banner Atas</label>
-                            <input type="text" id="admin-banner-input" value="${currentBanner}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold" placeholder="Cth: OLENG GO">
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">URL Gambar / Foto Banner OLENG GO</label>
+                            <input type="text" id="admin-banner-img-input" value="${currentBannerImg}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold" placeholder="URL Gambar Banner">
                         </div>
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Maskot Lebah (Emoji atau URL Gambar/Foto)</label>
-                            <input type="text" id="admin-bee-input" value="${currentBee}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold" placeholder="Cth: 🐝 atau https://...">
-                            <p class="text-[10px] text-slate-400 mt-1">Anda bisa mengetik emoji seperti 🐝 atau memasukkan link URL gambar dari internet.</p>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">URL Foto Asli Maskot Lebah</label>
+                            <input type="text" id="admin-bee-input" value="${currentBee}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold" placeholder="URL Foto Lebah">
                         </div>
-                        <div class="pt-2">
-                            <span class="text-[11px] font-extrabold text-slate-500 uppercase block mb-1">Pratinjau Logo Lebah:</span>
-                            <div class="w-16 h-16 bg-yellow-400 rounded-full border-2 border-white shadow flex items-center justify-center text-3xl overflow-hidden">
-                                ${currentBee.startsWith('http') ? `<img src="${currentBee}" class="w-full h-full object-cover">` : currentBee}
+                        <div class="pt-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <span class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Pratinjau Banner:</span>
+                                <div class="w-full h-16 bg-white border rounded-xl overflow-hidden flex items-center justify-center">
+                                    <img src="${currentBannerImg}" class="h-full object-cover">
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Pratinjau Foto Lebah:</span>
+                                <div class="w-16 h-16 bg-yellow-400 rounded-full border-2 border-white shadow flex items-center justify-center overflow-hidden">
+                                    <img src="${currentBee}" class="w-full h-full object-cover">
+                                </div>
                             </div>
                         </div>
                         <button onclick="saveAdminBranding()" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer mt-4">Simpan & Terapkan ke Semua User</button>
@@ -1880,15 +1933,17 @@ e<!DOCTYPE html>
         }
 
         function saveAdminBranding() {
-            const newBanner = document.getElementById('admin-banner-input').value.trim() || 'OLENG GO';
-            const newBee = document.getElementById('admin-bee-input').value.trim() || '🐝';
+            const newBannerImg = document.getElementById('admin-banner-img-input').value.trim();
+            const newBee = document.getElementById('admin-bee-input').value.trim();
 
             db.branding = {
-                bannerText: newBanner,
-                beeLogo: newBee
+                bannerType: 'image',
+                bannerText: 'GO OLENG',
+                bannerImage: newBannerImg || 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&auto=format&fit=crop&q=80',
+                beeLogo: newBee || 'https://images.unsplash.com/photo-1532635241-17e820acc59f?w=150&auto=format&fit=crop&q=80'
             };
             saveDB();
-            showToast('Perubahan Disimpan: Banner & Logo Lebah berhasil diperbarui untuk semua user!', 'success');
+            showToast('Perubahan Disimpan: Banner Gambar & Foto Lebah berhasil diperbarui untuk semua user!', 'success');
             renderDashboardContent('admin-dash');
         }
 
@@ -1913,11 +1968,11 @@ e<!DOCTYPE html>
                                     <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md font-extrabold">${u.status}</span>
                                 </div>
                                 <p class="text-[11px] text-slate-600 font-medium"><i class="fa-solid fa-location-dot"></i> ${u.address || 'Lengkong'}</p>
-                                ${u.role === 'merchant' || u.role === 'driver' || u.role === 'customer' ? `<p class="text-xs font-black text-yellow-600">Saldo Dompet: Rp ${(u.balance || 0).toLocaleString()}</p>` : ''}
+                                ${u.role === 'merchant' || u.role === 'driver' ? `<p class="text-xs font-black text-yellow-600">Saldo Dompet: Rp ${(u.balance || 0).toLocaleString()}</p>` : ''}
                                 
                                 <div class="flex gap-2 pt-2 border-t border-slate-100">
                                     <button onclick="openAdminEditUser(${u.id})" class="px-3 py-1.5 bg-sky-50 text-sky-700 rounded-xl text-[11px] font-extrabold cursor-pointer">Edit</button>
-                                    <button onclick="openAdminBalanceModal(${u.id})" class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-xl text-[11px] font-extrabold cursor-pointer">Atur Saldo</button>
+                                    ${u.role === 'merchant' || u.role === 'driver' ? `<button onclick="openAdminBalanceModal(${u.id})" class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-xl text-[11px] font-extrabold cursor-pointer">Atur Saldo</button>` : ''}
                                     <button onclick="adminResetPassword(${u.id})" class="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-xl text-[11px] font-extrabold cursor-pointer">Reset Sandi</button>
                                     <button onclick="adminDeleteUser(${u.id})" class="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-xl text-[11px] font-extrabold cursor-pointer"><i class="fa-solid fa-trash"></i></button>
                                 </div>
@@ -1951,7 +2006,7 @@ e<!DOCTYPE html>
                                 <p class="text-[11px] text-slate-600 font-medium"><i class="fa-solid fa-location-dot"></i> ${m.address} (<span class="text-sky-600 font-bold">Lat: ${m.lat}, Lng: ${m.lng}</span>)</p>
                                 <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
                                     <span class="font-black text-yellow-600">Saldo Toko: Rp ${(m.balance || 0).toLocaleString()}</span>
-                                    <a href="https://wa.me/${m.whatsapp}?text=${encodeURIComponent('Halo ' + m.name + ', salam dari Admin OLENG GO.')}" target="_blank" class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-bold"><i class="fa-brands fa-whatsapp"></i> Chat</a>
+                                    <button onclick="adminAdjustBalanceByName('${m.name}', 'merchant')" class="px-3 py-1.5 bg-yellow-400 text-slate-900 rounded-xl font-bold cursor-pointer">Atur Saldo</button>
                                 </div>
                             </div>
                         `).join('')}
@@ -1980,7 +2035,7 @@ e<!DOCTYPE html>
                                 <p class="text-[11px] text-slate-600 font-medium"><i class="fa-solid fa-location-dot"></i> Posisi: ${d.location} (<span class="text-sky-600 font-bold">Lat: ${d.lat}, Lng: ${d.lng}</span>)</p>
                                 <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
                                     <span class="font-black text-yellow-600">Saldo Driver: Rp ${(d.balance || 0).toLocaleString()}</span>
-                                    <a href="https://wa.me/${d.phone}?text=${encodeURIComponent('Halo ' + d.name + ', salam dari Admin OLENG GO.')}" target="_blank" class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-bold"><i class="fa-brands fa-whatsapp"></i> Chat</a>
+                                    <button onclick="adminAdjustBalanceByName('${d.name}', 'driver')" class="px-3 py-1.5 bg-yellow-400 text-slate-900 rounded-xl font-bold cursor-pointer">Atur Saldo</button>
                                 </div>
                             </div>
                         `).join('')}
@@ -1996,7 +2051,7 @@ e<!DOCTYPE html>
             const name = prompt('Nama User Baru:');
             if(!name) return;
             const phone = prompt('Nomor WhatsApp:', '0856xxxxxxxx');
-            const role = prompt('Role (customer / driver / merchant / admin):', 'customer');
+            const role = prompt('Role (customer / driver / merchant):', 'customer');
 
             db.users.push({
                 id: Date.now(),
@@ -2005,7 +2060,7 @@ e<!DOCTYPE html>
                 role: role,
                 status: 'Aktif',
                 address: 'Kecamatan Lengkong, Sukabumi',
-                balance: 50000,
+                balance: (role === 'merchant' || role === 'driver') ? 50000 : 0,
                 password: '123',
                 photo: 'https://placehold.co/150x150/0284c7/ffffff?text=' + name.charAt(0)
             });
@@ -2099,7 +2154,7 @@ e<!DOCTYPE html>
                 specificRoleInfoHTML = `
                     <div class="bg-slate-100 p-4 rounded-3xl border border-slate-200 space-y-2 text-xs">
                         <h4 class="font-extrabold text-slate-900 uppercase"><i class="fa-solid fa-shield-halved text-slate-700 mr-1"></i> Informasi Admin Master</h4>
-                        <p class="text-slate-700"><b>Hak Akses:</b> Kontrol Penuh Seluruh Sistem OLENG GO</p>
+                        <p class="text-slate-700"><b>Hak Akses:</b> Kontrol Penuh Seluruh Sistem OLENG GO (085624736602)</p>
                     </div>
                 `;
             }
@@ -2107,7 +2162,7 @@ e<!DOCTYPE html>
             let saldoSection = (activeRole === 'driver' || activeRole === 'merchant') ? `
                 <div class="bg-gradient-to-r from-sky-600 to-sky-700 text-white p-4 rounded-3xl shadow-md space-y-2">
                     <span class="text-[10px] text-sky-100 uppercase tracking-wider font-extrabold">Dompet Saldo OLENG</span>
-                    <h2 class="text-2xl font-black">Rp ${(currentUser.balance || 100000).toLocaleString()}</h2>
+                    <h2 class="text-2xl font-black">Rp ${(currentUser.balance || 0).toLocaleString()}</h2>
                     <button onclick="openTopUpModal()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold rounded-2xl text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-wallet text-sm"></i> Top-Up Saldo Instan
                     </button>
@@ -2405,3 +2460,4 @@ e<!DOCTYPE html>
     </script>
 </body>
 </html>
+
