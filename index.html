@@ -278,21 +278,23 @@
             </div>
         </div>
 
-        <!-- Live Chat View -->
+        <!-- Live Chat View (Per Konsumen / Personal) -->
         <div id="view-chat" class="absolute inset-0 bg-white z-50 hidden flex flex-col">
             <div class="bg-sky-600 text-white p-4 flex items-center justify-between shadow">
                 <div class="flex items-center space-x-3">
                     <button onclick="closeChat()" class="text-white text-lg cursor-pointer"><i class="fa-solid fa-arrow-left"></i></button>
                     <div>
-                        <h3 class="font-bold text-sm">Live Chat Bantuan OLENG GO</h3>
-                        <p class="text-[10px] text-sky-100">Kecamatan Lengkong, Sukabumi</p>
+                        <h3 id="chat-title" class="font-bold text-sm">Live Chat Bantuan</h3>
+                        <p id="chat-subtitle" class="text-[10px] text-sky-100">Kecamatan Lengkong, Sukabumi</p>
                     </div>
                 </div>
             </div>
-            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-100"></div>
+            <!-- Daftar Kontak / Konsumen untuk Dipilih Chatnya -->
+            <div id="chat-contact-selector" class="p-3 bg-slate-100 border-b flex gap-2 overflow-x-auto hide-scrollbar"></div>
+            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50"></div>
             <div class="p-3 bg-white border-t flex items-center space-x-2">
-                <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 border border-slate-200 rounded-full px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium">
-                <button onclick="sendChatMessage()" class="bg-sky-600 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-sky-700 transition shadow cursor-pointer">
+                <input type="text" id="chat-input" placeholder="Tulis pesan personal..." class="flex-1 border border-slate-200 rounded-full px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium">
+                <button onclick="sendPersonalChatMessage()" class="bg-sky-600 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-sky-700 transition shadow cursor-pointer">
                     <i class="fa-solid fa-paper-plane text-xs"></i>
                 </button>
             </div>
@@ -310,6 +312,7 @@
         let currentSubTab = 'home';
         let adminViewMode = null;
         let selectedDriverName = 'Asep Supriatna';
+        let activeChatTarget = 'Admin SIMADU'; // Target chat personal default
         let mapInstance = null;
         let checkoutMapInstance = null;
         let registerMapInstance = null;
@@ -391,7 +394,8 @@
                 { id: 1, title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Layanan ojek & food delivery khusus wilayah Kecamatan Lengkong, Sukabumi.' }
             ],
             chats: [
-                { sender: 'Admin SIMADU', text: 'Halo warga Lengkong! Ada yang bisa kami bantu hari ini?', time: '08:00' }
+                { id: 1, from: 'Budi Santoso', to: 'Admin SIMADU', text: 'Halo Admin, ada yang bisa dibantu?', time: '08:00' },
+                { id: 2, from: 'Budi Santoso', to: 'Warung Nasi Sunda Lengkong', text: 'Halo Kak, pesanan saya apakah sedang disiapkan?', time: '09:30' }
             ],
             cart: [],
             activeMerchant: null
@@ -416,7 +420,6 @@
             }
         });
 
-        // Prevent browser back button from returning to login screen once authenticated
         window.history.pushState(null, null, window.location.href);
         window.addEventListener('popstate', function () {
             window.history.pushState(null, null, window.location.href);
@@ -632,7 +635,6 @@
             updateDashboardShell();
         }
 
-        // --- STRICT ACCESS CONTROL (RBAC) ---
         function checkAccessAndNavigate(targetFeature) {
             const effectiveRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
 
@@ -1030,7 +1032,7 @@
                             <a href="https://wa.me/${merchant.whatsapp}?text=${encodeURIComponent('Halo ' + merchant.name + ', saya ingin bertanya mengenai menu makanan...')}" target="_blank" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl shadow-md flex items-center justify-center gap-2 text-xs transition">
                                 <i class="fa-brands fa-whatsapp text-base"></i> WhatsApp Toko
                             </a>
-                            <button onclick="switchView('chat')" class="px-4 py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-md flex items-center justify-center gap-1.5 text-xs transition cursor-pointer">
+                            <button onclick="startPersonalChat('${merchant.name}')" class="px-4 py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl shadow-md flex items-center justify-center gap-1.5 text-xs transition cursor-pointer">
                                 <i class="fa-solid fa-comments"></i> Live Chat
                             </button>
                         </div>
@@ -1113,7 +1115,7 @@
                                             <a href="https://wa.me/${d.phone}?text=${encodeURIComponent('Halo ' + d.name + ', saya butuh jemputan ojek.')}" target="_blank" class="px-2.5 py-1.5 bg-emerald-600 text-white rounded-xl text-[11px] font-bold shadow-xs flex items-center gap-1">
                                                 <i class="fa-brands fa-whatsapp"></i> WA
                                             </a>
-                                            <button onclick="switchView('chat')" class="px-2.5 py-1.5 bg-sky-600 text-white rounded-xl text-[11px] font-bold shadow-xs flex items-center gap-1 cursor-pointer">
+                                            <button onclick="startPersonalChat('${d.name}')" class="px-2.5 py-1.5 bg-sky-600 text-white rounded-xl text-[11px] font-bold shadow-xs flex items-center gap-1 cursor-pointer">
                                                 <i class="fa-solid fa-comments"></i> Chat
                                             </button>
                                         </div>
@@ -1180,7 +1182,7 @@
                         </div>
                         <div class="flex gap-1" onclick="event.stopPropagation()">
                             <a href="https://wa.me/${d.phone}?text=${encodeURIComponent('Halo ' + d.name + ', saya mau order makanan.')}" target="_blank" class="px-2 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold"><i class="fa-brands fa-whatsapp"></i> WA</a>
-                            <button onclick="switchView('chat')" class="px-2 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments"></i> Chat</button>
+                            <button onclick="startPersonalChat('${d.name}')" class="px-2 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments"></i> Chat</button>
                         </div>
                     </div>
                 `;
@@ -1219,8 +1221,6 @@
             updateCartModalUI();
             showToast(`Driver ${name} dipilih!`, 'success');
         }
-
-        function recalculateShipping() { updateCartModalUI(); }
 
         function removeFromCart(index) {
             db.cart.splice(index, 1);
@@ -1350,7 +1350,6 @@
                 </div>
             `;
             
-            // Inisialisasi peta untuk setiap pesanan setelah elemen dirender
             setTimeout(() => {
                 db.orders.forEach((o, idx) => {
                     renderOrderMap(idx, o);
@@ -1368,16 +1367,12 @@
                 delete orderMapInstances[mapId];
             }
 
-            // Koordinat default toko dan tujuan jika tidak ada di order
             const merchantLat = order.merchantLat || -7.1240;
             const merchantLng = order.merchantLng || 106.8460;
-            const destLat = order.destLat || -7.1290;
-            const destLng = order.destLng || 106.8520;
 
             const map = L.map(mapId, { zoomControl: false }).setView([merchantLat, merchantLng], 14);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
-            // Ikon Khusus Mitra Toko (Terkunci)
             const storeIcon = L.divIcon({
                 className: 'custom-store-icon',
                 html: '<div style="background-color: #f59e0b; color: white; padding: 6px; border-radius: 50%; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); text-align: center;"><i class="fa-solid fa-store"></i></div>',
@@ -1385,7 +1380,6 @@
                 iconAnchor: [15, 15]
             });
 
-            // Ikon Khusus Driver Ojol (Real-Time GPS)
             const driverIcon = L.divIcon({
                 className: 'custom-driver-icon',
                 html: '<div style="background-color: #0284c7; color: white; padding: 6px; border-radius: 50%; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); text-align: center;"><i class="fa-solid fa-motorcycle"></i></div>',
@@ -1393,11 +1387,9 @@
                 iconAnchor: [15, 15]
             });
 
-            // Tambahkan marker toko (terkunci di titik lokasi akurat)
             L.marker([merchantLat, merchantLng], { icon: storeIcon }).addTo(map)
                 .bindPopup(`<b>${order.merchant || 'Mitra Toko'}</b><br>Lokasi Toko Terkunci`);
 
-            // Dapatkan posisi GPS real-time ojol / fallback ke koordinat driver terdekat
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(position => {
                     const realLat = position.coords.latitude;
@@ -1405,14 +1397,12 @@
                     L.marker([realLat, realLng], { icon: driverIcon }).addTo(map)
                         .bindPopup(`<b>Driver: ${order.driver || 'Asep'}</b><br>Posisi GPS Real-Time`).openPopup();
                     
-                    // Sesuaikan batas peta agar mencakup toko dan posisi ojol
                     const group = new L.featureGroup([
                         L.marker([merchantLat, merchantLng]),
                         L.marker([realLat, realLng])
                     ]);
                     map.fitBounds(group.getBounds().pad(0.2));
                 }, () => {
-                    // Fallback jika GPS tidak aktif
                     L.marker([merchantLat + 0.002, merchantLng + 0.002], { icon: driverIcon }).addTo(map)
                         .bindPopup(`<b>Driver: ${order.driver || 'Asep'}</b><br>Posisi Ojol`).openPopup();
                 });
@@ -1457,7 +1447,7 @@
             const merchantFoods = db.foods.filter(f => f.merchantId === merchant.id);
 
             container.innerHTML = `
-                <div class="p-4 space-y-4">
+                <div class="p-4 space-y-4 pb-20">
                     <div class="flex justify-between items-center">
                         <div>
                             <h2 class="font-extrabold text-base text-slate-900">Kelola Menu Toko</h2>
@@ -1555,23 +1545,83 @@
             }
         }
 
+        // --- TAMBAH MENU DENGAN UPLOAD FOTO MAKANAN DARI GALERI ---
+        let tempFoodImage = null;
+
         function openAddMenuModal(merchantId) {
-            const name = prompt('Nama Menu Makanan / Minuman:');
-            if(!name) return;
-            const price = parseInt(prompt('Harga (Rp):', '15000')) || 10000;
-            const stock = parseInt(prompt('Stok Porsi:', '20')) || 20;
+            const modalHTML = `
+                <div id="modal-add-menu" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 flex flex-col justify-end">
+                    <div class="bg-white rounded-t-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <h3 class="font-extrabold text-base text-slate-900">Tambah Menu Makanan Baru</h3>
+                            <button onclick="document.getElementById('modal-add-menu').remove()" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nama Makanan / Minuman</label>
+                            <input type="text" id="new-food-name" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold" placeholder="Cth: Nasi Liwet Spesial">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Harga (Rp)</label>
+                            <input type="number" id="new-food-price" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold" placeholder="20000">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Stok Porsi</label>
+                            <input type="number" id="new-food-stock" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold" value="20">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Deskripsi Singkat</label>
+                            <input type="text" id="new-food-desc" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold" placeholder="Rasa mantap gurih...">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Upload Foto Makanan (Dari Galeri)</label>
+                            <input type="file" accept="image/*" class="w-full mt-1 p-2 border rounded-2xl text-xs" onchange="previewFoodImage(event)">
+                            <img id="preview-food-img" class="w-20 h-20 rounded-2xl object-cover mt-2 shadow-xs hidden" src="">
+                        </div>
+                        <button onclick="submitNewFood(${merchantId})" class="w-full py-3.5 bg-sky-600 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer">Simpan Menu Baru</button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            tempFoodImage = null;
+        }
+
+        function previewFoodImage(event) {
+            const file = event.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    tempFoodImage = e.target.result;
+                    const imgEl = document.getElementById('preview-food-img');
+                    imgEl.src = tempFoodImage;
+                    imgEl.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function submitNewFood(merchantId) {
+            const name = document.getElementById('new-food-name').value;
+            const price = parseInt(document.getElementById('new-food-price').value) || 15000;
+            const stock = parseInt(document.getElementById('new-food-stock').value) || 20;
+            const desc = document.getElementById('new-food-desc').value || 'Lezat dan nikmat.';
+
+            if(!name) {
+                showToast('Nama makanan wajib diisi!', 'error');
+                return;
+            }
 
             db.foods.push({
                 id: Date.now(),
                 merchantId: merchantId,
                 name: name,
                 price: price,
-                desc: 'Menu lezat khas Lengkong Sukabumi.',
+                desc: desc,
                 stock: stock,
-                image: 'https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name)
+                image: tempFoodImage || ('https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name))
             });
             saveDB();
-            showToast('Menu baru berhasil ditambahkan!', 'success');
+            document.getElementById('modal-add-menu').remove();
+            showToast('Menu makanan berhasil ditambahkan!', 'success');
             renderDashboardContent('merchant-menu');
         }
 
@@ -1937,42 +1987,104 @@
 
         function closeNotificationModal() { document.getElementById('modal-notif').classList.add('hidden'); }
 
+        // --- FITUR LIVE CHAT PERSONAL PER KONSUMEN / TARGET ---
         function switchView(view) {
             if(view === 'chat') {
                 document.getElementById('view-chat').classList.remove('hidden');
-                renderChatMessages();
+                renderChatContacts();
+                renderPersonalChatMessages();
             }
+        }
+
+        function startPersonalChat(targetName) {
+            activeChatTarget = targetName;
+            document.getElementById('view-chat').classList.remove('hidden');
+            renderChatContacts();
+            renderPersonalChatMessages();
         }
 
         function closeChat() { document.getElementById('view-chat').classList.add('hidden'); }
 
-        function renderChatMessages() {
+        function renderChatContacts() {
+            const container = document.getElementById('chat-contact-selector');
+            // Ambil daftar kontak unik (Admin, Toko, Driver, atau Customer lain)
+            const contacts = ['Admin SIMADU', ...db.merchants.map(m => m.name), ...db.drivers.map(d => d.name)];
+            
+            container.innerHTML = contacts.map(name => {
+                const isSelected = activeChatTarget === name;
+                return `
+                    <button onclick="selectChatTarget('${name}')" class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${isSelected ? 'bg-sky-600 text-white shadow' : 'bg-white text-slate-700 border border-slate-200'}">
+                        💬 ${name}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectChatTarget(name) {
+            activeChatTarget = name;
+            renderChatContacts();
+            renderPersonalChatMessages();
+        }
+
+        function renderPersonalChatMessages() {
             const container = document.getElementById('chat-messages');
-            container.innerHTML = db.chats.map(c => `
-                <div class="flex flex-col space-y-0.5">
-                    <div class="bg-white p-3 rounded-2xl shadow-xs border border-slate-100 max-w-[85%] text-xs text-slate-800">
-                        <span class="font-extrabold text-sky-600 block mb-0.5 text-[10px] uppercase">${c.sender}</span>
-                        ${c.text}
+            document.getElementById('chat-title').innerText = `Chat dengan: ${activeChatTarget}`;
+            
+            // Filter pesan antara user saat ini dan activeChatTarget
+            const thread = db.chats.filter(c => 
+                (c.from === currentUser.name && c.to === activeChatTarget) || 
+                (c.from === activeChatTarget && c.to === currentUser.name)
+            );
+
+            if(thread.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-400 text-xs py-8">Belum ada percakapan dengan ${activeChatTarget}. Mulai kirim pesan di bawah!</div>`;
+                return;
+            }
+
+            container.innerHTML = thread.map(c => {
+                const isMe = c.from === currentUser.name;
+                return `
+                    <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-0.5">
+                        <div class="p-3 rounded-2xl shadow-xs border max-w-[85%] text-xs ${isMe ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-800 border-slate-200'}">
+                            <span class="font-extrabold block mb-0.5 text-[9px] uppercase opacity-80">${c.from}</span>
+                            ${c.text}
+                        </div>
+                        <span class="text-[9px] text-slate-400 px-1 font-medium">${c.time}</span>
                     </div>
-                    <span class="text-[9px] text-slate-400 pl-1 font-medium">${c.time}</span>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             container.scrollTop = container.scrollHeight;
         }
 
-        function sendChatMessage() {
+        function sendPersonalChatMessage() {
             const input = document.getElementById('chat-input');
-            if(!input.value.trim()) return;
-            
-            db.chats.push({ sender: currentUser.name, text: input.value, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+            const text = input.value.trim();
+            if(!text) return;
+
+            db.chats.push({
+                id: Date.now(),
+                from: currentUser.name,
+                to: activeChatTarget,
+                text: text,
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
             saveDB();
             input.value = '';
-            renderChatMessages();
+            renderPersonalChatMessages();
 
+            // Simulasi balasan otomatis dari penerima setelah 1 detik
             setTimeout(() => {
-                db.chats.push({ sender: 'Admin SIMADU', text: 'Pesan Anda telah diterima. Warga Lengkong selalu siap dilayani!', time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+                db.chats.push({
+                    id: Date.now() + 1,
+                    from: activeChatTarget,
+                    to: currentUser.name,
+                    text: `Halo ${currentUser.name}, pesan Anda ("${text}") sudah saya terima. Ada yang bisa dibantu untuk wilayah Lengkong?`,
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                });
                 saveDB();
-                renderChatMessages();
+                if(!document.getElementById('view-chat').classList.contains('hidden')) {
+                    renderPersonalChatMessages();
+                }
             }, 1000);
         }
 
