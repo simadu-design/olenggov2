@@ -36,6 +36,16 @@
         .leaflet-container { z-index: 1 !important; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes panelSlideIn {
+            from { opacity: 0; transform: translateX(18px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes panelSlideBack {
+            from { opacity: 0; transform: translateX(-18px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .auth-panel-slide-right { animation: panelSlideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+        .auth-panel-slide-left { animation: panelSlideBack 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
     </style>
 </head>
 <body class="h-full flex flex-col items-center justify-center">
@@ -55,7 +65,7 @@
     </div>
 
     <!-- Toast Notification Container -->
-    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" class="fixed top-4 right-4 z-[9998] flex flex-col gap-2 pointer-events-none max-w-xs"></div>
 
     <!-- MAIN APP CONTAINER -->
     <div id="app" class="flex-1 flex flex-col h-full max-w-md mx-auto w-full bg-slate-50 shadow-2xl relative overflow-hidden">
@@ -82,14 +92,14 @@
                     </button>
                 </div>
 
-                <div class="bg-white text-slate-800 p-6 rounded-3xl shadow-2xl text-left space-y-4 border-2 border-yellow-400">
-                    <div class="flex border-b border-slate-100 pb-2 mb-2">
-                        <button onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1 text-sm cursor-pointer">Masuk (Wajib ID)</button>
-                        <button onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1 text-sm cursor-pointer">Daftar Akun</button>
+                <div id="auth-card-panel" class="bg-white text-slate-800 p-6 rounded-3xl shadow-2xl text-left space-y-4 border-2 border-yellow-400 transition-all duration-300">
+                    <div class="relative flex border-b border-slate-100 pb-2 mb-2">
+                        <button type="button" onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1.5 text-sm cursor-pointer transition-all">Masuk (Wajib ID)</button>
+                        <button type="button" onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1.5 text-sm cursor-pointer transition-all">Daftar Akun</button>
                     </div>
 
                     <!-- FORM LOGIN WAJIB ID (HURUF & ANGKA) -->
-                    <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3">
+                    <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3 auth-panel-slide-left">
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">ID Akun (Huruf & Angka)</label>
                             <input type="text" id="login-account-id" required pattern="[A-Za-z0-9]{3,20}" title="ID hanya boleh berisi huruf dan angka (3-20 karakter)" class="w-full mt-1 px-4 py-2.5 border rounded-2xl text-sm font-bold uppercase" placeholder="Contoh: CUST01, DRIV01, MRCH01, ADM01">
@@ -115,7 +125,7 @@
                     </form>
 
                     <!-- FORM REGISTER MULTI-ROLE -->
-                    <form id="form-register" onsubmit="handleRegister(event)" class="space-y-3 hidden">
+                    <form id="form-register" onsubmit="handleRegister(event)" class="space-y-3 hidden auth-panel-slide-right">
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">Daftar Sebagai</label>
                             <select id="reg-role" onchange="toggleRegisterRoleFields()" class="w-full mt-1 px-3.5 py-2.5 border rounded-2xl text-sm bg-white font-bold text-sky-700">
@@ -469,6 +479,36 @@
             if (!active) return false;
             const tag = (active.tagName || '').toUpperCase();
             return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || active.isContentEditable;
+        }
+
+        function compressImageFileToDataUrl(file, maxSize = 360, quality = 0.72) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function (evt) {
+                    const img = new Image();
+                    img.onload = function () {
+                        let w = img.width || maxSize;
+                        let h = img.height || maxSize;
+                        if (w > h && w > maxSize) {
+                            h = Math.round((h * maxSize) / w);
+                            w = maxSize;
+                        } else if (h >= w && h > maxSize) {
+                            w = Math.round((w * maxSize) / h);
+                            h = maxSize;
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.max(1, w);
+                        canvas.height = Math.max(1, h);
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = () => resolve(evt.target.result);
+                    img.src = evt.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
         }
 
         function notifyBackgroundOnce(key, title, body) {
@@ -1187,7 +1227,7 @@
                 // 1. Tarik app_config & state_json
                 const { data: cfg } = await supabaseClient.from('app_config').select('*').eq('id', 1).maybeSingle();
                 if (cfg) {
-                    if (cfg.main_banner && cfg.main_banner !== db.mainBanner) {
+                    if (!hasPendingMediaSelection && cfg.main_banner && cfg.main_banner !== db.mainBanner) {
                         customMainBanner = cfg.main_banner;
                         db.mainBanner = cfg.main_banner;
                         localStorage.setItem('oleng_global_banner', cfg.main_banner);
@@ -1226,7 +1266,7 @@
                     }
                 }
 
-                // 2. Tarik semua akun (accounts) tanpa menimpa input aktif atau memaksa logout saat reload
+                // 2. Tarik semua akun (accounts) & pertahankan foto profil tersimpan
                 const { data: accRows } = await supabaseClient.from('accounts').select('*');
                 if (Array.isArray(accRows) && accRows.length > 0) {
                     const remoteAccountCodes = new Set(accRows.map(r => String(r.account_id || '').toUpperCase()).filter(Boolean));
@@ -1274,11 +1314,11 @@
                         const myCode = String(currentUser.accountId || '').toUpperCase();
                         const refreshedSelf = mergedUsers.find(u => String(u.accountId).toUpperCase() === myCode);
                         if (refreshedSelf) {
+                            const localHasCustomPhoto = currentUser.photo && String(currentUser.photo).startsWith('data:image');
+                            const remoteHasCustomPhoto = refreshedSelf.photo && String(refreshedSelf.photo).startsWith('data:image');
                             currentUser = {
                                 ...refreshedSelf,
-                                photo: (currentUser.photo && String(currentUser.photo).startsWith('data:image') && !String(refreshedSelf.photo || '').startsWith('data:image'))
-                                    ? currentUser.photo
-                                    : refreshedSelf.photo
+                                photo: (localHasCustomPhoto && !remoteHasCustomPhoto) ? currentUser.photo : refreshedSelf.photo
                             };
                             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
                         }
@@ -1555,9 +1595,35 @@
         });
 
         function switchAuthTab(tab) {
-            document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
-            document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
-            if (tab === 'register') toggleRegisterRoleFields();
+            const loginForm = document.getElementById('form-login');
+            const regForm = document.getElementById('form-register');
+            const loginBtn = document.getElementById('tab-login-btn');
+            const regBtn = document.getElementById('tab-register-btn');
+            const cardPanel = document.getElementById('auth-card-panel');
+
+            const isLogin = tab === 'login';
+            loginForm.classList.toggle('hidden', !isLogin);
+            regForm.classList.toggle('hidden', isLogin);
+
+            if (isLogin) {
+                loginBtn.className = 'flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1.5 text-sm cursor-pointer transition-all';
+                regBtn.className = 'flex-1 font-semibold text-center text-slate-400 pb-1.5 text-sm cursor-pointer transition-all';
+                loginForm.classList.remove('auth-panel-slide-left');
+                void loginForm.offsetWidth;
+                loginForm.classList.add('auth-panel-slide-left');
+            } else {
+                regBtn.className = 'flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1.5 text-sm cursor-pointer transition-all';
+                loginBtn.className = 'flex-1 font-semibold text-center text-slate-400 pb-1.5 text-sm cursor-pointer transition-all';
+                regForm.classList.remove('auth-panel-slide-right');
+                void regForm.offsetWidth;
+                regForm.classList.add('auth-panel-slide-right');
+                toggleRegisterRoleFields();
+            }
+
+            if (cardPanel) {
+                cardPanel.classList.add('scale-[1.01]');
+                setTimeout(() => cardPanel.classList.remove('scale-[1.01]'), 180);
+            }
         }
 
         function toggleRegisterRoleFields() {
@@ -1820,16 +1886,17 @@
                 recordWalletMutation({ ownerName: name, role: 'driver', type: 'TOPUP', label: 'Saldo Awal Mitra Ojek', amount: 50000, commission: 0, netAmount: 50000 });
             }
 
-            // Langsung login ke akun baru dengan sandi yang disimpan
-            currentUser = { ...newUser };
-            adminViewMode = role === 'admin' ? 'admin' : null;
-            currentSubTab = role === 'admin' ? 'admin-dash' : role === 'merchant' ? 'merchant-manage' : role === 'driver' ? 'driver-orders' : 'home';
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            localStorage.setItem('oleng_last_tab', currentSubTab);
             await syncAllToSupabase();
-            showToast(`Berhasil! Akun ${accountId} terdaftar & langsung masuk dengan sandi Anda.`, 'success');
-            enterDashboard(true);
+
+            // Arahkan langsung ke tab Login dengan ID dan role yang baru terdaftar
+            switchAuthTab('login');
+            document.getElementById('login-account-id').value = accountId;
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-role').value = role;
+            document.getElementById('form-register').reset();
+            isRegMerchantLocationLocked = false;
+            showToast(`Pendaftaran berhasil! ID ${accountId} tersimpan, silakan masuk dengan kata sandi Anda.`, 'success');
         }
 
         function openForgotPasswordModal() {
@@ -1871,8 +1938,8 @@
             localStorage.removeItem('oleng_admin_view_mode');
             document.getElementById('view-auth').classList.remove('hidden');
             document.getElementById('view-dashboard').classList.add('hidden');
+            switchAuthTab('login');
             updateSupabaseBadgeUI(false);
-            showToast('Berhasil keluar dari akun.', 'success');
         }
 
         function enterDashboard(preserveSavedTab = false) {
@@ -2912,22 +2979,20 @@
             }
         }
 
-        function previewGalleryImage(e, previewId, type) {
+        async function previewGalleryImage(e, previewId, type) {
             const file = e.target.files[0];
             if(file) {
                 hasPendingMediaSelection = true;
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    if(type === 'photo') tempStorePhoto = evt.target.result;
-                    else if(type === 'banner') tempStoreBanner = evt.target.result;
-                    else if(type === 'food') tempNewFoodPhoto = evt.target.result;
-                    else if(type === 'user') tempUserProfilePhoto = evt.target.result;
-                    
-                    const imgEl = document.getElementById(previewId);
-                    if(imgEl) { imgEl.src = evt.target.result; imgEl.classList.remove('hidden'); }
-                    showToast('File dipilih! Tekan tombol Simpan agar tersimpan permanen.', 'success');
-                };
-                reader.readAsDataURL(file);
+                const maxDim = type === 'banner' ? 600 : 320;
+                const compressedUrl = await compressImageFileToDataUrl(file, maxDim, 0.72);
+                if(type === 'photo') tempStorePhoto = compressedUrl;
+                else if(type === 'banner') tempStoreBanner = compressedUrl;
+                else if(type === 'food') tempNewFoodPhoto = compressedUrl;
+                else if(type === 'user') tempUserProfilePhoto = compressedUrl;
+                
+                const imgEl = document.getElementById(previewId);
+                if(imgEl) { imgEl.src = compressedUrl; imgEl.classList.remove('hidden'); }
+                showToast('File dipilih! Tekan tombol Simpan agar tersimpan permanen.', 'success');
             }
         }
 
@@ -3492,18 +3557,15 @@
             `;
         }
 
-        function previewNewBanner(e) {
+        async function previewNewBanner(e) {
             const file = e.target.files[0];
             if(file) {
                 hasPendingMediaSelection = true;
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    customMainBanner = evt.target.result;
-                    const prev = document.getElementById('banner-preview');
-                    if (prev) prev.src = customMainBanner;
-                    showToast('File banner dipilih! Klik Simpan Permanen untuk menerapkan.', 'success');
-                };
-                reader.readAsDataURL(file);
+                const compressedBanner = await compressImageFileToDataUrl(file, 640, 0.72);
+                customMainBanner = compressedBanner;
+                const prev = document.getElementById('banner-preview');
+                if (prev) prev.src = customMainBanner;
+                showToast('File banner dipilih! Klik Simpan Permanen untuk menerapkan.', 'success');
             }
         }
 
