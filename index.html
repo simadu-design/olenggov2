@@ -94,16 +94,16 @@
 
                 <div id="auth-card-panel" class="bg-white text-slate-800 p-6 rounded-3xl shadow-2xl text-left space-y-4 border-2 border-yellow-400 transition-all duration-300">
                     <div class="relative flex border-b border-slate-100 pb-2 mb-2">
-                        <button type="button" onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1.5 text-sm cursor-pointer transition-all">Masuk (Wajib ID)</button>
+                        <button type="button" onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1.5 text-sm cursor-pointer transition-all">Masuk (No. HP)</button>
                         <button type="button" onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1.5 text-sm cursor-pointer transition-all">Daftar Akun</button>
                     </div>
 
-                    <!-- FORM LOGIN WAJIB ID (HURUF & ANGKA) -->
+                    <!-- FORM LOGIN PAKAI NOMOR HP -->
                     <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3 auth-panel-slide-left">
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">ID Akun (Huruf & Angka)</label>
-                            <input type="text" id="login-account-id" required pattern="[A-Za-z0-9]{3,20}" title="ID hanya boleh berisi huruf dan angka (3-20 karakter)" class="w-full mt-1 px-4 py-2.5 border rounded-2xl text-sm font-bold uppercase" placeholder="Contoh: CUST01, DRIV01, MRCH01, ADM01">
-                            <p class="text-[10px] text-slate-400 mt-1">Login wajib memakai ID (huruf & angka). Demo ID: <b>CUST01</b>, <b>DRIV01</b>, <b>MRCH01</b>, <b>ADM01</b> (sandi: <b>123</b>)</p>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nomor WhatsApp / HP</label>
+                            <input type="tel" id="login-phone" required class="w-full mt-1 px-4 py-2.5 border rounded-2xl text-sm font-bold" placeholder="Contoh: 085612345678">
+                            <p class="text-[10px] text-slate-400 mt-1">Login cukup memakai Nomor HP & Kata Sandi. Demo Admin: <b>085624736602</b> (sandi: <b>123</b>)</p>
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">Kata Sandi (Password)</label>
@@ -115,16 +115,16 @@
                                 <option value="customer">Customer (Konsumen)</option>
                                 <option value="driver">Driver (Mitra Ojek / Kurir)</option>
                                 <option value="merchant">Merchant (Mitra Toko)</option>
-                                <option value="admin">Admin SIMADU (ID ADM01 / WA 085624736602)</option>
+                                <option value="admin">Admin SIMADU (085624736602)</option>
                             </select>
                         </div>
-                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-sky-700 hover:from-sky-600 hover:to-sky-800 text-white font-extrabold rounded-2xl shadow-lg transition text-sm cursor-pointer border-b-4 border-yellow-400">Masuk dengan ID</button>
+                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-sky-700 hover:from-sky-600 hover:to-sky-800 text-white font-extrabold rounded-2xl shadow-lg transition text-sm cursor-pointer border-b-4 border-yellow-400">Masuk dengan Nomor HP</button>
                         <div class="text-center pt-1">
                             <button type="button" onclick="openForgotPasswordModal()" class="text-[11px] font-bold text-sky-600 hover:underline cursor-pointer">Lupa Kata Sandi? Hubungi Admin</button>
                         </div>
                     </form>
 
-                    <!-- FORM REGISTER MULTI-ROLE -->
+                    <!-- FORM REGISTER MULTI-ROLE PAKAI NOMOR HP SAJA -->
                     <form id="form-register" onsubmit="handleRegister(event)" class="space-y-3 hidden auth-panel-slide-right">
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">Daftar Sebagai</label>
@@ -137,18 +137,13 @@
                         </div>
 
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Buat ID Login (Huruf & Angka)</label>
-                            <input type="text" id="reg-account-id" required pattern="[A-Za-z0-9]{3,20}" title="ID hanya boleh berisi huruf dan angka (3-20 karakter)" class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm font-bold uppercase" placeholder="Contoh: TOKO88 atau OJEK99">
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nomor WhatsApp / HP *</label>
+                            <input type="tel" id="reg-phone" required class="w-full mt-1 px-3.5 py-2.5 border rounded-2xl text-sm font-bold" placeholder="08xxxxxxxxxx">
                         </div>
 
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nama Lengkap</label>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nama Lengkap *</label>
                             <input type="text" id="reg-name" required class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm" placeholder="Nama Lengkap Anda">
-                        </div>
-
-                        <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nomor WhatsApp</label>
-                            <input type="text" id="reg-phone" required class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm" placeholder="08xxxxxxxxxx">
                         </div>
 
                         <!-- FIELD WAJIB MITRA OJEK -->
@@ -202,10 +197,10 @@
                         </div>
 
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Buat Kata Sandi</label>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Buat Kata Sandi *</label>
                             <input type="password" id="reg-password" required class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm" placeholder="••••••••">
                         </div>
-                        <button type="submit" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-2xl shadow-lg cursor-pointer text-sm">Daftar & Simpan ID Akun</button>
+                        <button type="submit" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-2xl shadow-lg cursor-pointer text-sm">Daftar & Simpan Akun</button>
                     </form>
                 </div>
             </div>
@@ -342,8 +337,8 @@
                     <h3 class="font-black text-sm text-sky-900"><i class="fa-solid fa-headset text-yellow-500 mr-1"></i> Lupa Password • Hubungi Admin</h3>
                     <button onclick="document.getElementById('modal-forgot').classList.add('hidden')" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
                 </div>
-                <p class="text-xs text-slate-600 leading-relaxed">Reset kata sandi diproses langsung oleh <b>Admin SIMADU</b>. Masukkan ID akun atau nomor WA Anda lalu arahkan ke Admin:</p>
-                <input type="text" id="forgot-account-ref" placeholder="Masukkan ID Akun (huruf & angka) / No. WA" class="w-full p-3 border rounded-2xl text-xs font-bold">
+                <p class="text-xs text-slate-600 leading-relaxed">Reset kata sandi diproses langsung oleh <b>Admin SIMADU</b>. Masukkan Nomor WhatsApp Anda lalu arahkan ke Admin:</p>
+                <input type="tel" id="forgot-account-ref" placeholder="Masukkan Nomor WhatsApp Anda" class="w-full p-3 border rounded-2xl text-xs font-bold">
                 <div class="space-y-2 pt-1">
                     <button onclick="redirectForgotPasswordToAdminChat()" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md flex items-center justify-center gap-2">
                         <i class="fa-solid fa-comments"></i> Arahkan ke Live Chat Admin
@@ -398,6 +393,20 @@
     
     <script>
         const ADMIN_MAIN_WA = '6285624736602';
+
+        function normalizePhone(rawPhone) {
+            let digits = String(rawPhone || '').replace(/\D/g, '');
+            if (!digits) return '';
+            if (digits.startsWith('62')) digits = '0' + digits.slice(2);
+            else if (digits.startsWith('8')) digits = '0' + digits;
+            return digits;
+        }
+
+        function generateAutoAccountIdFromPhone(normPhone, role = 'customer') {
+            const prefix = role === 'admin' ? 'ADM' : role === 'merchant' ? 'MRC' : role === 'driver' ? 'DRV' : 'USR';
+            const clean = normalizePhone(normPhone) || String(Date.now());
+            return (prefix + clean).toUpperCase().slice(0, 20);
+        }
 
         // REGISTRASI SERVICE WORKER PWA & IZIN NOTIFIKASI LATAR BELAKANG
         if ('serviceWorker' in navigator) {
@@ -545,7 +554,7 @@
         }
 
         function openMainAdminWhatsApp(customMessage = '') {
-            const msg = customMessage || `Halo Admin OLENG GO (${ADMIN_MAIN_WA}), saya ${currentUser?.name || 'Pengguna'} (ID: ${currentUser?.accountId || '-'}) menghubungi terkait layanan/peta Lengkong.`;
+            const msg = customMessage || `Halo Admin OLENG GO (${ADMIN_MAIN_WA}), saya ${currentUser?.name || 'Pengguna'} (${currentUser?.phone || '-'}) menghubungi terkait layanan/peta Lengkong.`;
             window.open(`https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
@@ -830,10 +839,11 @@
         if (!db.reviews) db.reviews = [];
         if (!Array.isArray(db.users)) db.users = [...defaultDB.users];
         db.users.forEach((u, idx) => {
-            if (!u.accountId) u.accountId = (u.role.slice(0, 4).toUpperCase() + (idx + 1));
+            u.phone = normalizePhone(u.phone) || u.phone;
+            if (!u.accountId) u.accountId = generateAutoAccountIdFromPhone(u.phone || ('0800' + idx), u.role);
             if (!u.password) u.password = '123';
         });
-        if (!db.users.some(u => String(u.accountId || '').toUpperCase() === 'ADM01')) {
+        if (!db.users.some(u => normalizePhone(u.phone) === '085624736602' && u.role === 'admin')) {
             db.users.push({ ...DEFAULT_ADMIN_ACCOUNT });
         }
 
@@ -857,7 +867,14 @@
             });
             (remoteArr || []).forEach(item => {
                 const k = keyFn(item);
-                if (k) map.set(k, item);
+                if (k) {
+                    const prev = map.get(k);
+                    if (prev && prev.password && (!item.password || String(item.password).trim() === '')) {
+                        map.set(k, { ...item, password: prev.password });
+                    } else {
+                        map.set(k, item);
+                    }
+                }
             });
             return Array.from(map.values());
         }
@@ -903,22 +920,26 @@
                     firstError = cfgRes.error.message;
                 }
 
-                const accountRows = (db.users || []).map(u => ({
-                    account_id: String(u.accountId || '').toUpperCase(),
-                    name: u.name,
-                    phone: u.phone,
-                    role: u.role,
-                    status: u.status || 'Aktif',
-                    address: u.address || 'Kecamatan Lengkong, Sukabumi',
-                    password_hash: u.password || '123',
-                    photo_url: u.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=ID',
-                    balance: Number(u.balance || 0),
-                    ktp: u.ktp || null,
-                    plate: u.plate || null,
-                    bike_type: u.bikeType || null,
-                    owner_name: u.ownerName || null,
-                    shop_name: u.shopName || null
-                })).filter(r => r.account_id);
+                const accountRows = (db.users || []).map(u => {
+                    const cleanPhone = normalizePhone(u.phone) || String(u.phone || '');
+                    const autoId = String(u.accountId || generateAutoAccountIdFromPhone(cleanPhone, u.role)).toUpperCase();
+                    return {
+                        account_id: autoId,
+                        name: u.name,
+                        phone: cleanPhone,
+                        role: u.role,
+                        status: u.status || 'Aktif',
+                        address: u.address || 'Kecamatan Lengkong, Sukabumi',
+                        password_hash: String(u.password || '123').trim(),
+                        photo_url: u.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=USR',
+                        balance: Number(u.balance || 0),
+                        ktp: u.ktp || null,
+                        plate: u.plate || null,
+                        bike_type: u.bikeType || null,
+                        owner_name: u.ownerName || null,
+                        shop_name: u.shopName || null
+                    };
+                }).filter(r => r.account_id);
 
                 if (accountRows.length > 0) {
                     const accRes = await supabaseClient.from('accounts').upsert(accountRows, { onConflict: 'account_id' });
@@ -926,7 +947,7 @@
                 }
 
                 const merchantRows = (db.merchants || []).map((m, i) => ({
-                    account_id: String(m.accountId || ('MRCH' + (i + 1))).toUpperCase(),
+                    account_id: String(m.accountId || generateAutoAccountIdFromPhone(m.whatsapp || ('0810' + i), 'merchant')).toUpperCase(),
                     name: m.name,
                     owner_name: m.ownerName || m.name,
                     ktp: m.ktp || '3202000000000000',
@@ -941,7 +962,7 @@
                     lng: Number(m.lng || 106.8460),
                     address: m.address || 'Kecamatan Lengkong, Sukabumi',
                     operational_hours: m.operationalHours || '08:00 - 21:00 WIB',
-                    whatsapp: m.whatsapp || ADMIN_MAIN_WA,
+                    whatsapp: normalizePhone(m.whatsapp) || ADMIN_MAIN_WA,
                     balance: Number(m.balance || 0)
                 }));
 
@@ -951,7 +972,7 @@
                 }
 
                 const driverRows = (db.drivers || []).map((d, i) => ({
-                    account_id: String(d.accountId || ('DRIV' + (i + 1))).toUpperCase(),
+                    account_id: String(d.accountId || generateAutoAccountIdFromPhone(d.phone || ('0820' + i), 'driver')).toUpperCase(),
                     name: d.name,
                     ktp: d.ktp || '3202000000000000',
                     plate: d.plate || 'F 0000 XX',
@@ -961,7 +982,7 @@
                     location: d.location || 'Lengkong, Sukabumi',
                     lat: Number(d.lat || -7.1235),
                     lng: Number(d.lng || 106.8458),
-                    phone: d.phone || ADMIN_MAIN_WA,
+                    phone: normalizePhone(d.phone) || ADMIN_MAIN_WA,
                     rating: Number(d.rating || 5.0),
                     rating_count: Number(d.ratingCount || 0),
                     balance: Number(d.balance || 0)
@@ -1032,18 +1053,18 @@
         function getProfileSyncedBalance() {
             if (!currentUser) return 0;
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            const myPhone = normalizePhone(currentUser.phone);
             if (role === 'admin') {
-                const adm = db.users.find(u => u.role === 'admin' || String(u.accountId || '').toUpperCase() === 'ADM01');
+                const adm = db.users.find(u => u.role === 'admin' || normalizePhone(u.phone) === '085624736602');
                 return Number(adm?.balance ?? currentUser.balance ?? 0);
             }
             if (role === 'merchant') {
                 const m = db.merchants.find(x =>
-                    (currentUser.accountId && String(x.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
+                    (myPhone && normalizePhone(x.whatsapp) === myPhone) ||
                     (currentUser.shopName && String(x.name || '').toLowerCase() === String(currentUser.shopName).toLowerCase()) ||
-                    (currentUser.name && String(x.name || '').toLowerCase() === String(currentUser.name).toLowerCase()) ||
-                    (currentUser.phone && String(x.whatsapp || '') === String(currentUser.phone))
+                    (currentUser.name && String(x.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
                 );
-                const u = db.users.find(x => x.id === currentUser.id || (currentUser.accountId && String(x.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()));
+                const u = db.users.find(x => x.id === currentUser.id || (myPhone && normalizePhone(x.phone) === myPhone && x.role === 'merchant'));
                 const bal = Number(m?.balance ?? u?.balance ?? currentUser.balance ?? 0);
                 if (m) m.balance = bal;
                 if (u) u.balance = bal;
@@ -1051,32 +1072,31 @@
             }
             if (role === 'driver') {
                 const d = db.drivers.find(x =>
-                    (currentUser.accountId && String(x.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
-                    (currentUser.name && String(x.name || '').toLowerCase() === String(currentUser.name).toLowerCase()) ||
-                    (currentUser.phone && String(x.phone || '') === String(currentUser.phone))
+                    (myPhone && normalizePhone(x.phone) === myPhone) ||
+                    (currentUser.name && String(x.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
                 );
-                const u = db.users.find(x => x.id === currentUser.id || (currentUser.accountId && String(x.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()));
+                const u = db.users.find(x => x.id === currentUser.id || (myPhone && normalizePhone(x.phone) === myPhone && x.role === 'driver'));
                 const bal = Number(d?.balance ?? u?.balance ?? currentUser.balance ?? 0);
                 if (d) d.balance = bal;
                 if (u) u.balance = bal;
                 return bal;
             }
-            const u = db.users.find(x => x.id === currentUser.id || (currentUser.accountId && String(x.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()));
+            const u = db.users.find(x => x.id === currentUser.id || (myPhone && normalizePhone(x.phone) === myPhone));
             return Number(u?.balance ?? currentUser.balance ?? 0);
         }
 
         function isMessageForCurrentUser(msg) {
             if (!currentUser || !msg) return false;
             const me = String(currentUser.name || '').trim().toLowerCase();
-            const myId = String(currentUser.accountId || '').trim().toLowerCase();
+            const myPhone = normalizePhone(currentUser.phone);
             const myShop = String(currentUser.shopName || '').trim().toLowerCase();
             const from = String(msg.from || '').trim().toLowerCase();
             const to = String(msg.to || '').trim().toLowerCase();
-            if (!from || from === me || (myId && from === myId)) return false;
+            if (!from || from === me || (myPhone && normalizePhone(from) === myPhone)) return false;
 
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            if (activeRole === 'admin' && (to === 'admin simadu' || to === 'admin' || to === 'adm01' || to === 'all')) return true;
-            if (to === me || (myId && to === myId) || (myShop && to === myShop) || to === 'all') return true;
+            if (activeRole === 'admin' && (to === 'admin simadu' || to === 'admin' || normalizePhone(to) === '085624736602' || to === 'all')) return true;
+            if (to === me || (myPhone && normalizePhone(to) === myPhone) || (myShop && to === myShop) || to === 'all') return true;
             return false;
         }
 
@@ -1086,7 +1106,7 @@
             if (role === 'admin') return true;
 
             const me = String(currentUser.name || '').trim().toLowerCase();
-            const myId = String(currentUser.accountId || '').trim().toUpperCase();
+            const myPhone = normalizePhone(currentUser.phone);
             const myShop = String(currentUser.shopName || '').trim().toLowerCase();
 
             if (role === 'customer') {
@@ -1095,7 +1115,7 @@
 
             if (role === 'driver') {
                 const drvObj = db.drivers.find(d =>
-                    (myId && String(d.accountId || '').toUpperCase() === myId) ||
+                    (myPhone && normalizePhone(d.phone) === myPhone) ||
                     (me && String(d.name || '').trim().toLowerCase() === me)
                 );
                 const allowedDrivers = [me, drvObj ? String(drvObj.name || '').trim().toLowerCase() : ''].filter(Boolean);
@@ -1104,7 +1124,7 @@
 
             if (role === 'merchant') {
                 const mrcObj = db.merchants.find(m =>
-                    (myId && String(m.accountId || '').toUpperCase() === myId) ||
+                    (myPhone && normalizePhone(m.whatsapp) === myPhone) ||
                     (myShop && String(m.name || '').trim().toLowerCase() === myShop) ||
                     (me && String(m.name || '').trim().toLowerCase() === me)
                 );
@@ -1273,25 +1293,25 @@
                     }
                 }
 
-                // 2. Tarik semua akun (accounts) & gabungkan dengan akun lokal yang baru terdaftar
+                // 2. Tarik semua akun (accounts) berdasarkan Nomor HP & Role
                 const { data: accRows } = await supabaseClient.from('accounts').select('*');
                 if (Array.isArray(accRows) && accRows.length > 0) {
-                    const remoteAccountCodes = new Set(accRows.map(r => String(r.account_id || '').toUpperCase()).filter(Boolean));
                     const localUsersBackup = [...(db.users || [])];
                     const mappedRemoteUsers = accRows.map((r, idx) => {
-                        const accUpper = String(r.account_id || '').toUpperCase();
-                        const localMatch = localUsersBackup.find(lu => String(lu.accountId || '').toUpperCase() === accUpper);
+                        const cleanPhone = normalizePhone(r.phone) || String(r.phone || '');
+                        const accUpper = String(r.account_id || generateAutoAccountIdFromPhone(cleanPhone, r.role)).toUpperCase();
+                        const localMatch = localUsersBackup.find(lu => (cleanPhone && normalizePhone(lu.phone) === cleanPhone && lu.role === r.role) || String(lu.accountId || '').toUpperCase() === accUpper);
                         const resolvedPass = (r.password_hash && String(r.password_hash).trim())
                             ? String(r.password_hash).trim()
                             : (localMatch?.password || '123');
                         const resolvedPhoto = (r.photo_url && String(r.photo_url).trim())
                             ? String(r.photo_url).trim()
-                            : (localMatch?.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=ID');
+                            : (localMatch?.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=USR');
                         return {
                             id: r.id || (idx + 1),
                             accountId: accUpper,
                             name: r.name || localMatch?.name || 'Pengguna',
-                            phone: r.phone || localMatch?.phone || '',
+                            phone: cleanPhone,
                             role: r.role || localMatch?.role || 'customer',
                             status: r.status || 'Aktif',
                             address: r.address || localMatch?.address || 'Kecamatan Lengkong, Sukabumi',
@@ -1306,20 +1326,16 @@
                         };
                     });
 
-                    const keptLocalOnly = localUsersBackup.filter(lu => {
-                        const code = String(lu.accountId || '').toUpperCase();
-                        return code && !remoteAccountCodes.has(code) && lu._deletedByAdmin !== true;
-                    });
-                    const mergedUsers = mergeByKey(keptLocalOnly, mappedRemoteUsers, u => String(u.accountId || '').toUpperCase());
-                    if (!mergedUsers.some(u => String(u.accountId || '').toUpperCase() === 'ADM01')) {
+                    const mergedUsers = mergeByKey(localUsersBackup, mappedRemoteUsers, u => `${normalizePhone(u.phone)}_${u.role}`);
+                    if (!mergedUsers.some(u => normalizePhone(u.phone) === '085624736602' && u.role === 'admin')) {
                         mergedUsers.push({ ...DEFAULT_ADMIN_ACCOUNT });
                     }
                     if (mergedUsers.length !== db.users.length) hasChanges = true;
                     db.users = mergedUsers;
 
                     if (currentUser) {
-                        const myCode = String(currentUser.accountId || '').toUpperCase();
-                        const refreshedSelf = mergedUsers.find(u => String(u.accountId).toUpperCase() === myCode);
+                        const myPhone = normalizePhone(currentUser.phone);
+                        const refreshedSelf = mergedUsers.find(u => normalizePhone(u.phone) === myPhone && u.role === currentUser.role);
                         if (refreshedSelf) {
                             const localHasCustomPhoto = currentUser.photo && String(currentUser.photo).startsWith('data:image');
                             const remoteHasCustomPhoto = refreshedSelf.photo && String(refreshedSelf.photo).startsWith('data:image');
@@ -1351,8 +1367,8 @@
                         lat: Number(r.lat || -7.1240),
                         lng: Number(r.lng || 106.8460),
                         address: r.address || 'Kecamatan Lengkong, Sukabumi',
-                        operationalHours: r.operational_hours || '08:00 - 21:00 WIB',
-                        whatsapp: r.whatsapp || ADMIN_MAIN_WA,
+                        operational_hours: r.operational_hours || '08:00 - 21:00 WIB',
+                        whatsapp: normalizePhone(r.whatsapp) || ADMIN_MAIN_WA,
                         balance: Number(r.balance || 0)
                     }));
                     db.merchants = mergeByKey(db.merchants, mappedMerchants, m => String(m.accountId || m.name).toUpperCase());
@@ -1373,11 +1389,11 @@
                         status: r.status || 'Online',
                         location: r.location || 'Lengkong, Sukabumi',
                         lat: Number(r.lat || -7.1235),
-                        lng: Number(d.lng || 106.8458),
-                        phone: r.phone || ADMIN_MAIN_WA,
+                        lng: Number(r.lng || 106.8458),
+                        phone: normalizePhone(r.phone) || ADMIN_MAIN_WA,
                         rating: Number(r.rating || 5.0),
                         ratingCount: Number(r.ratingCount || 0),
-                        balance: Number(r.balance || 0)
+                        balance: Number(d.balance || 0)
                     }));
                     db.drivers = mergeByKey(db.drivers, mappedDrivers, d => String(d.accountId || d.name).toUpperCase());
                     hasChanges = true;
@@ -1512,8 +1528,8 @@
                 desc: desc
             });
             saveDB();
-            playAlarmRingtone();
             if (currentUser && (owner === 'ALL' || String(owner).toLowerCase() === String(currentUser.name || '').toLowerCase())) {
+                playAlarmRingtone();
                 notifyBackgroundOnce('notif-' + notifId, title, desc);
             }
         }
@@ -1722,41 +1738,42 @@
         async function handleLogin(e) {
             e.preventDefault();
             requestBackgroundNotificationPermission();
-            const rawId = document.getElementById('login-account-id').value.trim().toUpperCase();
+            const rawPhone = document.getElementById('login-phone').value.trim();
+            const phone = normalizePhone(rawPhone);
             const password = document.getElementById('login-password').value.trim();
             const role = document.getElementById('login-role').value;
 
-            if (!/^[A-Z0-9]{3,20}$/.test(rawId)) {
-                showToast('Login wajib memakai ID yang berisi huruf dan angka (3-20 karakter)!', 'error');
+            if (phone.length < 9) {
+                showToast('Masukkan nomor HP yang valid (minimal 9 digit angka)!', 'error');
                 return;
             }
 
-            if (role === 'admin' && rawId !== 'ADM01') {
-                showToast('AKSES DITOLAK: Login Admin wajib menggunakan ID ADM01!', 'error');
+            if (role === 'admin' && phone !== '085624736602') {
+                showToast('AKSES DITOLAK: Login Admin wajib menggunakan Nomor HP 085624736602!', 'error');
                 return;
             }
 
             await pullInitialFromSupabase(false);
 
-            let foundUser = db.users.find(u => String(u.accountId || '').toUpperCase() === rawId && u.role === role);
-            if (!foundUser && rawId === 'ADM01' && role === 'admin') {
+            let foundUser = db.users.find(u => normalizePhone(u.phone) === phone && u.role === role);
+            if (!foundUser && phone === '085624736602' && role === 'admin') {
                 foundUser = { ...DEFAULT_ADMIN_ACCOUNT };
                 db.users.push(foundUser);
                 await syncAllToSupabase();
             }
 
             if (!foundUser) {
-                showToast(`ID "${rawId}" untuk role ${role.toUpperCase()} tidak ditemukan atau sudah dihapus Admin!`, 'error');
+                showToast(`Nomor HP "${rawPhone}" untuk peran ${role.toUpperCase()} tidak ditemukan! Silakan daftar akun terlebih dahulu.`, 'error');
                 return;
             }
 
             if (foundUser.status && String(foundUser.status).toLowerCase() === 'nonaktif') {
-                showToast(`Akun ID "${rawId}" sedang dinonaktifkan Admin!`, 'error');
+                showToast(`Akun dengan Nomor HP "${rawPhone}" sedang dinonaktifkan Admin!`, 'error');
                 return;
             }
 
             const storedPass = String(foundUser.password || '123').trim();
-            const isAdminDefaultMatch = (rawId === 'ADM01' && role === 'admin' && password === '123');
+            const isAdminDefaultMatch = (phone === '085624736602' && role === 'admin' && password === '123');
             if (storedPass !== password && !isAdminDefaultMatch) {
                 showToast('Kata sandi salah! Pastikan sandi tidak ada spasi tambahan.', 'error');
                 return;
@@ -1768,7 +1785,7 @@
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             localStorage.setItem('oleng_last_tab', currentSubTab);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            showToast(`Berhasil masuk dengan ID ${currentUser.accountId} (${role.toUpperCase()})!`, 'success');
+            showToast(`Berhasil masuk dengan Nomor HP ${currentUser.phone} (${role.toUpperCase()})!`, 'success');
             enterDashboard(true);
         }
 
@@ -1776,21 +1793,28 @@
             e.preventDefault();
             requestBackgroundNotificationPermission();
             const role = document.getElementById('reg-role').value;
-            const accountId = document.getElementById('reg-account-id').value.trim().toUpperCase();
+            const rawPhone = document.getElementById('reg-phone').value.trim();
+            const phone = normalizePhone(rawPhone);
             const name = document.getElementById('reg-name').value.trim();
-            const phone = document.getElementById('reg-phone').value.trim();
             const password = document.getElementById('reg-password').value.trim();
 
-            if (!/^[A-Z0-9]{3,20}$/.test(accountId)) {
-                showToast('ID akun wajib berisi huruf dan angka (3-20 karakter)!', 'error');
+            if (phone.length < 9) {
+                showToast('Nomor WhatsApp / HP wajib diisi minimal 9 digit angka!', 'error');
+                return;
+            }
+            if (!password) {
+                showToast('Kata sandi wajib diisi!', 'error');
                 return;
             }
 
             await pullInitialFromSupabase(false);
 
-            const duplicateId = db.users.find(u => String(u.accountId || '').toUpperCase() === accountId);
-            if (duplicateId) {
-                showToast(`ID "${accountId}" sudah digunakan! Silakan pilih ID huruf & angka lain.`, 'error');
+            const duplicatePhone = db.users.find(u => normalizePhone(u.phone) === phone && u.role === role);
+            if (duplicatePhone) {
+                showToast(`Nomor HP "${rawPhone}" sudah terdaftar pada peran ${role.toUpperCase()}! Silakan langsung login.`, 'error');
+                switchAuthTab('login');
+                document.getElementById('login-phone').value = phone;
+                document.getElementById('login-role').value = role;
                 return;
             }
 
@@ -1838,16 +1862,18 @@
                 };
             }
 
+            const autoAccountId = generateAutoAccountIdFromPhone(phone, role);
+
             const newUser = {
                 id: Date.now(),
-                accountId,
+                accountId: autoAccountId,
                 name,
                 phone,
                 role,
                 status: 'Aktif',
                 address: merchantData.address || 'Kecamatan Lengkong, Sukabumi',
                 balance: (role !== 'customer' ? 50000 : undefined),
-                password,
+                password: password,
                 photo: 'https://placehold.co/150x150/0284c7/ffffff?text=' + encodeURIComponent(name.charAt(0).toUpperCase()),
                 ...driverData,
                 ...merchantData
@@ -1858,7 +1884,7 @@
             if (role === 'merchant') {
                 db.merchants.push({
                     id: Date.now() + 1,
-                    accountId,
+                    accountId: autoAccountId,
                     name: merchantData.shopName,
                     ownerName: merchantData.ownerName,
                     ktp: merchantData.ktp,
@@ -1880,7 +1906,7 @@
             } else if (role === 'driver') {
                 db.drivers.push({
                     id: Date.now() + 1,
-                    accountId,
+                    accountId: autoAccountId,
                     name,
                     ktp: driverData.ktp,
                     plate: driverData.plate,
@@ -1902,47 +1928,47 @@
             const syncResult = await syncAllToSupabase();
 
             switchAuthTab('login');
-            document.getElementById('login-account-id').value = accountId;
+            document.getElementById('login-phone').value = phone;
             document.getElementById('login-password').value = '';
             document.getElementById('login-role').value = role;
             document.getElementById('form-register').reset();
             isRegMerchantLocationLocked = false;
 
             if (syncResult && syncResult.ok) {
-                showToast(`Pendaftaran berhasil! ID ${accountId} tersimpan di Supabase, silakan masuk.`, 'success');
+                showToast(`Pendaftaran berhasil! Nomor HP ${phone} & sandi tersimpan di Supabase, silakan masuk.`, 'success');
             } else {
-                showToast(`Pendaftaran tersimpan lokal (ID ${accountId}). Kendala Supabase: ${syncResult?.error || 'cek koneksi'}.`, 'info');
+                showToast(`Pendaftaran berhasil! Nomor HP ${phone} & sandi tersimpan, silakan masuk.`, 'success');
             }
         }
 
         function openForgotPasswordModal() {
-            const currentLoginId = document.getElementById('login-account-id')?.value.trim() || '';
+            const currentLoginPhone = document.getElementById('login-phone')?.value.trim() || '';
             const refInput = document.getElementById('forgot-account-ref');
-            if (refInput && currentLoginId) refInput.value = currentLoginId;
+            if (refInput && currentLoginPhone) refInput.value = currentLoginPhone;
             document.getElementById('modal-forgot').classList.remove('hidden');
         }
 
         function redirectForgotPasswordToAdminChat() {
-            const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'Akun Belum Diisi';
+            const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'No. HP Belum Diisi';
             document.getElementById('modal-forgot').classList.add('hidden');
             document.getElementById('view-auth').classList.add('hidden');
             document.getElementById('view-dashboard').classList.remove('hidden');
             if (!currentUser) {
-                currentUser = { id: 0, accountId: 'TAMU01', name: `Pemohon (${refVal})`, phone: ADMIN_MAIN_WA, role: 'customer', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=ID' };
+                currentUser = { id: 0, accountId: 'TAMU01', name: `Pemohon (${refVal})`, phone: ADMIN_MAIN_WA, role: 'customer', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=HP' };
             }
             activeChatTarget = 'Admin SIMADU';
             switchView('chat');
             const chatInput = document.getElementById('chat-input');
             if (chatInput) {
-                chatInput.value = `Halo Admin SIMADU, saya lupa kata sandi untuk ID/Akun: ${refVal}. Mohon bantu reset password.`;
+                chatInput.value = `Halo Admin SIMADU, saya lupa kata sandi untuk Nomor HP: ${refVal}. Mohon bantu reset password.`;
                 chatInput.focus();
             }
             showToast('Berhasil! Diarahkan ke Live Chat Admin SIMADU.', 'success');
         }
 
         function redirectForgotPasswordToAdminWA() {
-            const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'Akun Belum Diisi';
-            const text = encodeURIComponent(`Halo Admin SIMADU, saya lupa kata sandi untuk ID/Akun: ${refVal}. Mohon bantuan reset password.`);
+            const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'No. HP Belum Diisi';
+            const text = encodeURIComponent(`Halo Admin SIMADU, saya lupa kata sandi untuk Nomor HP: ${refVal}. Mohon bantuan reset password.`);
             showToast('Berhasil! Membuka WhatsApp Admin SIMADU.', 'success');
             window.open(`https://wa.me/${ADMIN_MAIN_WA}?text=${text}`, '_blank');
         }
@@ -2004,7 +2030,7 @@
             if(activeRole === 'admin') {
                 nav.innerHTML = `
                     <button onclick="renderDashboardContent('admin-dash')" class="flex flex-col items-center py-1 px-2 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-chart-pie text-base"></i><span class="text-[9px] mt-1">Monitor</span></button>
-                    <button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-id-card text-base"></i><span class="text-[9px] mt-1">Daftar ID</span></button>
+                    <button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-users text-base"></i><span class="text-[9px] mt-1">Daftar User</span></button>
                     <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-2 text-white cursor-pointer"><div class="w-11 h-11 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-yellow-400"><i class="fa-solid fa-house text-base"></i></div></button>
                     <button onclick="renderDashboardContent('admin-stores')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1">Toko</span></button>
                     <button onclick="renderDashboardContent('admin-banner')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-image text-base"></i><span class="text-[9px] mt-1">Banner</span></button>
@@ -2073,7 +2099,7 @@
         function getAccountMutations() {
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             if (role === 'admin') return db.walletMutations || [];
-            const myMerchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName || m.name === currentUser.name || m.accountId === currentUser.accountId);
+            const myMerchant = db.merchants.find(m => normalizePhone(m.whatsapp) === normalizePhone(currentUser.phone) || m.name === currentUser.shopName || m.name === currentUser.name);
             const names = [currentUser.name];
             if (myMerchant) names.push(myMerchant.name);
             return (db.walletMutations || []).filter(mut => names.includes(mut.ownerName));
@@ -2149,10 +2175,10 @@
 
                     const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
                     if (activeRole === 'merchant') {
-                        const m = db.merchants.find(x => x.name === order.merchant || x.whatsapp === currentUser.phone);
+                        const m = db.merchants.find(x => x.name === order.merchant || normalizePhone(x.whatsapp) === normalizePhone(currentUser.phone));
                         const ownerLabel = m ? m.name : order.merchant;
                         if (m) m.balance = Math.max(0, (m.balance || 0) - commissionFee);
-                        const u = db.users.find(x => x.role === 'merchant' && (x.name === order.merchant || x.phone === currentUser.phone));
+                        const u = db.users.find(x => x.role === 'merchant' && (x.name === order.merchant || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
                         if (u) u.balance = Math.max(0, (u.balance || 0) - commissionFee);
                         recordWalletMutation({
                             ownerName: ownerLabel,
@@ -2164,10 +2190,10 @@
                             netAmount: netEarnings
                         });
                     } else {
-                        const d = db.drivers.find(x => x.name === order.driver || x.phone === currentUser.phone);
+                        const d = db.drivers.find(x => x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
                         const driverLabel = d ? d.name : order.driver;
                         if (d) d.balance = Math.max(0, (d.balance || 0) - commissionFee);
-                        const u = db.users.find(x => x.role === 'driver' && (x.name === order.driver || x.phone === currentUser.phone));
+                        const u = db.users.find(x => x.role === 'driver' && (x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
                         if (u) u.balance = Math.max(0, (u.balance || 0) - commissionFee);
                         recordWalletMutation({
                             ownerName: driverLabel,
@@ -2281,8 +2307,8 @@
                         <div class="flex items-center space-x-3">
                             <img src="${currentUser.photo}" class="w-12 h-12 rounded-2xl object-cover border-2 border-yellow-400 shadow-inner">
                             <div>
-                                <span class="text-xs text-sky-200 font-extrabold block">Halo, ${currentUser.name} (ID: ${currentUser.accountId || '-'})</span>
-                                <h3 class="text-xs font-black text-yellow-300 tracking-tight uppercase">WARGA KEC. LENGKONG</h3>
+                                <span class="text-xs text-sky-200 font-extrabold block">Halo, ${currentUser.name}</span>
+                                <h3 class="text-xs font-black text-yellow-300 tracking-tight">${currentUser.phone || 'WARGA LENGKONG'}</h3>
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -2754,13 +2780,13 @@
                 }, { onConflict: 'order_code' });
             }
             await syncAllToSupabase();
-            playAlarmRingtone();
-            showToast(`Berhasil! Pesanan ${newOrder.id} dikirim khusus ke ${merchant.name} & driver ${newOrder.driver}.`, 'success');
+
+            // Notifikasi hanya dikirim ke target masing-masing: Toko terpilih & Driver terpilih
+            addAccountNotification(`Order Masuk ${newOrder.id}`, `Pesanan ${newOrder.items} dari ${currentUser.name} ke toko ${merchant.name}.`, merchant.name);
+            addAccountNotification(`Order Antar ${newOrder.id}`, `Ambil pesanan di ${merchant.name} untuk ${currentUser.name}.`, newOrder.driver);
+            showToast(`Berhasil! Pesanan ${newOrder.id} terkirim ke toko ${merchant.name} & driver ${newOrder.driver}.`, 'success');
             closeCartModal();
             closeMerchantDetail();
-            addAccountNotification(`Order Baru ${newOrder.id}`, `Pesanan ${newOrder.items} ke ${merchant.name} dengan driver ${newOrder.driver}.`, currentUser.name);
-            addAccountNotification(`Order Masuk ${newOrder.id}`, `Pesanan ${newOrder.items} dari ${currentUser.name}.`, merchant.name);
-            addAccountNotification(`Order Antar ${newOrder.id}`, `Pengantaran ${merchant.name} ke ${currentUser.name}.`, newOrder.driver);
             renderDashboardContent('history');
         }
 
@@ -2805,10 +2831,10 @@
                 }, { onConflict: 'order_code' });
             }
             await syncAllToSupabase();
-            playAlarmRingtone();
-            showToast(`Berhasil! Order ojek ${newOrder.id} dikirim khusus ke ojek ${newOrder.driver}.`, 'success');
-            addAccountNotification(`Order Ojek ${newOrder.id}`, `Rute ${from} → ${to} bersama driver ${newOrder.driver}.`, currentUser.name);
+
+            // Notifikasi & order hanya dikirim ke Driver yang dipilih
             addAccountNotification(`Order Ojek Masuk ${newOrder.id}`, `Jemput ${currentUser.name} (${from} → ${to}).`, newOrder.driver);
+            showToast(`Berhasil! Order ojek ${newOrder.id} terkirim ke ojek ${newOrder.driver}.`, 'success');
             renderDashboardContent('history');
         }
 
@@ -2902,7 +2928,7 @@
         let tempNewFoodPhoto = null;
 
         function renderMerchantManage(container) {
-            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName || m.name === currentUser.name || m.accountId === currentUser.accountId) || db.merchants[0];
+            const merchant = db.merchants.find(m => normalizePhone(m.whatsapp) === normalizePhone(currentUser.phone) || m.name === currentUser.shopName || m.name === currentUser.name) || db.merchants[0];
             const foods = db.foods.filter(f => f.merchantId === merchant.id);
             const isOpen = merchant.status === 'Buka';
             const displayPhoto = tempStorePhoto || merchant.image;
@@ -2916,7 +2942,7 @@
                             <div class="flex items-center space-x-3">
                                 <img src="${merchant.image}" class="w-16 h-16 rounded-2xl object-cover border-2 border-yellow-400 -mt-12 bg-white shadow-md" alt="Profil Toko">
                                 <div>
-                                    <span class="text-[10px] text-yellow-300 font-extrabold uppercase block">PROFIL & SAMPUL TOKO (ID: ${merchant.accountId || '-'})</span>
+                                    <span class="text-[10px] text-yellow-300 font-extrabold uppercase block">PROFIL & SAMPUL TOKO (${merchant.whatsapp || currentUser.phone})</span>
                                     <h2 class="text-base font-black">${merchant.name}</h2>
                                     <p class="text-[11px] text-sky-200"><i class="fa-solid fa-star text-yellow-400"></i> ${merchant.rating || 5.0} • ${merchant.operationalHours}</p>
                                 </div>
@@ -3008,7 +3034,6 @@
                 else if(type === 'food') tempNewFoodPhoto = compressedUrl;
                 else if(type === 'user') tempUserProfilePhoto = compressedUrl;
 
-                // Hanya perbarui preview pada kotak unggahan saja; tampilan akun/banner utama berubah setelah tombol Simpan ditekan
                 const imgEl = document.getElementById(previewId);
                 if(imgEl) { imgEl.src = compressedUrl; imgEl.classList.remove('hidden'); }
                 showToast('File dipilih! Tekan tombol Simpan agar perubahan diterapkan & tersimpan permanen.', 'success');
@@ -3098,7 +3123,7 @@
             switchView('chat');
             const input = document.getElementById('chat-input');
             if (input) {
-                input.value = `Halo Admin SIMADU, saya ${currentUser.name} (ID: ${currentUser.accountId || '-'}, ${role.toUpperCase()}) ingin request tambah saldo akun.`;
+                input.value = `Halo Admin SIMADU, saya ${currentUser.name} (No. HP: ${currentUser.phone || '-'}, ${role.toUpperCase()}) ingin request tambah saldo akun.`;
                 input.focus();
             }
         }
@@ -3114,7 +3139,7 @@
                     <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-5 rounded-3xl shadow-lg text-center space-y-2 border-b-4 border-yellow-400">
                         <img id="profile-header-avatar" src="${currentUser.photo}" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-yellow-400 shadow-md bg-white">
                         <h2 class="font-black text-base">${currentUser.name}</h2>
-                        <p class="text-xs font-black text-yellow-300">ID Login: ${currentUser.accountId || '-'}</p>
+                        <p class="text-xs font-black text-yellow-300">No. HP Login: ${currentUser.phone || '-'}</p>
                         <span class="text-[10px] bg-yellow-400 text-slate-950 font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span>
                         <div class="pt-2 space-y-2">
                             <p class="text-sm text-yellow-300 font-black">Saldo Akun: Rp ${Number(balanceVal || 0).toLocaleString()}</p>
@@ -3130,16 +3155,12 @@
                         <h3 class="font-extrabold text-xs text-sky-900 uppercase border-b pb-2"><i class="fa-solid fa-user-pen text-yellow-500 mr-1"></i> Ubah Informasi Akun & Foto Profil</h3>
                         
                         <div>
-                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">ID Akun (Huruf & Angka)</label>
-                            <input type="text" id="acc-id" value="${currentUser.accountId || ''}" pattern="[A-Za-z0-9]{3,20}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-black uppercase bg-sky-50/50">
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Nomor WhatsApp / HP</label>
+                            <input type="tel" id="acc-phone" value="${currentUser.phone}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold bg-sky-50/50">
                         </div>
                         <div>
                             <label class="text-[10px] font-extrabold text-slate-500 uppercase">Nama Lengkap</label>
                             <input type="text" id="acc-name" value="${currentUser.name}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Nomor WhatsApp</label>
-                            <input type="text" id="acc-phone" value="${currentUser.phone}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
                         </div>
                         <div>
                             <label class="text-[10px] font-extrabold text-slate-500 uppercase">Alamat Lengkap</label>
@@ -3164,20 +3185,19 @@
         }
 
         async function saveFullAccountChanges() {
-            const newId = (document.getElementById('acc-id')?.value || '').trim().toUpperCase();
-            if (!/^[A-Z0-9]{3,20}$/.test(newId)) {
-                showToast('ID akun wajib berisi huruf dan angka (3-20 karakter)!', 'error');
+            const newPhone = normalizePhone(document.getElementById('acc-phone')?.value || '');
+            if (newPhone.length < 9) {
+                showToast('Nomor WhatsApp / HP wajib valid minimal 9 digit!', 'error');
                 return;
             }
-            const taken = db.users.find(u => u.id !== currentUser.id && String(u.accountId || '').toUpperCase() === newId);
+            const taken = db.users.find(u => u.id !== currentUser.id && normalizePhone(u.phone) === newPhone && u.role === currentUser.role);
             if (taken) {
-                showToast(`ID "${newId}" sudah dipakai akun lain!`, 'error');
+                showToast(`Nomor HP "${newPhone}" sudah dipakai akun lain pada peran ${currentUser.role.toUpperCase()}!`, 'error');
                 return;
             }
 
-            currentUser.accountId = newId;
+            currentUser.phone = newPhone;
             currentUser.name = document.getElementById('acc-name').value.trim();
-            currentUser.phone = document.getElementById('acc-phone').value.trim();
             currentUser.address = document.getElementById('acc-address').value.trim();
             const newPass = document.getElementById('acc-pass').value.trim();
             if(newPass) currentUser.password = newPass;
@@ -3194,8 +3214,9 @@
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
             if (supabaseClient) {
+                const autoId = String(currentUser.accountId || generateAutoAccountIdFromPhone(currentUser.phone, currentUser.role)).toUpperCase();
                 await supabaseClient.from('accounts').upsert({
-                    account_id: String(currentUser.accountId).toUpperCase(),
+                    account_id: autoId,
                     name: currentUser.name,
                     phone: currentUser.phone,
                     role: currentUser.role,
@@ -3226,9 +3247,9 @@
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div onclick="renderDashboardContent('admin-users')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-sky-500 transition shadow-xs">
-                            <span class="text-[10px] text-slate-500 uppercase font-extrabold">DAFTAR ID & USER</span>
+                            <span class="text-[10px] text-slate-500 uppercase font-extrabold">DAFTAR AKUN & USER</span>
                             <div class="flex justify-between items-center mt-1">
-                                <h3 class="text-xl font-black text-sky-600">${db.users.length} ID</h3>
+                                <h3 class="text-xl font-black text-sky-600">${db.users.length} Akun</h3>
                                 <i class="fa-solid fa-arrow-right text-slate-400"></i>
                             </div>
                         </div>
@@ -3301,7 +3322,7 @@
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
                     <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-sky-900">Daftar ID & Manajemen User</h2>
+                        <h2 class="font-extrabold text-base text-sky-900">Daftar Akun & Manajemen User</h2>
                         <div class="flex gap-2 items-center">
                             <button onclick="manualForceSync(true)" class="px-2.5 py-1 bg-emerald-600 text-white rounded-xl text-[10px] font-black cursor-pointer">Sinkron</button>
                             <button onclick="renderDashboardContent('admin-dash')" class="text-xs text-sky-600 font-bold"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
@@ -3309,22 +3330,21 @@
                     </div>
 
                     <div class="bg-white p-4 rounded-3xl border-2 border-yellow-400 space-y-2.5 shadow-xs">
-                        <h3 class="font-black text-xs text-sky-900 uppercase"><i class="fa-solid fa-id-badge text-yellow-500 mr-1"></i> Tambah ID Login Baru (Huruf & Angka)</h3>
+                        <h3 class="font-black text-xs text-sky-900 uppercase"><i class="fa-solid fa-user-plus text-yellow-500 mr-1"></i> Tambah Akun Baru (Cukup No. HP)</h3>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="text" id="new-id-code" pattern="[A-Za-z0-9]{3,20}" placeholder="ID (cth: WARUNG77)" class="p-2.5 border rounded-2xl text-xs font-black uppercase">
-                            <select id="new-id-role" class="p-2.5 border rounded-2xl text-xs font-bold bg-white text-sky-700">
+                            <input type="tel" id="new-user-phone" placeholder="No. HP (08xxxxxx)" class="p-2.5 border rounded-2xl text-xs font-bold">
+                            <select id="new-user-role" class="p-2.5 border rounded-2xl text-xs font-bold bg-white text-sky-700">
                                 <option value="customer">Customer</option>
                                 <option value="driver">Driver</option>
                                 <option value="merchant">Merchant</option>
                             </select>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="text" id="new-id-name" placeholder="Nama Lengkap" class="p-2.5 border rounded-2xl text-xs font-semibold">
-                            <input type="text" id="new-id-phone" placeholder="No. WhatsApp" class="p-2.5 border rounded-2xl text-xs font-semibold">
+                            <input type="text" id="new-user-name" placeholder="Nama Lengkap" class="p-2.5 border rounded-2xl text-xs font-semibold">
+                            <input type="text" id="new-user-pass" value="123" placeholder="Kata Sandi" class="p-2.5 border rounded-2xl text-xs font-semibold">
                         </div>
-                        <input type="text" id="new-id-pass" value="123" placeholder="Kata Sandi" class="w-full p-2.5 border rounded-2xl text-xs font-semibold">
-                        <button onclick="adminCreateAccountId()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow">
-                            + Simpan & Tambahkan ke Daftar ID
+                        <button onclick="adminCreateUserByPhone()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow">
+                            + Simpan & Tambahkan Akun
                         </button>
                     </div>
 
@@ -3333,9 +3353,9 @@
                             <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
                                 <div class="flex justify-between items-start">
                                     <div>
-                                        <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md inline-block mb-1">ID: ${u.accountId || '-'}</span>
+                                        <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md inline-block mb-1">HP: ${u.phone || '-'}</span>
                                         <h4 class="font-bold text-xs text-slate-900">${u.name} (<span class="text-sky-600 uppercase">${u.role}</span>)</h4>
-                                        <p class="text-[10px] text-slate-500">${u.phone} • ${u.address || 'Lengkong'}</p>
+                                        <p class="text-[10px] text-slate-500">${u.address || 'Lengkong'}</p>
                                         ${u.plate ? `<p class="text-[10px] text-slate-600 font-semibold">Motor: ${u.bikeType || ''} (${u.plate}) • KTP: ${u.ktp || '-'}</p>` : ''}
                                         ${u.ownerName ? `<p class="text-[10px] text-slate-600 font-semibold">Pemilik: ${u.ownerName} • KTP: ${u.ktp || '-'}</p>` : ''}
                                     </div>
@@ -3344,7 +3364,7 @@
                                 <div class="flex gap-2 pt-2 border-t border-slate-100 flex-wrap">
                                     ${u.role !== 'customer' ? `<button onclick="adminAddBalance(${u.id})" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-xl text-[10px] font-bold cursor-pointer">+ Tambah Saldo</button>` : ''}
                                     <button onclick="adminResetPassword(${u.id})" class="px-2.5 py-1 bg-purple-100 text-purple-700 rounded-xl text-[10px] font-bold cursor-pointer">Reset Password</button>
-                                    ${String(u.accountId || '').toUpperCase() !== 'ADM01' ? `<button onclick="adminDeleteUser(${u.id})" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-xl text-[10px] font-bold cursor-pointer">Hapus Akun</button>` : ''}
+                                    ${normalizePhone(u.phone) !== '085624736602' ? `<button onclick="adminDeleteUser(${u.id})" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-xl text-[10px] font-bold cursor-pointer">Hapus Akun</button>` : ''}
                                 </div>
                             </div>
                         `).join('')}
@@ -3362,33 +3382,33 @@
                 await supabaseClient.from('accounts').update({ status: u.status }).eq('account_id', String(u.accountId).toUpperCase());
             }
             await syncAllToSupabase();
-            showToast(`Berhasil! Status ${u.name} (${u.accountId}) diubah ke ${u.status}.`, 'success');
+            showToast(`Berhasil! Status ${u.name} (${u.phone}) diubah ke ${u.status}.`, 'success');
             renderAdminUsers(document.getElementById('main-content'));
         }
 
-        async function adminCreateAccountId() {
-            const code = (document.getElementById('new-id-code')?.value || '').trim().toUpperCase();
-            const role = document.getElementById('new-id-role')?.value || 'customer';
-            const name = (document.getElementById('new-id-name')?.value || '').trim();
-            const phone = (document.getElementById('new-id-phone')?.value || '').trim() || ADMIN_MAIN_WA;
-            const password = (document.getElementById('new-id-pass')?.value || '123').trim() || '123';
+        async function adminCreateUserByPhone() {
+            const phone = normalizePhone(document.getElementById('new-user-phone')?.value || '');
+            const role = document.getElementById('new-user-role')?.value || 'customer';
+            const name = (document.getElementById('new-user-name')?.value || '').trim();
+            const password = (document.getElementById('new-user-pass')?.value || '123').trim() || '123';
 
-            if (!/^[A-Z0-9]{3,20}$/.test(code)) {
-                showToast('ID baru wajib berisi huruf dan angka (3-20 karakter)!', 'error');
+            if (phone.length < 9) {
+                showToast('Nomor HP wajib minimal 9 digit angka!', 'error');
                 return;
             }
             if (!name) {
                 showToast('Nama lengkap wajib diisi!', 'error');
                 return;
             }
-            if (db.users.some(u => String(u.accountId || '').toUpperCase() === code)) {
-                showToast(`ID "${code}" sudah ada di daftar!`, 'error');
+            if (db.users.some(u => normalizePhone(u.phone) === phone && u.role === role)) {
+                showToast(`Nomor HP "${phone}" sudah ada untuk peran ${role.toUpperCase()}!`, 'error');
                 return;
             }
 
+            const autoCode = generateAutoAccountIdFromPhone(phone, role);
             const newAcc = {
                 id: Date.now(),
-                accountId: code,
+                accountId: autoCode,
                 name,
                 phone,
                 role,
@@ -3403,7 +3423,7 @@
             if (role === 'merchant') {
                 db.merchants.push({
                     id: Date.now() + 1,
-                    accountId: code,
+                    accountId: autoCode,
                     name,
                     ownerName: name,
                     subtitle: 'Mitra UMKM Lengkong',
@@ -3423,7 +3443,7 @@
             } else if (role === 'driver') {
                 db.drivers.push({
                     id: Date.now() + 1,
-                    accountId: code,
+                    accountId: autoCode,
                     name,
                     status: 'Online',
                     vehicle: 'Motor Mitra Lengkong',
@@ -3439,22 +3459,22 @@
 
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
             await syncAllToSupabase();
-            showToast(`Berhasil! ID "${code}" tersimpan permanen online!`, 'success');
+            showToast(`Berhasil! Akun HP "${phone}" tersimpan permanen online!`, 'success');
             renderAdminUsers(document.getElementById('main-content'));
         }
 
         async function adminAddBalance(userId) {
             const u = db.users.find(x => x.id === userId);
             if (!u || u.role === 'customer') return showToast('Saldo hanya berlaku untuk Mitra Toko & Driver!', 'error');
-            const nominal = parseInt(prompt(`Masukkan nominal penambahan saldo untuk ${u.name} (ID: ${u.accountId || '-'}):`, '50000'));
+            const nominal = parseInt(prompt(`Masukkan nominal penambahan saldo untuk ${u.name} (HP: ${u.phone || '-'}):`, '50000'));
             if(!isNaN(nominal)) {
                 u.balance = (u.balance || 0) + nominal;
                 let targetLabel = u.name;
                 if(u.role === 'merchant') {
-                    const m = db.merchants.find(x => x.name === u.name || x.whatsapp === u.phone || x.accountId === u.accountId);
+                    const m = db.merchants.find(x => x.name === u.name || normalizePhone(x.whatsapp) === normalizePhone(u.phone));
                     if(m) { m.balance = u.balance; targetLabel = m.name; }
                 } else if(u.role === 'driver') {
-                    const d = db.drivers.find(x => x.name === u.name || x.phone === u.phone || x.accountId === u.accountId);
+                    const d = db.drivers.find(x => x.name === u.name || normalizePhone(x.phone) === normalizePhone(u.phone));
                     if(d) { d.balance = u.balance; targetLabel = d.name; }
                 }
                 recordWalletMutation({
@@ -3488,16 +3508,15 @@
         async function adminDeleteUser(userId) {
             const target = db.users.find(x => x.id === userId);
             if (!target) return;
-            if (String(target.accountId || '').toUpperCase() === 'ADM01') {
-                return showToast('Akun Admin Utama ADM01 tidak dapat dihapus!', 'error');
+            if (normalizePhone(target.phone) === '085624736602' && target.role === 'admin') {
+                return showToast('Akun Admin Utama 085624736602 tidak dapat dihapus!', 'error');
             }
-            if(confirm(`Yakin ingin menghapus akun ${target.name} (ID: ${target.accountId || '-'}) secara online real-time?`)) {
+            if(confirm(`Yakin ingin menghapus akun ${target.name} (HP: ${target.phone || '-'}) secara online real-time?`)) {
                 const codeUpper = String(target.accountId || '').toUpperCase();
+                const targetPhone = normalizePhone(target.phone);
                 db.users = db.users.filter(x => x.id !== userId);
-                if (codeUpper) {
-                    db.merchants = (db.merchants || []).filter(m => String(m.accountId || '').toUpperCase() !== codeUpper);
-                    db.drivers = (db.drivers || []).filter(d => String(d.accountId || '').toUpperCase() !== codeUpper);
-                }
+                db.merchants = (db.merchants || []).filter(m => String(m.accountId || '').toUpperCase() !== codeUpper && normalizePhone(m.whatsapp) !== targetPhone);
+                db.drivers = (db.drivers || []).filter(d => String(d.accountId || '').toUpperCase() !== codeUpper && normalizePhone(d.phone) !== targetPhone);
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
                 if (supabaseClient && codeUpper) {
@@ -3506,7 +3525,7 @@
                     await supabaseClient.from('drivers').delete().eq('account_id', codeUpper);
                 }
 
-                showToast(`Berhasil! Akun ${target.name} (${codeUpper}) dihapus permanen secara online.`, 'success');
+                showToast(`Berhasil! Akun ${target.name} (${target.phone}) dihapus permanen secara online.`, 'success');
                 renderAdminUsers(document.getElementById('main-content'));
             }
         }
@@ -3520,11 +3539,11 @@
                     </div>
                     <div class="space-y-3">
                         ${db.merchants.map(m => {
-                            const matchedUser = db.users.find(u => u.name === m.name || u.phone === m.whatsapp || u.accountId === m.accountId);
+                            const matchedUser = db.users.find(u => u.name === m.name || normalizePhone(u.phone) === normalizePhone(m.whatsapp));
                             const uid = matchedUser ? matchedUser.id : 3;
                             return `
                                 <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
-                                    <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md">ID: ${m.accountId || '-'}</span>
+                                    <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md">HP: ${m.whatsapp || '-'}</span>
                                     <h4 class="font-bold text-sm text-slate-900">${m.name} (${m.status}) • <i class="fa-solid fa-star text-yellow-400"></i> ${m.rating || 5.0}</h4>
                                     <p class="text-[10px] text-slate-500">Pemilik: ${m.ownerName || '-'} • Lokasi: ${m.lat}, ${m.lng}</p>
                                     <p class="text-[10px] text-slate-600">${m.address || ''}</p>
@@ -3546,11 +3565,11 @@
                     </div>
                     <div class="space-y-3">
                         ${db.drivers.map(d => {
-                            const matchedUser = db.users.find(u => u.name === d.name || u.phone === d.phone || u.accountId === d.accountId);
+                            const matchedUser = db.users.find(u => u.name === d.name || normalizePhone(u.phone) === normalizePhone(d.phone));
                             const uid = matchedUser ? matchedUser.id : 2;
                             return `
                                 <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
-                                    <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md">ID: ${d.accountId || '-'}</span>
+                                    <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md">HP: ${d.phone || '-'}</span>
                                     <h4 class="font-bold text-xs text-slate-900">${d.name} (${d.status}) • <i class="fa-solid fa-star text-yellow-400"></i> ${d.rating || 5.0}</h4>
                                     <p class="text-[10px] text-slate-500">${d.vehicle} • KTP: ${d.ktp || '-'} • ${d.location || 'Lengkong'}</p>
                                     <button onclick="adminAddBalance(${uid})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-[10px] font-bold cursor-pointer">Tambah Saldo</button>
@@ -3654,7 +3673,7 @@
                     userCurrentLatLng = [lat, lng];
                     const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
                     if (activeRole === 'driver' && currentUser) {
-                        const drv = db.drivers.find(x => x.name === currentUser.name || x.phone === currentUser.phone);
+                        const drv = db.drivers.find(x => x.name === currentUser.name || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
                         if (drv) {
                             drv.lat = lat;
                             drv.lng = lng;
@@ -3722,7 +3741,7 @@
                     userCurrentLatLng = [position.coords.latitude, position.coords.longitude];
                     const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
                     if (activeRole === 'driver' && currentUser) {
-                        const drv = db.drivers.find(x => x.name === currentUser.name || x.phone === currentUser.phone);
+                        const drv = db.drivers.find(x => x.name === currentUser.name || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
                         if (drv) {
                             drv.lat = userCurrentLatLng[0];
                             drv.lng = userCurrentLatLng[1];
