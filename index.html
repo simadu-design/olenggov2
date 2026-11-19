@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OLENG GO (Powered by SIMADU) - Lengkong Sukabumi</title>
+    <!-- PWA Manifest & Custom Icons -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0284c7">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="OLENG GO">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png">
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -28,6 +39,20 @@
     </style>
 </head>
 <body class="h-full flex flex-col items-center justify-center">
+
+    <!-- SPLASH SCREEN 2 DETIK -->
+    <div id="oleng-splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-sky-400 via-sky-600 to-sky-900 text-white transition-opacity duration-500">
+        <div class="flex flex-col items-center space-y-4 px-6 text-center">
+            <div class="w-28 h-28 rounded-3xl bg-white p-2 shadow-2xl border-4 border-yellow-400 flex items-center justify-center overflow-hidden">
+                <img src="./icon-512.png" onerror="this.src='./icon-192.png'" alt="Logo OLENG GO" class="w-full h-full object-cover rounded-2xl">
+            </div>
+            <div>
+                <h1 class="text-3xl font-black italic tracking-wider text-yellow-300 drop-shadow">OLENG GO</h1>
+                <p class="text-xs font-bold text-sky-100 mt-1">Powered by SIMADU • Lengkong, Sukabumi</p>
+            </div>
+            <div class="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mt-2"></div>
+        </div>
+    </div>
 
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
@@ -240,6 +265,19 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
+        // SPLASH SCREEN 2 DETIK
+        window.addEventListener('DOMContentLoaded', function () {
+            const splash = document.getElementById('oleng-splash-screen');
+            if (splash) {
+                setTimeout(() => {
+                    splash.classList.add('opacity-0');
+                    setTimeout(() => {
+                        splash.style.display = 'none';
+                    }, 500);
+                }, 2000);
+            }
+        });
+
         let currentUser = null; 
         let currentSubTab = 'home';
         let adminViewMode = null;
@@ -567,13 +605,13 @@
             } else if(activeRole === 'merchant') {
                 nav.innerHTML = `
                     <button onclick="renderDashboardContent('merchant-manage')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1">Kelola Toko</span></button>
-                    <button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-receipt text-base"></i><span class="text-[9px] mt-1">Pesanan</span></button>
+                    <button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-receipt text-base"></i><span class="text-[9px] mt-1">Riwayat</span></button>
                     <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-yellow-400"><i class="fa-solid fa-house text-lg"></i></div></button>
                     <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1">Profil</span></button>
                 `;
             } else if(activeRole === 'driver') {
                 nav.innerHTML = `
-                    <button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-list-check text-base"></i><span class="text-[9px] mt-1">Orderan</span></button>
+                    <button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-list-check text-base"></i><span class="text-[9px] mt-1">Riwayat</span></button>
                     <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-yellow-400"><i class="fa-solid fa-house text-lg"></i></div></button>
                     <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1">Profil</span></button>
                 `;
@@ -627,7 +665,6 @@
             return db.orders.filter(o => o.customer === currentUser.name);
         }
 
-        // ================= POP-UP ORDER MASUK (TERIMA, TOLAK & SELESAI + POTONG KOMISI ADMIN) =================
         function checkAndShowIncomingOrderPopup() {
             if (!currentUser) return;
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
@@ -732,7 +769,6 @@
             renderDashboardContent(currentSubTab);
         }
 
-        // ================= BERANDA UTAMA (PETA SEMUA MITRA OJEK & TOKO) =================
         function renderCustomerHome(container) {
             const myNotifs = getAccountNotifs();
             container.innerHTML = `
@@ -792,7 +828,6 @@
                         </button>
                     </div>
 
-                    <!-- Peta Wilayah Lengkong (Menampilkan Semua Mitra Ojek GPS Real-Time & Toko Terkunci) -->
                     <div class="bg-white p-4 rounded-3xl shadow-sm border border-sky-100 space-y-2.5">
                         <div class="flex justify-between items-center">
                             <h3 class="font-extrabold text-xs text-sky-900 uppercase tracking-wider flex items-center gap-1.5">
@@ -1192,7 +1227,6 @@
             checkAndShowIncomingOrderPopup();
         }
 
-        // ================= RIWAYAT PESANAN & NOTIFIKASI PER AKUN =================
         function renderOrderHistory(container) {
             const myOrders = getAccountOrders();
             const myNotifs = getAccountNotifs();
@@ -1247,7 +1281,6 @@
             `;
         }
 
-        // ================= KELOLA TOKO =================
         let tempStoreBanner = null;
         let tempStorePhoto = null;
         let tempNewFoodPhoto = null;
@@ -1431,7 +1464,6 @@
             renderMerchantManage(document.getElementById('main-content'));
         }
 
-        // ================= MENU PROFIL =================
         let tempUserProfilePhoto = null;
 
         function getCurrentWalletBalance() {
@@ -1530,7 +1562,6 @@
             renderProfile(document.getElementById('main-content'));
         }
 
-        // ================= PANEL ADMIN MASTER CONTROL + PENGATURAN TARIF & KOMISI =================
         function renderAdminDash(container) {
             const totalCommission = db.commissionLogs.reduce((sum, item) => sum + Number(item.amount || 0), 0);
             const p = db.pricing || defaultPricing;
@@ -1569,7 +1600,6 @@
                         </div>
                     </div>
 
-                    <!-- Panel Khusus Pengaturan Tarif & Komisi Aplikasi -->
                     <div class="bg-white p-4 rounded-3xl border-2 border-yellow-400 space-y-3 shadow-sm">
                         <h3 class="font-black text-xs text-sky-900 uppercase border-b pb-2"><i class="fa-solid fa-sliders text-yellow-500 mr-1"></i> Pengaturan Tarif & Komisi Aplikasi (%)</h3>
                         
@@ -1758,7 +1788,6 @@
             renderDashboardContent('home');
         }
 
-        // ================= PETA INTERAKTIF (TOKO TERKUNCI & OJEK GPS REAL-TIME) =================
         function createStoreMarkerIcon() {
             return L.divIcon({
                 className: 'oleng-store-pin',
@@ -1880,7 +1909,6 @@
             }
         }
 
-        // ================= NOTIFIKASI & LIVE CHAT =================
         function openNotificationModal() {
             const myNotifs = getAccountNotifs();
             playAlarmRingtone();
