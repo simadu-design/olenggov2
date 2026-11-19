@@ -44,8 +44,8 @@
             from { opacity: 0; transform: translateX(-18px); }
             to { opacity: 1; transform: translateX(0); }
         }
-        .auth-panel-slide-right { animation: panelSlideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
-        .auth-panel-slide-left { animation: panelSlideBack 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+        .auth-panel-slide-right { animation: panelSlideIn 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
+        .auth-panel-slide-left { animation: panelSlideBack 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
     </style>
 </head>
 <body class="h-full flex flex-col items-center justify-center">
@@ -1157,7 +1157,7 @@
                     name: f.name,
                     price: Number(f.price || 15000),
                     description: f.desc || '',
-                    stock: Number(f.stock || 20),
+                    stock: Number(f.stock ?? 20),
                     image_url: f.image || 'https://placehold.co/200x200/0284c7/ffffff?text=Menu'
                 }));
 
@@ -1569,7 +1569,7 @@
                         name: r.name,
                         price: Number(r.price || 15000),
                         desc: r.description || '',
-                        stock: Number(r.stock || 20),
+                        stock: Number(r.stock ?? 20),
                         image: r.image_url || 'https://placehold.co/200x200/0284c7/ffffff?text=Menu'
                     }));
                     db.foods = mergeByKey(db.foods, mappedFoods, f => String(f.id));
@@ -1633,10 +1633,10 @@
             db.mainBanner = customMainBanner || db.mainBanner || DEFAULT_MAIN_BANNER;
             localStorage.setItem('oleng_global_banner', db.mainBanner);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            syncAllToSupabase();
             if (successMessage) {
                 showToast(`Berhasil! ${successMessage}`, 'success');
             }
+            syncAllToSupabase();
         }
 
         function recordWalletMutation({ ownerName, role, type, label, amount, commission = 0, netAmount = 0 }) {
@@ -1665,8 +1665,10 @@
                 desc: desc
             });
             saveDB();
-            playAlarmRingtone();
-            notifyBackgroundOnce('notif-' + notifId + '-' + owner, title, desc);
+            if (currentUser && (owner === 'ALL' || String(owner).toLowerCase() === String(currentUser.name || '').toLowerCase())) {
+                playAlarmRingtone();
+                notifyBackgroundOnce('notif-' + notifId + '-' + owner, title, desc);
+            }
         }
 
         function playAlarmRingtone() {
@@ -1894,7 +1896,7 @@
             if (!foundUser && phone === '085624736602' && role === 'admin') {
                 foundUser = { ...DEFAULT_ADMIN_ACCOUNT };
                 db.users.push(foundUser);
-                await syncAllToSupabase();
+                syncAllToSupabase();
             }
 
             if (!foundUser) {
@@ -1942,8 +1944,6 @@
                 showToast('Kata sandi wajib diisi!', 'error');
                 return;
             }
-
-            await pullInitialFromSupabase(false);
 
             const duplicatePhone = db.users.find(u => normalizePhone(u.phone) === phone && u.role === role);
             if (duplicatePhone) {
@@ -2062,7 +2062,6 @@
 
             ensureRoleListsSyncedFromUsers();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            const syncResult = await syncAllToSupabase();
 
             switchAuthTab('login');
             document.getElementById('login-phone').value = phone;
@@ -2070,12 +2069,8 @@
             document.getElementById('login-role').value = role;
             document.getElementById('form-register').reset();
             isRegMerchantLocationLocked = false;
-
-            if (syncResult && syncResult.ok) {
-                showToast(`Pendaftaran berhasil! Nomor HP ${phone} & sandi tersimpan di Supabase, silakan masuk.`, 'success');
-            } else {
-                showToast(`Pendaftaran berhasil! Nomor HP ${phone} & sandi tersimpan, silakan masuk.`, 'success');
-            }
+            showToast(`Pendaftaran berhasil! Nomor HP ${phone} & sandi tersimpan, silakan masuk.`, 'success');
+            syncAllToSupabase();
         }
 
         function openForgotPasswordModal() {
@@ -2260,7 +2255,7 @@
             if (activeRole !== 'driver' && activeRole !== 'merchant' && activeRole !== 'admin') return;
 
             const candidate = db.orders.find(o => {
-                if (o.status === 'Selesai' || o.status === 'Ditolak') return false;
+                if (o.status === 'Selesai' || o.status === 'Ditolak' || o.status === 'Dibatalkan') return false;
                 if (!forceShowLatest && shownPopupOrderIds.includes(o.id)) return false;
                 return isOrderTargetedToCurrentUser(o);
             });
@@ -2302,7 +2297,7 @@
                     </div>
                 `;
             } else {
-                const isAccepted = order.status === 'Sedang Diproses' || order.status === 'Driver Menuju Lokasi';
+                const isAccepted = order.status === 'Sedang Diproses' || order.status === 'Driver Menuju Lokasi' || order.status === 'Sedang Diantar';
                 card.innerHTML = `
                     <div class="flex justify-between items-center border-b pb-2">
                         <span class="bg-yellow-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">DETAIL ORDER (${order.id})</span>
@@ -2334,6 +2329,15 @@
         function handleIncomingOrderAction(orderId, action) {
             const order = db.orders.find(o => o.id === orderId);
             if (!order) return;
+
+            if (action === 'cancel') {
+                order.status = 'Dibatalkan';
+                saveDB(`Order ${order.id} dibatalkan.`);
+                addAccountNotification(`Order ${order.id} Dibatalkan`, `Pesanan ${order.customer} (${order.items}) dibatalkan pemesan.`, order.driver);
+                addAccountNotification(`Order ${order.id} Dibatalkan`, `Pesanan ${order.customer} (${order.items}) dibatalkan pemesan.`, order.merchant);
+                renderDashboardContent(currentSubTab);
+                return;
+            }
 
             if (action === 'accept') {
                 order.status = 'Sedang Diproses';
@@ -2468,7 +2472,7 @@
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
 
-            saveDB(`Rating ${selectedRatingStar} bintang & ulasan tersinkron.`);
+            saveDB(`Rating ${selectedRatingStar} bintang & ulasan tersimpan.`);
             closeRatingModal();
             renderDashboardContent('history');
         }
@@ -2702,19 +2706,26 @@
                     <div class="space-y-3 pt-1">
                         <h3 class="font-extrabold text-sm text-slate-900">Daftar Menu Makanan & Minuman</h3>
                         <div class="space-y-3">
-                            ${merchantFoods.map(f => `
-                                <div class="bg-white p-3.5 rounded-3xl shadow-xs border border-slate-100 flex items-center space-x-3.5">
+                            ${merchantFoods.map(f => {
+                                const stokNow = Number(f.stock ?? 20);
+                                const isSoldOut = stokNow <= 0;
+                                return `
+                                <div class="bg-white p-3.5 rounded-3xl shadow-xs border border-slate-100 flex items-center space-x-3.5 ${isSoldOut ? 'opacity-65' : ''}">
                                     <img src="${f.image}" class="w-20 h-20 rounded-2xl object-cover shadow-xs bg-sky-600" alt="Menu">
                                     <div class="flex-1 space-y-1">
                                         <h4 class="font-bold text-xs text-slate-900">${f.name}</h4>
                                         <p class="text-[11px] text-slate-500 line-clamp-2">${f.desc}</p>
-                                        <div class="font-black text-sky-600 text-xs">Rp ${f.price.toLocaleString()}</div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-black text-sky-600 text-xs">Rp ${f.price.toLocaleString()}</span>
+                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded ${isSoldOut ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}">${isSoldOut ? 'Habis' : 'Stok: ' + stokNow}</span>
+                                        </div>
                                     </div>
-                                    <button onclick="addToCart(${f.id})" class="w-10 h-10 bg-yellow-400 hover:bg-yellow-500 text-slate-900 rounded-full font-black flex items-center justify-center shadow-sm transition cursor-pointer">
+                                    <button onclick="addToCart(${f.id})" ${isSoldOut ? 'disabled' : ''} class="w-10 h-10 ${isSoldOut ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-yellow-400 hover:bg-yellow-500 text-slate-900 cursor-pointer'} rounded-full font-black flex items-center justify-center shadow-sm transition">
                                         <i class="fa-solid fa-plus text-xs"></i>
                                     </button>
                                 </div>
-                            `).join('')}
+                            `;
+                            }).join('')}
                         </div>
                     </div>
 
@@ -2842,6 +2853,10 @@
 
         function addToCart(foodId) {
             const food = db.foods.find(f => f.id === foodId);
+            if (!food) return;
+            if (Number(food.stock ?? 20) <= 0) {
+                return showToast(`Menu "${food.name}" sedang habis!`, 'error');
+            }
             db.cart.push(food);
             saveDB(`${food.name} masuk keranjang.`);
             const counter = document.getElementById('cart-counter');
@@ -2924,6 +2939,14 @@
             const distKm = calculateDistance(merchant.lat, merchant.lng, destLatLng[0], destLatLng[1]);
             const ongkir = calculateShippingCost(distKm, 'food');
 
+            // Kurangi stok menu yang dipesan secara otomatis
+            db.cart.forEach(cartItem => {
+                const foodObj = (db.foods || []).find(f => Number(f.id) === Number(cartItem.id));
+                if (foodObj) {
+                    foodObj.stock = Math.max(0, Number(foodObj.stock ?? 20) - 1);
+                }
+            });
+
             const newOrder = {
                 id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
                 type: 'food',
@@ -2943,22 +2966,6 @@
             db.orders.unshift(newOrder);
             db.cart = [];
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            if (supabaseClient) {
-                await supabaseClient.from('orders').upsert({
-                    order_code: newOrder.id,
-                    order_type: newOrder.type,
-                    customer_name: newOrder.customer,
-                    merchant_name: newOrder.merchant,
-                    driver_name: newOrder.driver,
-                    items_summary: newOrder.items,
-                    pickup_label: newOrder.pickup,
-                    dest_label: newOrder.dest,
-                    total_amount: Number(newOrder.total || 0),
-                    status: newOrder.status,
-                    settled: false
-                }, { onConflict: 'order_code' });
-            }
-            await syncAllToSupabase();
 
             addAccountNotification(`Order Masuk ${newOrder.id}`, `Pesanan ${newOrder.items} dari ${currentUser.name} ke toko ${merchant.name}.`, merchant.name);
             addAccountNotification(`Order Antar ${newOrder.id}`, `Ambil pesanan di ${merchant.name} untuk ${currentUser.name}.`, newOrder.driver);
@@ -2966,6 +2973,7 @@
             closeCartModal();
             closeMerchantDetail();
             renderDashboardContent('history');
+            syncAllToSupabase();
         }
 
         async function submitOjekOrder() {
@@ -2993,26 +3001,11 @@
 
             db.orders.unshift(newOrder);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            if (supabaseClient) {
-                await supabaseClient.from('orders').upsert({
-                    order_code: newOrder.id,
-                    order_type: newOrder.type,
-                    customer_name: newOrder.customer,
-                    merchant_name: newOrder.merchant,
-                    driver_name: newOrder.driver,
-                    items_summary: newOrder.items,
-                    pickup_label: newOrder.pickup,
-                    dest_label: newOrder.dest,
-                    total_amount: Number(newOrder.total || 0),
-                    status: newOrder.status,
-                    settled: false
-                }, { onConflict: 'order_code' });
-            }
-            await syncAllToSupabase();
 
             addAccountNotification(`Order Ojek Masuk ${newOrder.id}`, `Jemput ${currentUser.name} (${from} → ${to}).`, newOrder.driver);
             showToast(`Berhasil! Order ojek ${newOrder.id} terkirim ke ojek ${newOrder.driver}.`, 'success');
             renderDashboardContent('history');
+            syncAllToSupabase();
         }
 
         function renderOrderHistory(container) {
@@ -3046,11 +3039,12 @@
                                 <div class="text-xs font-black text-sky-700 pt-2 border-t border-slate-100 flex justify-between items-center flex-wrap gap-2">
                                     <span>Rp ${o.total.toLocaleString()}</span>
                                     <div class="flex gap-1.5 flex-wrap">
+                                        ${activeRole === 'customer' && o.status === 'Menunggu Konfirmasi' ? `<button onclick="handleIncomingOrderAction('${o.id}', 'cancel')" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold cursor-pointer">Batalkan</button>` : ''}
                                         ${o.status === 'Selesai' && activeRole === 'customer' ? `<button onclick="openRatingModal('${o.id}')" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-lg text-[10px] font-black cursor-pointer"><i class="fa-solid fa-star"></i> ${o.rating ? 'Ubah Rating' : 'Beri Rating'}</button>` : ''}
                                         ${(activeRole === 'driver' || activeRole === 'merchant' || activeRole === 'admin') ? `
                                             <button onclick="openIncomingOrderModal('${o.id}', false)" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-lg text-[10px] font-black cursor-pointer">Pop-Up</button>
                                             <button onclick="openIncomingOrderModal('${o.id}', true)" class="px-2.5 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-black cursor-pointer">Cek</button>
-                                            ${o.status !== 'Selesai' && o.status !== 'Ditolak' ? `
+                                            ${o.status !== 'Selesai' && o.status !== 'Ditolak' && o.status !== 'Dibatalkan' ? `
                                                 <button onclick="handleIncomingOrderAction('${o.id}', 'accept')" class="px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Terima</button>
                                                 <button onclick="handleIncomingOrderAction('${o.id}', 'reject')" class="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Tolak</button>
                                                 <button onclick="handleIncomingOrderAction('${o.id}', 'complete')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Konfirmasi Order Selesai</button>
@@ -3495,25 +3489,9 @@
 
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-
-            if (supabaseClient) {
-                const autoId = String(currentUser.accountId || generateAutoAccountIdFromPhone(currentUser.phone, currentUser.role)).toUpperCase();
-                await supabaseClient.from('accounts').upsert({
-                    account_id: autoId,
-                    name: currentUser.name,
-                    phone: currentUser.phone,
-                    role: currentUser.role,
-                    status: currentUser.status || 'Aktif',
-                    address: currentUser.address || 'Kecamatan Lengkong, Sukabumi',
-                    password_hash: currentUser.password || '123',
-                    photo_url: currentUser.photo,
-                    balance: Number(currentUser.balance || 0)
-                }, { onConflict: 'account_id' });
-            }
-
-            await syncAllToSupabase();
             showToast('Berhasil! Informasi & foto profil tersimpan permanen.', 'success');
             renderProfile(document.getElementById('main-content'));
+            syncAllToSupabase();
         }
 
         function renderAdminDash(container) {
@@ -3688,12 +3666,9 @@
             if (!u) return;
             u.status = u.status === 'Aktif' ? 'Nonaktif' : 'Aktif';
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            if (supabaseClient && u.accountId) {
-                await supabaseClient.from('accounts').update({ status: u.status }).eq('account_id', String(u.accountId).toUpperCase());
-            }
-            await syncAllToSupabase();
             showToast(`Berhasil! Status ${u.name} (${u.phone}) diubah ke ${u.status}.`, 'success');
             renderAdminUsers(document.getElementById('main-content'));
+            syncAllToSupabase();
         }
 
         async function adminCreateUserByPhone() {
@@ -3733,9 +3708,9 @@
             ensureRoleListsSyncedFromUsers();
 
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            await syncAllToSupabase();
             showToast(`Berhasil! Akun HP "${phone}" tersimpan permanen online!`, 'success');
             renderAdminUsers(document.getElementById('main-content'));
+            syncAllToSupabase();
         }
 
         async function adminAddBalance(userId) {
@@ -3766,25 +3741,6 @@
                         m.balance = currentBal;
                         targetLabel = m.name;
                     }
-                    if (supabaseClient) {
-                        await supabaseClient.from('merchants').upsert({
-                            account_id: accId,
-                            name: m?.name || u.shopName || u.name,
-                            owner_name: m?.ownerName || u.ownerName || u.name,
-                            ktp: m?.ktp || u.ktp || '3202000000000000',
-                            subtitle: m?.subtitle || u.name,
-                            category: m?.category || 'Kuliner',
-                            status: m?.status || 'Buka',
-                            banner_url: m?.banner || getSyncedMainBanner(),
-                            image_url: m?.image || u.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=TOKO',
-                            lat: Number(m?.lat || -7.1240),
-                            lng: Number(m?.lng || 106.8460),
-                            address: m?.address || u.address || 'Kecamatan Lengkong, Sukabumi',
-                            operational_hours: m?.operationalHours || '08:00 - 21:00 WIB',
-                            whatsapp: cleanPhone || ADMIN_MAIN_WA,
-                            balance: Number(currentBal)
-                        }, { onConflict: 'account_id' });
-                    }
                 } else if(u.role === 'driver') {
                     let d = (db.drivers || []).find(x =>
                         (accId && String(x.accountId || '').toUpperCase() === accId) ||
@@ -3801,36 +3757,6 @@
                         d.balance = currentBal;
                         targetLabel = d.name;
                     }
-                    if (supabaseClient) {
-                        await supabaseClient.from('drivers').upsert({
-                            account_id: accId,
-                            name: d?.name || u.name,
-                            ktp: d?.ktp || u.ktp || '3202000000000000',
-                            plate: d?.plate || u.plate || 'F 0000 XX',
-                            bike_type: d?.bikeType || u.bikeType || 'Motor',
-                            vehicle: d?.vehicle || u.vehicle || 'Motor Mitra Lengkong',
-                            status: d?.status || 'Online',
-                            location: d?.location || u.address || 'Lengkong, Sukabumi',
-                            lat: Number(d?.lat || -7.1235),
-                            lng: Number(d?.lng || 106.8458),
-                            phone: cleanPhone || ADMIN_MAIN_WA,
-                            balance: Number(currentBal)
-                        }, { onConflict: 'account_id' });
-                    }
-                }
-
-                if (supabaseClient) {
-                    await supabaseClient.from('accounts').upsert({
-                        account_id: accId,
-                        name: u.name,
-                        phone: cleanPhone,
-                        role: u.role,
-                        status: u.status || 'Aktif',
-                        address: u.address || 'Kecamatan Lengkong, Sukabumi',
-                        password_hash: String(u.password || '123').trim(),
-                        photo_url: u.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=USR',
-                        balance: Number(currentBal)
-                    }, { onConflict: 'account_id' });
                 }
 
                 if (currentUser && ((currentUser.id === u.id) || (cleanPhone && normalizePhone(currentUser.phone) === cleanPhone && currentUser.role === u.role))) {
@@ -3848,9 +3774,9 @@
                     netAmount: nominal
                 });
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
-                await syncAllToSupabase();
                 showToast(`Berhasil! Saldo ${targetLabel} menjadi Rp ${currentBal.toLocaleString()} (+Rp ${nominal.toLocaleString()})!`, 'success');
                 renderAdminUsers(document.getElementById('main-content'));
+                syncAllToSupabase();
             }
         }
 
@@ -3859,11 +3785,8 @@
             if (!u) return;
             u.password = '123';
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            if (supabaseClient && u.accountId) {
-                await supabaseClient.from('accounts').update({ password_hash: '123' }).eq('account_id', String(u.accountId).toUpperCase());
-            }
-            await syncAllToSupabase();
             showToast(`Berhasil! Password ${u.name} direset ke '123' & tersimpan online!`, 'success');
+            syncAllToSupabase();
         }
 
         async function adminDeleteUser(userId) {
@@ -3880,14 +3803,14 @@
                 db.drivers = (db.drivers || []).filter(d => String(d.accountId || '').toUpperCase() !== codeUpper && normalizePhone(d.phone) !== targetPhone);
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-                if (supabaseClient && codeUpper) {
-                    await supabaseClient.from('accounts').delete().eq('account_id', codeUpper);
-                    await supabaseClient.from('merchants').delete().eq('account_id', codeUpper);
-                    await supabaseClient.from('drivers').delete().eq('account_id', codeUpper);
-                }
-
                 showToast(`Berhasil! Akun ${target.name} (${target.phone}) dihapus permanen secara online.`, 'success');
                 renderAdminUsers(document.getElementById('main-content'));
+
+                if (supabaseClient && codeUpper) {
+                    supabaseClient.from('accounts').delete().eq('account_id', codeUpper).then(() => {});
+                    supabaseClient.from('merchants').delete().eq('account_id', codeUpper).then(() => {});
+                    supabaseClient.from('drivers').delete().eq('account_id', codeUpper).then(() => {});
+                }
             }
         }
 
@@ -3983,21 +3906,10 @@
             hasPendingMediaSelection = false;
             localStorage.setItem('oleng_global_banner', finalBanner);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            if (supabaseClient) {
-                await supabaseClient.from('app_config').upsert({
-                    id: 1,
-                    main_banner: finalBanner,
-                    min_fare: Number(db.pricing?.minFare || 8000),
-                    ojek_per_km: Number(db.pricing?.ojekPerKm || 2500),
-                    food_per_km: Number(db.pricing?.foodPerKm || 2000),
-                    commission_percent: Number(db.pricing?.commissionPercent || 10),
-                    admin_whatsapp: ADMIN_MAIN_WA
-                }, { onConflict: 'id' });
-            }
-            await syncAllToSupabase();
             showToast('Berhasil! Banner utama disimpan permanen untuk semua user!', 'success');
             addAccountNotification('Banner Utama Permanen Diperbarui', 'Admin memperbarui banner utama OLENG GO.', 'ALL');
             renderDashboardContent('home');
+            syncAllToSupabase();
         }
 
         function createStoreMarkerIcon(storeName = '') {
@@ -4140,10 +4052,10 @@
                 document.getElementById('view-chat').classList.remove('hidden');
                 const chatAlarmState = document.getElementById('chat-alarm-state');
                 if (chatAlarmState) chatAlarmState.textContent = alarmEnabled ? 'ON' : 'OFF';
-                await pullInitialFromSupabase(false);
                 markAllChatsAsRead();
                 renderChatContacts();
                 renderPersonalChatMessages();
+                pullInitialFromSupabase(false);
             }
         }
         function startPersonalChat(target) { activeChatTarget = target; switchView('chat'); }
@@ -4228,17 +4140,8 @@
             renderChatContacts();
             renderPersonalChatMessages();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            if (supabaseClient) {
-                await supabaseClient.from('chats').upsert({
-                    id: Number(newMsg.id),
-                    sender_name: newMsg.from,
-                    receiver_name: newMsg.to,
-                    message_text: newMsg.text,
-                    sent_time: newMsg.time
-                }, { onConflict: 'id' });
-            }
-            await syncAllToSupabase();
             showToast('Berhasil! Pesan terkirim & tersinkron.', 'success');
+            syncAllToSupabase();
         }
 
         function showToast(msg, type='success') {
@@ -4248,7 +4151,7 @@
             toast.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold flex items-center gap-2 ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-sky-600'}`;
             toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-info'}"></i> ${msg}`;
             container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3500);
+            setTimeout(() => toast.remove(), 2600);
         }
     </script>
 </body>
