@@ -76,8 +76,8 @@
                     <div class="w-14 h-14 bg-yellow-400 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-2xl animate-pulse">🐝</div>
                 </div>
 
-                <div class="flex justify-center">
-                    <button type="button" onclick="updateSupabaseBadgeUI(true)" id="supabase-status-badge" class="px-3 py-1 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 shadow cursor-pointer">
+                <div class="flex justify-center gap-2">
+                    <button type="button" onclick="manualForceSync(true)" id="supabase-status-badge" class="px-3 py-1 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 shadow cursor-pointer">
                         Supabase: Mengecek...
                     </button>
                 </div>
@@ -397,6 +397,7 @@
             ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
             : null;
 
+        let isSyncingNow = false;
         let lastSupabaseStatus = {
             ok: false,
             label: 'Supabase: Mengecek...',
@@ -435,9 +436,9 @@
                 lastSupabaseStatus = {
                     ok: true,
                     label: 'Supabase: Terhubung',
-                    detail: `Berhasil terhubung ke ${SUPABASE_PROJECT_ID}`
+                    detail: `Tersinkron ke ${SUPABASE_PROJECT_ID}`
                 };
-                if (showNotify) showToast('Berhasil! Koneksi ke Supabase aktif.', 'success');
+                if (showNotify) showToast('Berhasil! Semua data tersinkron dengan Supabase.', 'success');
                 return lastSupabaseStatus;
             } catch (err) {
                 lastSupabaseStatus = {
@@ -474,6 +475,13 @@
             applySupabaseBadgeStyle(document.getElementById('supabase-status-badge'), statusObj);
             applySupabaseBadgeStyle(document.getElementById('home-supabase-badge'), statusObj);
             return statusObj;
+        }
+
+        async function manualForceSync(showNotify = true) {
+            await updateSupabaseBadgeUI(false);
+            await pullInitialFromSupabase(true);
+            await syncAllToSupabase();
+            await updateSupabaseBadgeUI(showNotify);
         }
 
         let currentUser = null; 
@@ -624,18 +632,55 @@
             return synced;
         }
 
+        function mergeByKey(localArr, remoteArr, keyFn) {
+            const map = new Map();
+            (localArr || []).forEach(item => {
+                const k = keyFn(item);
+                if (k) map.set(k, item);
+            });
+            (remoteArr || []).forEach(item => {
+                const k = keyFn(item);
+                if (k) map.set(k, item);
+            });
+            return Array.from(map.values());
+        }
+
         async function syncAllToSupabase() {
-            if (!supabaseClient) return;
+            if (!supabaseClient || isSyncingNow) return false;
+            isSyncingNow = true;
             try {
-                await supabaseClient.from('app_config').upsert({
+                const extraState = {
+                    foods: db.foods || [],
+                    notifications: db.notifications || [],
+                    chats: db.chats || [],
+                    walletMutations: db.walletMutations || [],
+                    commissionLogs: db.commissionLogs || [],
+                    reviews: db.reviews || [],
+                    updatedAt: Date.now()
+                };
+
+                const cfgRes = await supabaseClient.from('app_config').upsert({
                     id: 1,
                     main_banner: db.mainBanner || DEFAULT_MAIN_BANNER,
                     min_fare: Number(db.pricing?.minFare || 8000),
                     ojek_per_km: Number(db.pricing?.ojekPerKm || 2500),
                     food_per_km: Number(db.pricing?.foodPerKm || 2000),
                     commission_percent: Number(db.pricing?.commissionPercent || 10),
-                    admin_whatsapp: '6285624736602'
+                    admin_whatsapp: '6285624736602',
+                    state_json: extraState
                 }, { onConflict: 'id' });
+
+                if (cfgRes.error && String(cfgRes.error.message || '').includes('state_json')) {
+                    await supabaseClient.from('app_config').upsert({
+                        id: 1,
+                        main_banner: db.mainBanner || DEFAULT_MAIN_BANNER,
+                        min_fare: Number(db.pricing?.minFare || 8000),
+                        ojek_per_km: Number(db.pricing?.ojekPerKm || 2500),
+                        food_per_km: Number(db.pricing?.foodPerKm || 2000),
+                        commission_percent: Number(db.pricing?.commissionPercent || 10),
+                        admin_whatsapp: '6285624736602'
+                    }, { onConflict: 'id' });
+                }
 
                 const accountRows = (db.users || []).map(u => ({
                     account_id: String(u.accountId || '').toUpperCase(),
@@ -658,8 +703,8 @@
                     await supabaseClient.from('accounts').upsert(accountRows, { onConflict: 'account_id' });
                 }
 
-                const merchantRows = (db.merchants || []).map(m => ({
-                    account_id: String(m.accountId || '').toUpperCase() || 'MRCH01',
+                const merchantRows = (db.merchants || []).map((m, i) => ({
+                    account_id: String(m.accountId || ('MRCH' + (i + 1))).toUpperCase(),
                     name: m.name,
                     owner_name: m.ownerName || m.name,
                     ktp: m.ktp || '3202000000000000',
@@ -682,8 +727,8 @@
                     await supabaseClient.from('merchants').upsert(merchantRows, { onConflict: 'account_id' });
                 }
 
-                const driverRows = (db.drivers || []).map(d => ({
-                    account_id: String(d.accountId || '').toUpperCase() || 'DRIV01',
+                const driverRows = (db.drivers || []).map((d, i) => ({
+                    account_id: String(d.accountId || ('DRIV' + (i + 1))).toUpperCase(),
                     name: d.name,
                     ktp: d.ktp || '3202000000000000',
                     plate: d.plate || 'F 0000 XX',
@@ -724,20 +769,28 @@
                 if (orderRows.length > 0) {
                     await supabaseClient.from('orders').upsert(orderRows, { onConflict: 'order_code' });
                 }
+                return true;
             } catch (err) {
                 console.warn('Supabase sync info:', err?.message || err);
+                return false;
+            } finally {
+                isSyncingNow = false;
             }
         }
 
-        async function pullInitialFromSupabase() {
+        async function pullInitialFromSupabase(forceRefreshUI = false) {
             if (!supabaseClient) return;
             try {
+                let hasChanges = false;
+
+                // 1. Tarik app_config & state_json
                 const { data: cfg } = await supabaseClient.from('app_config').select('*').eq('id', 1).maybeSingle();
                 if (cfg) {
-                    if (cfg.main_banner) {
+                    if (cfg.main_banner && cfg.main_banner !== db.mainBanner) {
                         customMainBanner = cfg.main_banner;
                         db.mainBanner = cfg.main_banner;
                         localStorage.setItem('oleng_global_banner', cfg.main_banner);
+                        hasChanges = true;
                     }
                     db.pricing = {
                         minFare: Number(cfg.min_fare ?? db.pricing.minFare ?? 8000),
@@ -745,12 +798,34 @@
                         foodPerKm: Number(cfg.food_per_km ?? db.pricing.foodPerKm ?? 2000),
                         commissionPercent: Number(cfg.commission_percent ?? db.pricing.commissionPercent ?? 10)
                     };
+                    if (cfg.state_json && typeof cfg.state_json === 'object') {
+                        const st = cfg.state_json;
+                        if (Array.isArray(st.foods) && st.foods.length > 0) {
+                            db.foods = mergeByKey(db.foods, st.foods, f => String(f.id));
+                        }
+                        if (Array.isArray(st.notifications) && st.notifications.length > 0) {
+                            db.notifications = mergeByKey(db.notifications, st.notifications, n => String(n.id));
+                        }
+                        if (Array.isArray(st.chats) && st.chats.length > 0) {
+                            db.chats = mergeByKey(db.chats, st.chats, c => String(c.id));
+                        }
+                        if (Array.isArray(st.walletMutations) && st.walletMutations.length > 0) {
+                            db.walletMutations = mergeByKey(db.walletMutations, st.walletMutations, m => String(m.id));
+                        }
+                        if (Array.isArray(st.commissionLogs) && st.commissionLogs.length > 0) {
+                            db.commissionLogs = mergeByKey(db.commissionLogs, st.commissionLogs, k => String(k.id));
+                        }
+                        if (Array.isArray(st.reviews) && st.reviews.length > 0) {
+                            db.reviews = mergeByKey(db.reviews, st.reviews, r => String(r.id));
+                        }
+                    }
                 }
 
+                // 2. Tarik semua akun (accounts)
                 const { data: accRows } = await supabaseClient.from('accounts').select('*');
                 if (Array.isArray(accRows) && accRows.length > 0) {
                     const localUsersBackup = [...(db.users || [])];
-                    const mappedUsers = accRows.map((r, idx) => {
+                    const mappedRemoteUsers = accRows.map((r, idx) => {
                         const accUpper = String(r.account_id || '').toUpperCase();
                         const localMatch = localUsersBackup.find(lu => String(lu.accountId || '').toUpperCase() === accUpper);
                         const resolvedPass = (r.password_hash && String(r.password_hash).trim())
@@ -775,15 +850,15 @@
                         };
                     });
 
-                    // Pastikan akun Admin ADM01 selalu tersedia dan memiliki password valid
-                    if (!mappedUsers.some(u => u.accountId === 'ADM01')) {
-                        const localAdm = localUsersBackup.find(lu => String(lu.accountId || '').toUpperCase() === 'ADM01');
-                        mappedUsers.push(localAdm || { ...DEFAULT_ADMIN_ACCOUNT });
+                    const mergedUsers = mergeByKey(localUsersBackup, mappedRemoteUsers, u => String(u.accountId || '').toUpperCase());
+                    if (!mergedUsers.some(u => String(u.accountId || '').toUpperCase() === 'ADM01')) {
+                        mergedUsers.push({ ...DEFAULT_ADMIN_ACCOUNT });
                     }
+                    if (mergedUsers.length !== db.users.length) hasChanges = true;
+                    db.users = mergedUsers;
 
-                    db.users = mappedUsers;
                     if (currentUser) {
-                        const refreshedSelf = mappedUsers.find(u => String(u.accountId).toUpperCase() === String(currentUser.accountId || '').toUpperCase());
+                        const refreshedSelf = mergedUsers.find(u => String(u.accountId).toUpperCase() === String(currentUser.accountId || '').toUpperCase());
                         if (refreshedSelf) {
                             currentUser = refreshedSelf;
                             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
@@ -791,8 +866,84 @@
                     }
                 }
 
+                // 3. Tarik semua toko (merchants)
+                const { data: merchantRows } = await supabaseClient.from('merchants').select('*');
+                if (Array.isArray(merchantRows) && merchantRows.length > 0) {
+                    const mappedMerchants = merchantRows.map((r, idx) => ({
+                        id: r.id || (idx + 1),
+                        accountId: String(r.account_id || '').toUpperCase(),
+                        name: r.name,
+                        ownerName: r.owner_name || r.name,
+                        ktp: r.ktp || '',
+                        subtitle: r.subtitle || r.name,
+                        category: r.category || 'Kuliner',
+                        status: r.status || 'Buka',
+                        banner: r.banner_url || DEFAULT_MAIN_BANNER,
+                        image: r.image_url || 'https://placehold.co/150x150/0284c7/ffffff?text=TOKO',
+                        rating: Number(r.rating || 5.0),
+                        ratingCount: Number(r.rating_count || 0),
+                        lat: Number(r.lat || -7.1240),
+                        lng: Number(r.lng || 106.8460),
+                        address: r.address || 'Kecamatan Lengkong, Sukabumi',
+                        operationalHours: r.operational_hours || '08:00 - 21:00 WIB',
+                        whatsapp: r.whatsapp || '6285624736602',
+                        balance: Number(r.balance || 0)
+                    }));
+                    db.merchants = mergeByKey(db.merchants, mappedMerchants, m => String(m.accountId || m.name).toUpperCase());
+                    hasChanges = true;
+                }
+
+                // 4. Tarik semua ojek (drivers)
+                const { data: driverRows } = await supabaseClient.from('drivers').select('*');
+                if (Array.isArray(driverRows) && driverRows.length > 0) {
+                    const mappedDrivers = driverRows.map((r, idx) => ({
+                        id: r.id || (idx + 1),
+                        accountId: String(r.account_id || '').toUpperCase(),
+                        name: r.name,
+                        ktp: r.ktp || '',
+                        plate: r.plate || '',
+                        bikeType: r.bike_type || '',
+                        vehicle: r.vehicle || 'Motor Mitra Lengkong',
+                        status: r.status || 'Online',
+                        location: r.location || 'Lengkong, Sukabumi',
+                        lat: Number(r.lat || -7.1235),
+                        lng: Number(r.lng || 106.8458),
+                        phone: r.phone || '6285624736602',
+                        rating: Number(r.rating || 5.0),
+                        ratingCount: Number(r.rating_count || 0),
+                        balance: Number(r.balance || 0)
+                    }));
+                    db.drivers = mergeByKey(db.drivers, mappedDrivers, d => String(d.accountId || d.name).toUpperCase());
+                    hasChanges = true;
+                }
+
+                // 5. Tarik semua pesanan (orders)
+                const { data: orderRows } = await supabaseClient.from('orders').select('*').order('id', { ascending: false });
+                if (Array.isArray(orderRows) && orderRows.length > 0) {
+                    const mappedOrders = orderRows.map(r => ({
+                        id: r.order_code,
+                        type: r.order_type || 'ojek',
+                        customer: r.customer_name,
+                        merchant: r.merchant_name,
+                        driver: r.driver_name,
+                        items: r.items_summary,
+                        pickup: r.pickup_label || 'Lengkong',
+                        dest: r.dest_label || 'Lengkong',
+                        total: Number(r.total_amount || 0),
+                        commissionFee: Number(r.commission_amount || 0),
+                        netEarnings: Number(r.net_amount || 0),
+                        status: r.status || 'Menunggu Driver',
+                        settled: Boolean(r.settled),
+                        rating: r.rating ? Number(r.rating) : null,
+                        reviewText: r.review_text || ''
+                    }));
+                    db.orders = mergeByKey(db.orders, mappedOrders, o => String(o.id).toUpperCase());
+                    hasChanges = true;
+                }
+
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
-                if (currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
+
+                if ((hasChanges || forceRefreshUI) && currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
                     renderDashboardContent(currentSubTab);
                 }
             } catch (err) {
@@ -890,7 +1041,7 @@
             }).sort((a, b) => a.distance - b.distance);
         }
 
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", async function() {
             getSyncedMainBanner();
             toggleRegisterRoleFields();
             updateSupabaseBadgeUI(false);
@@ -905,7 +1056,13 @@
                     localStorage.removeItem('oleng_user_session');
                 }
             }
-            pullInitialFromSupabase();
+            await pullInitialFromSupabase(true);
+            await syncAllToSupabase();
+
+            // Auto-sync setiap 10 detik agar data antar-HP tetap sinkron
+            setInterval(() => {
+                pullInitialFromSupabase(false);
+            }, 10000);
         });
 
         function switchAuthTab(tab) {
@@ -1000,7 +1157,7 @@
             }
         }
 
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
             const rawId = document.getElementById('login-account-id').value.trim().toUpperCase();
             const password = document.getElementById('login-password').value.trim();
@@ -1016,22 +1173,25 @@
                 return;
             }
 
+            // Tarik dulu data terbaru dari Supabase agar akun yang didaftarkan di HP lain terbaca
+            await pullInitialFromSupabase(false);
+
             let foundUser = db.users.find(u => String(u.accountId || '').toUpperCase() === rawId && u.role === role);
             if (!foundUser && rawId === 'ADM01' && role === 'admin') {
                 foundUser = { ...DEFAULT_ADMIN_ACCOUNT };
                 db.users.push(foundUser);
-                saveDB();
+                await syncAllToSupabase();
             }
 
             if (!foundUser) {
-                showToast(`ID "${rawId}" untuk role ${role.toUpperCase()} tidak ditemukan! Silakan daftar terlebih dahulu atau gunakan ID valid.`, 'error');
+                showToast(`ID "${rawId}" untuk role ${role.toUpperCase()} tidak ditemukan! Silakan daftar terlebih dahulu atau ketuk badge Supabase untuk sinkron.`, 'error');
                 return;
             }
 
             const storedPass = String(foundUser.password || '123').trim();
             const isAdminDefaultMatch = (rawId === 'ADM01' && role === 'admin' && password === '123');
             if (storedPass !== password && !isAdminDefaultMatch) {
-                showToast('Kata sandi salah! Pastikan sandi tidak ada spasi tambahan atau gunakan sandi default 123.', 'error');
+                showToast('Kata sandi salah! Pastikan sandi tidak ada spasi tambahan.', 'error');
                 return;
             }
 
@@ -1045,7 +1205,7 @@
             enterDashboard(true);
         }
 
-        function handleRegister(e) {
+        async function handleRegister(e) {
             e.preventDefault();
             const role = document.getElementById('reg-role').value;
             const accountId = document.getElementById('reg-account-id').value.trim().toUpperCase();
@@ -1057,6 +1217,8 @@
                 showToast('ID akun wajib berisi huruf dan angka (3-20 karakter)!', 'error');
                 return;
             }
+
+            await pullInitialFromSupabase(false);
 
             const duplicateId = db.users.find(u => String(u.accountId || '').toUpperCase() === accountId);
             if (duplicateId) {
@@ -1169,10 +1331,11 @@
             }
 
             currentUser = newUser;
-            saveDB();
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            addAccountNotification('Pendaftaran Tersimpan', `Akun ID ${accountId} (${name}) berhasil didaftarkan.`, name);
-            showToast(`Berhasil! Akun terdaftar dengan ID Login: ${accountId}.`, 'success');
+            await syncAllToSupabase();
+            addAccountNotification('Pendaftaran Tersimpan', `Akun ID ${accountId} (${name}) berhasil didaftarkan & tersinkron.`, name);
+            showToast(`Berhasil! Akun ID ${accountId} terdaftar & tersinkron ke semua perangkat.`, 'success');
             enterDashboard(false);
         }
 
@@ -1398,11 +1561,11 @@
 
             if (action === 'accept') {
                 order.status = 'Sedang Diproses';
-                saveDB(`Order ${order.id} diterima & disimpan.`);
+                saveDB(`Order ${order.id} diterima & tersinkron.`);
                 addAccountNotification(`Order ${order.id} Diterima`, `Pesanan ${order.items} telah diterima & diproses.`, order.customer);
             } else if (action === 'reject') {
                 order.status = 'Ditolak';
-                saveDB(`Status tolak order ${order.id} disimpan.`);
+                saveDB(`Status tolak order ${order.id} tersinkron.`);
                 addAccountNotification(`Order ${order.id} Ditolak`, `Maaf, order ${order.items} ditolak. Silakan pilih mitra lain.`, order.customer);
             } else if (action === 'complete') {
                 order.status = 'Selesai';
@@ -1458,10 +1621,10 @@
                     order.settled = true;
                     order.commissionFee = commissionFee;
                     order.netEarnings = netEarnings;
-                    saveDB(`Order ${order.id} selesai & tersimpan! Bersih Rp ${netEarnings.toLocaleString()}.`);
+                    saveDB(`Order ${order.id} selesai & tersinkron! Bersih Rp ${netEarnings.toLocaleString()}.`);
                     addAccountNotification(`Order ${order.id} Selesai`, `Order selesai. Pendapatan bersih Rp ${netEarnings.toLocaleString()}, komisi ${pct}% (Rp ${commissionFee.toLocaleString()}). Silakan beri rating!`, order.customer);
                 } else {
-                    saveDB(`Status order ${order.id} disimpan.`);
+                    saveDB(`Status order ${order.id} tersinkron.`);
                 }
             }
 
@@ -1527,7 +1690,7 @@
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
 
-            saveDB(`Rating ${selectedRatingStar} bintang & ulasan tersimpan.`);
+            saveDB(`Rating ${selectedRatingStar} bintang & ulasan tersinkron.`);
             closeRatingModal();
             renderDashboardContent('history');
         }
@@ -1567,7 +1730,7 @@
                                 Alarm: ${alarmEnabled ? 'ON' : 'OFF'}
                             </button>
                         </div>
-                        <button type="button" onclick="updateSupabaseBadgeUI(true)" id="home-supabase-badge" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 border border-slate-300 shadow cursor-pointer">
+                        <button type="button" onclick="manualForceSync(true)" id="home-supabase-badge" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 border border-slate-300 shadow cursor-pointer">
                             ${lastSupabaseStatus.label}
                         </button>
                     </div>
@@ -1973,7 +2136,7 @@
 
             db.orders.unshift(newOrder);
             db.cart = [];
-            saveDB(`Pesanan ${newOrder.id} berhasil dikirim & disimpan!`);
+            saveDB(`Pesanan ${newOrder.id} berhasil dikirim & tersinkron!`);
             closeCartModal();
             closeMerchantDetail();
             addAccountNotification(`Order Baru ${newOrder.id}`, `Pesanan ${newOrder.items} ke ${merchant.name} dengan driver ${driver.name}.`, currentUser.name);
@@ -2005,7 +2168,7 @@
             };
 
             db.orders.unshift(newOrder);
-            saveDB(`Order ojek ${newOrder.id} berhasil dikirim & disimpan!`);
+            saveDB(`Order ojek ${newOrder.id} berhasil dikirim & tersinkron!`);
             addAccountNotification(`Order Ojek ${newOrder.id}`, `Rute ${from} → ${to} bersama driver ${driver.name}.`, currentUser.name);
             renderDashboardContent('history');
             checkAndShowIncomingOrderPopup();
@@ -2183,7 +2346,7 @@
             const m = db.merchants.find(x => x.id === merchantId);
             if(m) {
                 m.status = m.status === 'Buka' ? 'Tutup' : 'Buka';
-                saveDB(`Status toko diubah menjadi ${m.status} & tersimpan!`);
+                saveDB(`Status toko diubah menjadi ${m.status} & tersinkron!`);
                 addAccountNotification('Status Toko Diperbarui', `${m.name} sekarang berstatus ${m.status}.`, currentUser.name);
                 renderMerchantManage(document.getElementById('main-content'));
             }
@@ -2215,7 +2378,7 @@
                 m.operationalHours = document.getElementById('edit-m-hours').value;
                 if(tempStorePhoto) m.image = tempStorePhoto;
                 if(tempStoreBanner) m.banner = tempStoreBanner;
-                saveDB('Profil & foto toko berhasil disimpan!');
+                saveDB('Profil & foto toko berhasil disimpan & tersinkron!');
                 addAccountNotification('Pengaturan Toko Disimpan', `Perubahan data & galeri ${m.name} tersimpan.`, currentUser.name);
                 renderMerchantManage(document.getElementById('main-content'));
             }
@@ -2260,14 +2423,15 @@
                 stock: 20,
                 image: tempNewFoodPhoto || ('https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name))
             });
-            saveDB(`Menu baru "${name}" berhasil disimpan!`);
+            document.getElementById('modal-new-food')?.remove();
+            saveDB(`Menu baru "${name}" berhasil disimpan & tersinkron!`);
             addAccountNotification('Menu Baru Ditambahkan', `Menu ${name} (Rp ${price.toLocaleString()}) ditambahkan.`, currentUser.name);
             renderMerchantManage(document.getElementById('main-content'));
         }
 
         function deleteMenuFood(foodId) {
             db.foods = db.foods.filter(f => f.id !== foodId);
-            saveDB('Menu berhasil dihapus & perubahan tersimpan!');
+            saveDB('Menu berhasil dihapus & perubahan tersinkron!');
             renderMerchantManage(document.getElementById('main-content'));
         }
 
@@ -2380,7 +2544,7 @@
             if(userIdx !== -1) db.users[userIdx] = { ...currentUser };
 
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            saveDB('Informasi akun berhasil disimpan!');
+            saveDB('Informasi akun berhasil disimpan & tersinkron!');
             addAccountNotification('Profil Disimpan', `Informasi akun ${currentUser.name} (ID: ${currentUser.accountId}) berhasil disimpan.`, currentUser.name);
             renderProfile(document.getElementById('main-content'));
         }
@@ -2391,7 +2555,12 @@
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
-                    <h2 class="font-extrabold text-base text-sky-900">Panel Admin Master Control</h2>
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-extrabold text-base text-sky-900">Panel Admin Master Control</h2>
+                        <button onclick="manualForceSync(true)" class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black cursor-pointer shadow">
+                            <i class="fa-solid fa-rotate mr-1"></i> Sinkron Sekarang
+                        </button>
+                    </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div onclick="renderDashboardContent('admin-users')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-sky-500 transition shadow-xs">
                             <span class="text-[10px] text-slate-500 uppercase font-extrabold">DAFTAR ID & USER</span>
@@ -2460,7 +2629,7 @@
                 foodPerKm: Math.max(500, parseInt(document.getElementById('cfg-food-km').value) || 2000),
                 commissionPercent: Math.min(100, Math.max(0, parseInt(document.getElementById('cfg-commission').value) || 0))
             };
-            saveDB('Pengaturan tarif & komisi berhasil disimpan!');
+            saveDB('Pengaturan tarif & komisi berhasil disimpan & tersinkron!');
             addAccountNotification('Tarif & Komisi Diperbarui', `Min order Rp ${db.pricing.minFare.toLocaleString()}, Ojek/km Rp ${db.pricing.ojekPerKm.toLocaleString()}, Food/km Rp ${db.pricing.foodPerKm.toLocaleString()}, Komisi ${db.pricing.commissionPercent}%.`, 'ALL');
             renderAdminDash(document.getElementById('main-content'));
         }
@@ -2470,7 +2639,10 @@
                 <div class="p-4 space-y-4 pb-24">
                     <div class="flex justify-between items-center">
                         <h2 class="font-extrabold text-base text-sky-900">Daftar ID & Manajemen User</h2>
-                        <button onclick="renderDashboardContent('admin-dash')" class="text-xs text-sky-600 font-bold"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                        <div class="flex gap-2 items-center">
+                            <button onclick="manualForceSync(true)" class="px-2.5 py-1 bg-emerald-600 text-white rounded-xl text-[10px] font-black cursor-pointer">Sinkron</button>
+                            <button onclick="renderDashboardContent('admin-dash')" class="text-xs text-sky-600 font-bold"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                        </div>
                     </div>
 
                     <div class="bg-white p-4 rounded-3xl border-2 border-yellow-400 space-y-2.5 shadow-xs">
@@ -2590,7 +2762,7 @@
                 });
             }
 
-            saveDB(`ID "${code}" berhasil ditambahkan & disimpan!`);
+            saveDB(`ID "${code}" berhasil ditambahkan & tersinkron!`);
             renderAdminUsers(document.getElementById('main-content'));
         }
 
@@ -2617,7 +2789,7 @@
                     commission: 0,
                     netAmount: nominal
                 });
-                saveDB(`Saldo ${targetLabel} ditambah Rp ${nominal.toLocaleString()} & tersimpan!`);
+                saveDB(`Saldo ${targetLabel} ditambah Rp ${nominal.toLocaleString()} & tersinkron!`);
                 addAccountNotification('Saldo Ditambah Admin', `Saldo ${targetLabel} ditambah Rp ${nominal.toLocaleString()}.`, targetLabel);
                 renderAdminUsers(document.getElementById('main-content'));
             }
@@ -2626,14 +2798,14 @@
         function adminResetPassword(userId) {
             const u = db.users.find(x => x.id === userId);
             u.password = '123';
-            saveDB(`Password ${u.name} direset menjadi '123' & tersimpan!`);
+            saveDB(`Password ${u.name} direset menjadi '123' & tersinkron!`);
             addAccountNotification('Reset Password Admin', `Password ${u.name} (ID: ${u.accountId || '-'}) direset menjadi '123'.`, u.name);
         }
 
         function adminDeleteUser(userId) {
             if(confirm('Yakin ingin menghapus akun user ini secara permanen?')) {
                 db.users = db.users.filter(x => x.id !== userId);
-                saveDB('Akun user berhasil dihapus & perubahan tersimpan!');
+                saveDB('Akun user berhasil dihapus & tersinkron!');
                 renderAdminUsers(document.getElementById('main-content'));
             }
         }
@@ -2878,7 +3050,7 @@
             if(!input.value.trim()) return;
             const timeNow = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             db.chats.push({ id: Date.now(), from: currentUser.name, to: activeChatTarget, text: input.value, time: timeNow });
-            saveDB('Pesan berhasil dikirim & disimpan!');
+            saveDB('Pesan berhasil dikirim & tersinkron!');
             input.value = '';
             renderPersonalChatMessages();
         }
