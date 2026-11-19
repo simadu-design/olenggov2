@@ -77,7 +77,7 @@
                 </div>
 
                 <div class="flex justify-center">
-                    <button type="button" onclick="updateSupabaseBadgeUI()" id="supabase-status-badge" class="px-3 py-1 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 shadow cursor-pointer">
+                    <button type="button" onclick="updateSupabaseBadgeUI(true)" id="supabase-status-badge" class="px-3 py-1 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 shadow cursor-pointer">
                         Supabase: Mengecek...
                     </button>
                 </div>
@@ -252,7 +252,7 @@
                     <textarea id="rating-comment-input" rows="2" placeholder="Bagaimana pelayanan driver atau rasa makanan?" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold"></textarea>
                 </div>
                 <button onclick="submitOrderRating()" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md border-b-2 border-yellow-400">
-                    Kirim Rating & Ulasan
+                    Simpan Rating & Ulasan
                 </button>
             </div>
         </div>
@@ -390,8 +390,9 @@
 
         // KONFIGURASI SUPABASE PROJECT OLENG GO
         const SUPABASE_PROJECT_ID = 'yhyjofvdkmuudpqzucnw';
-        const SUPABASE_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
-        const SUPABASE_PUBLISHABLE_KEY = `sb_publishable_${SUPABASE_PROJECT_ID}`;
+        const SUPABASE_URL = 'https://yhyjofvdkmuudpqzucnw.supabase.co';
+        const SUPABASE_REST_ENDPOINT = 'https://yhyjofvdkmuudpqzucnw.supabase.co/rest/v1/';
+        const SUPABASE_PUBLISHABLE_KEY = 'Sb_publishable_EFykp9Q2vKT3U_8KcIw8oQ_orxoyX1h';
         const supabaseClient = (window.supabase && typeof window.supabase.createClient === 'function')
             ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
             : null;
@@ -399,7 +400,7 @@
         let lastSupabaseStatus = {
             ok: false,
             label: 'Supabase: Mengecek...',
-            detail: ''
+            detail: SUPABASE_REST_ENDPOINT
         };
 
         async function checkSupabaseConnectionStatus(showNotify = false) {
@@ -434,9 +435,9 @@
                 lastSupabaseStatus = {
                     ok: true,
                     label: 'Supabase: Terhubung',
-                    detail: `Project ${SUPABASE_PROJECT_ID} aktif`
+                    detail: `Berhasil terhubung ke ${SUPABASE_PROJECT_ID}`
                 };
-                if (showNotify) showToast('Koneksi ke Supabase berhasil!', 'success');
+                if (showNotify) showToast('Berhasil! Koneksi ke Supabase aktif.', 'success');
                 return lastSupabaseStatus;
             } catch (err) {
                 lastSupabaseStatus = {
@@ -766,11 +767,14 @@
             }
         }
 
-        function saveDB() {
+        function saveDB(successMessage = null) {
             db.mainBanner = customMainBanner || db.mainBanner || DEFAULT_MAIN_BANNER;
             localStorage.setItem('oleng_global_banner', db.mainBanner);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
             syncAllToSupabase();
+            if (successMessage) {
+                showToast(`Berhasil! ${successMessage}`, 'success');
+            }
         }
 
         function recordWalletMutation({ ownerName, role, type, label, amount, commission = 0, netAmount = 0 }) {
@@ -826,7 +830,7 @@
             alarmEnabled = !alarmEnabled;
             localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled));
             if (alarmEnabled) playAlarmRingtone();
-            showToast(`Alarm notifikasi ${alarmEnabled ? 'DINYALAKAN (ON)' : 'DIMATIKAN (OFF)'}`, 'success');
+            showToast(`Berhasil! Alarm notifikasi ${alarmEnabled ? 'DINYALAKAN (ON)' : 'DIMATIKAN (OFF)'}.`, 'success');
             renderDashboardContent(currentSubTab);
         }
 
@@ -948,7 +952,7 @@
             if (addrInput && !addrInput.value.trim()) {
                 addrInput.value = `Lokasi Terkunci Map (${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}) - Lengkong, Sukabumi`;
             }
-            showToast(`Lokasi toko dikunci di ${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}`, 'success');
+            showToast(`Berhasil! Lokasi toko dikunci di ${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}.`, 'success');
         }
 
         function useCurrentGPSForMerchantReg() {
@@ -956,7 +960,7 @@
                 navigator.geolocation.getCurrentPosition(pos => {
                     regMerchantLatLng = [Number(pos.coords.latitude.toFixed(6)), Number(pos.coords.longitude.toFixed(6))];
                     initRegisterMerchantMap();
-                    showToast('Posisi GPS terkini dimuat ke peta toko!', 'success');
+                    showToast('Berhasil! Posisi GPS terkini dimuat ke peta toko.', 'success');
                 }, () => {
                     showToast('GPS tidak aktif, gunakan titik peta manual.', 'info');
                 });
@@ -996,7 +1000,7 @@
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             localStorage.setItem('oleng_last_tab', currentSubTab);
             addAccountNotification('Login Berhasil', `Akun ID ${currentUser.accountId} (${currentUser.name}) aktif.`, currentUser.name);
-            showToast(`Berhasil masuk dengan ID ${currentUser.accountId} (${role.toUpperCase()})`, 'success');
+            showToast(`Berhasil masuk dengan ID ${currentUser.accountId} (${role.toUpperCase()})!`, 'success');
             enterDashboard(true);
         }
 
@@ -1127,7 +1131,7 @@
             saveDB();
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             addAccountNotification('Pendaftaran Tersimpan', `Akun ID ${accountId} (${name}) berhasil didaftarkan.`, name);
-            showToast(`Akun terdaftar! ID Login Anda: ${accountId}`, 'success');
+            showToast(`Berhasil! Akun terdaftar dengan ID Login: ${accountId}.`, 'success');
             enterDashboard(false);
         }
 
@@ -1153,12 +1157,13 @@
                 chatInput.value = `Halo Admin SIMADU, saya lupa kata sandi untuk ID/Akun: ${refVal}. Mohon bantu reset password.`;
                 chatInput.focus();
             }
-            showToast('Diarahkan ke Live Chat Admin SIMADU.', 'info');
+            showToast('Berhasil! Diarahkan ke Live Chat Admin SIMADU.', 'success');
         }
 
         function redirectForgotPasswordToAdminWA() {
             const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'Akun Belum Diisi';
             const text = encodeURIComponent(`Halo Admin SIMADU, saya lupa kata sandi untuk ID/Akun: ${refVal}. Mohon bantuan reset password.`);
+            showToast('Berhasil! Membuka WhatsApp Admin SIMADU.', 'success');
             window.open(`https://wa.me/6285624736602?text=${text}`, '_blank');
         }
 
@@ -1170,7 +1175,7 @@
             document.getElementById('view-auth').classList.remove('hidden');
             document.getElementById('view-dashboard').classList.add('hidden');
             updateSupabaseBadgeUI(false);
-            showToast('Anda telah keluar dari akun.', 'info');
+            showToast('Berhasil keluar dari akun.', 'success');
         }
 
         function enterDashboard(preserveSavedTab = false) {
@@ -1352,14 +1357,12 @@
 
             if (action === 'accept') {
                 order.status = 'Sedang Diproses';
-                saveDB();
+                saveDB(`Order ${order.id} diterima & disimpan.`);
                 addAccountNotification(`Order ${order.id} Diterima`, `Pesanan ${order.items} telah diterima & diproses.`, order.customer);
-                showToast(`Order ${order.id} diterima!`, 'success');
             } else if (action === 'reject') {
                 order.status = 'Ditolak';
-                saveDB();
+                saveDB(`Status tolak order ${order.id} disimpan.`);
                 addAccountNotification(`Order ${order.id} Ditolak`, `Maaf, order ${order.items} ditolak. Silakan pilih mitra lain.`, order.customer);
-                showToast(`Order ${order.id} ditolak.`, 'info');
             } else if (action === 'complete') {
                 order.status = 'Selesai';
                 if (!order.settled) {
@@ -1414,9 +1417,10 @@
                     order.settled = true;
                     order.commissionFee = commissionFee;
                     order.netEarnings = netEarnings;
-                    saveDB();
+                    saveDB(`Order ${order.id} selesai & tersimpan! Bersih Rp ${netEarnings.toLocaleString()}.`);
                     addAccountNotification(`Order ${order.id} Selesai`, `Order selesai. Pendapatan bersih Rp ${netEarnings.toLocaleString()}, komisi ${pct}% (Rp ${commissionFee.toLocaleString()}). Silakan beri rating!`, order.customer);
-                    showToast(`Order selesai! Bersih Rp ${netEarnings.toLocaleString()} (Komisi Rp ${commissionFee.toLocaleString()}).`, 'success');
+                } else {
+                    saveDB(`Status order ${order.id} disimpan.`);
                 }
             }
 
@@ -1482,9 +1486,8 @@
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
 
-            saveDB();
+            saveDB(`Rating ${selectedRatingStar} bintang & ulasan tersimpan.`);
             closeRatingModal();
-            showToast(`Terima kasih! Rating ${selectedRatingStar} bintang tersimpan.`, 'success');
             renderDashboardContent('history');
         }
 
@@ -1821,7 +1824,7 @@
         function selectDriver(driverId) {
             selectedDriverId = driverId;
             const d = db.drivers.find(x => x.id === driverId);
-            showToast(`Driver ${d.name} (${d.distance} km) dipilih!`, 'success');
+            showToast(`Berhasil memilih driver ${d.name} (${d.distance} km)!`, 'success');
             if(currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
             else if(currentSubTab === 'food') renderCustomerFood(document.getElementById('main-content'));
             else updateCartUI();
@@ -1830,9 +1833,7 @@
         function addToCart(foodId) {
             const food = db.foods.find(f => f.id === foodId);
             db.cart.push(food);
-            saveDB();
-            playAlarmRingtone();
-            showToast(`${food.name} masuk keranjang!`, 'success');
+            saveDB(`${food.name} masuk keranjang.`);
             const counter = document.getElementById('cart-counter');
             if(counter) counter.innerText = db.cart.length;
             const detailCounter = document.getElementById('detail-cart-count');
@@ -1901,7 +1902,7 @@
 
         function removeFromCart(idx) {
             db.cart.splice(idx, 1);
-            saveDB();
+            saveDB('Item dihapus dari keranjang.');
             updateCartUI();
         }
 
@@ -1931,11 +1932,10 @@
 
             db.orders.unshift(newOrder);
             db.cart = [];
-            saveDB();
+            saveDB(`Pesanan ${newOrder.id} berhasil dikirim & disimpan!`);
             closeCartModal();
             closeMerchantDetail();
             addAccountNotification(`Order Baru ${newOrder.id}`, `Pesanan ${newOrder.items} ke ${merchant.name} dengan driver ${driver.name}.`, currentUser.name);
-            showToast(`Pesanan ${newOrder.id} berhasil dikirim ke driver ${driver.name}!`, 'success');
             renderDashboardContent('history');
             checkAndShowIncomingOrderPopup();
         }
@@ -1964,9 +1964,8 @@
             };
 
             db.orders.unshift(newOrder);
-            saveDB();
+            saveDB(`Order ojek ${newOrder.id} berhasil dikirim & disimpan!`);
             addAccountNotification(`Order Ojek ${newOrder.id}`, `Rute ${from} → ${to} bersama driver ${driver.name}.`, currentUser.name);
-            showToast(`Order ojek berhasil terkirim ke driver ${driver.name}!`, 'success');
             renderDashboardContent('history');
             checkAndShowIncomingOrderPopup();
         }
@@ -2143,9 +2142,8 @@
             const m = db.merchants.find(x => x.id === merchantId);
             if(m) {
                 m.status = m.status === 'Buka' ? 'Tutup' : 'Buka';
-                saveDB();
+                saveDB(`Status toko diubah menjadi ${m.status} & tersimpan!`);
                 addAccountNotification('Status Toko Diperbarui', `${m.name} sekarang berstatus ${m.status}.`, currentUser.name);
-                showToast(`Perubahan berhasil disimpan: Status toko menjadi ${m.status}!`, 'success');
                 renderMerchantManage(document.getElementById('main-content'));
             }
         }
@@ -2162,6 +2160,7 @@
                     
                     const imgEl = document.getElementById(previewId);
                     if(imgEl) { imgEl.src = evt.target.result; imgEl.classList.remove('hidden'); }
+                    showToast('Berhasil memuat gambar! Klik Simpan untuk menyimpan.', 'success');
                 };
                 reader.readAsDataURL(file);
             }
@@ -2175,9 +2174,8 @@
                 m.operationalHours = document.getElementById('edit-m-hours').value;
                 if(tempStorePhoto) m.image = tempStorePhoto;
                 if(tempStoreBanner) m.banner = tempStoreBanner;
-                saveDB();
+                saveDB('Profil & foto toko berhasil disimpan!');
                 addAccountNotification('Pengaturan Toko Disimpan', `Perubahan data & galeri ${m.name} tersimpan.`, currentUser.name);
-                showToast('Perubahan berhasil disimpan: Profil & foto toko telah diperbarui!', 'success');
                 renderMerchantManage(document.getElementById('main-content'));
             }
         }
@@ -2221,16 +2219,14 @@
                 stock: 20,
                 image: tempNewFoodPhoto || ('https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name))
             });
-            saveDB();
+            saveDB(`Menu baru "${name}" berhasil disimpan!`);
             addAccountNotification('Menu Baru Ditambahkan', `Menu ${name} (Rp ${price.toLocaleString()}) ditambahkan.`, currentUser.name);
-            showToast('Perubahan berhasil disimpan: Menu baru telah ditambahkan!', 'success');
             renderMerchantManage(document.getElementById('main-content'));
         }
 
         function deleteMenuFood(foodId) {
             db.foods = db.foods.filter(f => f.id !== foodId);
-            saveDB();
-            showToast('Perubahan berhasil disimpan: Menu dihapus!', 'info');
+            saveDB('Menu berhasil dihapus & perubahan tersimpan!');
             renderMerchantManage(document.getElementById('main-content'));
         }
 
@@ -2343,9 +2339,8 @@
             if(userIdx !== -1) db.users[userIdx] = { ...currentUser };
 
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            saveDB();
+            saveDB('Informasi akun berhasil disimpan!');
             addAccountNotification('Profil Disimpan', `Informasi akun ${currentUser.name} (ID: ${currentUser.accountId}) berhasil disimpan.`, currentUser.name);
-            showToast('Perubahan berhasil disimpan: Informasi akun telah diperbarui!', 'success');
             renderProfile(document.getElementById('main-content'));
         }
 
@@ -2424,9 +2419,8 @@
                 foodPerKm: Math.max(500, parseInt(document.getElementById('cfg-food-km').value) || 2000),
                 commissionPercent: Math.min(100, Math.max(0, parseInt(document.getElementById('cfg-commission').value) || 0))
             };
-            saveDB();
+            saveDB('Pengaturan tarif & komisi berhasil disimpan!');
             addAccountNotification('Tarif & Komisi Diperbarui', `Min order Rp ${db.pricing.minFare.toLocaleString()}, Ojek/km Rp ${db.pricing.ojekPerKm.toLocaleString()}, Food/km Rp ${db.pricing.foodPerKm.toLocaleString()}, Komisi ${db.pricing.commissionPercent}%.`, 'ALL');
-            showToast('Perubahan berhasil disimpan: Pengaturan tarif & komisi aktif!', 'success');
             renderAdminDash(document.getElementById('main-content'));
         }
 
@@ -2555,8 +2549,7 @@
                 });
             }
 
-            saveDB();
-            showToast(`ID "${code}" berhasil ditambahkan ke daftar!`, 'success');
+            saveDB(`ID "${code}" berhasil ditambahkan & disimpan!`);
             renderAdminUsers(document.getElementById('main-content'));
         }
 
@@ -2583,9 +2576,8 @@
                     commission: 0,
                     netAmount: nominal
                 });
-                saveDB();
+                saveDB(`Saldo ${targetLabel} ditambah Rp ${nominal.toLocaleString()} & tersimpan!`);
                 addAccountNotification('Saldo Ditambah Admin', `Saldo ${targetLabel} ditambah Rp ${nominal.toLocaleString()}.`, targetLabel);
-                showToast(`Perubahan berhasil disimpan: Saldo ${targetLabel} ditambah Rp ${nominal.toLocaleString()}!`, 'success');
                 renderAdminUsers(document.getElementById('main-content'));
             }
         }
@@ -2593,16 +2585,14 @@
         function adminResetPassword(userId) {
             const u = db.users.find(x => x.id === userId);
             u.password = '123';
-            saveDB();
+            saveDB(`Password ${u.name} direset menjadi '123' & tersimpan!`);
             addAccountNotification('Reset Password Admin', `Password ${u.name} (ID: ${u.accountId || '-'}) direset menjadi '123'.`, u.name);
-            showToast(`Perubahan berhasil disimpan: Password ${u.name} direset menjadi '123'`, 'success');
         }
 
         function adminDeleteUser(userId) {
             if(confirm('Yakin ingin menghapus akun user ini secara permanen?')) {
                 db.users = db.users.filter(x => x.id !== userId);
-                saveDB();
-                showToast('Perubahan berhasil disimpan: Akun user dihapus!', 'info');
+                saveDB('Akun user berhasil dihapus & perubahan tersimpan!');
                 renderAdminUsers(document.getElementById('main-content'));
             }
         }
@@ -2681,6 +2671,7 @@
                     customMainBanner = evt.target.result;
                     const prev = document.getElementById('banner-preview');
                     if (prev) prev.src = customMainBanner;
+                    showToast('Berhasil memuat gambar banner! Klik Simpan untuk menerapkan.', 'success');
                 };
                 reader.readAsDataURL(file);
             }
@@ -2691,9 +2682,8 @@
             customMainBanner = finalBanner;
             db.mainBanner = finalBanner;
             localStorage.setItem('oleng_global_banner', finalBanner);
-            saveDB();
+            saveDB('Banner utama berhasil disimpan & diterapkan ke semua user!');
             addAccountNotification('Banner Utama Diperbarui', 'Admin memperbarui banner utama OLENG GO.', 'ALL');
-            showToast('Perubahan berhasil disimpan: Banner utama tersinkron & tersimpan!', 'success');
             renderDashboardContent('home');
         }
 
@@ -2773,6 +2763,7 @@
                 userCurrentLatLng = [pos.lat, pos.lng];
                 if(isOjek) updateOjekFareUI();
                 else updateCartUI();
+                showToast('Berhasil memperbarui titik awal peta!', 'success');
             });
 
             destMarker.on('dragend', () => {
@@ -2780,6 +2771,7 @@
                 destLatLng = [pos.lat, pos.lng];
                 if(isOjek) updateOjekFareUI();
                 else updateCartUI();
+                showToast('Berhasil memperbarui titik tujuan peta!', 'success');
             });
 
             if(mapId === 'checkout-map') checkoutMapInstance = map;
@@ -2808,7 +2800,7 @@
                             saveDB();
                         }
                     }
-                    showToast('Lokasi terkini GPS berhasil dikunci!', 'success');
+                    showToast('Berhasil! Lokasi terkini GPS dikunci.', 'success');
                     if(context === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
                     else if(context === 'food') renderCustomerFood(document.getElementById('main-content'));
                     else if(context === 'cart') openCartModal();
@@ -2845,8 +2837,7 @@
             if(!input.value.trim()) return;
             const timeNow = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             db.chats.push({ id: Date.now(), from: currentUser.name, to: activeChatTarget, text: input.value, time: timeNow });
-            saveDB();
-            playAlarmRingtone();
+            saveDB('Pesan berhasil dikirim & disimpan!');
             input.value = '';
             renderPersonalChatMessages();
         }
