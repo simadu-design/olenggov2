@@ -229,7 +229,7 @@
         <!-- ================= MODALS & SUB-VIEWS ================= -->
         <div id="view-merchant-detail" class="absolute inset-0 bg-slate-50 z-40 hidden flex flex-col overflow-y-auto"></div>
 
-        <!-- Pop-Up Order Masuk untuk Toko & Ojek -->
+        <!-- Pop-Up Order Masuk (Pop-Up -> Cek Detail -> Terima / Tolak / Konfirmasi Order Selesai) -->
         <div id="modal-incoming-order" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
             <div id="incoming-order-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-yellow-400"></div>
         </div>
@@ -393,6 +393,7 @@
     
     <script>
         const ADMIN_MAIN_WA = '6285624736602';
+        const ADMIN_OWN_STORE_ID = 'TOKOADM01';
 
         function normalizePhone(rawPhone) {
             let digits = String(rawPhone || '').replace(/\D/g, '');
@@ -430,7 +431,7 @@
                                 body: body,
                                 icon: './icon-192.png',
                                 badge: './icon-192.png',
-                                vibrate: [200, 100, 200]
+                                vibrate: [250, 120, 250, 120, 250]
                             });
                         } else {
                             new Notification(title, { body, icon: './icon-192.png' });
@@ -754,6 +755,27 @@
             photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin'
         };
 
+        const DEFAULT_ADMIN_STORE = {
+            id: 901,
+            accountId: ADMIN_OWN_STORE_ID,
+            name: 'Toko SIMADU Lengkong',
+            ownerName: 'Admin SIMADU',
+            ktp: '3202247366020001',
+            subtitle: 'Toko Resmi Admin SIMADU Lengkong',
+            category: 'Kuliner & Oleh-Oleh',
+            status: 'Buka',
+            banner: 'https://placehold.co/600x300/0284c7/facc15?text=TOKO+SIMADU+LENGKONG',
+            image: 'https://placehold.co/150x150/0f172a/facc15?text=ADM',
+            rating: 5.0,
+            ratingCount: 1,
+            lat: -7.1238,
+            lng: 106.8459,
+            address: 'Jl. Raya Lengkong No. 01, Sukabumi',
+            operationalHours: '07:00 - 22:00 WIB',
+            whatsapp: ADMIN_MAIN_WA,
+            balance: 0
+        };
+
         const defaultDB = {
             mainBanner: DEFAULT_MAIN_BANNER,
             pricing: { ...defaultPricing },
@@ -770,6 +792,7 @@
                 { ...DEFAULT_ADMIN_ACCOUNT }
             ],
             merchants: [
+                { ...DEFAULT_ADMIN_STORE },
                 { 
                     id: 1, 
                     accountId: 'MRCH01',
@@ -812,6 +835,7 @@
                 }
             ],
             foods: [
+                { id: 9011, merchantId: 901, name: 'Nasi Kuning SIMADU Spesial', price: 18000, desc: 'Nasi kuning harum, telur balado, ayam suwir & sambal kacang.', stock: 25, image: 'https://placehold.co/200x200/0284c7/facc15?text=Nasi+Kuning' },
                 { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap Komplit', price: 25000, desc: 'Nasi liwet hangat, ikan asin jambal, tahu tempe, lalapan...', stock: 15, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Nasi+Liwet' },
                 { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung asli bumbu rempah bakar madu manis...', stock: 12, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Ayam+Bakar' },
                 { id: 103, merchantId: 2, name: 'Seblak Ceker Mercon Jumbo', price: 15000, desc: 'Seblak kuah kencur pedas nampol dengan ceker empuk.', stock: 25, image: 'https://placehold.co/200x200/f59e0b/ffffff?text=Seblak' }
@@ -841,6 +865,7 @@
         if (!Array.isArray(db.users)) db.users = [...defaultDB.users];
         if (!Array.isArray(db.merchants)) db.merchants = [...defaultDB.merchants];
         if (!Array.isArray(db.drivers)) db.drivers = [...defaultDB.drivers];
+        if (!Array.isArray(db.foods)) db.foods = [...defaultDB.foods];
         db.users.forEach((u, idx) => {
             u.phone = normalizePhone(u.phone) || u.phone;
             if (!u.accountId) u.accountId = generateAutoAccountIdFromPhone(u.phone || ('0800' + idx), u.role);
@@ -850,7 +875,28 @@
             db.users.push({ ...DEFAULT_ADMIN_ACCOUNT });
         }
 
+        function getAdminOwnStore() {
+            let store = (db.merchants || []).find(m => String(m.accountId || '').toUpperCase() === ADMIN_OWN_STORE_ID);
+            if (!store) {
+                store = { ...DEFAULT_ADMIN_STORE };
+                db.merchants.unshift(store);
+            }
+            if (!(db.foods || []).some(f => Number(f.merchantId) === Number(store.id))) {
+                db.foods.push({
+                    id: 9011,
+                    merchantId: store.id,
+                    name: 'Nasi Kuning SIMADU Spesial',
+                    price: 18000,
+                    desc: 'Nasi kuning harum, telur balado, ayam suwir & sambal kacang.',
+                    stock: 25,
+                    image: 'https://placehold.co/200x200/0284c7/facc15?text=Nasi+Kuning'
+                });
+            }
+            return store;
+        }
+
         function ensureRoleListsSyncedFromUsers() {
+            getAdminOwnStore();
             (db.users || []).forEach((u, idx) => {
                 const cleanPhone = normalizePhone(u.phone) || String(u.phone || '');
                 const accId = String(u.accountId || generateAutoAccountIdFromPhone(cleanPhone, u.role)).toUpperCase();
@@ -1193,11 +1239,15 @@
         function isOrderTargetedToCurrentUser(order) {
             if (!currentUser || !order) return false;
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            if (role === 'admin') return true;
-
             const me = String(currentUser.name || '').trim().toLowerCase();
             const myPhone = normalizePhone(currentUser.phone);
             const myShop = String(currentUser.shopName || '').trim().toLowerCase();
+            const adminStore = getAdminOwnStore();
+            const adminStoreName = String(adminStore?.name || '').trim().toLowerCase();
+
+            if (role === 'admin') {
+                return adminStoreName && String(order.merchant || '').trim().toLowerCase() === adminStoreName;
+            }
 
             if (role === 'customer') {
                 return String(order.customer || '').trim().toLowerCase() === me;
@@ -1341,7 +1391,6 @@
                 const prevChatIds = new Set((db.chats || []).map(c => String(c.id)));
                 const prevOrderIds = new Set((db.orders || []).map(o => String(o.id)));
 
-                // 1. Tarik app_config & state_json
                 const { data: cfg } = await supabaseClient.from('app_config').select('*').eq('id', 1).maybeSingle();
                 if (cfg) {
                     if (!hasPendingMediaSelection && cfg.main_banner && cfg.main_banner !== db.mainBanner) {
@@ -1383,7 +1432,6 @@
                     }
                 }
 
-                // 2. Tarik semua akun (accounts)
                 const { data: accRows } = await supabaseClient.from('accounts').select('*');
                 if (Array.isArray(accRows) && accRows.length > 0) {
                     const localUsersBackup = [...(db.users || [])];
@@ -1439,7 +1487,6 @@
                     }
                 }
 
-                // 3. Tarik semua toko (merchants)
                 const { data: merchantRows } = await supabaseClient.from('merchants').select('*');
                 if (Array.isArray(merchantRows) && merchantRows.length > 0) {
                     const mappedMerchants = merchantRows.map((r, idx) => ({
@@ -1462,11 +1509,10 @@
                         whatsapp: normalizePhone(r.whatsapp) || ADMIN_MAIN_WA,
                         balance: Number(r.balance || 0)
                     }));
-                    db.merchants = mergeByKey(db.merchants, mappedMerchants, m => normalizePhone(m.whatsapp) || String(m.accountId || m.name).toUpperCase());
+                    db.merchants = mergeByKey(db.merchants, mappedMerchants, m => String(m.accountId || '').toUpperCase() === ADMIN_OWN_STORE_ID ? ADMIN_OWN_STORE_ID : (normalizePhone(m.whatsapp) || String(m.accountId || m.name).toUpperCase()));
                     hasChanges = true;
                 }
 
-                // 4. Tarik semua ojek (drivers)
                 const { data: driverRows } = await supabaseClient.from('drivers').select('*');
                 if (Array.isArray(driverRows) && driverRows.length > 0) {
                     const mappedDrivers = driverRows.map((r, idx) => ({
@@ -1490,10 +1536,8 @@
                     hasChanges = true;
                 }
 
-                // Pastikan semua pendaftar baru merchant/driver ikut masuk ke list merchants/drivers
                 ensureRoleListsSyncedFromUsers();
 
-                // 5. Tarik semua pesanan (orders)
                 const { data: orderRows } = await supabaseClient.from('orders').select('*').order('id', { ascending: false });
                 if (Array.isArray(orderRows) && orderRows.length > 0) {
                     const mappedOrders = orderRows.map(r => ({
@@ -1517,7 +1561,6 @@
                     hasChanges = true;
                 }
 
-                // 6. Tarik semua menu makanan (foods)
                 const { data: foodRows } = await supabaseClient.from('foods').select('*').order('id', { ascending: true });
                 if (Array.isArray(foodRows) && foodRows.length > 0) {
                     const mappedFoods = foodRows.map(r => ({
@@ -1533,7 +1576,6 @@
                     hasChanges = true;
                 }
 
-                // 7. Tarik semua pesan live chat (chats)
                 const { data: chatRows } = await supabaseClient.from('chats').select('*').order('id', { ascending: true });
                 if (Array.isArray(chatRows) && chatRows.length > 0) {
                     const mappedChats = chatRows.map(r => ({
@@ -1561,7 +1603,7 @@
                 const newlyArrivedOrders = (db.orders || []).filter(o => !prevOrderIds.has(String(o.id)) && isOrderTargetedToCurrentUser(o));
                 if (newlyArrivedOrders.length > 0) {
                     const latestO = newlyArrivedOrders[0];
-                    notifyBackgroundOnce('order-' + latestO.id, `Order Masuk ${latestO.id}`, `${latestO.items} (${latestO.customer})`);
+                    notifyBackgroundOnce('order-' + latestO.id, `Order Masuk ${latestO.id}`, `${latestO.items} • Tujuan: ${latestO.dest || 'Lengkong'}`);
                     playAlarmRingtone();
                     checkAndShowIncomingOrderPopup(true);
                 }
@@ -1623,29 +1665,27 @@
                 desc: desc
             });
             saveDB();
-            if (currentUser && (owner === 'ALL' || String(owner).toLowerCase() === String(currentUser.name || '').toLowerCase())) {
-                playAlarmRingtone();
-                notifyBackgroundOnce('notif-' + notifId, title, desc);
-            }
+            playAlarmRingtone();
+            notifyBackgroundOnce('notif-' + notifId + '-' + owner, title, desc);
         }
 
         function playAlarmRingtone() {
             if (!alarmEnabled) return;
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const notes = [880, 1174.66, 880, 1318.51];
+                const notes = [880, 1174.66, 880, 1318.51, 1174.66];
                 notes.forEach((freq, i) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
                     osc.type = 'triangle';
-                    const start = ctx.currentTime + i * 0.14;
+                    const start = ctx.currentTime + i * 0.15;
                     osc.frequency.setValueAtTime(freq, start);
-                    gain.gain.setValueAtTime(0.16, start);
-                    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.13);
+                    gain.gain.setValueAtTime(0.18, start);
+                    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.14);
                     osc.connect(gain);
                     gain.connect(ctx.destination);
                     osc.start(start);
-                    osc.stop(start + 0.13);
+                    osc.stop(start + 0.14);
                 });
             } catch (e) {}
         }
@@ -1709,7 +1749,7 @@
                 if (!isUserCurrentlyTypingOrEditing()) {
                     pullInitialFromSupabase(false);
                 }
-            }, 6000);
+            }, 5000);
         });
 
         function switchAuthTab(tab) {
@@ -2127,11 +2167,12 @@
             const nav = document.getElementById('bottom-nav');
             if(activeRole === 'admin') {
                 nav.innerHTML = `
-                    <button onclick="renderDashboardContent('admin-dash')" class="flex flex-col items-center py-1 px-2 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-chart-pie text-base"></i><span class="text-[9px] mt-1">Monitor</span></button>
-                    <button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-users text-base"></i><span class="text-[9px] mt-1">Daftar User</span></button>
-                    <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-2 text-white cursor-pointer"><div class="w-11 h-11 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-yellow-400"><i class="fa-solid fa-house text-base"></i></div></button>
-                    <button onclick="renderDashboardContent('admin-stores')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1">Toko</span></button>
-                    <button onclick="renderDashboardContent('admin-banner')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-image text-base"></i><span class="text-[9px] mt-1">Banner</span></button>
+                    <button onclick="renderDashboardContent('admin-dash')" class="flex flex-col items-center py-1 px-1.5 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-chart-pie text-sm"></i><span class="text-[9px] mt-1">Monitor</span></button>
+                    <button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-1.5 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-users text-sm"></i><span class="text-[9px] mt-1">User</span></button>
+                    <button onclick="renderDashboardContent('admin-own-store')" class="flex flex-col items-center py-1 px-1.5 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-shop text-sm"></i><span class="text-[9px] mt-1">Toko Admin</span></button>
+                    <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-1.5 text-white cursor-pointer"><div class="w-11 h-11 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-yellow-400"><i class="fa-solid fa-house text-base"></i></div></button>
+                    <button onclick="renderDashboardContent('admin-stores')" class="flex flex-col items-center py-1 px-1.5 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-store text-sm"></i><span class="text-[9px] mt-1">List Toko</span></button>
+                    <button onclick="renderDashboardContent('admin-banner')" class="flex flex-col items-center py-1 px-1.5 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-image text-sm"></i><span class="text-[9px] mt-1">Banner</span></button>
                 `;
             } else if(activeRole === 'merchant') {
                 nav.innerHTML = `
@@ -2174,6 +2215,7 @@
             else if(tab === 'history') renderOrderHistory(container);
             else if(tab === 'profile') renderProfile(container);
             else if(tab === 'merchant-manage') renderMerchantManage(container);
+            else if(tab === 'admin-own-store') renderAdminOwnStoreManage(container);
             else if(tab === 'merchant-orders') renderOrderHistory(container);
             else if(tab === 'driver-orders') renderOrderHistory(container);
             else if(tab === 'admin-dash') renderAdminDash(container);
@@ -2187,7 +2229,15 @@
 
         function getAccountNotifs() {
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            if (role === 'admin') return db.notifications;
+            if (role === 'admin') {
+                const adminStore = getAdminOwnStore();
+                const ownStoreName = String(adminStore?.name || '').toLowerCase();
+                return (db.notifications || []).filter(n =>
+                    n.targetUser === 'ALL' ||
+                    String(n.targetUser || '').toLowerCase() === String(currentUser.name || '').toLowerCase() ||
+                    (ownStoreName && String(n.targetUser || '').toLowerCase() === ownStoreName)
+                );
+            }
             return (db.notifications || []).filter(n => n.targetUser === 'ALL' || String(n.targetUser || '').toLowerCase() === String(currentUser.name || '').toLowerCase());
         }
 
@@ -2212,16 +2262,15 @@
             const candidate = db.orders.find(o => {
                 if (o.status === 'Selesai' || o.status === 'Ditolak') return false;
                 if (!forceShowLatest && shownPopupOrderIds.includes(o.id)) return false;
-                if (activeRole === 'admin') return true;
                 return isOrderTargetedToCurrentUser(o);
             });
 
             if (candidate) {
-                openIncomingOrderModal(candidate.id);
+                openIncomingOrderModal(candidate.id, false);
             }
         }
 
-        function openIncomingOrderModal(orderId) {
+        function openIncomingOrderModal(orderId, showFullDetail = false) {
             const order = db.orders.find(o => o.id === orderId);
             if (!order) return;
 
@@ -2232,24 +2281,53 @@
 
             playAlarmRingtone();
             const card = document.getElementById('incoming-order-card');
-            card.innerHTML = `
-                <div class="flex justify-between items-center border-b pb-2">
-                    <span class="bg-yellow-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">ORDER MASUK (${order.id})</span>
-                    <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
-                </div>
-                <div class="space-y-1 text-xs">
-                    <h3 class="font-black text-sm text-sky-900">${order.merchant} • ${order.customer}</h3>
-                    <p class="text-slate-600 font-semibold">${order.items}</p>
-                    <p class="text-[11px] text-slate-500">Tujuan: ${order.dest || 'Wilayah Lengkong'}</p>
-                    <p class="text-[11px] font-bold text-amber-600">Status Saat Ini: ${order.status}</p>
-                    <p class="text-sm font-black text-sky-700 pt-1">Total Order: Rp ${order.total.toLocaleString()}</p>
-                </div>
-                <div class="grid grid-cols-3 gap-2 pt-2">
-                    <button onclick="handleIncomingOrderAction('${order.id}', 'accept')" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Terima</button>
-                    <button onclick="handleIncomingOrderAction('${order.id}', 'reject')" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Tolak</button>
-                    <button onclick="handleIncomingOrderAction('${order.id}', 'complete')" class="py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Konfirmasi Selesai</button>
-                </div>
-            `;
+            if (!showFullDetail) {
+                card.innerHTML = `
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span class="bg-yellow-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase"><i class="fa-solid fa-bell-ring mr-1"></i> POP-UP ORDER (${order.id})</span>
+                        <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
+                    </div>
+                    <div class="space-y-1.5 text-xs">
+                        <h3 class="font-black text-sm text-sky-900">Ada Order Baru untuk Anda!</h3>
+                        <p class="text-slate-600 font-semibold">Kode Order: <b>${order.id}</b> • Status: <span class="text-amber-600 font-bold">${order.status}</span></p>
+                        <p class="text-[11px] text-slate-500">Ketuk <b>Cek</b> untuk melihat detail isi order, jemput/tujuan, lalu Terima atau Tolak.</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-2">
+                        <button onclick="openIncomingOrderModal('${order.id}', true)" class="py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black cursor-pointer shadow border-b-2 border-yellow-400">
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i> Cek Order
+                        </button>
+                        <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="py-3 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-black cursor-pointer">
+                            Tutup
+                        </button>
+                    </div>
+                `;
+            } else {
+                const isAccepted = order.status === 'Sedang Diproses' || order.status === 'Driver Menuju Lokasi';
+                card.innerHTML = `
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span class="bg-yellow-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">DETAIL ORDER (${order.id})</span>
+                        <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
+                    </div>
+                    <div class="space-y-1 text-xs bg-slate-50 p-3 rounded-2xl border">
+                        <p class="font-black text-sky-900 text-sm">${order.merchant}</p>
+                        <p class="text-slate-700 font-bold">Pemesan: ${order.customer}</p>
+                        <p class="text-slate-700 font-semibold">Isi Order: ${order.items}</p>
+                        <p class="text-[11px] text-slate-600">Jemput: <b>${order.pickup || 'Lokasi Awal'}</b></p>
+                        <p class="text-[11px] text-slate-600">Tujuan: <b>${order.dest || 'Wilayah Lengkong'}</b></p>
+                        <p class="text-[11px] font-bold text-amber-600 pt-1">Status: ${order.status}</p>
+                        <p class="text-sm font-black text-sky-700 pt-1">Total: Rp ${Number(order.total || 0).toLocaleString()}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button onclick="handleIncomingOrderAction('${order.id}', 'accept')" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Terima</button>
+                        <button onclick="handleIncomingOrderAction('${order.id}', 'reject')" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Tolak</button>
+                    </div>
+                    ${isAccepted ? `
+                        <button onclick="handleIncomingOrderAction('${order.id}', 'complete')" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black cursor-pointer shadow border-b-2 border-yellow-400">
+                            <i class="fa-solid fa-check-double mr-1"></i> Konfirmasi Order Selesai
+                        </button>
+                    ` : ''}
+                `;
+            }
             document.getElementById('modal-incoming-order').classList.remove('hidden');
         }
 
@@ -2259,11 +2337,13 @@
 
             if (action === 'accept') {
                 order.status = 'Sedang Diproses';
-                saveDB(`Order ${order.id} diterima & tersinkron.`);
-                addAccountNotification(`Order ${order.id} Diterima`, `Pesanan ${order.items} telah diterima & diproses.`, order.customer);
+                saveDB(`Order ${order.id} diterima! Silakan selesaikan lalu tekan Konfirmasi Order Selesai.`);
+                addAccountNotification(`Order ${order.id} Diterima`, `Pesanan ${order.items} telah diterima & sedang diproses.`, order.customer);
+                openIncomingOrderModal(order.id, true);
+                return;
             } else if (action === 'reject') {
                 order.status = 'Ditolak';
-                saveDB(`Status tolak order ${order.id} tersinkron.`);
+                saveDB(`Order ${order.id} ditolak & tersinkron.`);
                 addAccountNotification(`Order ${order.id} Ditolak`, `Maaf, order ${order.items} ditolak. Silakan pilih mitra lain.`, order.customer);
             } else if (action === 'complete') {
                 order.status = 'Selesai';
@@ -2273,17 +2353,17 @@
                     const netEarnings = Math.max(0, order.total - commissionFee);
 
                     const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-                    if (activeRole === 'merchant') {
+                    if (activeRole === 'merchant' || activeRole === 'admin') {
                         const m = db.merchants.find(x => x.name === order.merchant || normalizePhone(x.whatsapp) === normalizePhone(currentUser.phone));
                         const ownerLabel = m ? m.name : order.merchant;
-                        if (m) m.balance = Math.max(0, (m.balance || 0) - commissionFee);
-                        const u = db.users.find(x => x.role === 'merchant' && (x.name === order.merchant || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
-                        if (u) u.balance = Math.max(0, (u.balance || 0) - commissionFee);
+                        if (m) m.balance = Number(m.balance || 0) + netEarnings;
+                        const u = db.users.find(x => (x.role === 'merchant' || x.role === 'admin') && (x.name === order.merchant || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
+                        if (u) u.balance = Number(u.balance || 0) + netEarnings;
                         recordWalletMutation({
                             ownerName: ownerLabel,
                             role: 'merchant',
                             type: 'ORDER_COMPLETE',
-                            label: `Order ${order.id} Selesai (Komisi ${pct}%)`,
+                            label: `Order ${order.id} Selesai (Bersih +Komisi ${pct}%)`,
                             amount: order.total,
                             commission: commissionFee,
                             netAmount: netEarnings
@@ -2291,14 +2371,14 @@
                     } else {
                         const d = db.drivers.find(x => x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
                         const driverLabel = d ? d.name : order.driver;
-                        if (d) d.balance = Math.max(0, (d.balance || 0) - commissionFee);
+                        if (d) d.balance = Number(d.balance || 0) + netEarnings;
                         const u = db.users.find(x => x.role === 'driver' && (x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
-                        if (u) u.balance = Math.max(0, (u.balance || 0) - commissionFee);
+                        if (u) u.balance = Number(u.balance || 0) + netEarnings;
                         recordWalletMutation({
                             ownerName: driverLabel,
                             role: 'driver',
                             type: 'ORDER_COMPLETE',
-                            label: `Order ${order.id} Selesai (Komisi ${pct}%)`,
+                            label: `Order ${order.id} Selesai (Bersih +Komisi ${pct}%)`,
                             amount: order.total,
                             commission: commissionFee,
                             netAmount: netEarnings
@@ -2306,7 +2386,7 @@
                     }
 
                     const adminUser = db.users.find(x => x.role === 'admin');
-                    if (adminUser) adminUser.balance = (adminUser.balance || 0) + commissionFee;
+                    if (adminUser) adminUser.balance = Number(adminUser.balance || 0) + commissionFee;
 
                     db.commissionLogs.unshift({
                         id: 'KOM-' + Date.now(),
@@ -2319,8 +2399,8 @@
                     order.settled = true;
                     order.commissionFee = commissionFee;
                     order.netEarnings = netEarnings;
-                    saveDB(`Order ${order.id} dikonfirmasi selesai & tersinkron! Bersih Rp ${netEarnings.toLocaleString()}.`);
-                    addAccountNotification(`Order ${order.id} Selesai`, `Order selesai. Pendapatan bersih Rp ${netEarnings.toLocaleString()}, komisi ${pct}% (Rp ${commissionFee.toLocaleString()}). Silakan beri rating!`, order.customer);
+                    saveDB(`Order ${order.id} dikonfirmasi selesai! Saldo bersih +Rp ${netEarnings.toLocaleString()} masuk & notif terkirim ke pemesan.`);
+                    addAccountNotification(`Order ${order.id} Selesai`, `Pesanan ${order.items} sudah dikonfirmasi selesai. Silakan beri rating & ulasan!`, order.customer);
                 } else {
                     saveDB(`Status order ${order.id} tersinkron.`);
                 }
@@ -2968,11 +3048,12 @@
                                     <div class="flex gap-1.5 flex-wrap">
                                         ${o.status === 'Selesai' && activeRole === 'customer' ? `<button onclick="openRatingModal('${o.id}')" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-lg text-[10px] font-black cursor-pointer"><i class="fa-solid fa-star"></i> ${o.rating ? 'Ubah Rating' : 'Beri Rating'}</button>` : ''}
                                         ${(activeRole === 'driver' || activeRole === 'merchant' || activeRole === 'admin') ? `
-                                            <button onclick="openIncomingOrderModal('${o.id}')" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-lg text-[10px] font-black cursor-pointer">Pop-Up Order</button>
+                                            <button onclick="openIncomingOrderModal('${o.id}', false)" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-lg text-[10px] font-black cursor-pointer">Pop-Up</button>
+                                            <button onclick="openIncomingOrderModal('${o.id}', true)" class="px-2.5 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-black cursor-pointer">Cek</button>
                                             ${o.status !== 'Selesai' && o.status !== 'Ditolak' ? `
-                                                <button onclick="handleIncomingOrderAction('${o.id}', 'accept')" class="px-2.5 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Terima</button>
+                                                <button onclick="handleIncomingOrderAction('${o.id}', 'accept')" class="px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Terima</button>
                                                 <button onclick="handleIncomingOrderAction('${o.id}', 'reject')" class="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Tolak</button>
-                                                <button onclick="handleIncomingOrderAction('${o.id}', 'complete')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Konfirmasi Pesanan Selesai</button>
+                                                <button onclick="handleIncomingOrderAction('${o.id}', 'complete')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Konfirmasi Order Selesai</button>
                                             ` : ''}
                                         ` : ''}
                                     </div>
@@ -3077,7 +3158,7 @@
                             <div>
                                 <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Banner Sampul Toko</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-m-banner', 'banner')">
-                                <img id="preview-m-banner" src="${displayBanner}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
+                                <img id="preview-m-banner" src="${displayBanner}" class="w-full h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
                             </div>
                         </div>
 
@@ -3110,12 +3191,118 @@
             `;
         }
 
+        function renderAdminOwnStoreManage(container) {
+            const adminStore = getAdminOwnStore();
+            const foods = (db.foods || []).filter(f => Number(f.merchantId) === Number(adminStore.id));
+            const isOpen = adminStore.status === 'Buka';
+            const displayPhoto = tempStorePhoto || adminStore.image;
+            const displayBanner = tempStoreBanner || adminStore.banner;
+
+            container.innerHTML = `
+                <div class="p-4 space-y-5 pb-24">
+                    <div class="relative bg-sky-800 text-white rounded-3xl overflow-hidden shadow-lg border-2 border-yellow-400">
+                        <img src="${adminStore.banner}" class="w-full h-36 object-cover opacity-85" alt="Banner Toko Admin">
+                        <div class="p-4 pt-10 bg-gradient-to-t from-sky-950 via-sky-900/95 to-sky-800/80 relative flex items-end justify-between">
+                            <div class="flex items-center space-x-3">
+                                <img src="${adminStore.image}" class="w-16 h-16 rounded-2xl object-cover border-2 border-yellow-400 -mt-12 bg-white shadow-md" alt="Foto Toko Admin">
+                                <div>
+                                    <span class="text-[10px] text-yellow-300 font-extrabold uppercase block">TOKO MILIK ADMIN (PERMANEN)</span>
+                                    <h2 class="text-base font-black">${adminStore.name}</h2>
+                                    <p class="text-[11px] text-sky-200"><i class="fa-solid fa-star text-yellow-400"></i> ${adminStore.rating || 5.0} • ${adminStore.operationalHours}</p>
+                                </div>
+                            </div>
+                            <button onclick="toggleAdminOwnStoreStatus(${adminStore.id})" class="px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer shadow ${isOpen ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}">
+                                ${adminStore.status}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
+                        <h3 class="font-extrabold text-xs text-sky-900 uppercase border-b pb-2"><i class="fa-solid fa-shop text-yellow-500 mr-1"></i> Kelola Toko Admin Secara Permanen</h3>
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Nama Toko Admin</label>
+                            <input type="text" id="adm-store-name" value="${adminStore.name}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Alamat Toko Admin</label>
+                            <input type="text" id="adm-store-address" value="${adminStore.address}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Jam Operasional</label>
+                            <input type="text" id="adm-store-hours" value="${adminStore.operationalHours}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 pt-1">
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Foto Profil Toko Admin</label>
+                                <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-adm-photo', 'photo')">
+                                <img id="preview-adm-photo" src="${displayPhoto}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Banner Toko Admin</label>
+                                <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-adm-banner', 'banner')">
+                                <img id="preview-adm-banner" src="${displayBanner}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
+                            </div>
+                        </div>
+                        <button onclick="saveAdminOwnStoreSettings(${adminStore.id})" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer mt-2 border-b-2 border-yellow-400">
+                            Simpan Toko Admin Permanen
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="font-extrabold text-xs text-sky-900 uppercase"><i class="fa-solid fa-utensils text-yellow-500 mr-1"></i> Menu Toko Admin</h3>
+                            <button onclick="openMerchantAddMenuModal(${adminStore.id})" class="px-3 py-1.5 bg-yellow-400 text-slate-950 rounded-xl text-[11px] font-extrabold cursor-pointer shadow-xs">+ Tambah Menu</button>
+                        </div>
+                        <div class="space-y-2.5">
+                            ${foods.map(f => `
+                                <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div class="flex items-center space-x-3">
+                                        <img src="${f.image}" class="w-12 h-12 rounded-xl object-cover bg-sky-600">
+                                        <div>
+                                            <h4 class="font-bold text-xs text-slate-900">${f.name}</h4>
+                                            <span class="text-xs font-black text-sky-600">Rp ${f.price.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                    <button onclick="deleteMenuFood(${f.id})" class="text-rose-500 p-2 cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleAdminOwnStoreStatus(storeId) {
+            const m = db.merchants.find(x => Number(x.id) === Number(storeId));
+            if (m) {
+                m.status = m.status === 'Buka' ? 'Tutup' : 'Buka';
+                saveDB(`Status toko Admin (${m.name}) menjadi ${m.status} secara permanen!`);
+                renderAdminOwnStoreManage(document.getElementById('main-content'));
+            }
+        }
+
+        function saveAdminOwnStoreSettings(storeId) {
+            const m = db.merchants.find(x => Number(x.id) === Number(storeId));
+            if (m) {
+                m.name = (document.getElementById('adm-store-name')?.value || m.name).trim();
+                m.address = (document.getElementById('adm-store-address')?.value || m.address).trim();
+                m.operationalHours = (document.getElementById('adm-store-hours')?.value || m.operationalHours).trim();
+                if (tempStorePhoto) m.image = tempStorePhoto;
+                if (tempStoreBanner) m.banner = tempStoreBanner;
+                tempStorePhoto = null;
+                tempStoreBanner = null;
+                hasPendingMediaSelection = false;
+                saveDB(`Toko Admin "${m.name}" berhasil disimpan permanen!`);
+                renderAdminOwnStoreManage(document.getElementById('main-content'));
+            }
+        }
+
         function toggleMerchantStatus(merchantId) {
             const m = db.merchants.find(x => x.id === merchantId);
             if(m) {
                 m.status = m.status === 'Buka' ? 'Tutup' : 'Buka';
                 saveDB(`Status toko diubah menjadi ${m.status} & tersinkron!`);
-                addAccountNotification('Status Toko Diperbarui', `${m.name} sekarang berstatus ${m.status}.`, currentUser.name);
+                addAccountNotification('Status Toko Diperbarui', `${m.name} sekarang berstatus ${m.status}.`, m.name);
                 renderMerchantManage(document.getElementById('main-content'));
             }
         }
@@ -3149,7 +3336,7 @@
                 tempStoreBanner = null;
                 hasPendingMediaSelection = false;
                 saveDB('Profil & foto toko berhasil disimpan permanen!');
-                addAccountNotification('Pengaturan Toko Disimpan', `Perubahan data & galeri ${m.name} tersimpan.`, currentUser.name);
+                addAccountNotification('Pengaturan Toko Disimpan', `Perubahan data & galeri ${m.name} tersimpan.`, m.name);
                 renderMerchantManage(document.getElementById('main-content'));
             }
         }
@@ -3198,14 +3385,13 @@
             hasPendingMediaSelection = false;
             document.getElementById('modal-new-food')?.remove();
             saveDB(`Menu baru "${name}" berhasil disimpan permanen!`);
-            addAccountNotification('Menu Baru Ditambahkan', `Menu ${name} (Rp ${price.toLocaleString()}) ditambahkan.`, currentUser.name);
-            renderMerchantManage(document.getElementById('main-content'));
+            renderDashboardContent(currentSubTab);
         }
 
         function deleteMenuFood(foodId) {
             db.foods = db.foods.filter(f => f.id !== foodId);
             saveDB('Menu berhasil dihapus & perubahan tersimpan permanen!');
-            renderMerchantManage(document.getElementById('main-content'));
+            renderDashboardContent(currentSubTab);
         }
 
         let tempUserProfilePhoto = null;
