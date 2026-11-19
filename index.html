@@ -481,7 +481,7 @@
             return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || active.isContentEditable;
         }
 
-        function compressImageFileToDataUrl(file, maxSize = 360, quality = 0.72) {
+        function compressImageFileToDataUrl(file, maxSize = 320, quality = 0.7) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = function (evt) {
@@ -863,9 +863,10 @@
         }
 
         async function syncAllToSupabase() {
-            if (!supabaseClient || isSyncingNow) return false;
+            if (!supabaseClient || isSyncingNow) return { ok: false, error: 'Supabase belum siap' };
             isSyncingNow = true;
             try {
+                let firstError = null;
                 const extraState = {
                     foods: db.foods || [],
                     notifications: db.notifications || [],
@@ -888,7 +889,7 @@
                 }, { onConflict: 'id' });
 
                 if (cfgRes.error && String(cfgRes.error.message || '').includes('state_json')) {
-                    await supabaseClient.from('app_config').upsert({
+                    const cfgFallback = await supabaseClient.from('app_config').upsert({
                         id: 1,
                         main_banner: db.mainBanner || DEFAULT_MAIN_BANNER,
                         min_fare: Number(db.pricing?.minFare || 8000),
@@ -897,6 +898,9 @@
                         commission_percent: Number(db.pricing?.commissionPercent || 10),
                         admin_whatsapp: ADMIN_MAIN_WA
                     }, { onConflict: 'id' });
+                    if (cfgFallback.error && !firstError) firstError = cfgFallback.error.message;
+                } else if (cfgRes.error && !firstError) {
+                    firstError = cfgRes.error.message;
                 }
 
                 const accountRows = (db.users || []).map(u => ({
@@ -917,7 +921,8 @@
                 })).filter(r => r.account_id);
 
                 if (accountRows.length > 0) {
-                    await supabaseClient.from('accounts').upsert(accountRows, { onConflict: 'account_id' });
+                    const accRes = await supabaseClient.from('accounts').upsert(accountRows, { onConflict: 'account_id' });
+                    if (accRes.error && !firstError) firstError = accRes.error.message;
                 }
 
                 const merchantRows = (db.merchants || []).map((m, i) => ({
@@ -941,7 +946,8 @@
                 }));
 
                 if (merchantRows.length > 0) {
-                    await supabaseClient.from('merchants').upsert(merchantRows, { onConflict: 'account_id' });
+                    const mRes = await supabaseClient.from('merchants').upsert(merchantRows, { onConflict: 'account_id' });
+                    if (mRes.error && !firstError) firstError = mRes.error.message;
                 }
 
                 const driverRows = (db.drivers || []).map((d, i) => ({
@@ -962,7 +968,8 @@
                 }));
 
                 if (driverRows.length > 0) {
-                    await supabaseClient.from('drivers').upsert(driverRows, { onConflict: 'account_id' });
+                    const dRes = await supabaseClient.from('drivers').upsert(driverRows, { onConflict: 'account_id' });
+                    if (dRes.error && !firstError) firstError = dRes.error.message;
                 }
 
                 const orderRows = (db.orders || []).map(o => ({
@@ -1013,10 +1020,10 @@
                     await supabaseClient.from('chats').upsert(chatRows, { onConflict: 'id' });
                 }
 
-                return true;
+                return { ok: !firstError, error: firstError };
             } catch (err) {
                 console.warn('Supabase sync info:', err?.message || err);
-                return false;
+                return { ok: false, error: err?.message || String(err) };
             } finally {
                 isSyncingNow = false;
             }
@@ -1266,7 +1273,7 @@
                     }
                 }
 
-                // 2. Tarik semua akun (accounts) & pertahankan foto profil tersimpan
+                // 2. Tarik semua akun (accounts) & gabungkan dengan akun lokal yang baru terdaftar
                 const { data: accRows } = await supabaseClient.from('accounts').select('*');
                 if (Array.isArray(accRows) && accRows.length > 0) {
                     const remoteAccountCodes = new Set(accRows.map(r => String(r.account_id || '').toUpperCase()).filter(Boolean));
@@ -1301,7 +1308,7 @@
 
                     const keptLocalOnly = localUsersBackup.filter(lu => {
                         const code = String(lu.accountId || '').toUpperCase();
-                        return code && !remoteAccountCodes.has(code) && lu._pendingLocal === true;
+                        return code && !remoteAccountCodes.has(code) && lu._deletedByAdmin !== true;
                     });
                     const mergedUsers = mergeByKey(keptLocalOnly, mappedRemoteUsers, u => String(u.accountId || '').toUpperCase());
                     if (!mergedUsers.some(u => String(u.accountId || '').toUpperCase() === 'ADM01')) {
@@ -1366,7 +1373,7 @@
                         status: r.status || 'Online',
                         location: r.location || 'Lengkong, Sukabumi',
                         lat: Number(r.lat || -7.1235),
-                        lng: Number(r.lng || 106.8458),
+                        lng: Number(d.lng || 106.8458),
                         phone: r.phone || ADMIN_MAIN_WA,
                         rating: Number(r.rating || 5.0),
                         ratingCount: Number(r.ratingCount || 0),
@@ -1743,6 +1750,11 @@
                 return;
             }
 
+            if (foundUser.status && String(foundUser.status).toLowerCase() === 'nonaktif') {
+                showToast(`Akun ID "${rawId}" sedang dinonaktifkan Admin!`, 'error');
+                return;
+            }
+
             const storedPass = String(foundUser.password || '123').trim();
             const isAdminDefaultMatch = (rawId === 'ADM01' && role === 'admin' && password === '123');
             if (storedPass !== password && !isAdminDefaultMatch) {
@@ -1887,16 +1899,20 @@
             }
 
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            await syncAllToSupabase();
+            const syncResult = await syncAllToSupabase();
 
-            // Arahkan langsung ke tab Login dengan ID dan role yang baru terdaftar
             switchAuthTab('login');
             document.getElementById('login-account-id').value = accountId;
             document.getElementById('login-password').value = '';
             document.getElementById('login-role').value = role;
             document.getElementById('form-register').reset();
             isRegMerchantLocationLocked = false;
-            showToast(`Pendaftaran berhasil! ID ${accountId} tersimpan, silakan masuk dengan kata sandi Anda.`, 'success');
+
+            if (syncResult && syncResult.ok) {
+                showToast(`Pendaftaran berhasil! ID ${accountId} tersimpan di Supabase, silakan masuk.`, 'success');
+            } else {
+                showToast(`Pendaftaran tersimpan lokal (ID ${accountId}). Kendala Supabase: ${syncResult?.error || 'cek koneksi'}.`, 'info');
+            }
         }
 
         function openForgotPasswordModal() {
@@ -2889,6 +2905,8 @@
             const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName || m.name === currentUser.name || m.accountId === currentUser.accountId) || db.merchants[0];
             const foods = db.foods.filter(f => f.merchantId === merchant.id);
             const isOpen = merchant.status === 'Buka';
+            const displayPhoto = tempStorePhoto || merchant.image;
+            const displayBanner = tempStoreBanner || merchant.banner;
 
             container.innerHTML = `
                 <div class="p-4 space-y-5 pb-24">
@@ -2931,12 +2949,12 @@
                             <div>
                                 <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Foto Profil Toko</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-m-photo', 'photo')">
-                                <img id="preview-m-photo" src="${merchant.image}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
+                                <img id="preview-m-photo" src="${displayPhoto}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
                             </div>
                             <div>
                                 <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Banner Sampul Toko</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-m-banner', 'banner')">
-                                <img id="preview-m-banner" src="${merchant.banner}" class="w-full h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
+                                <img id="preview-m-banner" src="${displayBanner}" class="w-full h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
                             </div>
                         </div>
 
@@ -2989,10 +3007,11 @@
                 else if(type === 'banner') tempStoreBanner = compressedUrl;
                 else if(type === 'food') tempNewFoodPhoto = compressedUrl;
                 else if(type === 'user') tempUserProfilePhoto = compressedUrl;
-                
+
+                // Hanya perbarui preview pada kotak unggahan saja; tampilan akun/banner utama berubah setelah tombol Simpan ditekan
                 const imgEl = document.getElementById(previewId);
                 if(imgEl) { imgEl.src = compressedUrl; imgEl.classList.remove('hidden'); }
-                showToast('File dipilih! Tekan tombol Simpan agar tersimpan permanen.', 'success');
+                showToast('File dipilih! Tekan tombol Simpan agar perubahan diterapkan & tersimpan permanen.', 'success');
             }
         }
 
@@ -3093,7 +3112,7 @@
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
                     <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-5 rounded-3xl shadow-lg text-center space-y-2 border-b-4 border-yellow-400">
-                        <img id="user-prof-preview" src="${currentUser.photo}" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-yellow-400 shadow-md bg-white">
+                        <img id="profile-header-avatar" src="${currentUser.photo}" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-yellow-400 shadow-md bg-white">
                         <h2 class="font-black text-base">${currentUser.name}</h2>
                         <p class="text-xs font-black text-yellow-300">ID Login: ${currentUser.accountId || '-'}</p>
                         <span class="text-[10px] bg-yellow-400 text-slate-950 font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span>
@@ -3129,6 +3148,7 @@
                         <div>
                             <label class="text-[10px] font-extrabold text-slate-500 uppercase">Upload Foto Profil (Dari Galeri)</label>
                             <input type="file" accept="image/*" class="w-full mt-1 p-2 border rounded-2xl text-xs" onchange="previewGalleryImage(event, 'user-prof-preview', 'user')">
+                            <img id="user-prof-preview" src="${currentUser.photo}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
                         </div>
                         <div>
                             <label class="text-[10px] font-extrabold text-slate-500 uppercase">Kata Sandi Baru (Opsional)</label>
@@ -3544,13 +3564,14 @@
 
         function renderAdminBanner(container) {
             const currentBanner = getSyncedMainBanner();
+            const previewSrc = customMainBanner || currentBanner;
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
                     <h2 class="font-extrabold text-base text-sky-900">Kontrol Banner Panjang Utama (Permanen)</h2>
                     <div class="bg-white p-4 rounded-3xl border space-y-3 shadow-xs">
                         <label class="text-[11px] font-extrabold text-slate-500 uppercase">UPLOAD BANNER PANJANG (DARI GALERI)</label>
                         <input type="file" accept="image/*" class="w-full p-2 border rounded-2xl text-xs" onchange="previewNewBanner(event)">
-                        <img id="banner-preview" src="${currentBanner}" class="w-full h-32 object-cover rounded-2xl border">
+                        <img id="banner-preview" src="${previewSrc}" class="w-full h-32 object-cover rounded-2xl border">
                         <button onclick="saveGlobalBanner()" class="w-full py-3.5 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md border-b-2 border-yellow-400">Simpan Permanen ke Semua User</button>
                     </div>
                 </div>
@@ -3565,7 +3586,7 @@
                 customMainBanner = compressedBanner;
                 const prev = document.getElementById('banner-preview');
                 if (prev) prev.src = customMainBanner;
-                showToast('File banner dipilih! Klik Simpan Permanen untuk menerapkan.', 'success');
+                showToast('File banner dipilih! Tekan Simpan Permanen agar diterapkan.', 'success');
             }
         }
 
@@ -3841,7 +3862,7 @@
             toast.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold flex items-center gap-2 ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-sky-600'}`;
             toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-info'}"></i> ${msg}`;
             container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3200);
+            setTimeout(() => toast.remove(), 3500);
         }
     </script>
 </body>
