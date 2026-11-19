@@ -229,6 +229,11 @@
         <!-- ================= MODALS & SUB-VIEWS ================= -->
         <div id="view-merchant-detail" class="absolute inset-0 bg-slate-50 z-40 hidden flex flex-col overflow-y-auto"></div>
 
+        <!-- Modal Info Profil Lawan Chat -->
+        <div id="modal-chat-partner-info" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-[60] hidden flex flex-col justify-center items-center p-4">
+            <div id="chat-partner-info-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-sky-500"></div>
+        </div>
+
         <!-- Pop-Up Order Masuk (Pop-Up -> Cek Detail -> Terima / Tolak / Konfirmasi Order Selesai) -->
         <div id="modal-incoming-order" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
             <div id="incoming-order-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-yellow-400"></div>
@@ -361,17 +366,17 @@
             </div>
         </div>
 
-        <!-- Live Chat View (Privat Antar-Akun + Galeri + Kamera + Emot & Stiker) -->
+        <!-- Live Chat View (Privat Antar-Akun + Klik Profil Detail + Galeri + Kamera + Emot & Stiker) -->
         <div id="view-chat" class="absolute inset-0 bg-white z-50 hidden flex flex-col">
             <div class="bg-sky-600 text-white px-4 py-3 flex items-center justify-between shadow border-b-2 border-yellow-400">
-                <div class="flex items-center space-x-3">
-                    <button onclick="closeChat()" class="text-white text-lg cursor-pointer"><i class="fa-solid fa-arrow-left"></i></button>
-                    <div>
-                        <h3 id="chat-title" class="font-extrabold text-sm">Live Chat</h3>
-                        <span id="chat-status-label" class="text-[10px] text-yellow-200 font-bold block">Chat Privat Tersinkron</span>
-                    </div>
+                <div class="flex items-center space-x-2.5 min-w-0">
+                    <button onclick="closeChat()" class="text-white text-lg cursor-pointer shrink-0"><i class="fa-solid fa-arrow-left"></i></button>
+                    <button type="button" onclick="openChatPartnerProfileModal(activeChatTarget)" class="text-left min-w-0 cursor-pointer group" title="Klik untuk lihat detail profil, toko & no HP">
+                        <h3 id="chat-title" class="font-extrabold text-sm truncate group-hover:underline">Chat Privat</h3>
+                        <span class="text-[10px] text-yellow-200 font-bold block truncate"><i class="fa-solid fa-circle-info mr-0.5"></i> Klik profil untuk lihat data, toko & no HP</span>
+                    </button>
                 </div>
-                <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-sky-800 text-yellow-300">
+                <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-sky-800 text-yellow-300 shrink-0">
                     <i class="fa-solid fa-bell"></i> <span id="chat-alarm-state">ON</span>
                 </button>
             </div>
@@ -526,6 +531,56 @@
             label: 'Supabase: Mengecek...',
             detail: SUPABASE_REST_ENDPOINT
         };
+
+        function openChatPartnerProfileModal(partnerName) {
+            const targetLow = String(partnerName || '').trim().toLowerCase();
+            if (!targetLow) return;
+
+            let matchedUser = (db.users || []).find(u =>
+                String(u.name || '').trim().toLowerCase() === targetLow ||
+                String(u.shopName || '').trim().toLowerCase() === targetLow
+            );
+
+            let matchedStore = (db.merchants || []).find(m =>
+                String(m.name || '').trim().toLowerCase() === targetLow ||
+                (matchedUser && normalizePhone(m.whatsapp) === normalizePhone(matchedUser.phone) && String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID)
+            );
+
+            let matchedDriver = (db.drivers || []).find(d =>
+                String(d.name || '').trim().toLowerCase() === targetLow ||
+                (matchedUser && normalizePhone(d.phone) === normalizePhone(matchedUser.phone))
+            );
+
+            const displayName = matchedUser?.name || matchedStore?.name || matchedDriver?.name || partnerName;
+            const displayRole = matchedUser?.role || (matchedStore ? 'merchant' : matchedDriver ? 'driver' : 'customer');
+            const displayPhone = normalizePhone(matchedUser?.phone || matchedStore?.whatsapp || matchedDriver?.phone) || (targetLow === 'admin simadu' ? '085624736602' : 'Belum tercatat');
+            const displayAddress = matchedUser?.address || matchedStore?.address || matchedDriver?.location || 'Kecamatan Lengkong, Sukabumi';
+            const displayShop = matchedStore?.name || matchedUser?.shopName || '-';
+            const displayPhoto = matchedUser?.photo || matchedStore?.image || 'https://placehold.co/150x150/0284c7/ffffff?text=USR';
+
+            const card = document.getElementById('chat-partner-info-card');
+            if (!card) return;
+            card.innerHTML = `
+                <div class="flex justify-between items-center border-b pb-2">
+                    <span class="bg-sky-100 text-sky-900 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">DETAIL PROFIL CHAT</span>
+                    <button onclick="document.getElementById('modal-chat-partner-info').classList.add('hidden')" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <img src="${displayPhoto}" class="w-14 h-14 rounded-2xl object-cover border-2 border-yellow-400 shrink-0" alt="Foto Profil">
+                    <div class="min-w-0">
+                        <h4 class="font-black text-sm text-slate-900 truncate">${displayName}</h4>
+                        <span class="text-[10px] bg-yellow-400 text-slate-950 font-black px-2 py-0.5 rounded uppercase inline-block mt-0.5">${displayRole}</span>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-2xl border space-y-1.5 text-xs">
+                    <p><span class="text-slate-500 font-bold">No. HP / WA:</span> <b class="text-sky-700">${displayPhone}</b></p>
+                    <p><span class="text-slate-500 font-bold">Toko:</span> <b class="text-slate-900">${displayShop}</b></p>
+                    <p><span class="text-slate-500 font-bold">Alamat:</span> <span class="text-slate-700 font-semibold">${displayAddress}</span></p>
+                </div>
+                <button onclick="document.getElementById('modal-chat-partner-info').classList.add('hidden')" class="w-full py-2.5 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer">Tutup</button>
+            `;
+            document.getElementById('modal-chat-partner-info').classList.remove('hidden');
+        }
 
         function isUserCurrentlyTypingOrEditing() {
             if (hasPendingMediaSelection) return true;
@@ -702,7 +757,7 @@
                                     time: row.sent_time || ''
                                 };
                                 if (isMessageForCurrentUser(chatObj)) {
-                                    notifyBackgroundOnce('chat-' + row.id, `Chat Masuk dari ${row.sender_name}`, row.message_text.startsWith('data:image') ? '📷 Mengirim foto' : row.message_text);
+                                    notifyBackgroundOnce('chat-' + row.id, `Chat Masuk dari ${row.sender_name}`, String(row.message_text || '').startsWith('data:image') ? '📷 Mengirim foto' : row.message_text);
                                     checkAndTriggerIncomingChatPopup(chatObj);
                                 }
                             }
@@ -945,7 +1000,7 @@
                             ratingCount: 0,
                             lat: typeof u.lat === 'number' ? u.lat : (-7.1240 - idx * 0.0005),
                             lng: typeof u.lng === 'number' ? u.lng : (106.8460 + idx * 0.0005),
-                            address: u.address || '',
+                            address: u.address && u.address !== 'Kecamatan Lengkong, Sukabumi' ? u.address : '',
                             operationalHours: '',
                             whatsapp: cleanPhone || ADMIN_MAIN_WA,
                             balance: Number(u.balance || 0)
@@ -954,6 +1009,9 @@
                     } else {
                         m.accountId = accId;
                         m.whatsapp = cleanPhone || m.whatsapp;
+                        if (shopTitle && !String(m.name || '').trim()) {
+                            m.name = shopTitle;
+                        }
                         if (typeof u.balance === 'number') {
                             m.balance = Math.max(Number(m.balance || 0), Number(u.balance || 0));
                             u.balance = m.balance;
@@ -1026,6 +1084,15 @@
                     }
                     if (prev && typeof prev.balance === 'number') {
                         merged.balance = Math.max(Number(prev.balance || 0), Number(item.balance || 0));
+                    }
+                    if (prev && prev.name && (!item.name || String(item.name).trim() === '')) {
+                        merged.name = prev.name;
+                    }
+                    if (prev && prev.address && (!item.address || String(item.address).trim() === '')) {
+                        merged.address = prev.address;
+                    }
+                    if (prev && prev.operationalHours && (!item.operationalHours || String(item.operationalHours).trim() === '')) {
+                        merged.operationalHours = prev.operationalHours;
                     }
                     map.set(k, merged);
                 }
@@ -1103,7 +1170,7 @@
 
                 const merchantRows = (db.merchants || []).map((m, i) => ({
                     account_id: String(m.accountId || generateAutoAccountIdFromPhone(m.whatsapp || ('0810' + i), 'merchant')).toUpperCase(),
-                    name: m.name || `Toko ${m.whatsapp || i}`,
+                    name: m.name || '',
                     owner_name: m.ownerName || m.name || 'Mitra Toko',
                     ktp: m.ktp || '3202000000000000',
                     subtitle: m.subtitle || m.name || '',
@@ -1115,8 +1182,8 @@
                     rating_count: Number(m.ratingCount || 0),
                     lat: Number(m.lat || -7.1240),
                     lng: Number(m.lng || 106.8460),
-                    address: m.address || 'Kecamatan Lengkong, Sukabumi',
-                    operational_hours: m.operationalHours || '08:00 - 21:00 WIB',
+                    address: m.address || '',
+                    operational_hours: m.operationalHours || '',
                     whatsapp: normalizePhone(m.whatsapp) || ADMIN_MAIN_WA,
                     balance: Number(m.balance || 0)
                 }));
@@ -1508,8 +1575,8 @@
                         ratingCount: Number(r.rating_count || 0),
                         lat: Number(r.lat || -7.1240),
                         lng: Number(r.lng || 106.8460),
-                        address: r.address || 'Kecamatan Lengkong, Sukabumi',
-                        operationalHours: r.operational_hours || '08:00 - 21:00 WIB',
+                        address: r.address || '',
+                        operationalHours: r.operational_hours || '',
                         whatsapp: normalizePhone(r.whatsapp) || ADMIN_MAIN_WA,
                         balance: Number(r.balance || 0)
                     }));
@@ -1624,7 +1691,6 @@
                 }
 
                 if ((hasChanges || forceRefreshUI) && !chatViewVisible && currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
-                    // Jangan reset tampilan peta home saat user sedang melihat peta agar zoom tidak lepas
                     if (currentSubTab !== 'home' || forceRefreshUI) {
                         renderDashboardContent(currentSubTab);
                     }
@@ -2068,7 +2134,7 @@
                     lat: merchantData.lat,
                     lng: merchantData.lng,
                     address: merchantData.address,
-                    operationalHours: '08:00 - 21:00 WIB',
+                    operationalHours: '',
                     whatsapp: phone,
                     balance: 50000
                 });
@@ -2195,11 +2261,10 @@
             if(activeRole === 'admin') {
                 nav.innerHTML = `
                     <button onclick="renderDashboardContent('admin-dash')" class="flex flex-col items-center py-1 px-1.5 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-chart-pie text-sm"></i><span class="text-[9px] mt-1">Monitor</span></button>
-                    <button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-1.5 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-users text-sm"></i><span class="text-[9px] mt-1">User</span></button>
-                    <button onclick="renderDashboardContent('admin-own-store')" class="flex flex-col items-center py-1 px-1.5 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-shop text-sm"></i><span class="text-[9px] mt-1">Toko Admin</span></button>
+                    <button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-1.5 text-slate-500 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-users text-sm"></i><span class="text-[9px] mt-1">User</span></button>
                     <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-1.5 text-white cursor-pointer"><div class="w-11 h-11 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-yellow-400"><i class="fa-solid fa-house text-base"></i></div></button>
-                    <button onclick="renderDashboardContent('admin-stores')" class="flex flex-col items-center py-1 px-1.5 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-store text-sm"></i><span class="text-[9px] mt-1">List Toko</span></button>
-                    <button onclick="renderDashboardContent('admin-banner')" class="flex flex-col items-center py-1 px-1.5 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-image text-sm"></i><span class="text-[9px] mt-1">Banner</span></button>
+                    <button onclick="renderDashboardContent('admin-stores')" class="flex flex-col items-center py-1 px-1.5 text-slate-500 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-store text-sm"></i><span class="text-[9px] mt-1">Toko</span></button>
+                    <button onclick="renderDashboardContent('admin-banner')" class="flex flex-col items-center py-1 px-1.5 text-slate-500 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-image text-sm"></i><span class="text-[9px] mt-1">Banner</span></button>
                 `;
             } else if(activeRole === 'merchant') {
                 nav.innerHTML = `
@@ -2951,7 +3016,6 @@
                 return;
             }
 
-            // Gabungkan item kembar di keranjang dengan angka (misal: Nasi Liwet 8)
             const groupedCart = [];
             db.cart.forEach((item, idx) => {
                 const found = groupedCart.find(g => Number(g.item.id) === Number(item.id));
@@ -3167,7 +3231,6 @@
                 (myPhone && normalizePhone(m.whatsapp) === myPhone))
             );
 
-            // Jika pendaftar baru belum punya entri toko, buat profil toko kosong khusus akun ini (tanpa isi Toko SIMADU)
             if (!merchant) {
                 merchant = {
                     id: currentUser.id || Date.now(),
@@ -3275,112 +3338,6 @@
                     </div>
                 </div>
             `;
-        }
-
-        function renderAdminOwnStoreManage(container) {
-            const adminStore = getAdminOwnStore();
-            const foods = (db.foods || []).filter(f => Number(f.merchantId) === Number(adminStore.id));
-            const isOpen = adminStore.status === 'Buka';
-            const displayPhoto = tempStorePhoto || adminStore.image;
-            const displayBanner = tempStoreBanner || adminStore.banner;
-
-            container.innerHTML = `
-                <div class="p-4 space-y-5 pb-24">
-                    <div class="relative bg-sky-800 text-white rounded-3xl overflow-hidden shadow-lg border-2 border-yellow-400">
-                        <img src="${adminStore.banner}" class="w-full h-36 object-cover opacity-85" alt="Banner Toko Admin">
-                        <div class="p-4 pt-10 bg-gradient-to-t from-sky-950 via-sky-900/95 to-sky-800/80 relative flex items-end justify-between">
-                            <div class="flex items-center space-x-3">
-                                <img src="${adminStore.image}" class="w-16 h-16 rounded-2xl object-cover border-2 border-yellow-400 -mt-12 bg-white shadow-md" alt="Foto Toko Admin">
-                                <div>
-                                    <span class="text-[10px] text-yellow-300 font-extrabold uppercase block">TOKO MILIK ADMIN (PERMANEN)</span>
-                                    <h2 class="text-base font-black">${adminStore.name}</h2>
-                                    <p class="text-[11px] text-sky-200"><i class="fa-solid fa-star text-yellow-400"></i> ${adminStore.rating || 5.0} • ${adminStore.operationalHours}</p>
-                                </div>
-                            </div>
-                            <button onclick="toggleAdminOwnStoreStatus(${adminStore.id})" class="px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer shadow ${isOpen ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}">
-                                ${adminStore.status}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
-                        <h3 class="font-extrabold text-xs text-sky-900 uppercase border-b pb-2"><i class="fa-solid fa-shop text-yellow-500 mr-1"></i> Kelola Toko Admin Secara Permanen</h3>
-                        <div>
-                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Nama Toko Admin</label>
-                            <input type="text" id="adm-store-name" value="${adminStore.name}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Alamat Toko Admin</label>
-                            <input type="text" id="adm-store-address" value="${adminStore.address}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">Jam Operasional</label>
-                            <input type="text" id="adm-store-hours" value="${adminStore.operationalHours}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3 pt-1">
-                            <div>
-                                <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Foto Profil Toko Admin</label>
-                                <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-adm-photo', 'photo')">
-                                <img id="preview-adm-photo" src="${displayPhoto}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Banner Toko Admin</label>
-                                <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-adm-banner', 'banner')">
-                                <img id="preview-adm-banner" src="${displayBanner}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
-                            </div>
-                        </div>
-                        <button onclick="saveAdminOwnStoreSettings(${adminStore.id})" class="w-full py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer mt-2 border-b-2 border-yellow-400">
-                            Simpan Toko Admin Permanen
-                        </button>
-                    </div>
-
-                    <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
-                        <div class="flex justify-between items-center border-b pb-2">
-                            <h3 class="font-extrabold text-xs text-sky-900 uppercase"><i class="fa-solid fa-utensils text-yellow-500 mr-1"></i> Menu Toko Admin</h3>
-                            <button onclick="openMerchantAddMenuModal(${adminStore.id})" class="px-3 py-1.5 bg-yellow-400 text-slate-950 rounded-xl text-[11px] font-extrabold cursor-pointer shadow-xs">+ Tambah Menu</button>
-                        </div>
-                        <div class="space-y-2.5">
-                            ${foods.map(f => `
-                                <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <div class="flex items-center space-x-3">
-                                        <img src="${f.image}" class="w-12 h-12 rounded-xl object-cover bg-sky-600">
-                                        <div>
-                                            <h4 class="font-bold text-xs text-slate-900">${f.name}</h4>
-                                            <span class="text-xs font-black text-sky-600">Rp ${f.price.toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                    <button onclick="deleteMenuFood(${f.id})" class="text-rose-500 p-2 cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function toggleAdminOwnStoreStatus(storeId) {
-            const m = db.merchants.find(x => Number(x.id) === Number(storeId));
-            if (m) {
-                m.status = m.status === 'Buka' ? 'Tutup' : 'Buka';
-                saveDB(`Status toko Admin (${m.name}) menjadi ${m.status} secara permanen!`);
-                renderAdminOwnStoreManage(document.getElementById('main-content'));
-            }
-        }
-
-        function saveAdminOwnStoreSettings(storeId) {
-            const m = db.merchants.find(x => Number(x.id) === Number(storeId));
-            if (m) {
-                m.name = (document.getElementById('adm-store-name')?.value || m.name).trim();
-                m.address = (document.getElementById('adm-store-address')?.value || m.address).trim();
-                m.operationalHours = (document.getElementById('adm-store-hours')?.value || m.operationalHours).trim();
-                if (tempStorePhoto) m.image = tempStorePhoto;
-                if (tempStoreBanner) m.banner = tempStoreBanner;
-                tempStorePhoto = null;
-                tempStoreBanner = null;
-                hasPendingMediaSelection = false;
-                saveDB(`Toko Admin "${m.name}" berhasil disimpan permanen!`);
-                renderAdminOwnStoreManage(document.getElementById('main-content'));
-            }
         }
 
         function toggleMerchantStatus(merchantId) {
@@ -3602,61 +3559,62 @@
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
-                    <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-sky-900">Panel Admin Master Control</h2>
-                        <button onclick="manualForceSync(true)" class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black cursor-pointer shadow">
-                            <i class="fa-solid fa-rotate mr-1"></i> Sinkron Sekarang
+                    <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-4 rounded-3xl shadow-lg flex items-center justify-between border-2 border-yellow-400">
+                        <div>
+                            <span class="text-[10px] text-yellow-300 font-extrabold uppercase block">PANEL ADMIN SIMADU</span>
+                            <h2 class="font-black text-sm">Master Control Lengkong</h2>
+                        </div>
+                        <button onclick="manualForceSync(true)" class="px-3 py-1.5 bg-yellow-400 text-slate-950 rounded-xl text-[10px] font-black cursor-pointer shadow">
+                            <i class="fa-solid fa-rotate mr-1"></i> Sinkron
                         </button>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div onclick="renderDashboardContent('admin-users')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-sky-500 transition shadow-xs">
-                            <span class="text-[10px] text-slate-500 uppercase font-extrabold">DAFTAR AKUN & USER</span>
-                            <div class="flex justify-between items-center mt-1">
-                                <h3 class="text-xl font-black text-sky-600">${db.users.length} Akun</h3>
-                                <i class="fa-solid fa-arrow-right text-slate-400"></i>
-                            </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div onclick="renderDashboardContent('admin-users')" class="bg-white p-3.5 rounded-3xl border border-sky-100 cursor-pointer hover:border-sky-500 transition shadow-xs text-center">
+                            <span class="text-[10px] text-slate-500 uppercase font-extrabold block">DAFTAR USER</span>
+                            <h3 class="text-lg font-black text-sky-600 mt-1">${db.users.length} Akun</h3>
                         </div>
-                        <div onclick="renderDashboardContent('admin-stores')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-yellow-500 transition shadow-xs">
-                            <span class="text-[10px] text-slate-500 uppercase font-extrabold">MITRA TOKO AKTIF</span>
-                            <div class="flex justify-between items-center mt-1">
-                                <h3 class="text-xl font-black text-yellow-500">${db.merchants.length} Toko</h3>
-                                <i class="fa-solid fa-arrow-right text-slate-400"></i>
-                            </div>
+                        <div onclick="renderDashboardContent('admin-stores')" class="bg-white p-3.5 rounded-3xl border border-sky-100 cursor-pointer hover:border-yellow-500 transition shadow-xs text-center">
+                            <span class="text-[10px] text-slate-500 uppercase font-extrabold block">MITRA TOKO</span>
+                            <h3 class="text-lg font-black text-yellow-500 mt-1">${db.merchants.length} Toko</h3>
                         </div>
-                        <div onclick="renderDashboardContent('admin-drivers')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-emerald-500 transition shadow-xs">
-                            <span class="text-[10px] text-slate-500 uppercase font-extrabold">TOTAL OJOL / DRIVER</span>
-                            <div class="flex justify-between items-center mt-1">
-                                <h3 class="text-xl font-black text-emerald-600">${db.drivers.length} Driver</h3>
-                                <i class="fa-solid fa-arrow-right text-slate-400"></i>
-                            </div>
+                        <div onclick="renderDashboardContent('admin-drivers')" class="bg-white p-3.5 rounded-3xl border border-sky-100 cursor-pointer hover:border-emerald-500 transition shadow-xs text-center">
+                            <span class="text-[10px] text-slate-500 uppercase font-extrabold block">OJOL / DRIVER</span>
+                            <h3 class="text-lg font-black text-emerald-600 mt-1">${db.drivers.length} Driver</h3>
                         </div>
-                        <div onclick="renderDashboardContent('history')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-purple-500 transition shadow-xs">
-                            <span class="text-[10px] text-slate-500 uppercase font-extrabold">KOMISI TERKUMPUL</span>
-                            <div class="flex justify-between items-center mt-1">
-                                <h3 class="text-sm font-black text-purple-600">Rp ${totalCommission.toLocaleString()}</h3>
-                                <i class="fa-solid fa-arrow-right text-slate-400"></i>
-                            </div>
+                        <div onclick="renderDashboardContent('history')" class="bg-white p-3.5 rounded-3xl border border-sky-100 cursor-pointer hover:border-purple-500 transition shadow-xs text-center">
+                            <span class="text-[10px] text-slate-500 uppercase font-extrabold block">KOMISI</span>
+                            <h3 class="text-sm font-black text-purple-600 mt-1">Rp ${totalCommission.toLocaleString()}</h3>
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button onclick="renderDashboardContent('admin-own-store')" class="py-2.5 px-3 bg-white hover:bg-sky-50 text-sky-900 font-extrabold rounded-2xl text-xs border border-sky-200 shadow-2xs cursor-pointer flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-shop text-yellow-500"></i> Toko Admin
+                        </button>
+                        <button onclick="renderDashboardContent('admin-banner')" class="py-2.5 px-3 bg-white hover:bg-sky-50 text-sky-900 font-extrabold rounded-2xl text-xs border border-sky-200 shadow-2xs cursor-pointer flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-image text-sky-600"></i> Banner Utama
+                        </button>
+                    </div>
+
                     <div class="bg-white p-4 rounded-3xl border-2 border-yellow-400 space-y-3 shadow-sm">
-                        <h3 class="font-black text-xs text-sky-900 uppercase border-b pb-2"><i class="fa-solid fa-sliders text-yellow-500 mr-1"></i> Pengaturan Tarif & Komisi Aplikasi (%)</h3>
+                        <h3 class="font-black text-xs text-sky-900 uppercase border-b pb-2 text-center"><i class="fa-solid fa-sliders text-yellow-500 mr-1"></i> Pengaturan Tarif & Komisi (%)</h3>
                         
                         <div class="grid grid-cols-2 gap-2.5">
                             <div>
-                                <label class="text-[10px] font-extrabold text-slate-500 uppercase">Tarif Minimal Terdekat (Rp)</label>
+                                <label class="text-[10px] font-extrabold text-slate-500 uppercase">Tarif Minimal (Rp)</label>
                                 <input type="number" id="cfg-min-fare" value="${p.minFare}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
                             </div>
                             <div>
-                                <label class="text-[10px] font-extrabold text-slate-500 uppercase">Komisi Aplikasi (%)</label>
+                                <label class="text-[10px] font-extrabold text-slate-500 uppercase">Komisi (%)</label>
                                 <input type="number" id="cfg-commission" value="${p.commissionPercent}" min="0" max="100" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
                             </div>
                             <div>
-                                <label class="text-[10px] font-extrabold text-slate-500 uppercase">Tarif Ojek per KM (Rp)</label>
+                                <label class="text-[10px] font-extrabold text-slate-500 uppercase">Ojek / KM (Rp)</label>
                                 <input type="number" id="cfg-ojek-km" value="${p.ojekPerKm}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
                             </div>
                             <div>
-                                <label class="text-[10px] font-extrabold text-slate-500 uppercase">Tarif Food per KM (Rp)</label>
+                                <label class="text-[10px] font-extrabold text-slate-500 uppercase">Food / KM (Rp)</label>
                                 <input type="number" id="cfg-food-km" value="${p.foodPerKm}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
                             </div>
                         </div>
@@ -4273,16 +4231,19 @@
                 const previewText = item.lastMsg ? `${item.lastMsg.from}: ${rawPrev}` : 'Ketuk untuk mulai chat privat';
                 const timeText = item.lastMsg?.time || '';
                 return `
-                    <button onclick="selectChatPartner('${safePartner}')" class="w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-2 cursor-pointer transition ${isSelected ? 'bg-sky-100/90 border-l-4 border-sky-600' : 'bg-white hover:bg-slate-50'}">
-                        <div class="min-w-0 flex-1">
+                    <div class="w-full px-3.5 py-2.5 flex items-center justify-between gap-2 transition ${isSelected ? 'bg-sky-100/90 border-l-4 border-sky-600' : 'bg-white hover:bg-slate-50'}">
+                        <button type="button" onclick="selectChatPartner('${safePartner}')" class="min-w-0 flex-1 text-left cursor-pointer">
                             <div class="flex items-center justify-between gap-2">
                                 <span class="text-xs font-extrabold text-slate-900 truncate">${item.partner}</span>
                                 <span class="text-[9px] text-slate-400 font-semibold shrink-0">${timeText}</span>
                             </div>
                             <p class="text-[11px] text-slate-500 truncate mt-0.5">${previewText}</p>
-                        </div>
+                        </button>
+                        <button type="button" onclick="openChatPartnerProfileModal('${safePartner}')" class="px-2 py-1 bg-sky-50 text-sky-700 border border-sky-200 rounded-lg text-[10px] font-bold cursor-pointer shrink-0" title="Lihat Profil">
+                            Profil
+                        </button>
                         ${item.unreadFromPartner > 0 ? `<span class="bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">${item.unreadFromPartner}</span>` : ''}
-                    </button>
+                    </div>
                 `;
             }).join('');
         }
@@ -4292,7 +4253,6 @@
             const target = String(activeChatTarget || '').trim().toLowerCase();
             const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
 
-            // Privasi ketat: hanya tampilkan chat antara akun login saat ini dan target yang dipilih
             const msgs = (db.chats || []).filter(c => {
                 const from = String(c.from || '').trim().toLowerCase();
                 const to = String(c.to || '').trim().toLowerCase();
