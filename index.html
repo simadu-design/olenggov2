@@ -273,11 +273,16 @@
                 </div>
 
                 <div class="space-y-2">
-                    <div class="flex justify-between items-center">
+                    <div class="flex justify-between items-center flex-wrap gap-1">
                         <span class="text-[11px] font-extrabold text-slate-700 uppercase">Peta Rute & Titik Pengantaran</span>
-                        <button onclick="useCurrentGPSLocation('cart')" class="px-2.5 py-1 bg-sky-600 text-white rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shadow-xs">
-                            <i class="fa-solid fa-crosshairs"></i> Lokasi Terkini
-                        </button>
+                        <div class="flex gap-1.5">
+                            <button onclick="toggleMapLayerMode()" class="px-2 py-1 bg-slate-800 text-yellow-300 rounded-xl text-[10px] font-extrabold cursor-pointer">
+                                <i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">Satelit</span>
+                            </button>
+                            <button onclick="useCurrentGPSLocation('cart')" class="px-2.5 py-1 bg-sky-600 text-white rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shadow-xs">
+                                <i class="fa-solid fa-crosshairs"></i> Lokasi Terkini
+                            </button>
+                        </div>
                     </div>
                     <div id="checkout-map" class="map-container shadow-inner border border-sky-200"></div>
                     <div class="grid grid-cols-2 gap-2 text-[10px]">
@@ -382,11 +387,43 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-        // REGISTRASI SERVICE WORKER PWA
+        const ADMIN_MAIN_WA = '6285624736602';
+
+        // REGISTRASI SERVICE WORKER PWA & IZIN NOTIFIKASI LATAR BELAKANG
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {
                 navigator.serviceWorker.register('./sw.js').catch(function () {});
             });
+        }
+
+        function requestBackgroundNotificationPermission() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().catch(function () {});
+            }
+        }
+
+        function triggerSystemBackgroundNotification(title, body) {
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+            try {
+                if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        if (reg && typeof reg.showNotification === 'function') {
+                            reg.showNotification(title, {
+                                body: body,
+                                icon: './icon-192.png',
+                                badge: './icon-192.png',
+                                vibrate: [200, 100, 200]
+                            });
+                        } else {
+                            new Notification(title, { body, icon: './icon-192.png' });
+                        }
+                    }).catch(() => {
+                        new Notification(title, { body, icon: './icon-192.png' });
+                    });
+                } else {
+                    new Notification(title, { body, icon: './icon-192.png' });
+                }
+            } catch (e) {}
         }
 
         // SPLASH SCREEN 2 DETIK
@@ -414,14 +451,54 @@
         let isSyncingNow = false;
         let realtimeChannel = null;
         let activeIncomingChatId = null;
+        let mapLayerMode = localStorage.getItem('oleng_map_layer_mode') || 'street'; // 'street' | 'satellite'
         let readChatIds = JSON.parse(localStorage.getItem('oleng_read_chat_ids') || '[]');
         let readNotifIds = JSON.parse(localStorage.getItem('oleng_read_notif_ids') || '[]');
         let shownPopupChatIds = JSON.parse(localStorage.getItem('oleng_shown_popup_chats') || '[]');
+        let notifiedBackgroundKeys = JSON.parse(localStorage.getItem('oleng_bg_notified_keys') || '[]');
         let lastSupabaseStatus = {
             ok: false,
             label: 'Supabase: Mengecek...',
             detail: SUPABASE_REST_ENDPOINT
         };
+
+        function notifyBackgroundOnce(key, title, body) {
+            const k = String(key);
+            if (notifiedBackgroundKeys.includes(k)) return;
+            notifiedBackgroundKeys.push(k);
+            localStorage.setItem('oleng_bg_notified_keys', JSON.stringify(notifiedBackgroundKeys.slice(-200)));
+            triggerSystemBackgroundNotification(title, body);
+        }
+
+        function getBaseTileLayerForMode() {
+            if (mapLayerMode === 'satellite') {
+                return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 19,
+                    attribution: 'Tiles &copy; Esri'
+                });
+            }
+            return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            });
+        }
+
+        function toggleMapLayerMode() {
+            mapLayerMode = mapLayerMode === 'satellite' ? 'street' : 'satellite';
+            localStorage.setItem('oleng_map_layer_mode', mapLayerMode);
+            const labelText = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
+            document.querySelectorAll('.map-layer-label').forEach(el => { el.textContent = labelText; });
+            showToast(`Berhasil! Tampilan peta diubah ke mode ${mapLayerMode === 'satellite' ? 'Satelit' : 'Peta Jalan'}.`, 'success');
+            if (currentSubTab === 'home') initHomeMap();
+            else if (currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
+            else if (currentSubTab === 'food') renderCustomerFood(document.getElementById('main-content'));
+            else if (!document.getElementById('modal-cart')?.classList.contains('hidden')) openCartModal();
+        }
+
+        function openMainAdminWhatsApp(customMessage = '') {
+            const msg = customMessage || `Halo Admin OLENG GO (${ADMIN_MAIN_WA}), saya ${currentUser?.name || 'Pengguna'} (ID: ${currentUser?.accountId || '-'}) menghubungi terkait layanan/peta Lengkong.`;
+            window.open(`https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
 
         async function checkSupabaseConnectionStatus(showNotify = false) {
             const sdkLoaded = Boolean(window.supabase && typeof window.supabase.createClient === 'function');
@@ -512,26 +589,53 @@
                         pullInitialFromSupabase(true).then(() => {
                             if (payload?.eventType === 'INSERT' && payload?.new) {
                                 const row = payload.new;
-                                checkAndTriggerIncomingChatPopup({
+                                const chatObj = {
                                     id: row.id,
                                     from: row.sender_name,
                                     to: row.receiver_name,
                                     text: row.message_text,
                                     time: row.sent_time || '',
-                                    chatStatus: row.chat_status || 'Baru'
-                                });
+                                    chatStatus: 'Baru'
+                                };
+                                if (isMessageForCurrentUser(chatObj)) {
+                                    notifyBackgroundOnce('chat-' + row.id, `Chat Baru dari ${row.sender_name}`, row.message_text);
+                                    checkAndTriggerIncomingChatPopup(chatObj);
+                                }
                             }
                         });
                     })
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
                         pullInitialFromSupabase(true).then(() => {
-                            if (payload?.eventType === 'INSERT') {
-                                playAlarmRingtone();
-                                checkAndShowIncomingOrderPopup(true);
+                            if (payload?.eventType === 'INSERT' && payload?.new) {
+                                const r = payload.new;
+                                const ordObj = {
+                                    id: r.order_code,
+                                    type: r.order_type || 'ojek',
+                                    customer: r.customer_name,
+                                    merchant: r.merchant_name,
+                                    driver: r.driver_name,
+                                    items: r.items_summary,
+                                    total: Number(r.total_amount || 0),
+                                    status: r.status || 'Menunggu Driver'
+                                };
+                                if (isOrderTargetedToCurrentUser(ordObj)) {
+                                    notifyBackgroundOnce('order-' + ordObj.id, `Order Baru ${ordObj.id}`, `${ordObj.items} (${ordObj.customer})`);
+                                    playAlarmRingtone();
+                                    checkAndShowIncomingOrderPopup(true);
+                                }
                             }
                         });
                     })
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, () => {
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, (payload) => {
+                        if (payload?.eventType === 'DELETE' && payload?.old?.account_id) {
+                            const deletedCode = String(payload.old.account_id).toUpperCase();
+                            db.users = (db.users || []).filter(u => String(u.accountId || '').toUpperCase() !== deletedCode);
+                            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                            if (currentUser && String(currentUser.accountId || '').toUpperCase() === deletedCode) {
+                                handleLogout();
+                                return;
+                            }
+                        }
                         pullInitialFromSupabase(true);
                     })
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'merchants' }, () => {
@@ -734,7 +838,7 @@
                     ojek_per_km: Number(db.pricing?.ojekPerKm || 2500),
                     food_per_km: Number(db.pricing?.foodPerKm || 2000),
                     commission_percent: Number(db.pricing?.commissionPercent || 10),
-                    admin_whatsapp: '6285624736602',
+                    admin_whatsapp: ADMIN_MAIN_WA,
                     state_json: extraState
                 }, { onConflict: 'id' });
 
@@ -746,7 +850,7 @@
                         ojek_per_km: Number(db.pricing?.ojekPerKm || 2500),
                         food_per_km: Number(db.pricing?.foodPerKm || 2000),
                         commission_percent: Number(db.pricing?.commissionPercent || 10),
-                        admin_whatsapp: '6285624736602'
+                        admin_whatsapp: ADMIN_MAIN_WA
                     }, { onConflict: 'id' });
                 }
 
@@ -787,7 +891,7 @@
                     lng: Number(m.lng || 106.8460),
                     address: m.address || 'Kecamatan Lengkong, Sukabumi',
                     operational_hours: m.operationalHours || '08:00 - 21:00 WIB',
-                    whatsapp: m.whatsapp || '6285624736602',
+                    whatsapp: m.whatsapp || ADMIN_MAIN_WA,
                     balance: Number(m.balance || 0)
                 }));
 
@@ -806,7 +910,7 @@
                     location: d.location || 'Lengkong, Sukabumi',
                     lat: Number(d.lat || -7.1235),
                     lng: Number(d.lng || 106.8458),
-                    phone: d.phone || '6285624736602',
+                    phone: d.phone || ADMIN_MAIN_WA,
                     rating: Number(d.rating || 5.0),
                     rating_count: Number(d.ratingCount || 0),
                     balance: Number(d.balance || 0)
@@ -921,6 +1025,41 @@
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             if (activeRole === 'admin' && (to === 'admin simadu' || to === 'admin' || to === 'adm01' || to === 'all')) return true;
             if (to === me || (myId && to === myId) || (myShop && to === myShop) || to === 'all') return true;
+            return false;
+        }
+
+        function isOrderTargetedToCurrentUser(order) {
+            if (!currentUser || !order) return false;
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            if (role === 'admin') return true;
+
+            const me = String(currentUser.name || '').trim().toLowerCase();
+            const myId = String(currentUser.accountId || '').trim().toUpperCase();
+            const myShop = String(currentUser.shopName || '').trim().toLowerCase();
+
+            if (role === 'customer') {
+                return String(order.customer || '').trim().toLowerCase() === me;
+            }
+
+            if (role === 'driver') {
+                const drvObj = db.drivers.find(d =>
+                    (myId && String(d.accountId || '').toUpperCase() === myId) ||
+                    (me && String(d.name || '').trim().toLowerCase() === me)
+                );
+                const allowedDrivers = [me, drvObj ? String(drvObj.name || '').trim().toLowerCase() : ''].filter(Boolean);
+                return allowedDrivers.includes(String(order.driver || '').trim().toLowerCase());
+            }
+
+            if (role === 'merchant') {
+                const mrcObj = db.merchants.find(m =>
+                    (myId && String(m.accountId || '').toUpperCase() === myId) ||
+                    (myShop && String(m.name || '').trim().toLowerCase() === myShop) ||
+                    (me && String(m.name || '').trim().toLowerCase() === me)
+                );
+                const allowedMerchants = [me, myShop, mrcObj ? String(mrcObj.name || '').trim().toLowerCase() : ''].filter(Boolean);
+                return allowedMerchants.includes(String(order.merchant || '').trim().toLowerCase());
+            }
+
             return false;
         }
 
@@ -1040,7 +1179,7 @@
                 const prevChatIds = new Set((db.chats || []).map(c => String(c.id)));
                 const prevOrderIds = new Set((db.orders || []).map(o => String(o.id)));
 
-                // 1. Tarik app_config & state_json
+                // 1. Tarik app_config & state_json (termasuk banner permanen & tarif admin)
                 const { data: cfg } = await supabaseClient.from('app_config').select('*').eq('id', 1).maybeSingle();
                 if (cfg) {
                     if (cfg.main_banner && cfg.main_banner !== db.mainBanner) {
@@ -1049,12 +1188,16 @@
                         localStorage.setItem('oleng_global_banner', cfg.main_banner);
                         hasChanges = true;
                     }
-                    db.pricing = {
+                    const nextPricing = {
                         minFare: Number(cfg.min_fare ?? db.pricing.minFare ?? 8000),
                         ojekPerKm: Number(cfg.ojek_per_km ?? db.pricing.ojekPerKm ?? 2500),
                         foodPerKm: Number(cfg.food_per_km ?? db.pricing.foodPerKm ?? 2000),
                         commissionPercent: Number(cfg.commission_percent ?? db.pricing.commissionPercent ?? 10)
                     };
+                    if (JSON.stringify(nextPricing) !== JSON.stringify(db.pricing)) {
+                        db.pricing = nextPricing;
+                        hasChanges = true;
+                    }
                     if (cfg.state_json && typeof cfg.state_json === 'object') {
                         const st = cfg.state_json;
                         if (Array.isArray(st.foods) && st.foods.length > 0) {
@@ -1078,9 +1221,10 @@
                     }
                 }
 
-                // 2. Tarik semua akun (accounts)
+                // 2. Tarik semua akun (accounts) & hormati penghapusan akun oleh Admin
                 const { data: accRows } = await supabaseClient.from('accounts').select('*');
                 if (Array.isArray(accRows) && accRows.length > 0) {
+                    const remoteAccountCodes = new Set(accRows.map(r => String(r.account_id || '').toUpperCase()).filter(Boolean));
                     const localUsersBackup = [...(db.users || [])];
                     const mappedRemoteUsers = accRows.map((r, idx) => {
                         const accUpper = String(r.account_id || '').toUpperCase();
@@ -1107,7 +1251,12 @@
                         };
                     });
 
-                    const mergedUsers = mergeByKey(localUsersBackup, mappedRemoteUsers, u => String(u.accountId || '').toUpperCase());
+                    // Pertahankan akun lokal yang belum ter-push atau akun yang ada di remote, buang yang sudah dihapus Admin dari remote
+                    const keptLocalOnly = localUsersBackup.filter(lu => {
+                        const code = String(lu.accountId || '').toUpperCase();
+                        return code && !remoteAccountCodes.has(code) && lu._pendingLocal === true;
+                    });
+                    const mergedUsers = mergeByKey(keptLocalOnly, mappedRemoteUsers, u => String(u.accountId || '').toUpperCase());
                     if (!mergedUsers.some(u => String(u.accountId || '').toUpperCase() === 'ADM01')) {
                         mergedUsers.push({ ...DEFAULT_ADMIN_ACCOUNT });
                     }
@@ -1115,10 +1264,14 @@
                     db.users = mergedUsers;
 
                     if (currentUser) {
-                        const refreshedSelf = mergedUsers.find(u => String(u.accountId).toUpperCase() === String(currentUser.accountId || '').toUpperCase());
+                        const myCode = String(currentUser.accountId || '').toUpperCase();
+                        if (myCode && myCode !== 'ADM01' && !remoteAccountCodes.has(myCode) && currentUser._pendingLocal !== true) {
+                            handleLogout();
+                            return;
+                        }
+                        const refreshedSelf = mergedUsers.find(u => String(u.accountId).toUpperCase() === myCode);
                         if (refreshedSelf) {
-                            const keptHomeBal = currentUser.balance;
-                            currentUser = { ...refreshedSelf, balance: keptHomeBal !== undefined ? keptHomeBal : refreshedSelf.balance };
+                            currentUser = { ...refreshedSelf };
                             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
                         }
                     }
@@ -1144,7 +1297,7 @@
                         lng: Number(r.lng || 106.8460),
                         address: r.address || 'Kecamatan Lengkong, Sukabumi',
                         operationalHours: r.operational_hours || '08:00 - 21:00 WIB',
-                        whatsapp: r.whatsapp || '6285624736602',
+                        whatsapp: r.whatsapp || ADMIN_MAIN_WA,
                         balance: Number(r.balance || 0)
                     }));
                     db.merchants = mergeByKey(db.merchants, mappedMerchants, m => String(m.accountId || m.name).toUpperCase());
@@ -1166,7 +1319,7 @@
                         location: r.location || 'Lengkong, Sukabumi',
                         lat: Number(r.lat || -7.1235),
                         lng: Number(r.lng || 106.8458),
-                        phone: r.phone || '6285624736602',
+                        phone: r.phone || ADMIN_MAIN_WA,
                         rating: Number(r.rating || 5.0),
                         ratingCount: Number(r.rating_count || 0),
                         balance: Number(r.balance || 0)
@@ -1234,12 +1387,16 @@
 
                 const newlyArrivedChats = (db.chats || []).filter(c => !prevChatIds.has(String(c.id)) && isMessageForCurrentUser(c));
                 if (newlyArrivedChats.length > 0) {
+                    const latestC = newlyArrivedChats[newlyArrivedChats.length - 1];
+                    notifyBackgroundOnce('chat-' + latestC.id, `Chat Baru dari ${latestC.from}`, latestC.text);
                     playAlarmRingtone();
-                    checkAndTriggerIncomingChatPopup(newlyArrivedChats[newlyArrivedChats.length - 1]);
+                    checkAndTriggerIncomingChatPopup(latestC);
                 }
 
-                const newlyArrivedOrders = (db.orders || []).filter(o => !prevOrderIds.has(String(o.id)));
+                const newlyArrivedOrders = (db.orders || []).filter(o => !prevOrderIds.has(String(o.id)) && isOrderTargetedToCurrentUser(o));
                 if (newlyArrivedOrders.length > 0) {
+                    const latestO = newlyArrivedOrders[0];
+                    notifyBackgroundOnce('order-' + latestO.id, `Order Masuk ${latestO.id}`, `${latestO.items} (${latestO.customer})`);
                     playAlarmRingtone();
                     checkAndShowIncomingOrderPopup(true);
                 }
@@ -1287,8 +1444,9 @@
 
         function addAccountNotification(title, desc, targetUser = null) {
             const owner = targetUser || (currentUser ? currentUser.name : 'ALL');
+            const notifId = Date.now() + Math.floor(Math.random() * 90);
             db.notifications.unshift({
-                id: Date.now(),
+                id: notifId,
                 targetUser: owner,
                 title: title,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -1296,6 +1454,9 @@
             });
             saveDB();
             playAlarmRingtone();
+            if (currentUser && (owner === 'ALL' || String(owner).toLowerCase() === String(currentUser.name || '').toLowerCase())) {
+                notifyBackgroundOnce('notif-' + notifId, title, desc);
+            }
         }
 
         function playAlarmRingtone() {
@@ -1357,6 +1518,7 @@
         document.addEventListener("DOMContentLoaded", async function() {
             getSyncedMainBanner();
             toggleRegisterRoleFields();
+            requestBackgroundNotificationPermission();
             updateSupabaseBadgeUI(false);
             subscribeRealtimeUpdates();
             const savedSession = localStorage.getItem('oleng_user_session');
@@ -1373,7 +1535,6 @@
             await pullInitialFromSupabase(true);
             await syncAllToSupabase();
 
-            // Auto-sync setiap 4 detik agar chat & order antar-HP cepat tersinkron
             setInterval(() => {
                 pullInitialFromSupabase(false);
             }, 4000);
@@ -1409,7 +1570,7 @@
                 regMerchantMapInstance = null;
             }
             regMerchantMapInstance = L.map('reg-merchant-map', { zoomControl: true }).setView(regMerchantLatLng, 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(regMerchantMapInstance);
+            getBaseTileLayerForMode().addTo(regMerchantMapInstance);
 
             const marker = L.marker(regMerchantLatLng, { draggable: true })
                 .addTo(regMerchantMapInstance)
@@ -1473,6 +1634,7 @@
 
         async function handleLogin(e) {
             e.preventDefault();
+            requestBackgroundNotificationPermission();
             const rawId = document.getElementById('login-account-id').value.trim().toUpperCase();
             const password = document.getElementById('login-password').value.trim();
             const role = document.getElementById('login-role').value;
@@ -1497,7 +1659,7 @@
             }
 
             if (!foundUser) {
-                showToast(`ID "${rawId}" untuk role ${role.toUpperCase()} tidak ditemukan! Silakan daftar terlebih dahulu atau ketuk badge Supabase untuk sinkron.`, 'error');
+                showToast(`ID "${rawId}" untuk role ${role.toUpperCase()} tidak ditemukan atau sudah dihapus Admin!`, 'error');
                 return;
             }
 
@@ -1520,6 +1682,7 @@
 
         async function handleRegister(e) {
             e.preventDefault();
+            requestBackgroundNotificationPermission();
             const role = document.getElementById('reg-role').value;
             const accountId = document.getElementById('reg-account-id').value.trim().toUpperCase();
             const name = document.getElementById('reg-name').value.trim();
@@ -1610,7 +1773,7 @@
                     subtitle: `Pemilik: ${merchantData.ownerName}`,
                     category: 'Kuliner',
                     status: 'Buka',
-                    banner: 'https://placehold.co/600x300/0284c7/facc15?text=' + encodeURIComponent(merchantData.shopName),
+                    banner: getSyncedMainBanner(),
                     image: newUser.photo,
                     rating: 5.0,
                     ratingCount: 0,
@@ -1665,7 +1828,7 @@
             document.getElementById('view-auth').classList.add('hidden');
             document.getElementById('view-dashboard').classList.remove('hidden');
             if (!currentUser) {
-                currentUser = { id: 0, accountId: 'TAMU01', name: `Pemohon (${refVal})`, phone: '085624736602', role: 'customer', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=ID' };
+                currentUser = { id: 0, accountId: 'TAMU01', name: `Pemohon (${refVal})`, phone: ADMIN_MAIN_WA, role: 'customer', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=ID' };
             }
             activeChatTarget = 'Admin SIMADU';
             switchView('chat');
@@ -1681,7 +1844,7 @@
             const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'Akun Belum Diisi';
             const text = encodeURIComponent(`Halo Admin SIMADU, saya lupa kata sandi untuk ID/Akun: ${refVal}. Mohon bantuan reset password.`);
             showToast('Berhasil! Membuka WhatsApp Admin SIMADU.', 'success');
-            window.open(`https://wa.me/6285624736602?text=${text}`, '_blank');
+            window.open(`https://wa.me/${ADMIN_MAIN_WA}?text=${text}`, '_blank');
         }
 
         function handleLogout() {
@@ -1798,37 +1961,13 @@
         }
 
         function getAccountNotifs() {
-            return db.notifications.filter(n => n.targetUser === 'ALL' || n.targetUser === currentUser.name);
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            if (role === 'admin') return db.notifications;
+            return (db.notifications || []).filter(n => n.targetUser === 'ALL' || String(n.targetUser || '').toLowerCase() === String(currentUser.name || '').toLowerCase());
         }
 
         function getAccountOrders() {
-            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            if (role === 'admin') return db.orders;
-            if (role === 'driver') {
-                const drvObj = db.drivers.find(d =>
-                    (currentUser.accountId && String(d.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
-                    (currentUser.name && String(d.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
-                );
-                const myDriverNames = [currentUser.name, drvObj?.name].filter(Boolean).map(s => s.toLowerCase());
-                return db.orders.filter(o =>
-                    myDriverNames.includes(String(o.driver || '').toLowerCase()) ||
-                    o.status === 'Menunggu Driver' ||
-                    o.status === 'Driver Menuju Lokasi'
-                );
-            }
-            if (role === 'merchant') {
-                const mrcObj = db.merchants.find(m =>
-                    (currentUser.accountId && String(m.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
-                    (currentUser.shopName && String(m.name || '').toLowerCase() === String(currentUser.shopName).toLowerCase()) ||
-                    (currentUser.name && String(m.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
-                );
-                const myShopNames = [currentUser.name, currentUser.shopName, mrcObj?.name].filter(Boolean).map(s => s.toLowerCase());
-                return db.orders.filter(o =>
-                    myShopNames.includes(String(o.merchant || '').toLowerCase()) ||
-                    o.type === 'food'
-                );
-            }
-            return db.orders.filter(o => String(o.customer || '').toLowerCase() === String(currentUser.name || '').toLowerCase());
+            return (db.orders || []).filter(o => isOrderTargetedToCurrentUser(o));
         }
 
         function getAccountMutations() {
@@ -1848,24 +1987,8 @@
             const candidate = db.orders.find(o => {
                 if (o.status === 'Selesai' || o.status === 'Ditolak') return false;
                 if (!forceShowLatest && shownPopupOrderIds.includes(o.id)) return false;
-                if (activeRole === 'driver') {
-                    const drvObj = db.drivers.find(d =>
-                        (currentUser.accountId && String(d.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
-                        (currentUser.name && String(d.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
-                    );
-                    const myNames = [currentUser.name, drvObj?.name].filter(Boolean).map(s => s.toLowerCase());
-                    return myNames.includes(String(o.driver || '').toLowerCase()) || o.type === 'ojek' || o.type === 'food';
-                }
-                if (activeRole === 'merchant') {
-                    const mrcObj = db.merchants.find(m =>
-                        (currentUser.accountId && String(m.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
-                        (currentUser.shopName && String(m.name || '').toLowerCase() === String(currentUser.shopName).toLowerCase()) ||
-                        (currentUser.name && String(m.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
-                    );
-                    const myShops = [currentUser.name, currentUser.shopName, mrcObj?.name].filter(Boolean).map(s => s.toLowerCase());
-                    return o.type === 'food' || myShops.includes(String(o.merchant || '').toLowerCase());
-                }
-                return true;
+                if (activeRole === 'admin') return true;
+                return isOrderTargetedToCurrentUser(o);
             });
 
             if (candidate) {
@@ -1899,7 +2022,7 @@
                 <div class="grid grid-cols-3 gap-2 pt-2">
                     <button onclick="handleIncomingOrderAction('${order.id}', 'accept')" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Terima</button>
                     <button onclick="handleIncomingOrderAction('${order.id}', 'reject')" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Tolak</button>
-                    <button onclick="handleIncomingOrderAction('${order.id}', 'complete')" class="py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Selesai</button>
+                    <button onclick="handleIncomingOrderAction('${order.id}', 'complete')" class="py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Konfirmasi Selesai</button>
                 </div>
             `;
             document.getElementById('modal-incoming-order').classList.remove('hidden');
@@ -1971,7 +2094,7 @@
                     order.settled = true;
                     order.commissionFee = commissionFee;
                     order.netEarnings = netEarnings;
-                    saveDB(`Order ${order.id} selesai & tersinkron! Bersih Rp ${netEarnings.toLocaleString()}.`);
+                    saveDB(`Order ${order.id} dikonfirmasi selesai & tersinkron! Bersih Rp ${netEarnings.toLocaleString()}.`);
                     addAccountNotification(`Order ${order.id} Selesai`, `Order selesai. Pendapatan bersih Rp ${netEarnings.toLocaleString()}, komisi ${pct}% (Rp ${commissionFee.toLocaleString()}). Silakan beri rating!`, order.customer);
                 } else {
                     saveDB(`Status order ${order.id} tersinkron.`);
@@ -2049,6 +2172,8 @@
             const unreadNotifs = getUnreadNotifCount();
             const unreadChats = getUnreadChatCount();
             const activeBanner = getSyncedMainBanner();
+            const layerBtnLabel = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
+
             container.innerHTML = `
                 <div class="p-4 space-y-4 bg-gradient-to-b from-sky-500 via-sky-600 to-slate-50 min-h-full pb-20">
                     
@@ -2057,7 +2182,7 @@
                             <img src="${currentUser.photo}" class="w-12 h-12 rounded-2xl object-cover border-2 border-yellow-400 shadow-inner">
                             <div>
                                 <span class="text-xs text-sky-200 font-extrabold block">Halo, ${currentUser.name} (ID: ${currentUser.accountId || '-'})</span>
-                                <h3 class="text-sm font-black text-yellow-300 tracking-tight">${currentUser.role === 'customer' ? 'WARGA KEC. LENGKONG' : 'Saldo: Rp ' + Number(currentUser.balance || 0).toLocaleString()}</h3>
+                                <h3 class="text-xs font-black text-yellow-300 tracking-tight uppercase">WARGA KEC. LENGKONG</h3>
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -2075,11 +2200,14 @@
                         </div>
                     </div>
 
-                    <div class="bg-white/95 px-4 py-2.5 rounded-2xl border border-sky-200 flex items-center justify-between shadow-xs gap-2">
-                        <div class="flex items-center gap-2">
+                    <div class="bg-white/95 px-4 py-2.5 rounded-2xl border border-sky-200 flex items-center justify-between shadow-xs gap-2 flex-wrap">
+                        <div class="flex items-center gap-1.5">
                             <i class="fa-solid fa-bell-ring text-yellow-500 text-xs"></i>
                             <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${alarmEnabled ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-700'}">
                                 Alarm: ${alarmEnabled ? 'ON' : 'OFF'}
+                            </button>
+                            <button onclick="openMainAdminWhatsApp()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-emerald-600 text-white shadow-2xs">
+                                <i class="fa-brands fa-whatsapp"></i> WA Utama
                             </button>
                         </div>
                         <button type="button" onclick="manualForceSync(true)" id="home-supabase-badge" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 border border-slate-300 shadow cursor-pointer">
@@ -2111,18 +2239,23 @@
                     </div>
 
                     <div class="bg-white p-4 rounded-3xl shadow-sm border border-sky-100 space-y-2.5">
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center gap-2 flex-wrap">
                             <h3 class="font-extrabold text-xs text-sky-900 uppercase tracking-wider flex items-center gap-1.5">
                                 <i class="fa-solid fa-map-location-dot text-sky-600"></i> Peta Ojek & Toko Lengkong
                             </h3>
-                            <span class="text-[10px] bg-sky-100 text-sky-800 px-2.5 py-1 rounded-full font-extrabold flex items-center gap-1">
-                                <i class="fa-solid fa-location-crosshairs text-sky-600"></i> GPS Real-Time
-                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="toggleMapLayerMode()" class="px-2.5 py-1 bg-slate-800 text-yellow-300 rounded-xl text-[10px] font-extrabold cursor-pointer">
+                                    <i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span>
+                                </button>
+                                <span class="text-[10px] bg-sky-100 text-sky-800 px-2 py-1 rounded-full font-extrabold flex items-center gap-1">
+                                    <i class="fa-solid fa-location-crosshairs text-sky-600"></i> GPS Real
+                                </span>
+                            </div>
                         </div>
                         <div id="map" class="map-container shadow-inner border border-sky-100"></div>
-                        <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1">
-                            <span><i class="fa-solid fa-store text-amber-500"></i> Toko (Titik Terkunci)</span>
-                            <span><i class="fa-solid fa-motorcycle text-sky-600"></i> Ojek (GPS Real-Time)</span>
+                        <div class="flex items-center justify-between text-[10px] text-slate-600 font-bold pt-1">
+                            <span><i class="fa-solid fa-store text-amber-500"></i> Mitra Toko</span>
+                            <span><i class="fa-solid fa-motorcycle text-sky-600"></i> Mitra Ojek</span>
                         </div>
                     </div>
                 </div>
@@ -2134,6 +2267,7 @@
 
         function renderCustomerFood(container) {
             const filteredMerchants = db.merchants.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || m.category.toLowerCase().includes(searchQuery.toLowerCase()));
+            const layerBtnLabel = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
@@ -2154,11 +2288,16 @@
                     </div>
 
                     <div class="bg-white p-3.5 rounded-3xl shadow-xs border border-sky-200 space-y-2">
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center gap-1 flex-wrap">
                             <span class="text-[11px] font-extrabold text-sky-800 uppercase"><i class="fa-solid fa-map-pin text-yellow-500 mr-1"></i> Peta Lokasi Toko & Ojek</span>
-                            <button onclick="useCurrentGPSLocation('food')" class="px-2.5 py-1 bg-yellow-400 text-slate-900 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shadow-xs">
-                                <i class="fa-solid fa-crosshairs"></i> Lokasi Terkini GPS
-                            </button>
+                            <div class="flex gap-1.5">
+                                <button onclick="toggleMapLayerMode()" class="px-2 py-1 bg-slate-800 text-yellow-300 rounded-xl text-[10px] font-extrabold cursor-pointer">
+                                    <i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span>
+                                </button>
+                                <button onclick="useCurrentGPSLocation('food')" class="px-2.5 py-1 bg-yellow-400 text-slate-900 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shadow-xs">
+                                    <i class="fa-solid fa-crosshairs"></i> Lokasi Terkini GPS
+                                </button>
+                            </div>
                         </div>
                         <div id="food-map" class="map-container shadow-inner border border-slate-200" style="height: 175px;"></div>
                         <div class="grid grid-cols-2 gap-2 text-[10px]">
@@ -2246,8 +2385,8 @@
                             </div>
                         </div>
                         <div class="flex gap-2.5">
-                            <a href="https://wa.me/${merchant.whatsapp}?text=${encodeURIComponent('Halo ' + merchant.name + ', saya ingin memesan menu di OLENG GO...')}" target="_blank" class="flex-1 py-3 bg-emerald-600 text-white font-extrabold rounded-2xl shadow-sm flex items-center justify-center gap-2 text-xs transition">
-                                <i class="fa-brands fa-whatsapp text-base"></i> WhatsApp Toko
+                            <a href="https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin OLENG GO (' + ADMIN_MAIN_WA + '), saya ingin memesan di toko ' + merchant.name + '...')}" target="_blank" class="flex-1 py-3 bg-emerald-600 text-white font-extrabold rounded-2xl shadow-sm flex items-center justify-center gap-2 text-xs transition">
+                                <i class="fa-brands fa-whatsapp text-base"></i> WA Utama
                             </a>
                             <button onclick="startPersonalChat('${merchant.name}')" class="flex-1 py-3 bg-sky-600 text-white font-extrabold rounded-2xl shadow-sm flex items-center justify-center gap-1.5 text-xs transition cursor-pointer">
                                 <i class="fa-solid fa-comments"></i> Live Chat
@@ -2301,6 +2440,7 @@
             const filteredDrivers = sortedDrivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.vehicle.toLowerCase().includes(searchQuery.toLowerCase()));
             const distanceKm = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]);
             const estFare = calculateShippingCost(distanceKm, 'ojek');
+            const layerBtnLabel = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
@@ -2313,11 +2453,16 @@
                     </div>
 
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-200 space-y-3">
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center gap-1 flex-wrap">
                             <span class="text-[11px] font-extrabold text-sky-800 uppercase"><i class="fa-solid fa-route text-yellow-500 mr-1"></i> Peta Rute Penjemputan GPS</span>
-                            <button onclick="useCurrentGPSLocation('ojek')" class="px-2.5 py-1 bg-yellow-400 text-slate-900 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shadow-xs">
-                                <i class="fa-solid fa-crosshairs"></i> Lokasi Terkini
-                            </button>
+                            <div class="flex gap-1.5">
+                                <button onclick="toggleMapLayerMode()" class="px-2 py-1 bg-slate-800 text-yellow-300 rounded-xl text-[10px] font-extrabold cursor-pointer">
+                                    <i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span>
+                                </button>
+                                <button onclick="useCurrentGPSLocation('ojek')" class="px-2.5 py-1 bg-yellow-400 text-slate-900 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shadow-xs">
+                                    <i class="fa-solid fa-crosshairs"></i> Lokasi Terkini
+                                </button>
+                            </div>
                         </div>
                         <div id="ojek-map" class="map-container shadow-inner border border-slate-200" style="height: 185px;"></div>
                         
@@ -2352,20 +2497,23 @@
                                 const isSelected = selectedDriverId === d.id;
                                 const isOnline = d.status === 'Online';
                                 return `
-                                    <div onclick="selectDriver(${d.id})" class="bg-white p-3.5 rounded-2xl border transition cursor-pointer flex items-center justify-between ${isSelected ? 'border-sky-600 bg-yellow-50/50 shadow-sm' : 'border-slate-100'}">
-                                        <div class="flex items-center space-x-3">
-                                            <div class="w-12 h-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-lg font-bold shadow-xs">
-                                                <i class="fa-solid fa-helmet-safety"></i>
+                                    <div onclick="selectDriver(${d.id})" class="bg-white p-3.5 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-2 ${isSelected ? 'border-sky-600 bg-yellow-50/50 shadow-sm' : 'border-slate-100'}">
+                                        <div class="flex items-center space-x-3 min-w-0 flex-1">
+                                            <div class="w-12 h-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-lg font-bold shadow-xs shrink-0">
+                                                <i class="fa-solid fa-motorcycle"></i>
                                             </div>
-                                            <div>
-                                                <h4 class="font-bold text-xs text-slate-900">${d.name} <span class="text-[9px] ${isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'} px-1.5 py-0.5 rounded font-extrabold ml-1">${d.status}</span></h4>
+                                            <div class="min-w-0">
+                                                <h4 class="font-bold text-xs text-slate-900 truncate">${d.name} <span class="text-[9px] ${isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'} px-1.5 py-0.5 rounded font-extrabold ml-1">${d.status}</span></h4>
                                                 ${index === 0 && isOnline ? '<span class="bg-yellow-400 text-slate-950 px-2 py-0.5 rounded text-[9px] font-black inline-block my-0.5">Terdekat Paling Atas</span>' : ''}
-                                                <p class="text-[10px] text-slate-500">${d.vehicle} • <i class="fa-solid fa-star text-yellow-400"></i> <b>${d.rating || 5.0}</b></p>
-                                                <p class="text-[10px] text-sky-600 font-bold mt-0.5"><i class="fa-solid fa-location-dot"></i> Jarak GPS: ${d.distance} km (${d.location})</p>
+                                                <p class="text-[10px] text-slate-500 truncate">${d.vehicle} • <i class="fa-solid fa-star text-yellow-400"></i> <b>${d.rating || 5.0}</b></p>
+                                                <p class="text-[10px] text-sky-600 font-bold mt-0.5 truncate"><i class="fa-solid fa-location-dot"></i> Jarak GPS: ${d.distance} km (${d.location})</p>
                                             </div>
                                         </div>
-                                        <div class="flex flex-col gap-1" onclick="event.stopPropagation()">
-                                            <a href="https://wa.me/${d.phone}?text=${encodeURIComponent('Halo ' + d.name + ', saya pesan ojek di OLENG GO.')}" target="_blank" class="px-2.5 py-1 bg-emerald-600 text-white rounded-xl text-[10px] font-bold text-center"><i class="fa-brands fa-whatsapp"></i> WA</a>
+                                        <div class="flex flex-col gap-1 shrink-0" onclick="event.stopPropagation()">
+                                            <button onclick="selectDriver(${d.id})" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black cursor-pointer shadow-2xs ${isSelected ? 'bg-emerald-600 text-white' : 'bg-yellow-400 text-slate-950'}">
+                                                ${isSelected ? '<i class="fa-solid fa-check"></i> Terpilih' : 'Pilih Ojek'}
+                                            </button>
+                                            <a href="https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin OLENG GO (' + ADMIN_MAIN_WA + '), saya pesan ojek bersama ' + d.name + '.')}" target="_blank" class="px-2.5 py-1 bg-emerald-600 text-white rounded-xl text-[10px] font-bold text-center"><i class="fa-brands fa-whatsapp"></i> WA Utama</a>
                                             <button onclick="startPersonalChat('${d.name}')" class="px-2.5 py-1 bg-sky-600 text-white rounded-xl text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments"></i> Chat</button>
                                         </div>
                                     </div>
@@ -2381,7 +2529,7 @@
         function selectDriver(driverId) {
             selectedDriverId = driverId;
             const d = db.drivers.find(x => x.id === driverId);
-            showToast(`Berhasil memilih driver ${d.name} (${d.distance} km)!`, 'success');
+            showToast(`Berhasil memilih ojek ${d.name} (${d.distance} km)!`, 'success');
             if(currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
             else if(currentSubTab === 'food') renderCustomerFood(document.getElementById('main-content'));
             else updateCartUI();
@@ -2478,7 +2626,7 @@
                 merchant: merchant.name,
                 driver: driver ? driver.name : 'Asep Supriatna',
                 total: subtotal + ongkir,
-                status: 'Menunggu Driver',
+                status: 'Menunggu Konfirmasi',
                 items: db.cart.map(i => i.name).join(', '),
                 pickup: merchant.name,
                 dest: document.getElementById('cart-dest-label').innerText,
@@ -2507,12 +2655,13 @@
             }
             await syncAllToSupabase();
             playAlarmRingtone();
-            showToast(`Berhasil! Pesanan ${newOrder.id} masuk ke ${merchant.name} & driver.`, 'success');
+            showToast(`Berhasil! Pesanan ${newOrder.id} dikirim khusus ke ${merchant.name} & driver ${newOrder.driver}.`, 'success');
             closeCartModal();
             closeMerchantDetail();
-            addAccountNotification(`Order Baru ${newOrder.id}`, `Pesanan ${newOrder.items} ke ${merchant.name} dengan driver ${newOrder.driver}.`, 'ALL');
+            addAccountNotification(`Order Baru ${newOrder.id}`, `Pesanan ${newOrder.items} ke ${merchant.name} dengan driver ${newOrder.driver}.`, currentUser.name);
+            addAccountNotification(`Order Masuk ${newOrder.id}`, `Pesanan ${newOrder.items} dari ${currentUser.name}.`, merchant.name);
+            addAccountNotification(`Order Antar ${newOrder.id}`, `Pengantaran ${merchant.name} ke ${currentUser.name}.`, newOrder.driver);
             renderDashboardContent('history');
-            checkAndShowIncomingOrderPopup(true);
         }
 
         async function submitOjekOrder() {
@@ -2529,7 +2678,7 @@
                 merchant: 'Layanan Ojek Online',
                 driver: driver ? driver.name : 'Asep Supriatna',
                 total: fare,
-                status: 'Driver Menuju Lokasi',
+                status: 'Menunggu Konfirmasi',
                 items: `Ojek (${from} → ${to})`,
                 pickup: from,
                 dest: to,
@@ -2557,10 +2706,10 @@
             }
             await syncAllToSupabase();
             playAlarmRingtone();
-            showToast(`Berhasil! Order ojek ${newOrder.id} masuk ke driver ${newOrder.driver}.`, 'success');
-            addAccountNotification(`Order Ojek ${newOrder.id}`, `Rute ${from} → ${to} bersama driver ${newOrder.driver}.`, 'ALL');
+            showToast(`Berhasil! Order ojek ${newOrder.id} dikirim khusus ke ojek ${newOrder.driver}.`, 'success');
+            addAccountNotification(`Order Ojek ${newOrder.id}`, `Rute ${from} → ${to} bersama driver ${newOrder.driver}.`, currentUser.name);
+            addAccountNotification(`Order Ojek Masuk ${newOrder.id}`, `Jemput ${currentUser.name} (${from} → ${to}).`, newOrder.driver);
             renderDashboardContent('history');
-            checkAndShowIncomingOrderPopup(true);
         }
 
         function renderOrderHistory(container) {
@@ -2593,11 +2742,15 @@
                                 ${o.rating ? `<p class="text-[11px] font-bold text-amber-600"><i class="fa-solid fa-star text-yellow-400"></i> Rating: ${o.rating}/5 ${o.reviewText ? `— "${o.reviewText}"` : ''}</p>` : ''}
                                 <div class="text-xs font-black text-sky-700 pt-2 border-t border-slate-100 flex justify-between items-center flex-wrap gap-2">
                                     <span>Rp ${o.total.toLocaleString()}</span>
-                                    <div class="flex gap-1.5">
+                                    <div class="flex gap-1.5 flex-wrap">
                                         ${o.status === 'Selesai' && activeRole === 'customer' ? `<button onclick="openRatingModal('${o.id}')" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-lg text-[10px] font-black cursor-pointer"><i class="fa-solid fa-star"></i> ${o.rating ? 'Ubah Rating' : 'Beri Rating'}</button>` : ''}
                                         ${(activeRole === 'driver' || activeRole === 'merchant' || activeRole === 'admin') ? `
                                             <button onclick="openIncomingOrderModal('${o.id}')" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-lg text-[10px] font-black cursor-pointer">Pop-Up Order</button>
-                                            ${o.status !== 'Selesai' && o.status !== 'Ditolak' ? `<button onclick="handleIncomingOrderAction('${o.id}', 'complete')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Selesai</button>` : ''}
+                                            ${o.status !== 'Selesai' && o.status !== 'Ditolak' ? `
+                                                <button onclick="handleIncomingOrderAction('${o.id}', 'accept')" class="px-2.5 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Terima</button>
+                                                <button onclick="handleIncomingOrderAction('${o.id}', 'reject')" class="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Tolak</button>
+                                                <button onclick="handleIncomingOrderAction('${o.id}', 'complete')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Konfirmasi Pesanan Selesai</button>
+                                            ` : ''}
                                         ` : ''}
                                     </div>
                                 </div>
@@ -2663,7 +2816,7 @@
                                 <div>
                                     <span class="text-[10px] text-yellow-300 font-extrabold uppercase block">PROFIL & SAMPUL TOKO (ID: ${merchant.accountId || '-'})</span>
                                     <h2 class="text-base font-black">${merchant.name}</h2>
-                                    <p class="text-[11px] text-sky-200">Saldo: Rp ${(merchant.balance || 0).toLocaleString()} • <i class="fa-solid fa-star text-yellow-400"></i> ${merchant.rating || 5.0}</p>
+                                    <p class="text-[11px] text-sky-200"><i class="fa-solid fa-star text-yellow-400"></i> ${merchant.rating || 5.0} • ${merchant.operationalHours}</p>
                                 </div>
                             </div>
                             <button onclick="toggleMerchantStatus(${merchant.id})" class="px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer shadow ${isOpen ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}">
@@ -2845,7 +2998,6 @@
         function renderProfile(container) {
             tempUserProfilePhoto = null;
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            const showWalletAndTopUp = activeRole === 'driver' || activeRole === 'merchant' || activeRole === 'admin';
             const balanceVal = getProfileSyncedBalance();
 
             container.innerHTML = `
@@ -2855,16 +3007,14 @@
                         <h2 class="font-black text-base">${currentUser.name}</h2>
                         <p class="text-xs font-black text-yellow-300">ID Login: ${currentUser.accountId || '-'}</p>
                         <span class="text-[10px] bg-yellow-400 text-slate-950 font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span>
-                        ${showWalletAndTopUp ? `
-                            <div class="pt-2 space-y-2">
-                                <p class="text-sm text-yellow-300 font-black">Saldo Dompet (Sinkron Profil): Rp ${Number(balanceVal || 0).toLocaleString()}</p>
-                                ${activeRole !== 'admin' ? `
-                                    <button onclick="goToAdminTopUpChat()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-2xl text-xs cursor-pointer shadow">
-                                        <i class="fa-solid fa-plus-circle mr-1"></i> Tambah Saldo (Chat Admin)
-                                    </button>
-                                ` : ''}
-                            </div>
-                        ` : ''}
+                        <div class="pt-2 space-y-2">
+                            <p class="text-sm text-yellow-300 font-black">Saldo Akun: Rp ${Number(balanceVal || 0).toLocaleString()}</p>
+                            ${(activeRole === 'driver' || activeRole === 'merchant') ? `
+                                <button onclick="goToAdminTopUpChat()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-2xl text-xs cursor-pointer shadow">
+                                    <i class="fa-solid fa-plus-circle mr-1"></i> Tambah Saldo (Chat Admin)
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
 
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
@@ -3012,7 +3162,7 @@
                 foodPerKm: Math.max(500, parseInt(document.getElementById('cfg-food-km').value) || 2000),
                 commissionPercent: Math.min(100, Math.max(0, parseInt(document.getElementById('cfg-commission').value) || 0))
             };
-            saveDB('Pengaturan tarif & komisi berhasil disimpan & tersinkron!');
+            saveDB('Pengaturan tarif & komisi berhasil disimpan & diterapkan online!');
             addAccountNotification('Tarif & Komisi Diperbarui', `Min order Rp ${db.pricing.minFare.toLocaleString()}, Ojek/km Rp ${db.pricing.ojekPerKm.toLocaleString()}, Food/km Rp ${db.pricing.foodPerKm.toLocaleString()}, Komisi ${db.pricing.commissionPercent}%.`, 'ALL');
             renderAdminDash(document.getElementById('main-content'));
         }
@@ -3058,14 +3208,13 @@
                                         <p class="text-[10px] text-slate-500">${u.phone} • ${u.address || 'Lengkong'}</p>
                                         ${u.plate ? `<p class="text-[10px] text-slate-600 font-semibold">Motor: ${u.bikeType || ''} (${u.plate}) • KTP: ${u.ktp || '-'}</p>` : ''}
                                         ${u.ownerName ? `<p class="text-[10px] text-slate-600 font-semibold">Pemilik: ${u.ownerName} • KTP: ${u.ktp || '-'}</p>` : ''}
-                                        ${u.role !== 'customer' ? `<p class="text-xs font-black text-yellow-600 mt-0.5">Saldo: Rp ${(u.balance || 0).toLocaleString()}</p>` : ''}
                                     </div>
                                     <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-extrabold">${u.status}</span>
                                 </div>
                                 <div class="flex gap-2 pt-2 border-t border-slate-100 flex-wrap">
                                     ${u.role !== 'customer' ? `<button onclick="adminAddBalance(${u.id})" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-xl text-[10px] font-bold cursor-pointer">+ Tambah Saldo</button>` : ''}
                                     <button onclick="adminResetPassword(${u.id})" class="px-2.5 py-1 bg-purple-100 text-purple-700 rounded-xl text-[10px] font-bold cursor-pointer">Reset Password</button>
-                                    <button onclick="adminDeleteUser(${u.id})" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-xl text-[10px] font-bold cursor-pointer">Hapus Akun</button>
+                                    ${String(u.accountId || '').toUpperCase() !== 'ADM01' ? `<button onclick="adminDeleteUser(${u.id})" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-xl text-[10px] font-bold cursor-pointer">Hapus Akun</button>` : ''}
                                 </div>
                             </div>
                         `).join('')}
@@ -3078,7 +3227,7 @@
             const code = (document.getElementById('new-id-code')?.value || '').trim().toUpperCase();
             const role = document.getElementById('new-id-role')?.value || 'customer';
             const name = (document.getElementById('new-id-name')?.value || '').trim();
-            const phone = (document.getElementById('new-id-phone')?.value || '').trim() || '085624736602';
+            const phone = (document.getElementById('new-id-phone')?.value || '').trim() || ADMIN_MAIN_WA;
             const password = (document.getElementById('new-id-pass')?.value || '123').trim() || '123';
 
             if (!/^[A-Z0-9]{3,20}$/.test(code)) {
@@ -3117,7 +3266,7 @@
                     subtitle: 'Mitra UMKM Lengkong',
                     category: 'Kuliner',
                     status: 'Buka',
-                    banner: 'https://placehold.co/600x300/0284c7/facc15?text=' + encodeURIComponent(name),
+                    banner: getSyncedMainBanner(),
                     image: newAcc.photo,
                     rating: 5.0,
                     ratingCount: 0,
@@ -3185,10 +3334,29 @@
             addAccountNotification('Reset Password Admin', `Password ${u.name} (ID: ${u.accountId || '-'}) direset menjadi '123'.`, u.name);
         }
 
-        function adminDeleteUser(userId) {
-            if(confirm('Yakin ingin menghapus akun user ini secara permanen?')) {
+        async function adminDeleteUser(userId) {
+            const target = db.users.find(x => x.id === userId);
+            if (!target) return;
+            if (String(target.accountId || '').toUpperCase() === 'ADM01') {
+                return showToast('Akun Admin Utama ADM01 tidak dapat dihapus!', 'error');
+            }
+            if(confirm(`Yakin ingin menghapus akun ${target.name} (ID: ${target.accountId || '-'}) secara online real-time?`)) {
+                const codeUpper = String(target.accountId || '').toUpperCase();
                 db.users = db.users.filter(x => x.id !== userId);
-                saveDB('Akun user berhasil dihapus & tersinkron!');
+                if (codeUpper) {
+                    db.merchants = (db.merchants || []).filter(m => String(m.accountId || '').toUpperCase() !== codeUpper);
+                    db.drivers = (db.drivers || []).filter(d => String(d.accountId || '').toUpperCase() !== codeUpper);
+                }
+                localStorage.setItem('oleng_go_db', JSON.stringify(db));
+
+                if (supabaseClient && codeUpper) {
+                    await supabaseClient.from('accounts').delete().eq('account_id', codeUpper);
+                    await supabaseClient.from('merchants').delete().eq('account_id', codeUpper);
+                    await supabaseClient.from('drivers').delete().eq('account_id', codeUpper);
+                }
+
+                await syncAllToSupabase();
+                showToast(`Berhasil! Akun ${target.name} (${codeUpper}) dihapus online real-time.`, 'success');
                 renderAdminUsers(document.getElementById('main-content'));
             }
         }
@@ -3209,7 +3377,7 @@
                                     <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md">ID: ${m.accountId || '-'}</span>
                                     <h4 class="font-bold text-sm text-slate-900">${m.name} (${m.status}) • <i class="fa-solid fa-star text-yellow-400"></i> ${m.rating || 5.0}</h4>
                                     <p class="text-[10px] text-slate-500">Pemilik: ${m.ownerName || '-'} • Lokasi: ${m.lat}, ${m.lng}</p>
-                                    <p class="text-xs font-black text-yellow-600">Saldo Toko: Rp ${(m.balance || 0).toLocaleString()}</p>
+                                    <p class="text-[10px] text-slate-600">${m.address || ''}</p>
                                     <button onclick="adminAddBalance(${uid})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-xs font-bold cursor-pointer">Tambah Saldo</button>
                                 </div>
                             `;
@@ -3234,7 +3402,7 @@
                                 <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
                                     <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md">ID: ${d.accountId || '-'}</span>
                                     <h4 class="font-bold text-xs text-slate-900">${d.name} (${d.status}) • <i class="fa-solid fa-star text-yellow-400"></i> ${d.rating || 5.0}</h4>
-                                    <p class="text-[10px] text-slate-500">${d.vehicle} • KTP: ${d.ktp || '-'} • Saldo: Rp ${(d.balance || 0).toLocaleString()}</p>
+                                    <p class="text-[10px] text-slate-500">${d.vehicle} • KTP: ${d.ktp || '-'} • ${d.location || 'Lengkong'}</p>
                                     <button onclick="adminAddBalance(${uid})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-[10px] font-bold cursor-pointer">Tambah Saldo</button>
                                 </div>
                             `;
@@ -3248,12 +3416,12 @@
             const currentBanner = getSyncedMainBanner();
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
-                    <h2 class="font-extrabold text-base text-sky-900">Kontrol Banner Panjang Utama</h2>
+                    <h2 class="font-extrabold text-base text-sky-900">Kontrol Banner Panjang Utama (Permanen)</h2>
                     <div class="bg-white p-4 rounded-3xl border space-y-3 shadow-xs">
                         <label class="text-[11px] font-extrabold text-slate-500 uppercase">UPLOAD BANNER PANJANG (DARI GALERI)</label>
                         <input type="file" accept="image/*" class="w-full p-2 border rounded-2xl text-xs" onchange="previewNewBanner(event)">
                         <img id="banner-preview" src="${currentBanner}" class="w-full h-32 object-cover rounded-2xl border">
-                        <button onclick="saveGlobalBanner()" class="w-full py-3.5 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md border-b-2 border-yellow-400">Simpan & Terapkan ke Semua User</button>
+                        <button onclick="saveGlobalBanner()" class="w-full py-3.5 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md border-b-2 border-yellow-400">Simpan Permanen ke Semua User</button>
                     </div>
                 </div>
             `;
@@ -3267,58 +3435,73 @@
                     customMainBanner = evt.target.result;
                     const prev = document.getElementById('banner-preview');
                     if (prev) prev.src = customMainBanner;
-                    showToast('Berhasil memuat gambar banner! Klik Simpan untuk menerapkan.', 'success');
+                    showToast('Berhasil memuat gambar banner! Klik Simpan Permanen untuk menerapkan.', 'success');
                 };
                 reader.readAsDataURL(file);
             }
         }
 
-        function saveGlobalBanner() {
+        async function saveGlobalBanner() {
             const finalBanner = customMainBanner || getSyncedMainBanner();
             customMainBanner = finalBanner;
             db.mainBanner = finalBanner;
             localStorage.setItem('oleng_global_banner', finalBanner);
-            saveDB('Banner utama berhasil disimpan & diterapkan ke semua user!');
-            addAccountNotification('Banner Utama Diperbarui', 'Admin memperbarui banner utama OLENG GO.', 'ALL');
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            if (supabaseClient) {
+                await supabaseClient.from('app_config').upsert({
+                    id: 1,
+                    main_banner: finalBanner,
+                    min_fare: Number(db.pricing?.minFare || 8000),
+                    ojek_per_km: Number(db.pricing?.ojekPerKm || 2500),
+                    food_per_km: Number(db.pricing?.foodPerKm || 2000),
+                    commission_percent: Number(db.pricing?.commissionPercent || 10),
+                    admin_whatsapp: ADMIN_MAIN_WA
+                }, { onConflict: 'id' });
+            }
+            await syncAllToSupabase();
+            showToast('Berhasil! Banner utama disimpan permanen untuk semua user!', 'success');
+            addAccountNotification('Banner Utama Permanen Diperbarui', 'Admin memperbarui banner utama OLENG GO.', 'ALL');
             renderDashboardContent('home');
         }
 
-        function createStoreMarkerIcon() {
+        function createStoreMarkerIcon(storeName = '') {
             return L.divIcon({
                 className: 'oleng-store-pin',
-                html: '<div style="background:#f59e0b;color:#0f172a;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);font-size:12px;"><i class="fa-solid fa-store"></i></div>',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
+                html: `<div style="display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-50%);"><div style="background:#f59e0b;color:#0f172a;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.4);font-size:13px;"><i class="fa-solid fa-store"></i></div><span style="background:#0f172a;color:#facc15;font-size:8px;font-weight:800;padding:1px 5px;border-radius:6px;white-space:nowrap;margin-top:2px;box-shadow:0 1px 4px rgba(0,0,0,.3);">${storeName || 'TOKO'}</span></div>`,
+                iconSize: [32, 44],
+                iconAnchor: [16, 22]
             });
         }
 
-        function createDriverMarkerIcon() {
+        function createDriverMarkerIcon(driverName = '') {
             return L.divIcon({
                 className: 'oleng-driver-pin',
-                html: '<div style="background:#0284c7;color:#facc15;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);font-size:12px;"><i class="fa-solid fa-motorcycle"></i></div>',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
+                html: `<div style="display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-50%);"><div style="background:#0284c7;color:#facc15;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.4);font-size:13px;"><i class="fa-solid fa-motorcycle"></i></div><span style="background:#0284c7;color:#fff;font-size:8px;font-weight:800;padding:1px 5px;border-radius:6px;white-space:nowrap;margin-top:2px;box-shadow:0 1px 4px rgba(0,0,0,.3);">${driverName || 'OJEK'}</span></div>`,
+                iconSize: [32, 44],
+                iconAnchor: [16, 22]
             });
         }
 
         function plotAllMerchantsAndDrivers(targetMap, syncCurrentUserDriverGPS = false) {
-            const storeIcon = createStoreMarkerIcon();
-            const driverIcon = createDriverMarkerIcon();
-
             db.merchants.forEach(m => {
-                L.marker([m.lat, m.lng], { icon: storeIcon }).addTo(targetMap)
-                    .bindPopup(`<b>${m.name}</b><br>Status: ${m.status}<br>Lokasi Toko Terkunci`);
+                if (typeof m.lat === 'number' && typeof m.lng === 'number') {
+                    L.marker([m.lat, m.lng], { icon: createStoreMarkerIcon(m.name) }).addTo(targetMap)
+                        .bindPopup(`<b><i class="fa-solid fa-store"></i> ${m.name}</b><br>Status: ${m.status}<br>${m.address || ''}`);
+                }
             });
 
             db.drivers.forEach(d => {
-                L.marker([d.lat, d.lng], { icon: driverIcon }).addTo(targetMap)
-                    .bindPopup(`<b>Driver: ${d.name}</b><br>Status: ${d.status}<br>GPS Real-Time`);
+                if (typeof d.lat === 'number' && typeof d.lng === 'number') {
+                    L.marker([d.lat, d.lng], { icon: createDriverMarkerIcon(d.name) }).addTo(targetMap)
+                        .bindPopup(`<b><i class="fa-solid fa-motorcycle"></i> Driver: ${d.name}</b><br>Status: ${d.status}<br>${d.vehicle || ''}`);
+                }
             });
 
             if (syncCurrentUserDriverGPS && navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(pos => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
+                    const lat = Number(pos.coords.latitude.toFixed(6));
+                    const lng = Number(pos.coords.longitude.toFixed(6));
+                    userCurrentLatLng = [lat, lng];
                     const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
                     if (activeRole === 'driver' && currentUser) {
                         const drv = db.drivers.find(x => x.name === currentUser.name || x.phone === currentUser.phone);
@@ -3328,7 +3511,7 @@
                             saveDB();
                         }
                     }
-                    L.marker([lat, lng], { icon: driverIcon }).addTo(targetMap)
+                    L.marker([lat, lng], { icon: createDriverMarkerIcon('GPS SAYA') }).addTo(targetMap)
                         .bindPopup('<b>Posisi GPS Real-Time Anda</b>');
                 }, () => {});
             }
@@ -3339,7 +3522,7 @@
             if(!mapEl) return;
             if(mapInstance) mapInstance.remove();
             mapInstance = L.map('map', { zoomControl: false }).setView(userCurrentLatLng, 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
+            getBaseTileLayerForMode().addTo(mapInstance);
             plotAllMerchantsAndDrivers(mapInstance, true);
         }
 
@@ -3348,7 +3531,7 @@
             if(!mapEl) return;
 
             const map = L.map(mapId, { zoomControl: true }).setView(userCurrentLatLng, 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            getBaseTileLayerForMode().addTo(map);
             plotAllMerchantsAndDrivers(map, true);
 
             const pickupMarker = L.marker(userCurrentLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Awal (GPS Tersinkron)</b>').openPopup();
@@ -3451,7 +3634,6 @@
             const allPartners = Array.from(new Set(['Admin SIMADU', ...db.merchants.map(m => m.name), ...db.drivers.map(d => d.name), ...userNames]))
                 .filter(n => n && String(n).trim().toLowerCase() !== me);
 
-            // Urutkan agar percakapan dengan chat terbaru berada di paling atas
             const sortedPartners = allPartners.map(partner => {
                 const pLow = partner.toLowerCase();
                 const related = (db.chats || []).filter(c => {
