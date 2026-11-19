@@ -78,14 +78,16 @@
 
                 <div class="bg-white text-slate-800 p-6 rounded-3xl shadow-2xl text-left space-y-4 border-2 border-yellow-400">
                     <div class="flex border-b border-slate-100 pb-2 mb-2">
-                        <button onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1 text-sm cursor-pointer">Masuk</button>
-                        <button onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1 text-sm cursor-pointer">Daftar / Reset</button>
+                        <button onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1 text-sm cursor-pointer">Masuk (Wajib ID)</button>
+                        <button onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1 text-sm cursor-pointer">Daftar Akun</button>
                     </div>
 
+                    <!-- FORM LOGIN WAJIB ID (HURUF & ANGKA) -->
                     <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3">
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">No. WhatsApp / Nama</label>
-                            <input type="text" id="login-identifier" required class="w-full mt-1 px-4 py-2.5 border rounded-2xl text-sm font-semibold" placeholder="0856xxxxxxxx atau Budi">
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">ID Akun (Huruf & Angka)</label>
+                            <input type="text" id="login-account-id" required pattern="[A-Za-z0-9]{3,20}" title="ID hanya boleh berisi huruf dan angka (3-20 karakter)" class="w-full mt-1 px-4 py-2.5 border rounded-2xl text-sm font-bold uppercase" placeholder="Contoh: CUST01, DRIV01, MRCH01, ADM01">
+                            <p class="text-[10px] text-slate-400 mt-1">Login wajib memakai ID (huruf & angka), bukan nomor HP atau nama. Demo ID: <b>CUST01</b>, <b>DRIV01</b>, <b>MRCH01</b>, <b>ADM01</b> (sandi: <b>123</b>)</p>
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">Kata Sandi (Password)</label>
@@ -95,40 +97,99 @@
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">Peran (Role Akses)</label>
                             <select id="login-role" class="w-full mt-1 px-4 py-2.5 border rounded-2xl text-sm bg-white font-bold text-sky-700">
                                 <option value="customer">Customer (Konsumen)</option>
-                                <option value="driver">Driver (Ojol / Kurir)</option>
+                                <option value="driver">Driver (Mitra Ojek / Kurir)</option>
                                 <option value="merchant">Merchant (Mitra Toko)</option>
-                                <option value="admin">Admin SIMADU (Wajib No. 085624736602)</option>
+                                <option value="admin">Admin SIMADU (ID ADM01 / WA 085624736602)</option>
                             </select>
                         </div>
-                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-sky-700 hover:from-sky-600 hover:to-sky-800 text-white font-extrabold rounded-2xl shadow-lg transition text-sm cursor-pointer border-b-4 border-yellow-400">Masuk Aplikasi</button>
+                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-sky-700 hover:from-sky-600 hover:to-sky-800 text-white font-extrabold rounded-2xl shadow-lg transition text-sm cursor-pointer border-b-4 border-yellow-400">Masuk dengan ID</button>
                         <div class="text-center pt-1">
-                            <button type="button" onclick="openForgotPasswordModal()" class="text-[11px] font-bold text-sky-600 hover:underline cursor-pointer">Lupa Kata Sandi?</button>
+                            <button type="button" onclick="openForgotPasswordModal()" class="text-[11px] font-bold text-sky-600 hover:underline cursor-pointer">Lupa Kata Sandi? Hubungi Admin</button>
                         </div>
                     </form>
 
+                    <!-- FORM REGISTER MULTI-ROLE -->
                     <form id="form-register" onsubmit="handleRegister(event)" class="space-y-3 hidden">
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nama Lengkap</label>
-                            <input type="text" id="reg-name" required class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm" placeholder="Nama Anda">
-                        </div>
-                        <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nomor WhatsApp (Admin Wajib 085624736602)</label>
-                            <input type="text" id="reg-phone" required class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm" placeholder="08xxxxxxxxxx">
-                        </div>
-                        <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">Daftar Sebagai</label>
-                            <select id="reg-role" class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm bg-white font-bold text-sky-700">
+                            <select id="reg-role" onchange="toggleRegisterRoleFields()" class="w-full mt-1 px-3.5 py-2.5 border rounded-2xl text-sm bg-white font-bold text-sky-700">
                                 <option value="customer">Customer (Konsumen)</option>
-                                <option value="driver">Driver (Ojol / Kurir)</option>
-                                <option value="merchant">Merchant (Mitra Toko)</option>
+                                <option value="driver">Mitra Ojek (Driver / Kurir)</option>
+                                <option value="merchant">Mitra Toko (Merchant)</option>
                                 <option value="admin">Admin SIMADU (085624736602)</option>
                             </select>
                         </div>
+
                         <div>
-                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Buat Kata Sandi Baru</label>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Buat ID Login (Huruf & Angka)</label>
+                            <input type="text" id="reg-account-id" required pattern="[A-Za-z0-9]{3,20}" title="ID hanya boleh berisi huruf dan angka (3-20 karakter)" class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm font-bold uppercase" placeholder="Contoh: TOKO88 atau OJEK99">
+                        </div>
+
+                        <div>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nama Lengkap</label>
+                            <input type="text" id="reg-name" required class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm" placeholder="Nama Lengkap Anda">
+                        </div>
+
+                        <div>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nomor WhatsApp</label>
+                            <input type="text" id="reg-phone" required class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm" placeholder="08xxxxxxxxxx">
+                        </div>
+
+                        <!-- FIELD WAJIB MITRA OJEK -->
+                        <div id="reg-driver-fields" class="hidden space-y-2.5 bg-sky-50 p-3 rounded-2xl border border-sky-200">
+                            <span class="text-[10px] font-black text-sky-900 uppercase block"><i class="fa-solid fa-motorcycle text-yellow-500 mr-1"></i> Data Wajib Mitra Ojek</span>
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-600 uppercase">Nomor KTP *</label>
+                                <input type="text" id="reg-driver-ktp" class="w-full mt-1 px-3 py-2 border rounded-xl text-xs font-semibold bg-white" placeholder="3202xxxxxxxxxxxx">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-600 uppercase">Nomor Plat Motor *</label>
+                                <input type="text" id="reg-driver-plate" class="w-full mt-1 px-3 py-2 border rounded-xl text-xs font-bold uppercase bg-white" placeholder="F 1234 XY">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-600 uppercase">Jenis Motor *</label>
+                                <input type="text" id="reg-driver-bike" class="w-full mt-1 px-3 py-2 border rounded-xl text-xs font-semibold bg-white" placeholder="Contoh: Honda Beat / Yamaha NMAX">
+                            </div>
+                        </div>
+
+                        <!-- FIELD WAJIB MITRA TOKO + KUNCI LOKASI MAP -->
+                        <div id="reg-merchant-fields" class="hidden space-y-2.5 bg-yellow-50/80 p-3 rounded-2xl border border-yellow-300">
+                            <span class="text-[10px] font-black text-sky-950 uppercase block"><i class="fa-solid fa-store text-sky-600 mr-1"></i> Data Wajib Mitra Toko</span>
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-600 uppercase">Nama Pemilik Toko *</label>
+                                <input type="text" id="reg-merchant-owner" class="w-full mt-1 px-3 py-2 border rounded-xl text-xs font-semibold bg-white" placeholder="Nama Pemilik Toko">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-600 uppercase">Nama Toko *</label>
+                                <input type="text" id="reg-merchant-shop" class="w-full mt-1 px-3 py-2 border rounded-xl text-xs font-bold bg-white" placeholder="Contoh: Warung Berkah Lengkong">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-extrabold text-slate-600 uppercase">Nomor KTP *</label>
+                                <input type="text" id="reg-merchant-ktp" class="w-full mt-1 px-3 py-2 border rounded-xl text-xs font-semibold bg-white" placeholder="3202xxxxxxxxxxxx">
+                            </div>
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between items-center">
+                                    <label class="text-[10px] font-extrabold text-slate-600 uppercase">Lokasi Toko (Kunci via Map) *</label>
+                                    <button type="button" onclick="useCurrentGPSForMerchantReg()" class="px-2 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-extrabold cursor-pointer">
+                                        <i class="fa-solid fa-crosshairs"></i> GPS Terkini
+                                    </button>
+                                </div>
+                                <div id="reg-merchant-map" class="map-container border border-sky-300" style="height: 170px;"></div>
+                                <div class="flex items-center justify-between gap-2 bg-white p-2 rounded-xl border text-[10px]">
+                                    <span id="reg-merchant-coords-label" class="font-bold text-slate-700 truncate">Koordinat: -7.1240, 106.8460</span>
+                                    <button type="button" onclick="lockMerchantMapPin()" id="btn-lock-merchant-pin" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg font-extrabold cursor-pointer shrink-0">
+                                        <i class="fa-solid fa-lock"></i> Kunci Lokasi
+                                    </button>
+                                </div>
+                                <input type="text" id="reg-merchant-address" class="w-full px-3 py-2 border rounded-xl text-xs bg-white" placeholder="Detail alamat toko (otomatis/bisa diedit)">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[11px] font-extrabold text-slate-500 uppercase">Buat Kata Sandi</label>
                             <input type="password" id="reg-password" required class="w-full mt-1 px-3.5 py-2 border rounded-2xl text-sm" placeholder="••••••••">
                         </div>
-                        <button type="submit" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-2xl shadow-lg cursor-pointer text-sm">Daftar / Pendaftaran Ulang</button>
+                        <button type="submit" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-2xl shadow-lg cursor-pointer text-sm">Daftar & Simpan ID Akun</button>
                     </form>
                 </div>
             </div>
@@ -220,16 +281,23 @@
             </div>
         </div>
 
-        <!-- Lupa Password Modal -->
+        <!-- Lupa Password Modal (Diarahkan ke Admin) -->
         <div id="modal-forgot" class="absolute inset-0 bg-black/60 z-50 hidden flex flex-col justify-center items-center p-4">
             <div class="bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-2xl border-2 border-yellow-400">
                 <div class="flex justify-between items-center border-b pb-2">
-                    <h3 class="font-black text-sm text-sky-900">Reset / Lupa Password Akun</h3>
+                    <h3 class="font-black text-sm text-sky-900"><i class="fa-solid fa-headset text-yellow-500 mr-1"></i> Lupa Password • Hubungi Admin</h3>
                     <button onclick="document.getElementById('modal-forgot').classList.add('hidden')" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
                 </div>
-                <p class="text-xs text-slate-600">Masukkan nomor WhatsApp terdaftar untuk mereset kata sandi Anda menjadi <b>'123'</b>.</p>
-                <input type="text" id="forgot-phone" placeholder="No. WhatsApp terdaftar" class="w-full p-3 border rounded-2xl text-xs font-bold">
-                <button onclick="processForgotPassword()" class="w-full py-3 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md">Reset Password Menjadi '123'</button>
+                <p class="text-xs text-slate-600 leading-relaxed">Reset kata sandi diproses langsung oleh <b>Admin SIMADU</b>. Masukkan ID akun atau nomor WA Anda lalu arahkan ke Admin:</p>
+                <input type="text" id="forgot-account-ref" placeholder="Masukkan ID Akun (huruf & angka) / No. WA" class="w-full p-3 border rounded-2xl text-xs font-bold">
+                <div class="space-y-2 pt-1">
+                    <button onclick="redirectForgotPasswordToAdminChat()" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-comments"></i> Arahkan ke Live Chat Admin
+                    </button>
+                    <button onclick="redirectForgotPasswordToAdminWA()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-whatsapp text-sm"></i> Arahkan ke WhatsApp Admin (085624736602)
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -297,9 +365,12 @@
         let mapInstance = null;
         let checkoutMapInstance = null;
         let ojekMapInstance = null;
+        let regMerchantMapInstance = null;
 
         let userCurrentLatLng = [-7.1234, 106.8456];
         let destLatLng = [-7.1285, 106.8510];
+        let regMerchantLatLng = [-7.1240, 106.8460];
+        let isRegMerchantLocationLocked = false;
 
         const DEFAULT_MAIN_BANNER = 'https://placehold.co/600x300/0284c7/facc15?text=OLENG+GO+OJEK+ONLINE+LENGKONG';
 
@@ -315,15 +386,18 @@
             pricing: { ...defaultPricing },
             commissionLogs: [],
             users: [
-                { id: 1, name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Budi' },
-                { id: 2, name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Asep' },
-                { id: 3, name: 'MADU TOKO', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12, Sukabumi', balance: 350000, password: '123', shopName: 'MADU TOKO', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS' },
-                { id: 4, name: 'Admin SIMADU', phone: '085624736602', role: 'admin', status: 'Aktif', address: 'Kantor Pusat Lengkong', balance: 1200000, password: '123', photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin' }
+                { id: 1, accountId: 'CUST01', name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Budi' },
+                { id: 2, accountId: 'DRIV01', name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Asep' },
+                { id: 3, accountId: 'MRCH01', name: 'MADU TOKO', ownerName: 'H. Madu', ktp: '3202110202880002', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12, Sukabumi', lat: -7.1240, lng: 106.8460, balance: 350000, password: '123', shopName: 'MADU TOKO', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS' },
+                { id: 4, accountId: 'ADM01', name: 'Admin SIMADU', phone: '085624736602', role: 'admin', status: 'Aktif', address: 'Kantor Pusat Lengkong', balance: 1200000, password: '123', photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin' }
             ],
             merchants: [
                 { 
                     id: 1, 
+                    accountId: 'MRCH01',
                     name: 'MADU TOKO', 
+                    ownerName: 'H. Madu',
+                    ktp: '3202110202880002',
                     subtitle: 'Warung Nasi Sunda Lengkong',
                     category: 'Makanan Berat', 
                     status: 'Buka', 
@@ -339,7 +413,10 @@
                 },
                 { 
                     id: 2, 
+                    accountId: 'MRCH02',
                     name: 'Seblak & Bakso Bledor Lengkong', 
+                    ownerName: 'Bu Bledor',
+                    ktp: '3202110303920003',
                     subtitle: 'Spesialis Pedas Lengkong',
                     category: 'Snack & Pedas', 
                     status: 'Buka', 
@@ -360,8 +437,8 @@
                 { id: 103, merchantId: 2, name: 'Seblak Ceker Mercon Jumbo', price: 15000, desc: 'Seblak kuah kencur pedas nampol dengan ceker empuk.', stock: 25, image: 'https://placehold.co/200x200/f59e0b/ffffff?text=Seblak' }
             ],
             drivers: [
-                { id: 1, name: 'Asep Supriatna', status: 'Online', vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '6285624736602', balance: 150000 },
-                { id: 2, name: 'Ujang Hendra', status: 'Online', vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '6285624736602', balance: 120000 }
+                { id: 1, accountId: 'DRIV01', name: 'Asep Supriatna', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', status: 'Online', vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '6285624736602', balance: 150000 },
+                { id: 2, accountId: 'DRIV02', name: 'Ujang Hendra', ktp: '3202110404910004', plate: 'F 8891 ZY', bikeType: 'Yamaha Mio', status: 'Online', vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '6285624736602', balance: 120000 }
             ],
             orders: [
                 { id: 'ORD-9853', type: 'food', customer: 'Budi Santoso', merchant: 'MADU TOKO', driver: 'Asep Supriatna', total: 55000, status: 'Menunggu Driver', items: 'Paket Nasi Liwet Lengkap Komplit (2x)', pickup: 'MADU TOKO', dest: 'Kp. Lengkong RT 02/01', settled: false }
@@ -379,6 +456,9 @@
         let db = JSON.parse(localStorage.getItem('oleng_go_db')) || defaultDB;
         if (!db.pricing) db.pricing = { ...defaultPricing };
         if (!db.commissionLogs) db.commissionLogs = [];
+        db.users.forEach((u, idx) => {
+            if (!u.accountId) u.accountId = (u.role.slice(0, 4).toUpperCase() + (idx + 1));
+        });
 
         let customMainBanner = db.mainBanner || localStorage.getItem('oleng_global_banner') || DEFAULT_MAIN_BANNER;
         db.mainBanner = customMainBanner;
@@ -465,6 +545,7 @@
 
         document.addEventListener("DOMContentLoaded", function() {
             getSyncedMainBanner();
+            toggleRegisterRoleFields();
             const savedSession = localStorage.getItem('oleng_user_session');
             if (savedSession) {
                 try {
@@ -481,27 +562,119 @@
         function switchAuthTab(tab) {
             document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
             document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+            if (tab === 'register') toggleRegisterRoleFields();
+        }
+
+        function toggleRegisterRoleFields() {
+            const roleEl = document.getElementById('reg-role');
+            if (!roleEl) return;
+            const role = roleEl.value;
+            const driverBox = document.getElementById('reg-driver-fields');
+            const merchantBox = document.getElementById('reg-merchant-fields');
+
+            if (driverBox) driverBox.classList.toggle('hidden', role !== 'driver');
+            if (merchantBox) merchantBox.classList.toggle('hidden', role !== 'merchant');
+
+            if (role === 'merchant') {
+                isRegMerchantLocationLocked = false;
+                setTimeout(initRegisterMerchantMap, 200);
+            }
+        }
+
+        function initRegisterMerchantMap() {
+            const mapEl = document.getElementById('reg-merchant-map');
+            if (!mapEl) return;
+            if (regMerchantMapInstance) {
+                regMerchantMapInstance.remove();
+                regMerchantMapInstance = null;
+            }
+            regMerchantMapInstance = L.map('reg-merchant-map', { zoomControl: true }).setView(regMerchantLatLng, 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(regMerchantMapInstance);
+
+            const marker = L.marker(regMerchantLatLng, { draggable: true })
+                .addTo(regMerchantMapInstance)
+                .bindPopup('<b>Lokasi Toko (Geser Pin Lalu Kunci)</b>')
+                .openPopup();
+
+            const updateCoordsLabel = (lat, lng) => {
+                regMerchantLatLng = [Number(lat.toFixed(6)), Number(lng.toFixed(6))];
+                const lbl = document.getElementById('reg-merchant-coords-label');
+                if (lbl) lbl.innerText = `Koordinat: ${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}`;
+            };
+
+            marker.on('dragend', () => {
+                const pos = marker.getLatLng();
+                isRegMerchantLocationLocked = false;
+                const btn = document.getElementById('btn-lock-merchant-pin');
+                if (btn) {
+                    btn.className = 'px-2.5 py-1 bg-emerald-600 text-white rounded-lg font-extrabold cursor-pointer shrink-0';
+                    btn.innerHTML = '<i class="fa-solid fa-lock"></i> Kunci Lokasi';
+                }
+                updateCoordsLabel(pos.lat, pos.lng);
+            });
+
+            regMerchantMapInstance.on('click', (e) => {
+                marker.setLatLng(e.latlng);
+                isRegMerchantLocationLocked = false;
+                const btn = document.getElementById('btn-lock-merchant-pin');
+                if (btn) {
+                    btn.className = 'px-2.5 py-1 bg-emerald-600 text-white rounded-lg font-extrabold cursor-pointer shrink-0';
+                    btn.innerHTML = '<i class="fa-solid fa-lock"></i> Kunci Lokasi';
+                }
+                updateCoordsLabel(e.latlng.lat, e.latlng.lng);
+            });
+        }
+
+        function lockMerchantMapPin() {
+            isRegMerchantLocationLocked = true;
+            const btn = document.getElementById('btn-lock-merchant-pin');
+            if (btn) {
+                btn.className = 'px-2.5 py-1 bg-amber-400 text-slate-950 rounded-lg font-black cursor-pointer shrink-0';
+                btn.innerHTML = '<i class="fa-solid fa-check-double"></i> Terkunci';
+            }
+            const addrInput = document.getElementById('reg-merchant-address');
+            if (addrInput && !addrInput.value.trim()) {
+                addrInput.value = `Lokasi Terkunci Map (${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}) - Lengkong, Sukabumi`;
+            }
+            showToast(`Lokasi toko dikunci di ${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}`, 'success');
+        }
+
+        function useCurrentGPSForMerchantReg() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    regMerchantLatLng = [Number(pos.coords.latitude.toFixed(6)), Number(pos.coords.longitude.toFixed(6))];
+                    initRegisterMerchantMap();
+                    showToast('Posisi GPS terkini dimuat ke peta toko!', 'success');
+                }, () => {
+                    showToast('GPS tidak aktif, gunakan titik peta manual.', 'info');
+                });
+            }
         }
 
         function handleLogin(e) {
             e.preventDefault();
-            const identifier = document.getElementById('login-identifier').value.trim();
+            const rawId = document.getElementById('login-account-id').value.trim().toUpperCase();
             const password = document.getElementById('login-password').value;
             const role = document.getElementById('login-role').value;
 
-            if(role === 'admin' && identifier !== '085624736602') {
-                showToast('AKSES DITOLAK: Admin Master wajib menggunakan nomor 085624736602!', 'error');
+            if (!/^[A-Z0-9]{3,20}$/.test(rawId)) {
+                showToast('Login wajib memakai ID yang berisi huruf dan angka (3-20 karakter)!', 'error');
                 return;
             }
 
-            let foundUser = db.users.find(u => (u.phone === identifier || u.name === identifier) && u.role === role);
-            if(!foundUser) {
-                foundUser = { id: Date.now(), name: identifier, phone: identifier, role, status: 'Aktif', address: 'Kecamatan Lengkong, Sukabumi', balance: (role !== 'customer' ? 100000 : undefined), password: password, photo: 'https://placehold.co/150x150/0284c7/ffffff?text='+identifier.charAt(0).toUpperCase() };
-                db.users.push(foundUser); saveDB();
+            if (role === 'admin' && rawId !== 'ADM01') {
+                showToast('AKSES DITOLAK: Login Admin wajib menggunakan ID ADM01!', 'error');
+                return;
             }
 
-            if(foundUser.password && foundUser.password !== password) {
-                showToast('Kata sandi salah! Silakan coba lagi atau gunakan fitur Lupa Sandi.', 'error');
+            const foundUser = db.users.find(u => String(u.accountId || '').toUpperCase() === rawId && u.role === role);
+            if (!foundUser) {
+                showToast(`ID "${rawId}" untuk role ${role.toUpperCase()} tidak ditemukan! Silakan daftar terlebih dahulu atau gunakan ID valid.`, 'error');
+                return;
+            }
+
+            if (foundUser.password && foundUser.password !== password) {
+                showToast('Kata sandi salah! Klik "Lupa Kata Sandi?" untuk diarahkan ke Admin.', 'error');
                 return;
             }
 
@@ -510,61 +683,167 @@
             currentSubTab = role === 'admin' ? 'admin-dash' : role === 'merchant' ? 'merchant-manage' : role === 'driver' ? 'driver-orders' : 'home';
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             localStorage.setItem('oleng_last_tab', currentSubTab);
-            addAccountNotification('Login Berhasil', `Akun ${currentUser.name} (${role.toUpperCase()}) aktif.`, currentUser.name);
-            showToast(`Berhasil masuk sebagai ${role.toUpperCase()}`, 'success');
+            addAccountNotification('Login Berhasil', `Akun ID ${currentUser.accountId} (${currentUser.name}) aktif.`, currentUser.name);
+            showToast(`Berhasil masuk dengan ID ${currentUser.accountId} (${role.toUpperCase()})`, 'success');
             enterDashboard(true);
         }
 
         function handleRegister(e) {
             e.preventDefault();
+            const role = document.getElementById('reg-role').value;
+            const accountId = document.getElementById('reg-account-id').value.trim().toUpperCase();
             const name = document.getElementById('reg-name').value.trim();
             const phone = document.getElementById('reg-phone').value.trim();
-            const role = document.getElementById('reg-role').value;
             const password = document.getElementById('reg-password').value;
 
-            if(role === 'admin' && phone !== '085624736602') {
+            if (!/^[A-Z0-9]{3,20}$/.test(accountId)) {
+                showToast('ID akun wajib berisi huruf dan angka (3-20 karakter)!', 'error');
+                return;
+            }
+
+            const duplicateId = db.users.find(u => String(u.accountId || '').toUpperCase() === accountId);
+            if (duplicateId) {
+                showToast(`ID "${accountId}" sudah digunakan! Silakan pilih ID huruf & angka lain.`, 'error');
+                return;
+            }
+
+            if (role === 'admin' && phone !== '085624736602') {
                 showToast('Pendaftaran Admin Master wajib menggunakan nomor 085624736602!', 'error');
                 return;
             }
 
-            let existing = db.users.find(u => u.phone === phone && u.role === role);
-            if(existing) {
-                existing.password = password;
-                existing.name = name;
-                currentUser = existing;
-            } else {
-                const newUser = { id: Date.now(), name, phone, role, status: 'Aktif', address: 'Kecamatan Lengkong, Sukabumi', balance: (role !== 'customer' ? 50000 : undefined), password, photo: 'https://placehold.co/150x150/0284c7/ffffff?text='+name.charAt(0).toUpperCase() };
-                db.users.push(newUser);
-                if(role === 'merchant') {
-                    db.merchants.push({ id: Date.now(), name: name, subtitle: 'Mitra UMKM Lengkong', category: 'Kuliner', status: 'Buka', banner: 'https://placehold.co/600x300/0284c7/facc15?text='+encodeURIComponent(name), image: newUser.photo, rating: 5.0, lat: -7.1245, lng: 106.8465, address: 'Kecamatan Lengkong, Sukabumi', operationalHours: '08:00 - 21:00 WIB', whatsapp: phone, balance: 50000 });
-                } else if(role === 'driver') {
-                    db.drivers.push({ id: Date.now(), name: name, status: 'Online', vehicle: 'Motor Mitra Lengkong', rating: 5.0, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: phone, balance: 50000 });
+            let driverData = {};
+            if (role === 'driver') {
+                const ktp = document.getElementById('reg-driver-ktp').value.trim();
+                const plate = document.getElementById('reg-driver-plate').value.trim().toUpperCase();
+                const bikeType = document.getElementById('reg-driver-bike').value.trim();
+                if (!ktp || !plate || !bikeType) {
+                    showToast('Mitra Ojek wajib mengisi Nama, Nomor KTP, Nomor Plat Motor, dan Jenis Motor!', 'error');
+                    return;
                 }
-                currentUser = newUser;
+                driverData = { ktp, plate, bikeType, vehicle: `${bikeType} - ${plate}` };
             }
+
+            let merchantData = {};
+            if (role === 'merchant') {
+                const ownerName = document.getElementById('reg-merchant-owner').value.trim();
+                const shopName = document.getElementById('reg-merchant-shop').value.trim();
+                const ktp = document.getElementById('reg-merchant-ktp').value.trim();
+                const address = document.getElementById('reg-merchant-address').value.trim();
+
+                if (!name || !phone || !ownerName || !shopName || !ktp) {
+                    showToast('Mitra Toko wajib mengisi Nama, Nomor WA, Nama Pemilik Toko, Nama Toko, dan Nomor KTP!', 'error');
+                    return;
+                }
+                if (!isRegMerchantLocationLocked) {
+                    showToast('Silakan geser pin dan klik tombol "Kunci Lokasi" pada peta toko terlebih dahulu!', 'error');
+                    return;
+                }
+
+                const finalAddr = address || `Lokasi Toko (${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}) - Lengkong, Sukabumi`;
+                merchantData = {
+                    ownerName,
+                    shopName,
+                    ktp,
+                    address: finalAddr,
+                    lat: regMerchantLatLng[0],
+                    lng: regMerchantLatLng[1]
+                };
+            }
+
+            const newUser = {
+                id: Date.now(),
+                accountId,
+                name,
+                phone,
+                role,
+                status: 'Aktif',
+                address: merchantData.address || 'Kecamatan Lengkong, Sukabumi',
+                balance: (role !== 'customer' ? 50000 : undefined),
+                password,
+                photo: 'https://placehold.co/150x150/0284c7/ffffff?text=' + encodeURIComponent(name.charAt(0).toUpperCase()),
+                ...driverData,
+                ...merchantData
+            };
+
+            db.users.push(newUser);
+
+            if (role === 'merchant') {
+                db.merchants.push({
+                    id: Date.now() + 1,
+                    accountId,
+                    name: merchantData.shopName,
+                    ownerName: merchantData.ownerName,
+                    ktp: merchantData.ktp,
+                    subtitle: `Pemilik: ${merchantData.ownerName}`,
+                    category: 'Kuliner',
+                    status: 'Buka',
+                    banner: 'https://placehold.co/600x300/0284c7/facc15?text=' + encodeURIComponent(merchantData.shopName),
+                    image: newUser.photo,
+                    rating: 5.0,
+                    lat: merchantData.lat,
+                    lng: merchantData.lng,
+                    address: merchantData.address,
+                    operationalHours: '08:00 - 21:00 WIB',
+                    whatsapp: phone,
+                    balance: 50000
+                });
+            } else if (role === 'driver') {
+                db.drivers.push({
+                    id: Date.now() + 1,
+                    accountId,
+                    name,
+                    ktp: driverData.ktp,
+                    plate: driverData.plate,
+                    bikeType: driverData.bikeType,
+                    status: 'Online',
+                    vehicle: driverData.vehicle,
+                    rating: 5.0,
+                    location: 'Lengkong, Sukabumi',
+                    lat: userCurrentLatLng[0],
+                    lng: userCurrentLatLng[1],
+                    phone,
+                    balance: 50000
+                });
+            }
+
+            currentUser = newUser;
             saveDB();
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            addAccountNotification('Pendaftaran Tersimpan', `Akun ${currentUser.name} berhasil disimpan.`, currentUser.name);
-            showToast('Perubahan berhasil disimpan: Pendaftaran / Pendaftaran Ulang berhasil!', 'success');
+            addAccountNotification('Pendaftaran Tersimpan', `Akun ID ${accountId} (${name}) berhasil didaftarkan.`, name);
+            showToast(`Akun terdaftar! ID Login Anda: ${accountId}`, 'success');
             enterDashboard(false);
         }
 
         function openForgotPasswordModal() {
+            const currentLoginId = document.getElementById('login-account-id')?.value.trim() || '';
+            const refInput = document.getElementById('forgot-account-ref');
+            if (refInput && currentLoginId) refInput.value = currentLoginId;
             document.getElementById('modal-forgot').classList.remove('hidden');
         }
 
-        function processForgotPassword() {
-            const phone = document.getElementById('forgot-phone').value.trim();
-            const user = db.users.find(u => u.phone === phone);
-            if(!user) {
-                showToast('Nomor WhatsApp tidak ditemukan dalam database!', 'error');
-                return;
-            }
-            user.password = '123';
-            saveDB();
+        function redirectForgotPasswordToAdminChat() {
+            const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'Akun Belum Diisi';
             document.getElementById('modal-forgot').classList.add('hidden');
-            addAccountNotification('Reset Password', `Password akun ${user.name} direset ke '123'.`, user.name);
-            showToast(`Perubahan berhasil disimpan: Kata sandi untuk ${user.name} direset menjadi '123'`, 'success');
+            document.getElementById('view-auth').classList.add('hidden');
+            document.getElementById('view-dashboard').classList.remove('hidden');
+            if (!currentUser) {
+                currentUser = { id: 0, accountId: 'TAMU01', name: `Pemohon (${refVal})`, phone: '085624736602', role: 'customer', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=ID' };
+            }
+            activeChatTarget = 'Admin SIMADU';
+            switchView('chat');
+            const chatInput = document.getElementById('chat-input');
+            if (chatInput) {
+                chatInput.value = `Halo Admin SIMADU, saya lupa kata sandi untuk ID/Akun: ${refVal}. Mohon bantu reset password.`;
+                chatInput.focus();
+            }
+            showToast('Diarahkan ke Live Chat Admin SIMADU.', 'info');
+        }
+
+        function redirectForgotPasswordToAdminWA() {
+            const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'Akun Belum Diisi';
+            const text = encodeURIComponent(`Halo Admin SIMADU, saya lupa kata sandi untuk ID/Akun: ${refVal}. Mohon bantuan reset password.`);
+            window.open(`https://wa.me/6285624736602?text=${text}`, '_blank');
         }
 
         function handleLogout() {
@@ -623,7 +902,7 @@
             if(activeRole === 'admin') {
                 nav.innerHTML = `
                     <button onclick="renderDashboardContent('admin-dash')" class="flex flex-col items-center py-1 px-2 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-chart-pie text-base"></i><span class="text-[9px] mt-1">Monitor</span></button>
-                    <button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] mt-1">User</span></button>
+                    <button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-id-card text-base"></i><span class="text-[9px] mt-1">Daftar ID</span></button>
                     <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-2 text-white cursor-pointer"><div class="w-11 h-11 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-yellow-400"><i class="fa-solid fa-house text-base"></i></div></button>
                     <button onclick="renderDashboardContent('admin-stores')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1">Toko</span></button>
                     <button onclick="renderDashboardContent('admin-banner')" class="flex flex-col items-center py-1 px-2 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-image text-base"></i><span class="text-[9px] mt-1">Banner</span></button>
@@ -805,7 +1084,7 @@
                         <div class="flex items-center space-x-3">
                             <img src="${currentUser.photo}" class="w-12 h-12 rounded-2xl object-cover border-2 border-yellow-400 shadow-inner">
                             <div>
-                                <span class="text-xs text-sky-200 font-extrabold block">Halo, ${currentUser.name}</span>
+                                <span class="text-xs text-sky-200 font-extrabold block">Halo, ${currentUser.name} (ID: ${currentUser.accountId || '-'})</span>
                                 <h3 class="text-sm font-black text-yellow-300 tracking-tight">${currentUser.role === 'customer' ? 'WARGA KEC. LENGKONG' : 'Saldo: Rp ' + (currentUser.balance || 0).toLocaleString()}</h3>
                             </div>
                         </div>
@@ -1313,7 +1592,7 @@
         let tempNewFoodPhoto = null;
 
         function renderMerchantManage(container) {
-            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName || m.name === currentUser.name) || db.merchants[0];
+            const merchant = db.merchants.find(m => m.whatsapp === currentUser.phone || m.name === currentUser.shopName || m.name === currentUser.name || m.accountId === currentUser.accountId) || db.merchants[0];
             const foods = db.foods.filter(f => f.merchantId === merchant.id);
             const isOpen = merchant.status === 'Buka';
 
@@ -1325,7 +1604,7 @@
                             <div class="flex items-center space-x-3">
                                 <img src="${merchant.image}" class="w-16 h-16 rounded-2xl object-cover border-2 border-yellow-400 -mt-12 bg-white shadow-md" alt="Profil Toko">
                                 <div>
-                                    <span class="text-[10px] text-yellow-300 font-extrabold uppercase block">PROFIL & SAMPUL TOKO</span>
+                                    <span class="text-[10px] text-yellow-300 font-extrabold uppercase block">PROFIL & SAMPUL TOKO (ID: ${merchant.accountId || '-'})</span>
                                     <h2 class="text-base font-black">${merchant.name}</h2>
                                     <p class="text-[11px] text-sky-200">Saldo: Rp ${(merchant.balance || 0).toLocaleString()}</p>
                                 </div>
@@ -1512,7 +1791,7 @@
             switchView('chat');
             const input = document.getElementById('chat-input');
             if (input) {
-                input.value = `Halo Admin SIMADU, saya ${currentUser.name} (${role.toUpperCase()}) ingin request tambah saldo akun.`;
+                input.value = `Halo Admin SIMADU, saya ${currentUser.name} (ID: ${currentUser.accountId || '-'}, ${role.toUpperCase()}) ingin request tambah saldo akun.`;
                 input.focus();
             }
         }
@@ -1528,6 +1807,7 @@
                     <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-5 rounded-3xl shadow-lg text-center space-y-2 border-b-4 border-yellow-400">
                         <img id="user-prof-preview" src="${currentUser.photo}" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-yellow-400 shadow-md bg-white">
                         <h2 class="font-black text-base">${currentUser.name}</h2>
+                        <p class="text-xs font-black text-yellow-300">ID Login: ${currentUser.accountId || '-'}</p>
                         <span class="text-[10px] bg-yellow-400 text-slate-950 font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span>
                         ${showWalletAndTopUp ? `
                             <div class="pt-2 space-y-2">
@@ -1542,6 +1822,10 @@
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
                         <h3 class="font-extrabold text-xs text-sky-900 uppercase border-b pb-2"><i class="fa-solid fa-user-pen text-yellow-500 mr-1"></i> Ubah Informasi Akun & Foto Profil</h3>
                         
+                        <div>
+                            <label class="text-[10px] font-extrabold text-slate-500 uppercase">ID Akun (Huruf & Angka)</label>
+                            <input type="text" id="acc-id" value="${currentUser.accountId || ''}" pattern="[A-Za-z0-9]{3,20}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-black uppercase bg-sky-50/50">
+                        </div>
                         <div>
                             <label class="text-[10px] font-extrabold text-slate-500 uppercase">Nama Lengkap</label>
                             <input type="text" id="acc-name" value="${currentUser.name}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
@@ -1572,6 +1856,18 @@
         }
 
         function saveFullAccountChanges() {
+            const newId = (document.getElementById('acc-id')?.value || '').trim().toUpperCase();
+            if (!/^[A-Z0-9]{3,20}$/.test(newId)) {
+                showToast('ID akun wajib berisi huruf dan angka (3-20 karakter)!', 'error');
+                return;
+            }
+            const taken = db.users.find(u => u.id !== currentUser.id && String(u.accountId || '').toUpperCase() === newId);
+            if (taken) {
+                showToast(`ID "${newId}" sudah dipakai akun lain!`, 'error');
+                return;
+            }
+
+            currentUser.accountId = newId;
             currentUser.name = document.getElementById('acc-name').value;
             currentUser.phone = document.getElementById('acc-phone').value;
             currentUser.address = document.getElementById('acc-address').value;
@@ -1584,7 +1880,7 @@
 
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             saveDB();
-            addAccountNotification('Profil Disimpan', `Informasi akun ${currentUser.name} berhasil disimpan.`, currentUser.name);
+            addAccountNotification('Profil Disimpan', `Informasi akun ${currentUser.name} (ID: ${currentUser.accountId}) berhasil disimpan.`, currentUser.name);
             showToast('Perubahan berhasil disimpan: Informasi akun telah diperbarui!', 'success');
             renderProfile(document.getElementById('main-content'));
         }
@@ -1598,9 +1894,9 @@
                     <h2 class="font-extrabold text-base text-sky-900">Panel Admin Master Control</h2>
                     <div class="grid grid-cols-2 gap-3">
                         <div onclick="renderDashboardContent('admin-users')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-sky-500 transition shadow-xs">
-                            <span class="text-[10px] text-slate-500 uppercase font-extrabold">TOTAL PENGGUNA</span>
+                            <span class="text-[10px] text-slate-500 uppercase font-extrabold">DAFTAR ID & USER</span>
                             <div class="flex justify-between items-center mt-1">
-                                <h3 class="text-xl font-black text-sky-600">${db.users.length} User</h3>
+                                <h3 class="text-xl font-black text-sky-600">${db.users.length} ID</h3>
                                 <i class="fa-solid fa-arrow-right text-slate-400"></i>
                             </div>
                         </div>
@@ -1674,16 +1970,41 @@
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
                     <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-sky-900">Manajemen Pengguna (Hapus, Reset Pass, Saldo)</h2>
+                        <h2 class="font-extrabold text-base text-sky-900">Daftar ID & Manajemen User</h2>
                         <button onclick="renderDashboardContent('admin-dash')" class="text-xs text-sky-600 font-bold"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
                     </div>
+
+                    <!-- FORM TAMBAH ID BARU OLEH ADMIN -->
+                    <div class="bg-white p-4 rounded-3xl border-2 border-yellow-400 space-y-2.5 shadow-xs">
+                        <h3 class="font-black text-xs text-sky-900 uppercase"><i class="fa-solid fa-id-badge text-yellow-500 mr-1"></i> Tambah ID Login Baru (Huruf & Angka)</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="new-id-code" pattern="[A-Za-z0-9]{3,20}" placeholder="ID (cth: WARUNG77)" class="p-2.5 border rounded-2xl text-xs font-black uppercase">
+                            <select id="new-id-role" class="p-2.5 border rounded-2xl text-xs font-bold bg-white text-sky-700">
+                                <option value="customer">Customer</option>
+                                <option value="driver">Driver</option>
+                                <option value="merchant">Merchant</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="new-id-name" placeholder="Nama Lengkap" class="p-2.5 border rounded-2xl text-xs font-semibold">
+                            <input type="text" id="new-id-phone" placeholder="No. WhatsApp" class="p-2.5 border rounded-2xl text-xs font-semibold">
+                        </div>
+                        <input type="text" id="new-id-pass" value="123" placeholder="Kata Sandi" class="w-full p-2.5 border rounded-2xl text-xs font-semibold">
+                        <button onclick="adminCreateAccountId()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow">
+                            + Simpan & Tambahkan ke Daftar ID
+                        </button>
+                    </div>
+
                     <div class="space-y-3">
                         ${db.users.map(u => `
                             <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
                                 <div class="flex justify-between items-start">
                                     <div>
+                                        <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md inline-block mb-1">ID: ${u.accountId || '-'}</span>
                                         <h4 class="font-bold text-xs text-slate-900">${u.name} (<span class="text-sky-600 uppercase">${u.role}</span>)</h4>
                                         <p class="text-[10px] text-slate-500">${u.phone} • ${u.address || 'Lengkong'}</p>
+                                        ${u.plate ? `<p class="text-[10px] text-slate-600 font-semibold">Motor: ${u.bikeType || ''} (${u.plate}) • KTP: ${u.ktp || '-'}</p>` : ''}
+                                        ${u.ownerName ? `<p class="text-[10px] text-slate-600 font-semibold">Pemilik: ${u.ownerName} • KTP: ${u.ktp || '-'}</p>` : ''}
                                         ${u.role !== 'customer' ? `<p class="text-xs font-black text-yellow-600 mt-0.5">Saldo: Rp ${(u.balance || 0).toLocaleString()}</p>` : ''}
                                     </div>
                                     <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-extrabold">${u.status}</span>
@@ -1700,17 +2021,91 @@
             `;
         }
 
+        function adminCreateAccountId() {
+            const code = (document.getElementById('new-id-code')?.value || '').trim().toUpperCase();
+            const role = document.getElementById('new-id-role')?.value || 'customer';
+            const name = (document.getElementById('new-id-name')?.value || '').trim();
+            const phone = (document.getElementById('new-id-phone')?.value || '').trim() || '085624736602';
+            const password = (document.getElementById('new-id-pass')?.value || '123').trim() || '123';
+
+            if (!/^[A-Z0-9]{3,20}$/.test(code)) {
+                showToast('ID baru wajib berisi huruf dan angka (3-20 karakter)!', 'error');
+                return;
+            }
+            if (!name) {
+                showToast('Nama lengkap wajib diisi!', 'error');
+                return;
+            }
+            if (db.users.some(u => String(u.accountId || '').toUpperCase() === code)) {
+                showToast(`ID "${code}" sudah ada di daftar!`, 'error');
+                return;
+            }
+
+            const newAcc = {
+                id: Date.now(),
+                accountId: code,
+                name,
+                phone,
+                role,
+                status: 'Aktif',
+                address: 'Kecamatan Lengkong, Sukabumi',
+                balance: role !== 'customer' ? 50000 : undefined,
+                password,
+                photo: 'https://placehold.co/150x150/0284c7/ffffff?text=' + encodeURIComponent(name.charAt(0).toUpperCase())
+            };
+
+            db.users.unshift(newAcc);
+            if (role === 'merchant') {
+                db.merchants.push({
+                    id: Date.now() + 1,
+                    accountId: code,
+                    name,
+                    ownerName: name,
+                    subtitle: 'Mitra UMKM Lengkong',
+                    category: 'Kuliner',
+                    status: 'Buka',
+                    banner: 'https://placehold.co/600x300/0284c7/facc15?text=' + encodeURIComponent(name),
+                    image: newAcc.photo,
+                    rating: 5.0,
+                    lat: -7.1242,
+                    lng: 106.8462,
+                    address: 'Kecamatan Lengkong, Sukabumi',
+                    operationalHours: '08:00 - 21:00 WIB',
+                    whatsapp: phone,
+                    balance: 50000
+                });
+            } else if (role === 'driver') {
+                db.drivers.push({
+                    id: Date.now() + 1,
+                    accountId: code,
+                    name,
+                    status: 'Online',
+                    vehicle: 'Motor Mitra Lengkong',
+                    rating: 5.0,
+                    location: 'Lengkong, Sukabumi',
+                    lat: -7.1235,
+                    lng: 106.8458,
+                    phone,
+                    balance: 50000
+                });
+            }
+
+            saveDB();
+            showToast(`ID "${code}" berhasil ditambahkan ke daftar!`, 'success');
+            renderAdminUsers(document.getElementById('main-content'));
+        }
+
         function adminAddBalance(userId) {
             const u = db.users.find(x => x.id === userId);
             if (!u || u.role === 'customer') return showToast('Saldo hanya berlaku untuk Mitra Toko & Driver!', 'error');
-            const nominal = parseInt(prompt(`Masukkan nominal penambahan saldo untuk ${u.name}:`, '50000'));
+            const nominal = parseInt(prompt(`Masukkan nominal penambahan saldo untuk ${u.name} (ID: ${u.accountId || '-'}):`, '50000'));
             if(!isNaN(nominal)) {
                 u.balance = (u.balance || 0) + nominal;
                 if(u.role === 'merchant') {
-                    const m = db.merchants.find(x => x.name === u.name || x.whatsapp === u.phone);
+                    const m = db.merchants.find(x => x.name === u.name || x.whatsapp === u.phone || x.accountId === u.accountId);
                     if(m) m.balance = u.balance;
                 } else if(u.role === 'driver') {
-                    const d = db.drivers.find(x => x.name === u.name || x.phone === u.phone);
+                    const d = db.drivers.find(x => x.name === u.name || x.phone === u.phone || x.accountId === u.accountId);
                     if(d) d.balance = u.balance;
                 }
                 saveDB();
@@ -1724,7 +2119,7 @@
             const u = db.users.find(x => x.id === userId);
             u.password = '123';
             saveDB();
-            addAccountNotification('Reset Password Admin', `Password ${u.name} direset menjadi '123'.`, u.name);
+            addAccountNotification('Reset Password Admin', `Password ${u.name} (ID: ${u.accountId || '-'}) direset menjadi '123'.`, u.name);
             showToast(`Perubahan berhasil disimpan: Password ${u.name} direset menjadi '123'`, 'success');
         }
 
@@ -1746,11 +2141,13 @@
                     </div>
                     <div class="space-y-3">
                         ${db.merchants.map(m => {
-                            const matchedUser = db.users.find(u => u.name === m.name || u.phone === m.whatsapp);
+                            const matchedUser = db.users.find(u => u.name === m.name || u.phone === m.whatsapp || u.accountId === m.accountId);
                             const uid = matchedUser ? matchedUser.id : 3;
                             return `
                                 <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
+                                    <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md">ID: ${m.accountId || '-'}</span>
                                     <h4 class="font-bold text-sm text-slate-900">${m.name} (${m.status})</h4>
+                                    <p class="text-[10px] text-slate-500">Pemilik: ${m.ownerName || '-'} • Lokasi: ${m.lat}, ${m.lng}</p>
                                     <p class="text-xs font-black text-yellow-600">Saldo Toko: Rp ${(m.balance || 0).toLocaleString()}</p>
                                     <button onclick="adminAddBalance(${uid})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-xs font-bold cursor-pointer">Tambah Saldo</button>
                                 </div>
@@ -1770,12 +2167,13 @@
                     </div>
                     <div class="space-y-3">
                         ${db.drivers.map(d => {
-                            const matchedUser = db.users.find(u => u.name === d.name || u.phone === d.phone);
+                            const matchedUser = db.users.find(u => u.name === d.name || u.phone === d.phone || u.accountId === d.accountId);
                             const uid = matchedUser ? matchedUser.id : 2;
                             return `
                                 <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
+                                    <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md">ID: ${d.accountId || '-'}</span>
                                     <h4 class="font-bold text-xs text-slate-900">${d.name} (${d.status})</h4>
-                                    <p class="text-[10px] text-slate-500">${d.vehicle} • Saldo: Rp ${(d.balance || 0).toLocaleString()}</p>
+                                    <p class="text-[10px] text-slate-500">${d.vehicle} • KTP: ${d.ktp || '-'} • Saldo: Rp ${(d.balance || 0).toLocaleString()}</p>
                                     <button onclick="adminAddBalance(${uid})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-[10px] font-bold cursor-pointer">Tambah Saldo</button>
                                 </div>
                             `;
