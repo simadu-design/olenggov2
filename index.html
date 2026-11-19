@@ -76,6 +76,12 @@
                     <div class="w-14 h-14 bg-yellow-400 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-2xl animate-pulse">🐝</div>
                 </div>
 
+                <div class="flex justify-center">
+                    <button type="button" onclick="updateSupabaseBadgeUI()" id="supabase-status-badge" class="px-3 py-1 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 shadow cursor-pointer">
+                        Supabase: Mengecek...
+                    </button>
+                </div>
+
                 <div class="bg-white text-slate-800 p-6 rounded-3xl shadow-2xl text-left space-y-4 border-2 border-yellow-400">
                     <div class="flex border-b border-slate-100 pb-2 mb-2">
                         <button onclick="switchAuthTab('login')" id="tab-login-btn" class="flex-1 font-bold text-center text-sky-600 border-b-2 border-sky-600 pb-1 text-sm cursor-pointer">Masuk (Wajib ID)</button>
@@ -389,6 +395,85 @@
         const supabaseClient = (window.supabase && typeof window.supabase.createClient === 'function')
             ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
             : null;
+
+        let lastSupabaseStatus = {
+            ok: false,
+            label: 'Supabase: Mengecek...',
+            detail: ''
+        };
+
+        async function checkSupabaseConnectionStatus(showNotify = false) {
+            const sdkLoaded = Boolean(window.supabase && typeof window.supabase.createClient === 'function');
+            if (!sdkLoaded || !supabaseClient) {
+                lastSupabaseStatus = {
+                    ok: false,
+                    label: 'Supabase: Gagal (SDK)',
+                    detail: 'SDK Supabase belum termuat'
+                };
+                if (showNotify) showToast('Gagal konek Supabase: SDK belum termuat.', 'error');
+                return lastSupabaseStatus;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('app_config')
+                    .select('id')
+                    .eq('id', 1)
+                    .maybeSingle();
+
+                if (error) {
+                    lastSupabaseStatus = {
+                        ok: false,
+                        label: `Supabase: Gagal (${error.code || 'ERR'})`,
+                        detail: error.message
+                    };
+                    if (showNotify) showToast(`Gagal konek Supabase: ${error.message}`, 'error');
+                    return lastSupabaseStatus;
+                }
+
+                lastSupabaseStatus = {
+                    ok: true,
+                    label: 'Supabase: Terhubung',
+                    detail: `Project ${SUPABASE_PROJECT_ID} aktif`
+                };
+                if (showNotify) showToast('Koneksi ke Supabase berhasil!', 'success');
+                return lastSupabaseStatus;
+            } catch (err) {
+                lastSupabaseStatus = {
+                    ok: false,
+                    label: 'Supabase: Gagal (Jaringan)',
+                    detail: err?.message || String(err)
+                };
+                if (showNotify) showToast(`Gagal konek Supabase: ${lastSupabaseStatus.detail}`, 'error');
+                return lastSupabaseStatus;
+            }
+        }
+
+        function applySupabaseBadgeStyle(el, statusObj) {
+            if (!el) return;
+            el.textContent = statusObj.label;
+            el.title = statusObj.detail || statusObj.label;
+            if (statusObj.ok) {
+                el.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow cursor-pointer';
+            } else if (statusObj.label.includes('Mengecek')) {
+                el.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 border border-slate-300 shadow cursor-pointer';
+            } else {
+                el.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300 shadow cursor-pointer';
+            }
+        }
+
+        async function updateSupabaseBadgeUI(showNotify = false) {
+            const authBadge = document.getElementById('supabase-status-badge');
+            const homeBadge = document.getElementById('home-supabase-badge');
+            const checkingObj = { ok: false, label: 'Supabase: Mengecek...', detail: 'Sedang memeriksa koneksi...' };
+            applySupabaseBadgeStyle(authBadge, checkingObj);
+            applySupabaseBadgeStyle(homeBadge, checkingObj);
+
+            const statusObj = await checkSupabaseConnectionStatus(showNotify);
+            applySupabaseBadgeStyle(document.getElementById('supabase-status-badge'), statusObj);
+            applySupabaseBadgeStyle(document.getElementById('home-supabase-badge'), statusObj);
+            return statusObj;
+        }
 
         let currentUser = null; 
         let currentSubTab = 'home';
@@ -771,6 +856,7 @@
         document.addEventListener("DOMContentLoaded", function() {
             getSyncedMainBanner();
             toggleRegisterRoleFields();
+            updateSupabaseBadgeUI(false);
             const savedSession = localStorage.getItem('oleng_user_session');
             if (savedSession) {
                 try {
@@ -1083,6 +1169,7 @@
             localStorage.removeItem('oleng_admin_view_mode');
             document.getElementById('view-auth').classList.remove('hidden');
             document.getElementById('view-dashboard').classList.add('hidden');
+            updateSupabaseBadgeUI(false);
             showToast('Anda telah keluar dari akun.', 'info');
         }
 
@@ -1429,12 +1516,15 @@
                         </div>
                     </div>
 
-                    <div class="bg-white/95 px-4 py-2.5 rounded-2xl border border-sky-200 flex items-center justify-between shadow-xs">
-                        <span class="text-xs font-extrabold text-sky-900 flex items-center gap-2">
-                            <i class="fa-solid fa-bell-ring text-yellow-500"></i> Alarm Notifikasi: ${alarmEnabled ? 'NYALA (ON)' : 'MATI (OFF)'}
-                        </span>
-                        <button onclick="toggleNotificationAlarm()" class="px-3 py-1 rounded-xl text-[11px] font-black cursor-pointer ${alarmEnabled ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-700'}">
-                            ${alarmEnabled ? 'ON' : 'OFF'}
+                    <div class="bg-white/95 px-4 py-2.5 rounded-2xl border border-sky-200 flex items-center justify-between shadow-xs gap-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-bell-ring text-yellow-500 text-xs"></i>
+                            <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${alarmEnabled ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-700'}">
+                                Alarm: ${alarmEnabled ? 'ON' : 'OFF'}
+                            </button>
+                        </div>
+                        <button type="button" onclick="updateSupabaseBadgeUI(true)" id="home-supabase-badge" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 border border-slate-300 shadow cursor-pointer">
+                            ${lastSupabaseStatus.label}
                         </button>
                     </div>
 
@@ -1478,6 +1568,7 @@
                     </div>
                 </div>
             `;
+            applySupabaseBadgeStyle(document.getElementById('home-supabase-badge'), lastSupabaseStatus);
             setTimeout(initHomeMap, 200);
         }
 
