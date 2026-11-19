@@ -234,7 +234,7 @@
             <div id="incoming-order-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-yellow-400"></div>
         </div>
 
-        <!-- Pop-Up Chat Masuk Berbunyi (Terima / Tolak / Selesai) -->
+        <!-- Pop-Up Notifikasi Chat Masuk Berbunyi Nada -->
         <div id="modal-incoming-chat" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
             <div id="incoming-chat-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-sky-500"></div>
         </div>
@@ -361,14 +361,14 @@
             </div>
         </div>
 
-        <!-- Live Chat View (Simpel, List Berjejer ke Bawah, Chat Terbaru Paling Atas) -->
+        <!-- Live Chat View (Privat Antar-Akun + Galeri + Kamera + Emot & Stiker) -->
         <div id="view-chat" class="absolute inset-0 bg-white z-50 hidden flex flex-col">
             <div class="bg-sky-600 text-white px-4 py-3 flex items-center justify-between shadow border-b-2 border-yellow-400">
                 <div class="flex items-center space-x-3">
                     <button onclick="closeChat()" class="text-white text-lg cursor-pointer"><i class="fa-solid fa-arrow-left"></i></button>
                     <div>
                         <h3 id="chat-title" class="font-extrabold text-sm">Live Chat</h3>
-                        <span id="chat-status-label" class="text-[10px] text-yellow-200 font-bold block">Pilih percakapan di bawah</span>
+                        <span id="chat-status-label" class="text-[10px] text-yellow-200 font-bold block">Chat Privat Tersinkron</span>
                     </div>
                 </div>
                 <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-sky-800 text-yellow-300">
@@ -376,13 +376,44 @@
                 </button>
             </div>
 
-            <div class="bg-slate-50 border-b max-h-44 overflow-y-auto divide-y divide-slate-200" id="chat-contact-selector"></div>
+            <div class="bg-slate-50 border-b max-h-40 overflow-y-auto divide-y divide-slate-200" id="chat-contact-selector"></div>
 
             <div id="chat-messages" class="flex-1 p-3.5 overflow-y-auto space-y-2.5 bg-slate-100"></div>
 
-            <div class="p-2.5 bg-white border-t flex items-center space-x-2">
-                <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 border rounded-full px-4 py-2 text-xs font-medium">
-                <button onclick="sendPersonalChatMessage()" class="bg-sky-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow cursor-pointer"><i class="fa-solid fa-paper-plane text-xs"></i></button>
+            <!-- Panel Emot & Stiker -->
+            <div id="chat-sticker-panel" class="hidden bg-slate-50 border-t px-3 py-2 space-y-2">
+                <div class="flex flex-wrap gap-1.5 text-lg">
+                    <button type="button" onclick="appendChatEmot('😊')" class="p-1 hover:bg-slate-200 rounded cursor-pointer">😊</button>
+                    <button type="button" onclick="appendChatEmot('🙏')" class="p-1 hover:bg-slate-200 rounded cursor-pointer">🙏</button>
+                    <button type="button" onclick="appendChatEmot('👍')" class="p-1 hover:bg-slate-200 rounded cursor-pointer">👍</button>
+                    <button type="button" onclick="appendChatEmot('🏍️')" class="p-1 hover:bg-slate-200 rounded cursor-pointer">🏍️</button>
+                    <button type="button" onclick="appendChatEmot('🍲')" class="p-1 hover:bg-slate-200 rounded cursor-pointer">🍲</button>
+                    <button type="button" onclick="appendChatEmot('🐝')" class="p-1 hover:bg-slate-200 rounded cursor-pointer">🐝</button>
+                    <button type="button" onclick="appendChatEmot('❤️')" class="p-1 hover:bg-slate-200 rounded cursor-pointer">❤️</button>
+                    <button type="button" onclick="appendChatEmot('😂')" class="p-1 hover:bg-slate-200 rounded cursor-pointer">😂</button>
+                </div>
+                <div class="grid grid-cols-4 gap-1.5 text-[10px] font-black">
+                    <button type="button" onclick="sendChatSticker('🐝 OTW SEKARANG!')" class="py-1.5 px-2 bg-yellow-300 text-slate-950 rounded-xl cursor-pointer">🐝 OTW!</button>
+                    <button type="button" onclick="sendChatSticker('🙏 TERIMA KASIH!')" class="py-1.5 px-2 bg-sky-100 text-sky-900 rounded-xl cursor-pointer">🙏 MAKASIH</button>
+                    <button type="button" onclick="sendChatSticker('✅ SIAP PESANAN!')" class="py-1.5 px-2 bg-emerald-100 text-emerald-900 rounded-xl cursor-pointer">✅ SIAP!</button>
+                    <button type="button" onclick="sendChatSticker('📍 SUDAH SAMPAI')" class="py-1.5 px-2 bg-amber-100 text-amber-900 rounded-xl cursor-pointer">📍 SAMPAI</button>
+                </div>
+            </div>
+
+            <div class="p-2.5 bg-white border-t flex items-center space-x-1.5">
+                <input type="file" id="chat-gallery-input" accept="image/*" class="hidden" onchange="handleSendChatImage(event)">
+                <input type="file" id="chat-camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleSendChatImage(event)">
+                <button type="button" onclick="toggleChatStickerPanel()" class="w-9 h-9 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center cursor-pointer shrink-0" title="Emot & Stiker">
+                    <i class="fa-solid fa-face-smile text-sm"></i>
+                </button>
+                <button type="button" onclick="document.getElementById('chat-gallery-input').click()" class="w-9 h-9 bg-sky-100 text-sky-700 rounded-full flex items-center justify-center cursor-pointer shrink-0" title="Kirim Foto Galeri">
+                    <i class="fa-solid fa-image text-sm"></i>
+                </button>
+                <button type="button" onclick="document.getElementById('chat-camera-input').click()" class="w-9 h-9 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center cursor-pointer shrink-0" title="Ambil Foto Kamera">
+                    <i class="fa-solid fa-camera text-sm"></i>
+                </button>
+                <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 border rounded-full px-3.5 py-2 text-xs font-medium min-w-0">
+                <button type="button" onclick="sendPersonalChatMessage()" class="bg-sky-600 text-white w-9 h-9 rounded-full flex items-center justify-center shadow cursor-pointer shrink-0"><i class="fa-solid fa-paper-plane text-xs"></i></button>
             </div>
         </div>
 
@@ -407,6 +438,18 @@
             const prefix = role === 'admin' ? 'ADM' : role === 'merchant' ? 'MRC' : role === 'driver' ? 'DRV' : 'USR';
             const clean = normalizePhone(normPhone) || String(Date.now());
             return (prefix + clean).toUpperCase().slice(0, 20);
+        }
+
+        function formatCompactOrderItems(itemsArr) {
+            const counts = new Map();
+            (itemsArr || []).forEach(item => {
+                const label = String(item?.name || item || '').trim();
+                if (!label) return;
+                counts.set(label, (counts.get(label) || 0) + 1);
+            });
+            return Array.from(counts.entries())
+                .map(([name, qty]) => `${name} ${qty}`)
+                .join(', ');
         }
 
         if ('serviceWorker' in navigator) {
@@ -470,6 +513,10 @@
         let activeIncomingChatId = null;
         let hasPendingMediaSelection = false;
         let mapLayerMode = localStorage.getItem('oleng_map_layer_mode') || 'street';
+        let currentMapZoom = Number(localStorage.getItem('oleng_map_zoom') || 15);
+        let currentMapCenter = null;
+        let gpsWatchId = null;
+        let homeUserMarker = null;
         let readChatIds = JSON.parse(localStorage.getItem('oleng_read_chat_ids') || '[]');
         let readNotifIds = JSON.parse(localStorage.getItem('oleng_read_notif_ids') || '[]');
         let shownPopupChatIds = JSON.parse(localStorage.getItem('oleng_shown_popup_chats') || '[]');
@@ -652,11 +699,10 @@
                                     from: row.sender_name,
                                     to: row.receiver_name,
                                     text: row.message_text,
-                                    time: row.sent_time || '',
-                                    chatStatus: 'Baru'
+                                    time: row.sent_time || ''
                                 };
                                 if (isMessageForCurrentUser(chatObj)) {
-                                    notifyBackgroundOnce('chat-' + row.id, `Chat Baru dari ${row.sender_name}`, row.message_text);
+                                    notifyBackgroundOnce('chat-' + row.id, `Chat Masuk dari ${row.sender_name}`, row.message_text.startsWith('data:image') ? '📷 Mengirim foto' : row.message_text);
                                     checkAndTriggerIncomingChatPopup(chatObj);
                                 }
                             }
@@ -780,10 +826,7 @@
             mainBanner: DEFAULT_MAIN_BANNER,
             pricing: { ...defaultPricing },
             commissionLogs: [],
-            walletMutations: [
-                { id: 'MUT-1001', ownerName: 'Asep Supriatna', role: 'driver', type: 'TOPUP', label: 'Saldo Awal Driver', amount: 150000, commission: 0, netAmount: 150000, time: 'Hari ini' },
-                { id: 'MUT-1002', ownerName: 'MADU TOKO', role: 'merchant', type: 'TOPUP', label: 'Saldo Awal Toko', amount: 350000, commission: 0, netAmount: 350000, time: 'Hari ini' }
-            ],
+            walletMutations: [],
             reviews: [],
             users: [
                 { id: 1, accountId: 'CUST01', name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Budi' },
@@ -812,47 +855,20 @@
                     operationalHours: '08:00 - 21:00 WIB', 
                     whatsapp: '6285624736602', 
                     balance: 350000 
-                },
-                { 
-                    id: 2, 
-                    accountId: 'MRCH02',
-                    name: 'Seblak & Bakso Bledor Lengkong', 
-                    ownerName: 'Bu Bledor',
-                    ktp: '3202110303920003',
-                    subtitle: 'Spesialis Pedas Lengkong',
-                    category: 'Snack & Pedas', 
-                    status: 'Buka', 
-                    banner: 'https://placehold.co/600x300/0369a1/facc15?text=Seblak+Bakso+Bledor', 
-                    image: 'https://placehold.co/150x150/f59e0b/ffffff?text=SBB', 
-                    rating: 4.7, 
-                    ratingCount: 1,
-                    lat: -7.1220, 
-                    lng: 106.8440, 
-                    address: 'Kp. Pasar Lengkong RT 01/02, Sukabumi', 
-                    operationalHours: '10:00 - 22:00 WIB', 
-                    whatsapp: '6285624736602', 
-                    balance: 200000 
                 }
             ],
             foods: [
                 { id: 9011, merchantId: 901, name: 'Nasi Kuning SIMADU Spesial', price: 18000, desc: 'Nasi kuning harum, telur balado, ayam suwir & sambal kacang.', stock: 25, image: 'https://placehold.co/200x200/0284c7/facc15?text=Nasi+Kuning' },
                 { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap Komplit', price: 25000, desc: 'Nasi liwet hangat, ikan asin jambal, tahu tempe, lalapan...', stock: 15, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Nasi+Liwet' },
-                { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung asli bumbu rempah bakar madu manis...', stock: 12, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Ayam+Bakar' },
-                { id: 103, merchantId: 2, name: 'Seblak Ceker Mercon Jumbo', price: 15000, desc: 'Seblak kuah kencur pedas nampol dengan ceker empuk.', stock: 25, image: 'https://placehold.co/200x200/f59e0b/ffffff?text=Seblak' }
+                { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung asli bumbu rempah bakar madu manis...', stock: 12, image: 'https://placehold.co/200x200/0284c7/ffffff?text=Ayam+Bakar' }
             ],
             drivers: [
                 { id: 1, accountId: 'DRIV01', name: 'Asep Supriatna', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', status: 'Online', vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, ratingCount: 1, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '6285624736602', balance: 150000 },
                 { id: 2, accountId: 'DRIV02', name: 'Ujang Hendra', ktp: '3202110404910004', plate: 'F 8891 ZY', bikeType: 'Yamaha Mio', status: 'Online', vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, ratingCount: 1, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '6285624736602', balance: 120000 }
             ],
-            orders: [
-                { id: 'ORD-9853', type: 'food', customer: 'Budi Santoso', merchant: 'MADU TOKO', driver: 'Asep Supriatna', total: 55000, status: 'Menunggu Driver', items: 'Paket Nasi Liwet Lengkap Komplit (2x)', pickup: 'MADU TOKO', dest: 'Kp. Lengkong RT 02/01', settled: false, rating: null, reviewText: '' }
-            ],
-            notifications: [
-                { id: 1, targetUser: 'ALL', title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Aplikasi ojek & kuliner warga Lengkong Sukabumi siap digunakan.' }
-            ],
-            chats: [
-                { id: 1, from: 'Budi Santoso', to: 'Admin SIMADU', text: 'Halo Admin, aplikasi berjalan lancar.', time: '08:00', chatStatus: 'Diterima' }
-            ],
+            orders: [],
+            notifications: [],
+            chats: [],
             cart: [],
             activeMerchant: null
         };
@@ -860,12 +876,15 @@
         let db = JSON.parse(localStorage.getItem('oleng_go_db')) || defaultDB;
         if (!db.pricing) db.pricing = { ...defaultPricing };
         if (!db.commissionLogs) db.commissionLogs = [];
-        if (!db.walletMutations) db.walletMutations = [...defaultDB.walletMutations];
+        if (!db.walletMutations) db.walletMutations = [];
         if (!db.reviews) db.reviews = [];
         if (!Array.isArray(db.users)) db.users = [...defaultDB.users];
         if (!Array.isArray(db.merchants)) db.merchants = [...defaultDB.merchants];
         if (!Array.isArray(db.drivers)) db.drivers = [...defaultDB.drivers];
         if (!Array.isArray(db.foods)) db.foods = [...defaultDB.foods];
+        if (!Array.isArray(db.orders)) db.orders = [];
+        if (!Array.isArray(db.notifications)) db.notifications = [];
+        if (!Array.isArray(db.chats)) db.chats = [];
         db.users.forEach((u, idx) => {
             u.phone = normalizePhone(u.phone) || u.phone;
             if (!u.accountId) u.accountId = generateAutoAccountIdFromPhone(u.phone || ('0800' + idx), u.role);
@@ -904,11 +923,11 @@
                 u.phone = cleanPhone;
 
                 if (u.role === 'merchant') {
-                    const shopTitle = u.shopName || u.name || `Toko ${cleanPhone}`;
+                    const shopTitle = u.shopName || '';
                     let m = (db.merchants || []).find(item =>
-                        (accId && String(item.accountId || '').toUpperCase() === accId) ||
-                        (cleanPhone && normalizePhone(item.whatsapp) === cleanPhone) ||
-                        (String(item.name || '').trim().toLowerCase() === String(shopTitle).trim().toLowerCase())
+                        String(item.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID &&
+                        ((accId && String(item.accountId || '').toUpperCase() === accId) ||
+                        (cleanPhone && normalizePhone(item.whatsapp) === cleanPhone))
                     );
                     if (!m) {
                         m = {
@@ -917,17 +936,17 @@
                             name: shopTitle,
                             ownerName: u.ownerName || u.name,
                             ktp: u.ktp || '',
-                            subtitle: u.ownerName ? `Pemilik: ${u.ownerName}` : 'Mitra Toko Lengkong',
+                            subtitle: u.ownerName ? `Pemilik: ${u.ownerName}` : '',
                             category: 'Kuliner',
                             status: 'Buka',
-                            banner: getSyncedMainBanner(),
+                            banner: 'https://placehold.co/600x300/0284c7/facc15?text=Banner+Toko',
                             image: u.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=TOKO',
                             rating: 5.0,
                             ratingCount: 0,
                             lat: typeof u.lat === 'number' ? u.lat : (-7.1240 - idx * 0.0005),
                             lng: typeof u.lng === 'number' ? u.lng : (106.8460 + idx * 0.0005),
-                            address: u.address || 'Kecamatan Lengkong, Sukabumi',
-                            operationalHours: '08:00 - 21:00 WIB',
+                            address: u.address || '',
+                            operationalHours: '',
                             whatsapp: cleanPhone || ADMIN_MAIN_WA,
                             balance: Number(u.balance || 0)
                         };
@@ -1084,10 +1103,10 @@
 
                 const merchantRows = (db.merchants || []).map((m, i) => ({
                     account_id: String(m.accountId || generateAutoAccountIdFromPhone(m.whatsapp || ('0810' + i), 'merchant')).toUpperCase(),
-                    name: m.name,
-                    owner_name: m.ownerName || m.name,
+                    name: m.name || `Toko ${m.whatsapp || i}`,
+                    owner_name: m.ownerName || m.name || 'Mitra Toko',
                     ktp: m.ktp || '3202000000000000',
-                    subtitle: m.subtitle || m.name,
+                    subtitle: m.subtitle || m.name || '',
                     category: m.category || 'Kuliner',
                     status: m.status || 'Buka',
                     banner_url: m.banner || DEFAULT_MAIN_BANNER,
@@ -1196,9 +1215,9 @@
             }
             if (role === 'merchant') {
                 const m = db.merchants.find(x =>
-                    (myPhone && normalizePhone(x.whatsapp) === myPhone) ||
-                    (currentUser.shopName && String(x.name || '').toLowerCase() === String(currentUser.shopName).toLowerCase()) ||
-                    (currentUser.name && String(x.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
+                    String(x.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID &&
+                    ((myPhone && normalizePhone(x.whatsapp) === myPhone) ||
+                    (currentUser.shopName && String(x.name || '').toLowerCase() === String(currentUser.shopName).toLowerCase()))
                 );
                 const u = db.users.find(x => x.id === currentUser.id || (myPhone && normalizePhone(x.phone) === myPhone && x.role === 'merchant'));
                 const bal = Math.max(Number(m?.balance || 0), Number(u?.balance || 0), Number(currentUser.balance || 0));
@@ -1231,9 +1250,10 @@
             if (!from || from === me || (myPhone && normalizePhone(from) === myPhone)) return false;
 
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            if (activeRole === 'admin' && (to === 'admin simadu' || to === 'admin' || normalizePhone(to) === '085624736602' || to === 'all')) return true;
-            if (to === me || (myPhone && normalizePhone(to) === myPhone) || (myShop && to === myShop) || to === 'all') return true;
-            return false;
+            if (activeRole === 'admin') {
+                return to === 'admin simadu' || to === 'admin' || normalizePhone(to) === '085624736602';
+            }
+            return to === me || (myPhone && normalizePhone(to) === myPhone) || (myShop && to === myShop);
         }
 
         function isOrderTargetedToCurrentUser(order) {
@@ -1264,11 +1284,11 @@
 
             if (role === 'merchant') {
                 const mrcObj = db.merchants.find(m =>
-                    (myPhone && normalizePhone(m.whatsapp) === myPhone) ||
-                    (myShop && String(m.name || '').trim().toLowerCase() === myShop) ||
-                    (me && String(m.name || '').trim().toLowerCase() === me)
+                    String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID &&
+                    ((myPhone && normalizePhone(m.whatsapp) === myPhone) ||
+                    (myShop && String(m.name || '').trim().toLowerCase() === myShop))
                 );
-                const allowedMerchants = [me, myShop, mrcObj ? String(mrcObj.name || '').trim().toLowerCase() : ''].filter(Boolean);
+                const allowedMerchants = [myShop, mrcObj ? String(mrcObj.name || '').trim().toLowerCase() : ''].filter(Boolean);
                 return allowedMerchants.includes(String(order.merchant || '').trim().toLowerCase());
             }
 
@@ -1335,20 +1355,21 @@
             const card = document.getElementById('incoming-chat-card');
             if (!card) return;
             const safeFrom = String(msg.from || 'Pengguna').replace(/'/g, "\\'");
+            const previewMsg = String(msg.text || '').startsWith('data:image')
+                ? `<img src="${msg.text}" class="w-full max-h-40 object-cover rounded-xl border" alt="Foto Masuk">`
+                : `<p class="text-slate-700 font-semibold bg-slate-100 p-3 rounded-2xl">"${msg.text}"</p>`;
             card.innerHTML = `
                 <div class="flex justify-between items-center border-b pb-2">
-                    <span class="bg-sky-600 text-yellow-300 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase"><i class="fa-solid fa-bell-ring mr-1"></i> CHAT MASUK</span>
+                    <span class="bg-sky-600 text-yellow-300 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase"><i class="fa-solid fa-bell-ring mr-1"></i> ADA CHAT MASUK</span>
                     <button onclick="closeIncomingChatModal()" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
                 </div>
                 <div class="space-y-1.5 text-xs">
                     <p class="text-[11px] font-extrabold text-sky-900">Dari: ${msg.from} <span class="text-[10px] text-slate-400 font-semibold">(${msg.time || 'Baru saja'})</span></p>
-                    <p class="text-slate-700 font-semibold bg-slate-100 p-3 rounded-2xl">"${msg.text}"</p>
-                    <p class="text-[10px] font-bold text-amber-600">Status: ${msg.chatStatus || 'Menunggu Konfirmasi'}</p>
+                    ${previewMsg}
                 </div>
-                <div class="grid grid-cols-3 gap-2 pt-2">
-                    <button onclick="handleIncomingChatDecision('${msg.id}', '${safeFrom}', 'accept')" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Terima</button>
-                    <button onclick="handleIncomingChatDecision('${msg.id}', '${safeFrom}', 'reject')" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Tolak</button>
-                    <button onclick="handleIncomingChatDecision('${msg.id}', '${safeFrom}', 'complete')" class="py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Selesai</button>
+                <div class="grid grid-cols-2 gap-2 pt-2">
+                    <button onclick="openChatFromPopup('${msg.id}', '${safeFrom}')" class="py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Buka Chat</button>
+                    <button onclick="closeIncomingChatModal()" class="py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-[11px] font-black cursor-pointer">Tutup</button>
                 </div>
             `;
             document.getElementById('modal-incoming-chat').classList.remove('hidden');
@@ -1359,29 +1380,12 @@
             document.getElementById('modal-incoming-chat')?.classList.add('hidden');
         }
 
-        function handleIncomingChatDecision(msgId, senderName, decision) {
-            const targetMsg = (db.chats || []).find(c => String(c.id) === String(msgId));
-            if (targetMsg) {
-                if (decision === 'accept') targetMsg.chatStatus = 'Diterima';
-                else if (decision === 'reject') targetMsg.chatStatus = 'Ditolak';
-                else if (decision === 'complete') targetMsg.chatStatus = 'Selesai';
-            }
-
+        function openChatFromPopup(msgId, senderName) {
             readChatIds = Array.from(new Set([...readChatIds, String(msgId)]));
             localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
             closeIncomingChatModal();
-
-            if (decision === 'accept') {
-                activeChatTarget = senderName;
-                saveDB(`Chat dari ${senderName} diterima!`);
-                switchView('chat');
-            } else if (decision === 'reject') {
-                saveDB(`Chat dari ${senderName} ditolak.`);
-                updateHomeHeaderBadgesOnly();
-            } else if (decision === 'complete') {
-                saveDB(`Chat dengan ${senderName} dikonfirmasi selesai!`);
-                updateHomeHeaderBadgesOnly();
-            }
+            activeChatTarget = senderName;
+            switchView('chat');
         }
 
         async function pullInitialFromSupabase(forceRefreshUI = false) {
@@ -1583,8 +1587,7 @@
                         from: r.sender_name,
                         to: r.receiver_name,
                         text: r.message_text,
-                        time: r.sent_time || '',
-                        chatStatus: 'Baru'
+                        time: r.sent_time || ''
                     }));
                     db.chats = mergeByKey(db.chats, mappedChats, c => String(c.id));
                     hasChanges = true;
@@ -1595,7 +1598,7 @@
                 const newlyArrivedChats = (db.chats || []).filter(c => !prevChatIds.has(String(c.id)) && isMessageForCurrentUser(c));
                 if (newlyArrivedChats.length > 0) {
                     const latestC = newlyArrivedChats[newlyArrivedChats.length - 1];
-                    notifyBackgroundOnce('chat-' + latestC.id, `Chat Baru dari ${latestC.from}`, latestC.text);
+                    notifyBackgroundOnce('chat-' + latestC.id, `Chat Masuk dari ${latestC.from}`, String(latestC.text || '').startsWith('data:image') ? '📷 Mengirim foto' : latestC.text);
                     playAlarmRingtone();
                     checkAndTriggerIncomingChatPopup(latestC);
                 }
@@ -1621,7 +1624,10 @@
                 }
 
                 if ((hasChanges || forceRefreshUI) && !chatViewVisible && currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
-                    renderDashboardContent(currentSubTab);
+                    // Jangan reset tampilan peta home saat user sedang melihat peta agar zoom tidak lepas
+                    if (currentSubTab !== 'home' || forceRefreshUI) {
+                        renderDashboardContent(currentSubTab);
+                    }
                 }
             } catch (err) {
                 console.warn('Supabase pull info:', err?.message || err);
@@ -1727,10 +1733,38 @@
             }).sort((a, b) => a.distance - b.distance);
         }
 
+        function startLiveHighAccuracyGPSWatcher() {
+            if (!navigator.geolocation || gpsWatchId !== null) return;
+            try {
+                gpsWatchId = navigator.geolocation.watchPosition(pos => {
+                    const lat = Number(pos.coords.latitude.toFixed(6));
+                    const lng = Number(pos.coords.longitude.toFixed(6));
+                    userCurrentLatLng = [lat, lng];
+                    if (homeUserMarker && mapInstance) {
+                        homeUserMarker.setLatLng([lat, lng]);
+                    }
+                    const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+                    if (activeRole === 'driver' && currentUser) {
+                        const drv = db.drivers.find(x => x.name === currentUser.name || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
+                        if (drv && (Math.abs(drv.lat - lat) > 0.0002 || Math.abs(drv.lng - lng) > 0.0002)) {
+                            drv.lat = lat;
+                            drv.lng = lng;
+                            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                        }
+                    }
+                }, () => {}, {
+                    enableHighAccuracy: true,
+                    maximumAge: 3000,
+                    timeout: 12000
+                });
+            } catch (e) {}
+        }
+
         document.addEventListener("DOMContentLoaded", async function() {
             getSyncedMainBanner();
             toggleRegisterRoleFields();
             requestBackgroundNotificationPermission();
+            startLiveHighAccuracyGPSWatcher();
             updateSupabaseBadgeUI(false);
             subscribeRealtimeUpdates();
             const savedSession = localStorage.getItem('oleng_user_session');
@@ -1744,14 +1778,14 @@
                     localStorage.removeItem('oleng_user_session');
                 }
             }
-            await pullInitialFromSupabase(true);
+            await pullInitialFromSupabase(false);
             await syncAllToSupabase();
 
             setInterval(() => {
                 if (!isUserCurrentlyTypingOrEditing()) {
                     pullInitialFromSupabase(false);
                 }
-            }, 5000);
+            }, 3500);
         });
 
         function switchAuthTab(tab) {
@@ -1809,7 +1843,7 @@
                 regMerchantMapInstance.remove();
                 regMerchantMapInstance = null;
             }
-            regMerchantMapInstance = L.map('reg-merchant-map', { zoomControl: true }).setView(regMerchantLatLng, 15);
+            regMerchantMapInstance = L.map('reg-merchant-map', { zoomControl: true }).setView(regMerchantLatLng, 16);
             getBaseTileLayerForMode().addTo(regMerchantMapInstance);
 
             const marker = L.marker(regMerchantLatLng, { draggable: true })
@@ -1865,10 +1899,10 @@
                 navigator.geolocation.getCurrentPosition(pos => {
                     regMerchantLatLng = [Number(pos.coords.latitude.toFixed(6)), Number(pos.coords.longitude.toFixed(6))];
                     initRegisterMerchantMap();
-                    showToast('Berhasil! Posisi GPS terkini dimuat ke peta toko.', 'success');
+                    showToast('Berhasil! Posisi GPS akurat dimuat ke peta toko.', 'success');
                 }, () => {
                     showToast('GPS tidak aktif, gunakan titik peta manual.', 'info');
-                });
+                }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
             }
         }
 
@@ -2027,7 +2061,7 @@
                     subtitle: `Pemilik: ${merchantData.ownerName}`,
                     category: 'Kuliner',
                     status: 'Buka',
-                    banner: getSyncedMainBanner(),
+                    banner: 'https://placehold.co/600x300/0284c7/facc15?text=' + encodeURIComponent(merchantData.shopName),
                     image: newUser.photo,
                     rating: 5.0,
                     ratingCount: 0,
@@ -2038,7 +2072,6 @@
                     whatsapp: phone,
                     balance: 50000
                 });
-                recordWalletMutation({ ownerName: merchantData.shopName, role: 'merchant', type: 'TOPUP', label: 'Saldo Awal Mitra Toko', amount: 50000, commission: 0, netAmount: 50000 });
             } else if (role === 'driver') {
                 db.drivers.push({
                     id: Date.now() + 1,
@@ -2057,7 +2090,6 @@
                     phone,
                     balance: 50000
                 });
-                recordWalletMutation({ ownerName: name, role: 'driver', type: 'TOPUP', label: 'Saldo Awal Mitra Ojek', amount: 50000, commission: 0, netAmount: 50000 });
             }
 
             ensureRoleListsSyncedFromUsers();
@@ -2194,7 +2226,11 @@
         }
 
         function renderDashboardContent(tab) {
-            if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+            if (mapInstance) {
+                try { currentMapZoom = mapInstance.getZoom(); currentMapCenter = mapInstance.getCenter(); } catch (e) {}
+                mapInstance.remove();
+                mapInstance = null;
+            }
             if (ojekMapInstance) { ojekMapInstance.remove(); ojekMapInstance = null; }
             if (checkoutMapInstance) { checkoutMapInstance.remove(); checkoutMapInstance = null; }
 
@@ -2224,16 +2260,22 @@
 
         function getAccountNotifs() {
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            const me = String(currentUser.name || '').trim().toLowerCase();
+            const myShop = String(currentUser.shopName || '').trim().toLowerCase();
             if (role === 'admin') {
                 const adminStore = getAdminOwnStore();
-                const ownStoreName = String(adminStore?.name || '').toLowerCase();
+                const ownStoreName = String(adminStore?.name || '').trim().toLowerCase();
                 return (db.notifications || []).filter(n =>
                     n.targetUser === 'ALL' ||
-                    String(n.targetUser || '').toLowerCase() === String(currentUser.name || '').toLowerCase() ||
-                    (ownStoreName && String(n.targetUser || '').toLowerCase() === ownStoreName)
+                    String(n.targetUser || '').trim().toLowerCase() === me ||
+                    (ownStoreName && String(n.targetUser || '').trim().toLowerCase() === ownStoreName)
                 );
             }
-            return (db.notifications || []).filter(n => n.targetUser === 'ALL' || String(n.targetUser || '').toLowerCase() === String(currentUser.name || '').toLowerCase());
+            return (db.notifications || []).filter(n =>
+                n.targetUser === 'ALL' ||
+                String(n.targetUser || '').trim().toLowerCase() === me ||
+                (myShop && String(n.targetUser || '').trim().toLowerCase() === myShop)
+            );
         }
 
         function getAccountOrders() {
@@ -2243,9 +2285,12 @@
         function getAccountMutations() {
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             if (role === 'admin') return db.walletMutations || [];
-            const myMerchant = db.merchants.find(m => normalizePhone(m.whatsapp) === normalizePhone(currentUser.phone) || m.name === currentUser.shopName || m.name === currentUser.name);
+            const myMerchant = db.merchants.find(m =>
+                String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID &&
+                (normalizePhone(m.whatsapp) === normalizePhone(currentUser.phone) || m.name === currentUser.shopName)
+            );
             const names = [currentUser.name];
-            if (myMerchant) names.push(myMerchant.name);
+            if (myMerchant && myMerchant.name) names.push(myMerchant.name);
             return (db.walletMutations || []).filter(mut => names.includes(mut.ownerName));
         }
 
@@ -2556,9 +2601,9 @@
                                 <button onclick="toggleMapLayerMode()" class="px-2.5 py-1 bg-slate-800 text-yellow-300 rounded-xl text-[10px] font-extrabold cursor-pointer">
                                     <i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span>
                                 </button>
-                                <span class="text-[10px] bg-sky-100 text-sky-800 px-2 py-1 rounded-full font-extrabold flex items-center gap-1">
-                                    <i class="fa-solid fa-location-crosshairs text-sky-600"></i> GPS Real
-                                </span>
+                                <button onclick="recenterHomeMapToAccurateGPS()" class="text-[10px] bg-sky-100 text-sky-800 px-2 py-1 rounded-full font-extrabold flex items-center gap-1 cursor-pointer">
+                                    <i class="fa-solid fa-location-crosshairs text-sky-600"></i> GPS Akurat
+                                </button>
                             </div>
                         </div>
                         <div id="map" class="map-container shadow-inner border border-sky-100"></div>
@@ -2575,7 +2620,8 @@
         }
 
         function renderCustomerFood(container) {
-            const filteredMerchants = db.merchants.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || m.category.toLowerCase().includes(searchQuery.toLowerCase()));
+            const activeMerchants = db.merchants.filter(m => String(m.name || '').trim() !== '');
+            const filteredMerchants = activeMerchants.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || String(m.category || '').toLowerCase().includes(searchQuery.toLowerCase()));
             const layerBtnLabel = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
 
             container.innerHTML = `
@@ -2635,8 +2681,8 @@
                                                 <h4 class="font-bold text-sm text-slate-900">${m.name}</h4>
                                                 <span class="text-[10px] px-2 py-0.5 rounded-md font-extrabold ${isOpen ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${m.status}</span>
                                             </div>
-                                            <p class="text-[11px] text-slate-500 mt-0.5">${m.category} • <i class="fa-solid fa-star text-yellow-400"></i> <b>${m.rating || 5.0}</b> • <span class="font-bold text-sky-600">${dist} km</span></p>
-                                            <p class="text-[10px] text-slate-600 font-medium mt-1"><i class="fa-solid fa-location-dot text-sky-500"></i> ${m.address}</p>
+                                            <p class="text-[11px] text-slate-500 mt-0.5">${m.category || 'Kuliner'} • <i class="fa-solid fa-star text-yellow-400"></i> <b>${m.rating || 5.0}</b> • <span class="font-bold text-sky-600">${dist} km</span></p>
+                                            <p class="text-[10px] text-slate-600 font-medium mt-1"><i class="fa-solid fa-location-dot text-sky-500"></i> ${m.address || 'Lengkong, Sukabumi'}</p>
                                         </div>
                                     </div>
                                 `;
@@ -2680,7 +2726,7 @@
                     <div class="flex justify-between items-start">
                         <div>
                             <h2 class="font-black text-lg text-slate-900 uppercase tracking-tight">${merchant.name}</h2>
-                            <p class="text-xs text-slate-500 font-medium mt-0.5">${merchant.category} • <i class="fa-solid fa-star text-yellow-400"></i> <b>${merchant.rating || 5.0}</b> • Buka: ${merchant.operationalHours}</p>
+                            <p class="text-xs text-slate-500 font-medium mt-0.5">${merchant.category || 'Kuliner'} • <i class="fa-solid fa-star text-yellow-400"></i> <b>${merchant.rating || 5.0}</b> • Buka: ${merchant.operationalHours || '08:00 - 21:00 WIB'}</p>
                         </div>
                         <span class="text-xs ${isOpen ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'} font-extrabold px-3 py-1 rounded-xl">${merchant.status}</span>
                     </div>
@@ -2690,7 +2736,7 @@
                             <i class="fa-solid fa-location-dot text-sky-600 mt-0.5 text-sm"></i>
                             <div>
                                 <span class="font-extrabold block text-slate-900">Alamat Toko (Tersinkron GPS):</span>
-                                <span class="text-slate-600">${merchant.address} (${dist} km dari posisi GPS Anda)</span>
+                                <span class="text-slate-600">${merchant.address || 'Lengkong, Sukabumi'} (${dist} km dari posisi GPS Anda)</span>
                             </div>
                         </div>
                         <div class="flex gap-2.5">
@@ -2905,13 +2951,25 @@
                 return;
             }
 
-            container.innerHTML = db.cart.map((item, idx) => `
+            // Gabungkan item kembar di keranjang dengan angka (misal: Nasi Liwet 8)
+            const groupedCart = [];
+            db.cart.forEach((item, idx) => {
+                const found = groupedCart.find(g => Number(g.item.id) === Number(item.id));
+                if (found) {
+                    found.qty += 1;
+                    found.lastIdx = idx;
+                } else {
+                    groupedCart.push({ item, qty: 1, lastIdx: idx });
+                }
+            });
+
+            container.innerHTML = groupedCart.map(g => `
                 <div class="flex justify-between items-center py-2 text-xs">
                     <div>
-                        <h4 class="font-bold text-slate-900">${item.name}</h4>
-                        <span class="text-sky-600 font-extrabold">Rp ${item.price.toLocaleString()}</span>
+                        <h4 class="font-bold text-slate-900">${g.item.name} ${g.qty}</h4>
+                        <span class="text-sky-600 font-extrabold">Rp ${(g.item.price * g.qty).toLocaleString()}</span>
                     </div>
-                    <button onclick="removeFromCart(${idx})" class="text-rose-500 p-1 cursor-pointer"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="removeFromCart(${g.lastIdx})" class="text-rose-500 p-1 cursor-pointer"><i class="fa-solid fa-trash"></i></button>
                 </div>
             `).join('');
 
@@ -2939,13 +2997,14 @@
             const distKm = calculateDistance(merchant.lat, merchant.lng, destLatLng[0], destLatLng[1]);
             const ongkir = calculateShippingCost(distKm, 'food');
 
-            // Kurangi stok menu yang dipesan secara otomatis
             db.cart.forEach(cartItem => {
                 const foodObj = (db.foods || []).find(f => Number(f.id) === Number(cartItem.id));
                 if (foodObj) {
                     foodObj.stock = Math.max(0, Number(foodObj.stock ?? 20) - 1);
                 }
             });
+
+            const compactItemsText = formatCompactOrderItems(db.cart);
 
             const newOrder = {
                 id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
@@ -2955,7 +3014,7 @@
                 driver: driver ? driver.name : 'Asep Supriatna',
                 total: subtotal + ongkir,
                 status: 'Menunggu Konfirmasi',
-                items: db.cart.map(i => i.name).join(', '),
+                items: compactItemsText,
                 pickup: merchant.name,
                 dest: document.getElementById('cart-dest-label').innerText,
                 settled: false,
@@ -3025,7 +3084,7 @@
                     </div>
 
                     <div class="space-y-3">
-                        <h3 class="text-xs font-black text-sky-800 uppercase">Daftar Pesanan Akun</h3>
+                        <h3 class="text-xs font-black text-sky-800 uppercase">Daftar Pesanan Real Akun Anda</h3>
                         ${myOrders.length > 0 ? myOrders.map(o => `
                             <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-2">
                                 <div class="flex justify-between items-center">
@@ -3033,7 +3092,7 @@
                                     <span class="text-[10px] bg-yellow-100 text-yellow-800 font-extrabold px-2.5 py-0.5 rounded-md">${o.status}</span>
                                 </div>
                                 <h4 class="font-bold text-xs text-slate-900">${o.merchant} • Pemesan: ${o.customer}</h4>
-                                <p class="text-[11px] text-slate-600">${o.items}</p>
+                                <p class="text-[11px] text-slate-700 font-semibold">${o.items}</p>
                                 <p class="text-[10px] text-slate-500"><i class="fa-solid fa-motorcycle text-sky-600"></i> Driver: <b>${o.driver}</b></p>
                                 ${o.rating ? `<p class="text-[11px] font-bold text-amber-600"><i class="fa-solid fa-star text-yellow-400"></i> Rating: ${o.rating}/5 ${o.reviewText ? `— "${o.reviewText}"` : ''}</p>` : ''}
                                 <div class="text-xs font-black text-sky-700 pt-2 border-t border-slate-100 flex justify-between items-center flex-wrap gap-2">
@@ -3081,7 +3140,7 @@
 
                     <div class="space-y-3">
                         <h3 class="text-xs font-black text-sky-800 uppercase">Notifikasi Akun</h3>
-                        ${myNotifs.map(n => `
+                        ${myNotifs.length > 0 ? myNotifs.map(n => `
                             <div class="bg-white p-3.5 rounded-2xl border border-sky-100 space-y-1 shadow-xs">
                                 <div class="flex justify-between text-xs font-extrabold text-slate-900">
                                     <span>${n.title}</span>
@@ -3089,7 +3148,7 @@
                                 </div>
                                 <p class="text-[11px] text-slate-600">${n.desc}</p>
                             </div>
-                        `).join('')}
+                        `).join('') : `<p class="text-xs text-slate-400 bg-white p-4 rounded-2xl border text-center">Belum ada notifikasi untuk akun ini.</p>`}
                     </div>
                 </div>
             `;
@@ -3100,8 +3159,41 @@
         let tempNewFoodPhoto = null;
 
         function renderMerchantManage(container) {
-            const merchant = db.merchants.find(m => normalizePhone(m.whatsapp) === normalizePhone(currentUser.phone) || m.name === currentUser.shopName || m.name === currentUser.name) || db.merchants[0];
-            const foods = db.foods.filter(f => f.merchantId === merchant.id);
+            const myPhone = normalizePhone(currentUser.phone);
+            const myAccId = String(currentUser.accountId || '').toUpperCase();
+            let merchant = db.merchants.find(m =>
+                String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID &&
+                ((myAccId && String(m.accountId || '').toUpperCase() === myAccId) ||
+                (myPhone && normalizePhone(m.whatsapp) === myPhone))
+            );
+
+            // Jika pendaftar baru belum punya entri toko, buat profil toko kosong khusus akun ini (tanpa isi Toko SIMADU)
+            if (!merchant) {
+                merchant = {
+                    id: currentUser.id || Date.now(),
+                    accountId: myAccId || generateAutoAccountIdFromPhone(myPhone, 'merchant'),
+                    name: currentUser.shopName || '',
+                    ownerName: currentUser.ownerName || currentUser.name || '',
+                    ktp: currentUser.ktp || '',
+                    subtitle: '',
+                    category: 'Kuliner',
+                    status: 'Buka',
+                    banner: 'https://placehold.co/600x300/0284c7/facc15?text=Banner+Toko',
+                    image: currentUser.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=TOKO',
+                    rating: 5.0,
+                    ratingCount: 0,
+                    lat: typeof currentUser.lat === 'number' ? currentUser.lat : -7.1240,
+                    lng: typeof currentUser.lng === 'number' ? currentUser.lng : 106.8460,
+                    address: currentUser.address && currentUser.address !== 'Kecamatan Lengkong, Sukabumi' ? currentUser.address : '',
+                    operationalHours: '',
+                    whatsapp: myPhone,
+                    balance: Number(currentUser.balance || 0)
+                };
+                db.merchants.push(merchant);
+                localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            }
+
+            const foods = db.foods.filter(f => Number(f.merchantId) === Number(merchant.id));
             const isOpen = merchant.status === 'Buka';
             const displayPhoto = tempStorePhoto || merchant.image;
             const displayBanner = tempStoreBanner || merchant.banner;
@@ -3115,8 +3207,8 @@
                                 <img src="${merchant.image}" class="w-16 h-16 rounded-2xl object-cover border-2 border-yellow-400 -mt-12 bg-white shadow-md" alt="Profil Toko">
                                 <div>
                                     <span class="text-[10px] text-yellow-300 font-extrabold uppercase block">PROFIL & SAMPUL TOKO (${merchant.whatsapp || currentUser.phone})</span>
-                                    <h2 class="text-base font-black">${merchant.name}</h2>
-                                    <p class="text-[11px] text-sky-200"><i class="fa-solid fa-star text-yellow-400"></i> ${merchant.rating || 5.0} • ${merchant.operationalHours}</p>
+                                    <h2 class="text-base font-black">${merchant.name || 'Nama Toko Belum Diisi'}</h2>
+                                    <p class="text-[11px] text-sky-200"><i class="fa-solid fa-star text-yellow-400"></i> ${merchant.rating || 5.0} • ${merchant.operationalHours || 'Atur Jam Buka'}</p>
                                 </div>
                             </div>
                             <button onclick="toggleMerchantStatus(${merchant.id})" class="px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer shadow ${isOpen ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}">
@@ -3130,17 +3222,17 @@
                         
                         <div>
                             <label class="text-[10px] font-extrabold text-slate-500 uppercase">Nama Toko</label>
-                            <input type="text" id="edit-m-name" value="${merchant.name}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
+                            <input type="text" id="edit-m-name" value="${merchant.name || ''}" placeholder="Ketik nama toko Anda..." class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-bold">
                         </div>
 
                         <div>
                             <label class="text-[10px] font-extrabold text-slate-500 uppercase">Alamat Lengkap Toko</label>
-                            <input type="text" id="edit-m-address" value="${merchant.address}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
+                            <input type="text" id="edit-m-address" value="${merchant.address || ''}" placeholder="Ketik alamat lengkap toko Anda..." class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
                         </div>
 
                         <div>
                             <label class="text-[10px] font-extrabold text-slate-500 uppercase">Jam Operasional</label>
-                            <input type="text" id="edit-m-hours" value="${merchant.operationalHours}" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
+                            <input type="text" id="edit-m-hours" value="${merchant.operationalHours || ''}" placeholder="Contoh: 08:00 - 21:00 WIB" class="w-full mt-1 p-2.5 border rounded-2xl text-xs font-semibold">
                         </div>
 
                         <div class="grid grid-cols-2 gap-3 pt-1">
@@ -3152,7 +3244,7 @@
                             <div>
                                 <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Banner Sampul Toko</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-m-banner', 'banner')">
-                                <img id="preview-m-banner" src="${displayBanner}" class="w-full h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
+                                <img id="preview-m-banner" src="${displayBanner}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
                             </div>
                         </div>
 
@@ -3167,7 +3259,7 @@
                             <button onclick="openMerchantAddMenuModal(${merchant.id})" class="px-3 py-1.5 bg-yellow-400 text-slate-950 rounded-xl text-[11px] font-extrabold cursor-pointer shadow-xs">+ Tambah Menu</button>
                         </div>
                         <div class="space-y-2.5">
-                            ${foods.map(f => `
+                            ${foods.length > 0 ? foods.map(f => `
                                 <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-2xl border border-slate-100">
                                     <div class="flex items-center space-x-3">
                                         <img src="${f.image}" class="w-12 h-12 rounded-xl object-cover bg-sky-600">
@@ -3178,7 +3270,7 @@
                                     </div>
                                     <button onclick="deleteMenuFood(${f.id})" class="text-rose-500 p-2 cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button>
                                 </div>
-                            `).join('')}
+                            `).join('') : `<p class="text-xs text-slate-400 text-center py-3">Belum ada menu. Klik <b>+ Tambah Menu</b> untuk mengisi menu toko Anda.</p>`}
                         </div>
                     </div>
                 </div>
@@ -3321,16 +3413,25 @@
         function saveMerchantSettings(merchantId) {
             const m = db.merchants.find(x => x.id === merchantId);
             if(m) {
-                m.name = document.getElementById('edit-m-name').value;
-                m.address = document.getElementById('edit-m-address').value;
-                m.operationalHours = document.getElementById('edit-m-hours').value;
+                const newName = (document.getElementById('edit-m-name')?.value || '').trim();
+                if (!newName) return showToast('Nama toko wajib diisi!', 'error');
+                m.name = newName;
+                m.address = (document.getElementById('edit-m-address')?.value || '').trim();
+                m.operationalHours = (document.getElementById('edit-m-hours')?.value || '').trim();
                 if(tempStorePhoto) m.image = tempStorePhoto;
                 if(tempStoreBanner) m.banner = tempStoreBanner;
+
+                if (currentUser && currentUser.role === 'merchant') {
+                    currentUser.shopName = newName;
+                    const uIdx = db.users.findIndex(u => u.id === currentUser.id);
+                    if (uIdx !== -1) db.users[uIdx].shopName = newName;
+                    localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
+                }
+
                 tempStorePhoto = null;
                 tempStoreBanner = null;
                 hasPendingMediaSelection = false;
                 saveDB('Profil & foto toko berhasil disimpan permanen!');
-                addAccountNotification('Pengaturan Toko Disimpan', `Perubahan data & galeri ${m.name} tersimpan.`, m.name);
                 renderMerchantManage(document.getElementById('main-content'));
             }
         }
@@ -3584,9 +3685,9 @@
             const cleanPhone = normalizePhone(u.phone);
             if (u.role === 'merchant') {
                 const m = (db.merchants || []).find(item =>
-                    (u.accountId && String(item.accountId || '').toUpperCase() === String(u.accountId).toUpperCase()) ||
-                    (cleanPhone && normalizePhone(item.whatsapp) === cleanPhone) ||
-                    (String(item.name || '').trim().toLowerCase() === String(u.shopName || u.name || '').trim().toLowerCase())
+                    String(item.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID &&
+                    ((u.accountId && String(item.accountId || '').toUpperCase() === String(u.accountId).toUpperCase()) ||
+                    (cleanPhone && normalizePhone(item.whatsapp) === cleanPhone))
                 );
                 return Math.max(Number(u.balance || 0), Number(m?.balance || 0));
             }
@@ -3727,9 +3828,9 @@
 
                 if(u.role === 'merchant') {
                     let m = (db.merchants || []).find(x =>
-                        (accId && String(x.accountId || '').toUpperCase() === accId) ||
-                        (cleanPhone && normalizePhone(x.whatsapp) === cleanPhone) ||
-                        (String(x.name || '').trim().toLowerCase() === String(u.shopName || u.name || '').trim().toLowerCase())
+                        String(x.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID &&
+                        ((accId && String(x.accountId || '').toUpperCase() === accId) ||
+                        (cleanPhone && normalizePhone(x.whatsapp) === cleanPhone))
                     );
                     if (!m) {
                         ensureRoleListsSyncedFromUsers();
@@ -3739,7 +3840,7 @@
                     u.balance = currentBal;
                     if (m) {
                         m.balance = currentBal;
-                        targetLabel = m.name;
+                        targetLabel = m.name || u.name;
                     }
                 } else if(u.role === 'driver') {
                     let d = (db.drivers || []).find(x =>
@@ -3824,13 +3925,13 @@
                     </div>
                     <div class="space-y-3">
                         ${db.merchants.map(m => {
-                            const matchedUser = db.users.find(u => u.role === 'merchant' && ((m.accountId && String(u.accountId || '').toUpperCase() === String(m.accountId).toUpperCase()) || u.name === m.name || normalizePhone(u.phone) === normalizePhone(m.whatsapp)));
+                            const matchedUser = db.users.find(u => u.role === 'merchant' && ((m.accountId && String(u.accountId || '').toUpperCase() === String(m.accountId).toUpperCase()) || normalizePhone(u.phone) === normalizePhone(m.whatsapp)));
                             const uid = matchedUser ? matchedUser.id : 3;
                             const storeBal = Math.max(Number(m.balance || 0), Number(matchedUser?.balance || 0));
                             return `
                                 <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
                                     <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md">HP: ${m.whatsapp || '-'}</span>
-                                    <h4 class="font-bold text-sm text-slate-900">${m.name} (${m.status}) • <i class="fa-solid fa-star text-yellow-400"></i> ${m.rating || 5.0}</h4>
+                                    <h4 class="font-bold text-sm text-slate-900">${m.name || 'Nama Toko Belum Diisi'} (${m.status}) • <i class="fa-solid fa-star text-yellow-400"></i> ${m.rating || 5.0}</h4>
                                     <p class="text-[10px] text-slate-500">Pemilik: ${m.ownerName || '-'} • Lokasi: ${m.lat}, ${m.lng}</p>
                                     <p class="text-[10px] text-slate-600">${m.address || ''}</p>
                                     <p class="text-xs font-black text-emerald-700">Saldo Toko: Rp ${storeBal.toLocaleString()}</p>
@@ -3932,7 +4033,7 @@
 
         function plotAllMerchantsAndDrivers(targetMap, syncCurrentUserDriverGPS = false) {
             db.merchants.forEach(m => {
-                if (typeof m.lat === 'number' && typeof m.lng === 'number') {
+                if (typeof m.lat === 'number' && typeof m.lng === 'number' && String(m.name || '').trim() !== '') {
                     L.marker([m.lat, m.lng], { icon: createStoreMarkerIcon(m.name) }).addTo(targetMap)
                         .bindPopup(`<b><i class="fa-solid fa-store"></i> ${m.name}</b><br>Status: ${m.status}<br>${m.address || ''}`);
                 }
@@ -3945,23 +4046,9 @@
                 }
             });
 
-            if (syncCurrentUserDriverGPS && navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    const lat = Number(pos.coords.latitude.toFixed(6));
-                    const lng = Number(pos.coords.longitude.toFixed(6));
-                    userCurrentLatLng = [lat, lng];
-                    const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
-                    if (activeRole === 'driver' && currentUser) {
-                        const drv = db.drivers.find(x => x.name === currentUser.name || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
-                        if (drv) {
-                            drv.lat = lat;
-                            drv.lng = lng;
-                            saveDB();
-                        }
-                    }
-                    L.marker([lat, lng], { icon: createDriverMarkerIcon('GPS SAYA') }).addTo(targetMap)
-                        .bindPopup('<b>Posisi GPS Real-Time Anda</b>');
-                }, () => {});
+            if (syncCurrentUserDriverGPS) {
+                homeUserMarker = L.marker(userCurrentLatLng, { icon: createDriverMarkerIcon('LOKASI SAYA') }).addTo(targetMap)
+                    .bindPopup('<b>Posisi GPS Akurat Anda</b>');
             }
         }
 
@@ -3969,25 +4056,57 @@
             const mapEl = document.getElementById('map');
             if(!mapEl) return;
             if(mapInstance) mapInstance.remove();
-            mapInstance = L.map('map', { zoomControl: false }).setView(userCurrentLatLng, 14);
+            const startCenter = currentMapCenter || userCurrentLatLng;
+            mapInstance = L.map('map', { zoomControl: true }).setView(startCenter, currentMapZoom);
             getBaseTileLayerForMode().addTo(mapInstance);
             plotAllMerchantsAndDrivers(mapInstance, true);
+
+            mapInstance.on('zoomend', () => {
+                if (mapInstance) {
+                    currentMapZoom = mapInstance.getZoom();
+                    localStorage.setItem('oleng_map_zoom', String(currentMapZoom));
+                }
+            });
+            mapInstance.on('moveend', () => {
+                if (mapInstance) {
+                    currentMapCenter = mapInstance.getCenter();
+                }
+            });
+        }
+
+        function recenterHomeMapToAccurateGPS() {
+            if (!navigator.geolocation) {
+                return showToast('Perangkat tidak mendukung GPS.', 'error');
+            }
+            navigator.geolocation.getCurrentPosition(pos => {
+                const lat = Number(pos.coords.latitude.toFixed(6));
+                const lng = Number(pos.coords.longitude.toFixed(6));
+                userCurrentLatLng = [lat, lng];
+                currentMapCenter = L.latLng(lat, lng);
+                if (homeUserMarker) homeUserMarker.setLatLng([lat, lng]);
+                if (mapInstance) {
+                    mapInstance.setView([lat, lng], Math.max(mapInstance.getZoom(), 16));
+                }
+                showToast(`Lokasi GPS akurat terkunci (${lat}, ${lng})!`, 'success');
+            }, () => {
+                showToast('Aktifkan izin lokasi (GPS) di browser HP Anda.', 'error');
+            }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
         }
 
         function initInteractiveRouteMap(mapId, pickupInputId, destInputId, isOjek = false, mode = 'ojek') {
             const mapEl = document.getElementById(mapId);
             if(!mapEl) return;
 
-            const map = L.map(mapId, { zoomControl: true }).setView(userCurrentLatLng, 14);
+            const map = L.map(mapId, { zoomControl: true }).setView(userCurrentLatLng, 15);
             getBaseTileLayerForMode().addTo(map);
-            plotAllMerchantsAndDrivers(map, true);
+            plotAllMerchantsAndDrivers(map, false);
 
-            const pickupMarker = L.marker(userCurrentLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Awal (GPS Tersinkron)</b>').openPopup();
+            const pickupMarker = L.marker(userCurrentLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Awal (GPS Akurat)</b>').openPopup();
             const destMarker = L.marker(destLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Tujuan</b>');
 
             pickupMarker.on('dragend', () => {
                 const pos = pickupMarker.getLatLng();
-                userCurrentLatLng = [pos.lat, pos.lng];
+                userCurrentLatLng = [Number(pos.lat.toFixed(6)), Number(pos.lng.toFixed(6))];
                 if(isOjek) updateOjekFareUI();
                 else updateCartUI();
                 showToast('Berhasil memperbarui titik awal peta!', 'success');
@@ -3995,7 +4114,7 @@
 
             destMarker.on('dragend', () => {
                 const pos = destMarker.getLatLng();
-                destLatLng = [pos.lat, pos.lng];
+                destLatLng = [Number(pos.lat.toFixed(6)), Number(pos.lng.toFixed(6))];
                 if(isOjek) updateOjekFareUI();
                 else updateCartUI();
                 showToast('Berhasil memperbarui titik tujuan peta!', 'success');
@@ -4017,7 +4136,7 @@
         function useCurrentGPSLocation(context) {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(position => {
-                    userCurrentLatLng = [position.coords.latitude, position.coords.longitude];
+                    userCurrentLatLng = [Number(position.coords.latitude.toFixed(6)), Number(position.coords.longitude.toFixed(6))];
                     const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
                     if (activeRole === 'driver' && currentUser) {
                         const drv = db.drivers.find(x => x.name === currentUser.name || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
@@ -4027,13 +4146,13 @@
                             saveDB();
                         }
                     }
-                    showToast('Berhasil! Lokasi terkini GPS dikunci.', 'success');
+                    showToast(`Berhasil! Lokasi terkini GPS akurat dikunci (${userCurrentLatLng[0]}, ${userCurrentLatLng[1]}).`, 'success');
                     if(context === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
                     else if(context === 'food') renderCustomerFood(document.getElementById('main-content'));
                     else if(context === 'cart') openCartModal();
                 }, () => {
-                    showToast('GPS tidak aktif, menggunakan titik pusat Lengkong.', 'info');
-                });
+                    showToast('GPS tidak aktif, pastikan izin lokasi browser diaktifkan.', 'error');
+                }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
             }
         }
 
@@ -4042,7 +4161,7 @@
             const myNotifs = getAccountNotifs();
             playAlarmRingtone();
             document.getElementById('modal-notif').classList.remove('hidden');
-            document.getElementById('notification-list').innerHTML = myNotifs.map(n => `<div class="p-3 bg-sky-50 rounded-2xl text-xs border border-sky-100"><b>${n.title}</b> <span class="text-[10px] text-slate-400 float-right">${n.time}</span><p class="text-slate-600 mt-0.5">${n.desc}</p></div>`).join('');
+            document.getElementById('notification-list').innerHTML = myNotifs.map(n => `<div class="p-3 bg-sky-50 rounded-2xl text-xs border border-sky-100"><b>${n.title}</b> <span class="text-[10px] text-slate-400 float-right">${n.time}</span><p class="text-slate-600 mt-0.5">${n.desc}</p></div>`).join('') || '<p class="text-xs text-slate-400 text-center py-4">Belum ada notifikasi.</p>';
         }
         function closeNotificationModal() { document.getElementById('modal-notif').classList.add('hidden'); }
 
@@ -4050,6 +4169,7 @@
             if(view === 'chat') {
                 markAllChatsAsRead();
                 document.getElementById('view-chat').classList.remove('hidden');
+                document.getElementById('chat-sticker-panel')?.classList.add('hidden');
                 const chatAlarmState = document.getElementById('chat-alarm-state');
                 if (chatAlarmState) chatAlarmState.textContent = alarmEnabled ? 'ON' : 'OFF';
                 markAllChatsAsRead();
@@ -4064,10 +4184,48 @@
             document.getElementById('view-chat').classList.add('hidden');
             updateHomeHeaderBadgesOnly();
         }
+        function toggleChatStickerPanel() {
+            document.getElementById('chat-sticker-panel')?.classList.toggle('hidden');
+        }
+        function appendChatEmot(emot) {
+            const input = document.getElementById('chat-input');
+            if (!input) return;
+            input.value = (input.value || '') + emot;
+            input.focus();
+        }
+        function sendChatSticker(stickerText) {
+            document.getElementById('chat-sticker-panel')?.classList.add('hidden');
+            pushChatPayload(stickerText);
+        }
+        async function handleSendChatImage(e) {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const dataUrl = await compressImageFileToDataUrl(file, 420, 0.72);
+            e.target.value = '';
+            pushChatPayload(dataUrl);
+        }
+        function pushChatPayload(payloadText) {
+            if (!payloadText) return;
+            const timeNow = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const newMsg = { id: Date.now(), from: currentUser.name, to: activeChatTarget, text: payloadText };
+            newMsg.time = timeNow;
+            db.chats.push(newMsg);
+            readChatIds = Array.from(new Set([...readChatIds, String(newMsg.id)]));
+            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+            renderChatContacts();
+            renderPersonalChatMessages();
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            showToast('Terkirim!', 'success');
+            syncAllToSupabase();
+        }
         function selectChatPartner(partnerName) {
             activeChatTarget = partnerName;
+            const me = String(currentUser?.name || '').trim().toLowerCase();
+            const pLow = String(partnerName || '').trim().toLowerCase();
             (db.chats || []).forEach(c => {
-                if (String(c.from || '').trim().toLowerCase() === String(partnerName || '').trim().toLowerCase()) {
+                const f = String(c.from || '').trim().toLowerCase();
+                const t = String(c.to || '').trim().toLowerCase();
+                if (f === pLow && (t === me || (me === 'admin simadu' && (t === 'admin' || t === 'admin simadu')))) {
                     if (!readChatIds.includes(String(c.id))) readChatIds.push(String(c.id));
                 }
             });
@@ -4078,16 +4236,30 @@
         }
         function renderChatContacts() {
             const me = String(currentUser?.name || '').trim().toLowerCase();
+            const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
             const userNames = (db.users || []).map(u => u.name).filter(n => n && String(n).trim().toLowerCase() !== me);
-            const allPartners = Array.from(new Set(['Admin SIMADU', ...db.merchants.map(m => m.name), ...db.drivers.map(d => d.name), ...userNames]))
+            const chatSenders = (db.chats || [])
+                .filter(c => isMessageForCurrentUser(c))
+                .map(c => c.from)
                 .filter(n => n && String(n).trim().toLowerCase() !== me);
+
+            const allPartners = Array.from(new Set([
+                ...(activeRole !== 'admin' ? ['Admin SIMADU'] : []),
+                ...chatSenders,
+                ...db.merchants.map(m => m.name).filter(Boolean),
+                ...db.drivers.map(d => d.name).filter(Boolean),
+                ...userNames
+            ])).filter(n => n && String(n).trim().toLowerCase() !== me);
 
             const sortedPartners = allPartners.map(partner => {
                 const pLow = partner.toLowerCase();
                 const related = (db.chats || []).filter(c => {
                     const f = String(c.from || '').trim().toLowerCase();
                     const t = String(c.to || '').trim().toLowerCase();
-                    return (f === me && t === pLow) || (f === pLow && t === me) || (pLow === 'admin simadu' && (f === 'admin simadu' || t === 'admin simadu'));
+                    const isSelfAdmin = activeRole === 'admin';
+                    const matchSelf = isSelfAdmin ? (f === 'admin simadu' || f === 'admin' || f === me) : (f === me);
+                    const matchTarget = isSelfAdmin ? (t === 'admin simadu' || t === 'admin' || t === me) : (t === me);
+                    return (matchSelf && t === pLow) || (f === pLow && matchTarget);
                 });
                 const lastMsg = related.length > 0 ? related[related.length - 1] : null;
                 const unreadFromPartner = related.filter(c => String(c.from || '').trim().toLowerCase() === pLow && !readChatIds.includes(String(c.id))).length;
@@ -4097,7 +4269,8 @@
             document.getElementById('chat-contact-selector').innerHTML = sortedPartners.map(item => {
                 const isSelected = String(activeChatTarget || '').toLowerCase() === item.partner.toLowerCase();
                 const safePartner = item.partner.replace(/'/g, "\\'");
-                const previewText = item.lastMsg ? `${item.lastMsg.from}: ${item.lastMsg.text}` : 'Ketuk untuk mulai chat';
+                const rawPrev = item.lastMsg ? (String(item.lastMsg.text || '').startsWith('data:image') ? '📷 Foto' : item.lastMsg.text) : '';
+                const previewText = item.lastMsg ? `${item.lastMsg.from}: ${rawPrev}` : 'Ketuk untuk mulai chat privat';
                 const timeText = item.lastMsg?.time || '';
                 return `
                     <button onclick="selectChatPartner('${safePartner}')" class="w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-2 cursor-pointer transition ${isSelected ? 'bg-sky-100/90 border-l-4 border-sky-600' : 'bg-white hover:bg-slate-50'}">
@@ -4114,34 +4287,39 @@
             }).join('');
         }
         function renderPersonalChatMessages() {
-            document.getElementById('chat-title').innerText = `Chat: ${activeChatTarget}`;
-            const statusLbl = document.getElementById('chat-status-label');
+            document.getElementById('chat-title').innerText = `Chat Privat: ${activeChatTarget}`;
             const me = String(currentUser?.name || '').trim().toLowerCase();
             const target = String(activeChatTarget || '').trim().toLowerCase();
+            const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+
+            // Privasi ketat: hanya tampilkan chat antara akun login saat ini dan target yang dipilih
             const msgs = (db.chats || []).filter(c => {
                 const from = String(c.from || '').trim().toLowerCase();
                 const to = String(c.to || '').trim().toLowerCase();
-                return (from === me && to === target) || (from === target && to === me) || (target === 'admin simadu' && (to === 'admin simadu' || from === 'admin simadu'));
+                if (activeRole === 'admin') {
+                    const fromAdmin = (from === 'admin simadu' || from === 'admin' || from === me);
+                    const toAdmin = (to === 'admin simadu' || to === 'admin' || to === me);
+                    return (fromAdmin && to === target) || (from === target && toAdmin);
+                }
+                return (from === me && to === target) || (from === target && to === me);
             });
-            const latestStatus = msgs.length > 0 && msgs[msgs.length - 1].chatStatus ? `Status: ${msgs[msgs.length - 1].chatStatus}` : 'Percakapan tersinkron';
-            if (statusLbl) statusLbl.textContent = latestStatus;
 
-            document.getElementById('chat-messages').innerHTML = msgs.map(c => `<div class="p-3 rounded-2xl text-xs max-w-[80%] shadow-2xs ${String(c.from).trim().toLowerCase()===me?'bg-sky-600 text-white ml-auto':'bg-white border mr-auto'}"><b>${c.from}</b><p class="mt-0.5">${c.text}</p><span class="text-[9px] opacity-75">${c.time}</span></div>`).join('') || '<p class="text-xs text-slate-400 text-center py-6">Mulai obrolan dengan '+activeChatTarget+'...</p>';
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = msgs.map(c => {
+                const isMine = String(c.from).trim().toLowerCase() === me || (activeRole === 'admin' && (String(c.from).trim().toLowerCase() === 'admin simadu' || String(c.from).trim().toLowerCase() === 'admin'));
+                const bodyHtml = String(c.text || '').startsWith('data:image')
+                    ? `<img src="${c.text}" class="w-44 max-h-48 object-cover rounded-xl mt-1 border border-white/40" alt="Foto Chat">`
+                    : `<p class="mt-0.5 break-words">${c.text}</p>`;
+                return `<div class="p-3 rounded-2xl text-xs max-w-[80%] shadow-2xs ${isMine ? 'bg-sky-600 text-white ml-auto' : 'bg-white border mr-auto'}"><b>${c.from}</b>${bodyHtml}<span class="text-[9px] opacity-75 block mt-1">${c.time}</span></div>`;
+            }).join('') || '<p class="text-xs text-slate-400 text-center py-6">Mulai obrolan privat dengan '+activeChatTarget+'...</p>';
+            container.scrollTop = container.scrollHeight;
         }
         async function sendPersonalChatMessage() {
             const input = document.getElementById('chat-input');
             if(!input.value.trim()) return;
-            const timeNow = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            const newMsg = { id: Date.now(), from: currentUser.name, to: activeChatTarget, text: input.value.trim(), time: timeNow, chatStatus: 'Terkirim' };
-            db.chats.push(newMsg);
-            readChatIds = Array.from(new Set([...readChatIds, String(newMsg.id)]));
-            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+            const textVal = input.value.trim();
             input.value = '';
-            renderChatContacts();
-            renderPersonalChatMessages();
-            localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            showToast('Berhasil! Pesan terkirim & tersinkron.', 'success');
-            syncAllToSupabase();
+            pushChatPayload(textVal);
         }
 
         function showToast(msg, type='success') {
@@ -4151,7 +4329,7 @@
             toast.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold flex items-center gap-2 ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-sky-600'}`;
             toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-info'}"></i> ${msg}`;
             container.appendChild(toast);
-            setTimeout(() => toast.remove(), 2600);
+            setTimeout(() => toast.remove(), 2500);
         }
     </script>
 </body>
