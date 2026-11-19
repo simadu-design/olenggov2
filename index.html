@@ -408,7 +408,6 @@
             return (prefix + clean).toUpperCase().slice(0, 20);
         }
 
-        // REGISTRASI SERVICE WORKER PWA & IZIN NOTIFIKASI LATAR BELAKANG
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {
                 navigator.serviceWorker.register('./sw.js').catch(function () {});
@@ -445,7 +444,6 @@
             } catch (e) {}
         }
 
-        // SPLASH SCREEN 2 DETIK
         window.addEventListener('DOMContentLoaded', function () {
             const splash = document.getElementById('oleng-splash-screen');
             if (splash) {
@@ -458,7 +456,6 @@
             }
         });
 
-        // KONFIGURASI SUPABASE PROJECT OLENG GO
         const SUPABASE_PROJECT_ID = 'yhyjofvdkmuudpqzucnw';
         const SUPABASE_URL = 'https://yhyjofvdkmuudpqzucnw.supabase.co';
         const SUPABASE_REST_ENDPOINT = 'https://yhyjofvdkmuudpqzucnw.supabase.co/rest/v1/';
@@ -632,8 +629,10 @@
         }
 
         async function manualForceSync(showNotify = true) {
+            ensureRoleListsSyncedFromUsers();
             await updateSupabaseBadgeUI(false);
             await pullInitialFromSupabase(true);
+            ensureRoleListsSyncedFromUsers();
             await syncAllToSupabase();
             await updateSupabaseBadgeUI(showNotify);
         }
@@ -688,6 +687,8 @@
                         if (payload?.eventType === 'DELETE' && payload?.old?.account_id) {
                             const deletedCode = String(payload.old.account_id).toUpperCase();
                             db.users = (db.users || []).filter(u => String(u.accountId || '').toUpperCase() !== deletedCode);
+                            db.merchants = (db.merchants || []).filter(m => String(m.accountId || '').toUpperCase() !== deletedCode);
+                            db.drivers = (db.drivers || []).filter(d => String(d.accountId || '').toUpperCase() !== deletedCode);
                             localStorage.setItem('oleng_go_db', JSON.stringify(db));
                         }
                         pullInitialFromSupabase(false);
@@ -838,6 +839,8 @@
         if (!db.walletMutations) db.walletMutations = [...defaultDB.walletMutations];
         if (!db.reviews) db.reviews = [];
         if (!Array.isArray(db.users)) db.users = [...defaultDB.users];
+        if (!Array.isArray(db.merchants)) db.merchants = [...defaultDB.merchants];
+        if (!Array.isArray(db.drivers)) db.drivers = [...defaultDB.drivers];
         db.users.forEach((u, idx) => {
             u.phone = normalizePhone(u.phone) || u.phone;
             if (!u.accountId) u.accountId = generateAutoAccountIdFromPhone(u.phone || ('0800' + idx), u.role);
@@ -846,6 +849,89 @@
         if (!db.users.some(u => normalizePhone(u.phone) === '085624736602' && u.role === 'admin')) {
             db.users.push({ ...DEFAULT_ADMIN_ACCOUNT });
         }
+
+        function ensureRoleListsSyncedFromUsers() {
+            (db.users || []).forEach((u, idx) => {
+                const cleanPhone = normalizePhone(u.phone) || String(u.phone || '');
+                const accId = String(u.accountId || generateAutoAccountIdFromPhone(cleanPhone, u.role)).toUpperCase();
+                u.accountId = accId;
+                u.phone = cleanPhone;
+
+                if (u.role === 'merchant') {
+                    const shopTitle = u.shopName || u.name || `Toko ${cleanPhone}`;
+                    let m = (db.merchants || []).find(item =>
+                        (accId && String(item.accountId || '').toUpperCase() === accId) ||
+                        (cleanPhone && normalizePhone(item.whatsapp) === cleanPhone) ||
+                        (String(item.name || '').trim().toLowerCase() === String(shopTitle).trim().toLowerCase())
+                    );
+                    if (!m) {
+                        m = {
+                            id: u.id || (Date.now() + idx + 11),
+                            accountId: accId,
+                            name: shopTitle,
+                            ownerName: u.ownerName || u.name,
+                            ktp: u.ktp || '',
+                            subtitle: u.ownerName ? `Pemilik: ${u.ownerName}` : 'Mitra Toko Lengkong',
+                            category: 'Kuliner',
+                            status: 'Buka',
+                            banner: getSyncedMainBanner(),
+                            image: u.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=TOKO',
+                            rating: 5.0,
+                            ratingCount: 0,
+                            lat: typeof u.lat === 'number' ? u.lat : (-7.1240 - idx * 0.0005),
+                            lng: typeof u.lng === 'number' ? u.lng : (106.8460 + idx * 0.0005),
+                            address: u.address || 'Kecamatan Lengkong, Sukabumi',
+                            operationalHours: '08:00 - 21:00 WIB',
+                            whatsapp: cleanPhone || ADMIN_MAIN_WA,
+                            balance: Number(u.balance || 0)
+                        };
+                        db.merchants.push(m);
+                    } else {
+                        m.accountId = accId;
+                        m.whatsapp = cleanPhone || m.whatsapp;
+                        if (typeof u.balance === 'number') {
+                            m.balance = Math.max(Number(m.balance || 0), Number(u.balance || 0));
+                            u.balance = m.balance;
+                        }
+                    }
+                } else if (u.role === 'driver') {
+                    let d = (db.drivers || []).find(item =>
+                        (accId && String(item.accountId || '').toUpperCase() === accId) ||
+                        (cleanPhone && normalizePhone(item.phone) === cleanPhone) ||
+                        (String(item.name || '').trim().toLowerCase() === String(u.name || '').trim().toLowerCase())
+                    );
+                    if (!d) {
+                        d = {
+                            id: u.id || (Date.now() + idx + 21),
+                            accountId: accId,
+                            name: u.name,
+                            ktp: u.ktp || '',
+                            plate: u.plate || '',
+                            bikeType: u.bikeType || '',
+                            status: 'Online',
+                            vehicle: u.vehicle || (u.bikeType && u.plate ? `${u.bikeType} - ${u.plate}` : 'Motor Mitra Lengkong'),
+                            rating: 5.0,
+                            ratingCount: 0,
+                            location: u.address || 'Lengkong, Sukabumi',
+                            lat: typeof u.lat === 'number' ? u.lat : (-7.1235 - idx * 0.0004),
+                            lng: typeof u.lng === 'number' ? u.lng : (106.8458 + idx * 0.0004),
+                            phone: cleanPhone || ADMIN_MAIN_WA,
+                            balance: Number(u.balance || 0)
+                        };
+                        db.drivers.push(d);
+                    } else {
+                        d.accountId = accId;
+                        d.phone = cleanPhone || d.phone;
+                        if (typeof u.balance === 'number') {
+                            d.balance = Math.max(Number(d.balance || 0), Number(u.balance || 0));
+                            u.balance = d.balance;
+                        }
+                    }
+                }
+            });
+        }
+
+        ensureRoleListsSyncedFromUsers();
 
         let customMainBanner = db.mainBanner || localStorage.getItem('oleng_global_banner') || DEFAULT_MAIN_BANNER;
         db.mainBanner = customMainBanner;
@@ -869,11 +955,14 @@
                 const k = keyFn(item);
                 if (k) {
                     const prev = map.get(k);
+                    const merged = prev ? { ...prev, ...item } : { ...item };
                     if (prev && prev.password && (!item.password || String(item.password).trim() === '')) {
-                        map.set(k, { ...item, password: prev.password });
-                    } else {
-                        map.set(k, item);
+                        merged.password = prev.password;
                     }
+                    if (prev && typeof prev.balance === 'number') {
+                        merged.balance = Math.max(Number(prev.balance || 0), Number(item.balance || 0));
+                    }
+                    map.set(k, merged);
                 }
             });
             return Array.from(map.values());
@@ -881,6 +970,7 @@
 
         async function syncAllToSupabase() {
             if (!supabaseClient || isSyncingNow) return { ok: false, error: 'Supabase belum siap' };
+            ensureRoleListsSyncedFromUsers();
             isSyncingNow = true;
             try {
                 let firstError = null;
@@ -1065,7 +1155,7 @@
                     (currentUser.name && String(x.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
                 );
                 const u = db.users.find(x => x.id === currentUser.id || (myPhone && normalizePhone(x.phone) === myPhone && x.role === 'merchant'));
-                const bal = Number(m?.balance ?? u?.balance ?? currentUser.balance ?? 0);
+                const bal = Math.max(Number(m?.balance || 0), Number(u?.balance || 0), Number(currentUser.balance || 0));
                 if (m) m.balance = bal;
                 if (u) u.balance = bal;
                 return bal;
@@ -1076,7 +1166,7 @@
                     (currentUser.name && String(x.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
                 );
                 const u = db.users.find(x => x.id === currentUser.id || (myPhone && normalizePhone(x.phone) === myPhone && x.role === 'driver'));
-                const bal = Number(d?.balance ?? u?.balance ?? currentUser.balance ?? 0);
+                const bal = Math.max(Number(d?.balance || 0), Number(u?.balance || 0), Number(currentUser.balance || 0));
                 if (d) d.balance = bal;
                 if (u) u.balance = bal;
                 return bal;
@@ -1293,7 +1383,7 @@
                     }
                 }
 
-                // 2. Tarik semua akun (accounts) berdasarkan Nomor HP & Role
+                // 2. Tarik semua akun (accounts)
                 const { data: accRows } = await supabaseClient.from('accounts').select('*');
                 if (Array.isArray(accRows) && accRows.length > 0) {
                     const localUsersBackup = [...(db.users || [])];
@@ -1317,7 +1407,7 @@
                             address: r.address || localMatch?.address || 'Kecamatan Lengkong, Sukabumi',
                             password: resolvedPass,
                             photo: resolvedPhoto,
-                            balance: r.role !== 'customer' ? Number(r.balance ?? localMatch?.balance ?? 0) : undefined,
+                            balance: r.role !== 'customer' ? Math.max(Number(r.balance || 0), Number(localMatch?.balance || 0)) : undefined,
                             ktp: r.ktp || localMatch?.ktp || null,
                             plate: r.plate || localMatch?.plate || null,
                             bikeType: r.bike_type || localMatch?.bikeType || null,
@@ -1341,7 +1431,8 @@
                             const remoteHasCustomPhoto = refreshedSelf.photo && String(refreshedSelf.photo).startsWith('data:image');
                             currentUser = {
                                 ...refreshedSelf,
-                                photo: (localHasCustomPhoto && !remoteHasCustomPhoto) ? currentUser.photo : refreshedSelf.photo
+                                photo: (localHasCustomPhoto && !remoteHasCustomPhoto) ? currentUser.photo : refreshedSelf.photo,
+                                balance: typeof refreshedSelf.balance === 'number' ? Math.max(Number(refreshedSelf.balance || 0), Number(currentUser.balance || 0)) : currentUser.balance
                             };
                             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
                         }
@@ -1367,11 +1458,11 @@
                         lat: Number(r.lat || -7.1240),
                         lng: Number(r.lng || 106.8460),
                         address: r.address || 'Kecamatan Lengkong, Sukabumi',
-                        operational_hours: r.operational_hours || '08:00 - 21:00 WIB',
+                        operationalHours: r.operational_hours || '08:00 - 21:00 WIB',
                         whatsapp: normalizePhone(r.whatsapp) || ADMIN_MAIN_WA,
                         balance: Number(r.balance || 0)
                     }));
-                    db.merchants = mergeByKey(db.merchants, mappedMerchants, m => String(m.accountId || m.name).toUpperCase());
+                    db.merchants = mergeByKey(db.merchants, mappedMerchants, m => normalizePhone(m.whatsapp) || String(m.accountId || m.name).toUpperCase());
                     hasChanges = true;
                 }
 
@@ -1393,11 +1484,14 @@
                         phone: normalizePhone(r.phone) || ADMIN_MAIN_WA,
                         rating: Number(r.rating || 5.0),
                         ratingCount: Number(r.ratingCount || 0),
-                        balance: Number(d.balance || 0)
+                        balance: Number(r.balance || 0)
                     }));
-                    db.drivers = mergeByKey(db.drivers, mappedDrivers, d => String(d.accountId || d.name).toUpperCase());
+                    db.drivers = mergeByKey(db.drivers, mappedDrivers, d => normalizePhone(d.phone) || String(d.accountId || d.name).toUpperCase());
                     hasChanges = true;
                 }
+
+                // Pastikan semua pendaftar baru merchant/driver ikut masuk ke list merchants/drivers
+                ensureRoleListsSyncedFromUsers();
 
                 // 5. Tarik semua pesanan (orders)
                 const { data: orderRows } = await supabaseClient.from('orders').select('*').order('id', { ascending: false });
@@ -1493,6 +1587,7 @@
         }
 
         function saveDB(successMessage = null) {
+            ensureRoleListsSyncedFromUsers();
             db.mainBanner = customMainBanner || db.mainBanner || DEFAULT_MAIN_BANNER;
             localStorage.setItem('oleng_global_banner', db.mainBanner);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
@@ -1782,6 +1877,7 @@
             currentUser = { ...foundUser };
             adminViewMode = role === 'admin' ? 'admin' : null;
             currentSubTab = role === 'admin' ? 'admin-dash' : role === 'merchant' ? 'merchant-manage' : role === 'driver' ? 'driver-orders' : 'home';
+            ensureRoleListsSyncedFromUsers();
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             localStorage.setItem('oleng_last_tab', currentSubTab);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
@@ -1924,6 +2020,7 @@
                 recordWalletMutation({ ownerName: name, role: 'driver', type: 'TOPUP', label: 'Saldo Awal Mitra Ojek', amount: 50000, commission: 0, netAmount: 50000 });
             }
 
+            ensureRoleListsSyncedFromUsers();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
             const syncResult = await syncAllToSupabase();
 
@@ -1985,6 +2082,7 @@
         }
 
         function enterDashboard(preserveSavedTab = false) {
+            ensureRoleListsSyncedFromUsers();
             getSyncedMainBanner();
             document.getElementById('view-auth').classList.add('hidden');
             document.getElementById('view-dashboard').classList.remove('hidden');
@@ -2064,6 +2162,7 @@
             if (ojekMapInstance) { ojekMapInstance.remove(); ojekMapInstance = null; }
             if (checkoutMapInstance) { checkoutMapInstance.remove(); checkoutMapInstance = null; }
 
+            ensureRoleListsSyncedFromUsers();
             currentSubTab = tab;
             localStorage.setItem('oleng_last_tab', tab);
             document.getElementById('view-merchant-detail').classList.add('hidden');
@@ -2781,7 +2880,6 @@
             }
             await syncAllToSupabase();
 
-            // Notifikasi hanya dikirim ke target masing-masing: Toko terpilih & Driver terpilih
             addAccountNotification(`Order Masuk ${newOrder.id}`, `Pesanan ${newOrder.items} dari ${currentUser.name} ke toko ${merchant.name}.`, merchant.name);
             addAccountNotification(`Order Antar ${newOrder.id}`, `Ambil pesanan di ${merchant.name} untuk ${currentUser.name}.`, newOrder.driver);
             showToast(`Berhasil! Pesanan ${newOrder.id} terkirim ke toko ${merchant.name} & driver ${newOrder.driver}.`, 'success');
@@ -2832,7 +2930,6 @@
             }
             await syncAllToSupabase();
 
-            // Notifikasi & order hanya dikirim ke Driver yang dipilih
             addAccountNotification(`Order Ojek Masuk ${newOrder.id}`, `Jemput ${currentUser.name} (${from} → ${to}).`, newOrder.driver);
             showToast(`Berhasil! Order ojek ${newOrder.id} terkirim ke ojek ${newOrder.driver}.`, 'success');
             renderDashboardContent('history');
@@ -2980,7 +3077,7 @@
                             <div>
                                 <label class="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Banner Sampul Toko</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-m-banner', 'banner')">
-                                <img id="preview-m-banner" src="${displayBanner}" class="w-full h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
+                                <img id="preview-m-banner" src="${displayBanner}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-sky-200">
                             </div>
                         </div>
 
@@ -3234,6 +3331,7 @@
         }
 
         function renderAdminDash(container) {
+            ensureRoleListsSyncedFromUsers();
             const totalCommission = db.commissionLogs.reduce((sum, item) => sum + Number(item.amount || 0), 0);
             const p = db.pricing || defaultPricing;
 
@@ -3318,7 +3416,29 @@
             renderAdminDash(document.getElementById('main-content'));
         }
 
+        function getUserCurrentBalanceDisplay(u) {
+            const cleanPhone = normalizePhone(u.phone);
+            if (u.role === 'merchant') {
+                const m = (db.merchants || []).find(item =>
+                    (u.accountId && String(item.accountId || '').toUpperCase() === String(u.accountId).toUpperCase()) ||
+                    (cleanPhone && normalizePhone(item.whatsapp) === cleanPhone) ||
+                    (String(item.name || '').trim().toLowerCase() === String(u.shopName || u.name || '').trim().toLowerCase())
+                );
+                return Math.max(Number(u.balance || 0), Number(m?.balance || 0));
+            }
+            if (u.role === 'driver') {
+                const d = (db.drivers || []).find(item =>
+                    (u.accountId && String(item.accountId || '').toUpperCase() === String(u.accountId).toUpperCase()) ||
+                    (cleanPhone && normalizePhone(item.phone) === cleanPhone) ||
+                    (String(item.name || '').trim().toLowerCase() === String(u.name || '').trim().toLowerCase())
+                );
+                return Math.max(Number(u.balance || 0), Number(d?.balance || 0));
+            }
+            return Number(u.balance || 0);
+        }
+
         function renderAdminUsers(container) {
+            ensureRoleListsSyncedFromUsers();
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
                     <div class="flex justify-between items-center">
@@ -3349,13 +3469,16 @@
                     </div>
 
                     <div class="space-y-3">
-                        ${db.users.map(u => `
+                        ${db.users.map(u => {
+                            const balNow = getUserCurrentBalanceDisplay(u);
+                            return `
                             <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md inline-block mb-1">HP: ${u.phone || '-'}</span>
                                         <h4 class="font-bold text-xs text-slate-900">${u.name} (<span class="text-sky-600 uppercase">${u.role}</span>)</h4>
                                         <p class="text-[10px] text-slate-500">${u.address || 'Lengkong'}</p>
+                                        ${u.role !== 'customer' ? `<p class="text-xs font-black text-emerald-700 mt-0.5">Saldo: Rp ${balNow.toLocaleString()}</p>` : ''}
                                         ${u.plate ? `<p class="text-[10px] text-slate-600 font-semibold">Motor: ${u.bikeType || ''} (${u.plate}) • KTP: ${u.ktp || '-'}</p>` : ''}
                                         ${u.ownerName ? `<p class="text-[10px] text-slate-600 font-semibold">Pemilik: ${u.ownerName} • KTP: ${u.ktp || '-'}</p>` : ''}
                                     </div>
@@ -3367,7 +3490,8 @@
                                     ${normalizePhone(u.phone) !== '085624736602' ? `<button onclick="adminDeleteUser(${u.id})" class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-xl text-[10px] font-bold cursor-pointer">Hapus Akun</button>` : ''}
                                 </div>
                             </div>
-                        `).join('')}
+                        `;
+                        }).join('')}
                     </div>
                 </div>
             `;
@@ -3420,42 +3544,7 @@
             };
 
             db.users.unshift(newAcc);
-            if (role === 'merchant') {
-                db.merchants.push({
-                    id: Date.now() + 1,
-                    accountId: autoCode,
-                    name,
-                    ownerName: name,
-                    subtitle: 'Mitra UMKM Lengkong',
-                    category: 'Kuliner',
-                    status: 'Buka',
-                    banner: getSyncedMainBanner(),
-                    image: newAcc.photo,
-                    rating: 5.0,
-                    ratingCount: 0,
-                    lat: -7.1242,
-                    lng: 106.8462,
-                    address: 'Kecamatan Lengkong, Sukabumi',
-                    operationalHours: '08:00 - 21:00 WIB',
-                    whatsapp: phone,
-                    balance: 50000
-                });
-            } else if (role === 'driver') {
-                db.drivers.push({
-                    id: Date.now() + 1,
-                    accountId: autoCode,
-                    name,
-                    status: 'Online',
-                    vehicle: 'Motor Mitra Lengkong',
-                    rating: 5.0,
-                    ratingCount: 0,
-                    location: 'Lengkong, Sukabumi',
-                    lat: -7.1235,
-                    lng: 106.8458,
-                    phone,
-                    balance: 50000
-                });
-            }
+            ensureRoleListsSyncedFromUsers();
 
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
             await syncAllToSupabase();
@@ -3467,16 +3556,102 @@
             const u = db.users.find(x => x.id === userId);
             if (!u || u.role === 'customer') return showToast('Saldo hanya berlaku untuk Mitra Toko & Driver!', 'error');
             const nominal = parseInt(prompt(`Masukkan nominal penambahan saldo untuk ${u.name} (HP: ${u.phone || '-'}):`, '50000'));
-            if(!isNaN(nominal)) {
-                u.balance = (u.balance || 0) + nominal;
+            if(!isNaN(nominal) && nominal !== 0) {
+                const cleanPhone = normalizePhone(u.phone);
+                const accId = String(u.accountId || generateAutoAccountIdFromPhone(cleanPhone, u.role)).toUpperCase();
+                u.accountId = accId;
+
+                let currentBal = Math.max(Number(u.balance || 0), Number(getUserCurrentBalanceDisplay(u) || 0));
                 let targetLabel = u.name;
+
                 if(u.role === 'merchant') {
-                    const m = db.merchants.find(x => x.name === u.name || normalizePhone(x.whatsapp) === normalizePhone(u.phone));
-                    if(m) { m.balance = u.balance; targetLabel = m.name; }
+                    let m = (db.merchants || []).find(x =>
+                        (accId && String(x.accountId || '').toUpperCase() === accId) ||
+                        (cleanPhone && normalizePhone(x.whatsapp) === cleanPhone) ||
+                        (String(x.name || '').trim().toLowerCase() === String(u.shopName || u.name || '').trim().toLowerCase())
+                    );
+                    if (!m) {
+                        ensureRoleListsSyncedFromUsers();
+                        m = (db.merchants || []).find(x => (accId && String(x.accountId || '').toUpperCase() === accId) || (cleanPhone && normalizePhone(x.whatsapp) === cleanPhone));
+                    }
+                    currentBal = Math.max(currentBal, Number(m?.balance || 0)) + nominal;
+                    u.balance = currentBal;
+                    if (m) {
+                        m.balance = currentBal;
+                        targetLabel = m.name;
+                    }
+                    if (supabaseClient) {
+                        await supabaseClient.from('merchants').upsert({
+                            account_id: accId,
+                            name: m?.name || u.shopName || u.name,
+                            owner_name: m?.ownerName || u.ownerName || u.name,
+                            ktp: m?.ktp || u.ktp || '3202000000000000',
+                            subtitle: m?.subtitle || u.name,
+                            category: m?.category || 'Kuliner',
+                            status: m?.status || 'Buka',
+                            banner_url: m?.banner || getSyncedMainBanner(),
+                            image_url: m?.image || u.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=TOKO',
+                            lat: Number(m?.lat || -7.1240),
+                            lng: Number(m?.lng || 106.8460),
+                            address: m?.address || u.address || 'Kecamatan Lengkong, Sukabumi',
+                            operational_hours: m?.operationalHours || '08:00 - 21:00 WIB',
+                            whatsapp: cleanPhone || ADMIN_MAIN_WA,
+                            balance: Number(currentBal)
+                        }, { onConflict: 'account_id' });
+                    }
                 } else if(u.role === 'driver') {
-                    const d = db.drivers.find(x => x.name === u.name || normalizePhone(x.phone) === normalizePhone(u.phone));
-                    if(d) { d.balance = u.balance; targetLabel = d.name; }
+                    let d = (db.drivers || []).find(x =>
+                        (accId && String(x.accountId || '').toUpperCase() === accId) ||
+                        (cleanPhone && normalizePhone(x.phone) === cleanPhone) ||
+                        (String(x.name || '').trim().toLowerCase() === String(u.name || '').trim().toLowerCase())
+                    );
+                    if (!d) {
+                        ensureRoleListsSyncedFromUsers();
+                        d = (db.drivers || []).find(x => (accId && String(x.accountId || '').toUpperCase() === accId) || (cleanPhone && normalizePhone(x.phone) === cleanPhone));
+                    }
+                    currentBal = Math.max(currentBal, Number(d?.balance || 0)) + nominal;
+                    u.balance = currentBal;
+                    if (d) {
+                        d.balance = currentBal;
+                        targetLabel = d.name;
+                    }
+                    if (supabaseClient) {
+                        await supabaseClient.from('drivers').upsert({
+                            account_id: accId,
+                            name: d?.name || u.name,
+                            ktp: d?.ktp || u.ktp || '3202000000000000',
+                            plate: d?.plate || u.plate || 'F 0000 XX',
+                            bike_type: d?.bikeType || u.bikeType || 'Motor',
+                            vehicle: d?.vehicle || u.vehicle || 'Motor Mitra Lengkong',
+                            status: d?.status || 'Online',
+                            location: d?.location || u.address || 'Lengkong, Sukabumi',
+                            lat: Number(d?.lat || -7.1235),
+                            lng: Number(d?.lng || 106.8458),
+                            phone: cleanPhone || ADMIN_MAIN_WA,
+                            balance: Number(currentBal)
+                        }, { onConflict: 'account_id' });
+                    }
                 }
+
+                if (supabaseClient) {
+                    await supabaseClient.from('accounts').upsert({
+                        account_id: accId,
+                        name: u.name,
+                        phone: cleanPhone,
+                        role: u.role,
+                        status: u.status || 'Aktif',
+                        address: u.address || 'Kecamatan Lengkong, Sukabumi',
+                        password_hash: String(u.password || '123').trim(),
+                        photo_url: u.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=USR',
+                        balance: Number(currentBal)
+                    }, { onConflict: 'account_id' });
+                }
+
+                if (currentUser && ((currentUser.id === u.id) || (cleanPhone && normalizePhone(currentUser.phone) === cleanPhone && currentUser.role === u.role))) {
+                    currentUser.balance = currentBal;
+                    localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
+                }
+
                 recordWalletMutation({
                     ownerName: targetLabel,
                     role: u.role,
@@ -3488,7 +3663,7 @@
                 });
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
                 await syncAllToSupabase();
-                showToast(`Berhasil! Saldo ${targetLabel} ditambah Rp ${nominal.toLocaleString()} & tersimpan online!`, 'success');
+                showToast(`Berhasil! Saldo ${targetLabel} menjadi Rp ${currentBal.toLocaleString()} (+Rp ${nominal.toLocaleString()})!`, 'success');
                 renderAdminUsers(document.getElementById('main-content'));
             }
         }
@@ -3531,22 +3706,25 @@
         }
 
         function renderAdminStores(container) {
+            ensureRoleListsSyncedFromUsers();
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
                     <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-sky-900">Daftar List Toko & Saldo</h2>
+                        <h2 class="font-extrabold text-base text-sky-900">Daftar List Toko & Saldo (${db.merchants.length})</h2>
                         <button onclick="renderDashboardContent('admin-dash')" class="text-xs text-sky-600 font-bold"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
                     </div>
                     <div class="space-y-3">
                         ${db.merchants.map(m => {
-                            const matchedUser = db.users.find(u => u.name === m.name || normalizePhone(u.phone) === normalizePhone(m.whatsapp));
+                            const matchedUser = db.users.find(u => u.role === 'merchant' && ((m.accountId && String(u.accountId || '').toUpperCase() === String(m.accountId).toUpperCase()) || u.name === m.name || normalizePhone(u.phone) === normalizePhone(m.whatsapp)));
                             const uid = matchedUser ? matchedUser.id : 3;
+                            const storeBal = Math.max(Number(m.balance || 0), Number(matchedUser?.balance || 0));
                             return `
                                 <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
                                     <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md">HP: ${m.whatsapp || '-'}</span>
                                     <h4 class="font-bold text-sm text-slate-900">${m.name} (${m.status}) • <i class="fa-solid fa-star text-yellow-400"></i> ${m.rating || 5.0}</h4>
                                     <p class="text-[10px] text-slate-500">Pemilik: ${m.ownerName || '-'} • Lokasi: ${m.lat}, ${m.lng}</p>
                                     <p class="text-[10px] text-slate-600">${m.address || ''}</p>
+                                    <p class="text-xs font-black text-emerald-700">Saldo Toko: Rp ${storeBal.toLocaleString()}</p>
                                     <button onclick="adminAddBalance(${uid})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-xs font-bold cursor-pointer">Tambah Saldo</button>
                                 </div>
                             `;
@@ -3557,21 +3735,24 @@
         }
 
         function renderAdminDrivers(container) {
+            ensureRoleListsSyncedFromUsers();
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
                     <div class="flex justify-between items-center">
-                        <h2 class="font-extrabold text-base text-sky-900">Daftar Ojol / Driver</h2>
+                        <h2 class="font-extrabold text-base text-sky-900">Daftar Ojol / Driver (${db.drivers.length})</h2>
                         <button onclick="renderDashboardContent('admin-dash')" class="text-xs text-sky-600 font-bold"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
                     </div>
                     <div class="space-y-3">
                         ${db.drivers.map(d => {
-                            const matchedUser = db.users.find(u => u.name === d.name || normalizePhone(u.phone) === normalizePhone(d.phone));
+                            const matchedUser = db.users.find(u => u.role === 'driver' && ((d.accountId && String(u.accountId || '').toUpperCase() === String(d.accountId).toUpperCase()) || u.name === d.name || normalizePhone(u.phone) === normalizePhone(d.phone)));
                             const uid = matchedUser ? matchedUser.id : 2;
+                            const drvBal = Math.max(Number(d.balance || 0), Number(matchedUser?.balance || 0));
                             return `
                                 <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
                                     <span class="text-[10px] bg-sky-100 text-sky-900 font-black px-2 py-0.5 rounded-md">HP: ${d.phone || '-'}</span>
                                     <h4 class="font-bold text-xs text-slate-900">${d.name} (${d.status}) • <i class="fa-solid fa-star text-yellow-400"></i> ${d.rating || 5.0}</h4>
                                     <p class="text-[10px] text-slate-500">${d.vehicle} • KTP: ${d.ktp || '-'} • ${d.location || 'Lengkong'}</p>
+                                    <p class="text-xs font-black text-emerald-700">Saldo Driver: Rp ${drvBal.toLocaleString()}</p>
                                     <button onclick="adminAddBalance(${uid})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-[10px] font-bold cursor-pointer">Tambah Saldo</button>
                                 </div>
                             `;
