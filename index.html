@@ -229,6 +229,11 @@
             <div id="incoming-order-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-yellow-400"></div>
         </div>
 
+        <!-- Pop-Up Chat Masuk Berbunyi (Terima / Tolak / Selesai) -->
+        <div id="modal-incoming-chat" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
+            <div id="incoming-chat-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-sky-500"></div>
+        </div>
+
         <!-- Modal Rating & Ulasan Setelah Order Selesai -->
         <div id="modal-rating" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
             <div class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-4 shadow-2xl border-4 border-yellow-400">
@@ -346,18 +351,27 @@
             </div>
         </div>
 
-        <!-- Live Chat View -->
+        <!-- Live Chat View (Simpel, List Berjejer ke Bawah, Chat Terbaru Paling Atas) -->
         <div id="view-chat" class="absolute inset-0 bg-white z-50 hidden flex flex-col">
-            <div class="bg-sky-600 text-white p-4 flex items-center justify-between shadow border-b-2 border-yellow-400">
+            <div class="bg-sky-600 text-white px-4 py-3 flex items-center justify-between shadow border-b-2 border-yellow-400">
                 <div class="flex items-center space-x-3">
                     <button onclick="closeChat()" class="text-white text-lg cursor-pointer"><i class="fa-solid fa-arrow-left"></i></button>
-                    <h3 id="chat-title" class="font-bold text-sm">Live Chat Tersinkron</h3>
+                    <div>
+                        <h3 id="chat-title" class="font-extrabold text-sm">Live Chat</h3>
+                        <span id="chat-status-label" class="text-[10px] text-yellow-200 font-bold block">Pilih percakapan di bawah</span>
+                    </div>
                 </div>
+                <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-sky-800 text-yellow-300">
+                    <i class="fa-solid fa-bell"></i> <span id="chat-alarm-state">ON</span>
+                </button>
             </div>
-            <div id="chat-contact-selector" class="p-3 bg-slate-100 border-b flex gap-2 overflow-x-auto hide-scrollbar"></div>
-            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50"></div>
-            <div class="p-3 bg-white border-t flex items-center space-x-2">
-                <input type="text" id="chat-input" placeholder="Tulis pesan personal..." class="flex-1 border rounded-full px-4 py-2.5 text-xs">
+
+            <div class="bg-slate-50 border-b max-h-44 overflow-y-auto divide-y divide-slate-200" id="chat-contact-selector"></div>
+
+            <div id="chat-messages" class="flex-1 p-3.5 overflow-y-auto space-y-2.5 bg-slate-100"></div>
+
+            <div class="p-2.5 bg-white border-t flex items-center space-x-2">
+                <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 border rounded-full px-4 py-2 text-xs font-medium">
                 <button onclick="sendPersonalChatMessage()" class="bg-sky-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow cursor-pointer"><i class="fa-solid fa-paper-plane text-xs"></i></button>
             </div>
         </div>
@@ -398,6 +412,11 @@
             : null;
 
         let isSyncingNow = false;
+        let realtimeChannel = null;
+        let activeIncomingChatId = null;
+        let readChatIds = JSON.parse(localStorage.getItem('oleng_read_chat_ids') || '[]');
+        let readNotifIds = JSON.parse(localStorage.getItem('oleng_read_notif_ids') || '[]');
+        let shownPopupChatIds = JSON.parse(localStorage.getItem('oleng_shown_popup_chats') || '[]');
         let lastSupabaseStatus = {
             ok: false,
             label: 'Supabase: Mengecek...',
@@ -438,7 +457,7 @@
                     label: 'Supabase: Terhubung',
                     detail: `Tersinkron ke ${SUPABASE_PROJECT_ID}`
                 };
-                if (showNotify) showToast('Berhasil! Semua data tersinkron dengan Supabase.', 'success');
+                if (showNotify) showToast('Berhasil! Data & chat tersinkron dengan Supabase.', 'success');
                 return lastSupabaseStatus;
             } catch (err) {
                 lastSupabaseStatus = {
@@ -482,6 +501,55 @@
             await pullInitialFromSupabase(true);
             await syncAllToSupabase();
             await updateSupabaseBadgeUI(showNotify);
+        }
+
+        function subscribeRealtimeUpdates() {
+            if (!supabaseClient || realtimeChannel) return;
+            try {
+                realtimeChannel = supabaseClient
+                    .channel('oleng-go-realtime-sync')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, (payload) => {
+                        pullInitialFromSupabase(true).then(() => {
+                            if (payload?.eventType === 'INSERT' && payload?.new) {
+                                const row = payload.new;
+                                checkAndTriggerIncomingChatPopup({
+                                    id: row.id,
+                                    from: row.sender_name,
+                                    to: row.receiver_name,
+                                    text: row.message_text,
+                                    time: row.sent_time || '',
+                                    chatStatus: row.chat_status || 'Baru'
+                                });
+                            }
+                        });
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+                        pullInitialFromSupabase(true).then(() => {
+                            if (payload?.eventType === 'INSERT') {
+                                playAlarmRingtone();
+                                checkAndShowIncomingOrderPopup(true);
+                            }
+                        });
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, () => {
+                        pullInitialFromSupabase(true);
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'merchants' }, () => {
+                        pullInitialFromSupabase(true);
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => {
+                        pullInitialFromSupabase(true);
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'foods' }, () => {
+                        pullInitialFromSupabase(true);
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, () => {
+                        pullInitialFromSupabase(true);
+                    })
+                    .subscribe();
+            } catch (err) {
+                console.warn('Realtime info:', err?.message || err);
+            }
         }
 
         let currentUser = null; 
@@ -600,7 +668,7 @@
                 { id: 1, targetUser: 'ALL', title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Aplikasi ojek & kuliner warga Lengkong Sukabumi siap digunakan.' }
             ],
             chats: [
-                { id: 1, from: 'Budi Santoso', to: 'Admin SIMADU', text: 'Halo Admin, aplikasi berjalan lancar.', time: '08:00' }
+                { id: 1, from: 'Budi Santoso', to: 'Admin SIMADU', text: 'Halo Admin, aplikasi berjalan lancar.', time: '08:00', chatStatus: 'Diterima' }
             ],
             cart: [],
             activeMerchant: null
@@ -769,6 +837,33 @@
                 if (orderRows.length > 0) {
                     await supabaseClient.from('orders').upsert(orderRows, { onConflict: 'order_code' });
                 }
+
+                const foodRows = (db.foods || []).map(f => ({
+                    id: Number(f.id),
+                    merchant_id: Number(f.merchantId || 1),
+                    name: f.name,
+                    price: Number(f.price || 15000),
+                    description: f.desc || '',
+                    stock: Number(f.stock || 20),
+                    image_url: f.image || 'https://placehold.co/200x200/0284c7/ffffff?text=Menu'
+                }));
+
+                if (foodRows.length > 0) {
+                    await supabaseClient.from('foods').upsert(foodRows, { onConflict: 'id' });
+                }
+
+                const chatRows = (db.chats || []).map(c => ({
+                    id: Number(c.id),
+                    sender_name: c.from,
+                    receiver_name: c.to,
+                    message_text: c.text,
+                    sent_time: c.time || ''
+                }));
+
+                if (chatRows.length > 0) {
+                    await supabaseClient.from('chats').upsert(chatRows, { onConflict: 'id' });
+                }
+
                 return true;
             } catch (err) {
                 console.warn('Supabase sync info:', err?.message || err);
@@ -778,10 +873,172 @@
             }
         }
 
+        function getProfileSyncedBalance() {
+            if (!currentUser) return 0;
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            if (role === 'admin') {
+                const adm = db.users.find(u => u.role === 'admin' || String(u.accountId || '').toUpperCase() === 'ADM01');
+                return Number(adm?.balance ?? currentUser.balance ?? 0);
+            }
+            if (role === 'merchant') {
+                const m = db.merchants.find(x =>
+                    (currentUser.accountId && String(x.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
+                    (currentUser.shopName && String(x.name || '').toLowerCase() === String(currentUser.shopName).toLowerCase()) ||
+                    (currentUser.name && String(x.name || '').toLowerCase() === String(currentUser.name).toLowerCase()) ||
+                    (currentUser.phone && String(x.whatsapp || '') === String(currentUser.phone))
+                );
+                const u = db.users.find(x => x.id === currentUser.id || (currentUser.accountId && String(x.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()));
+                const bal = Number(m?.balance ?? u?.balance ?? currentUser.balance ?? 0);
+                if (m) m.balance = bal;
+                if (u) u.balance = bal;
+                return bal;
+            }
+            if (role === 'driver') {
+                const d = db.drivers.find(x =>
+                    (currentUser.accountId && String(x.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
+                    (currentUser.name && String(x.name || '').toLowerCase() === String(currentUser.name).toLowerCase()) ||
+                    (currentUser.phone && String(x.phone || '') === String(currentUser.phone))
+                );
+                const u = db.users.find(x => x.id === currentUser.id || (currentUser.accountId && String(x.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()));
+                const bal = Number(d?.balance ?? u?.balance ?? currentUser.balance ?? 0);
+                if (d) d.balance = bal;
+                if (u) u.balance = bal;
+                return bal;
+            }
+            const u = db.users.find(x => x.id === currentUser.id || (currentUser.accountId && String(x.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()));
+            return Number(u?.balance ?? currentUser.balance ?? 0);
+        }
+
+        function isMessageForCurrentUser(msg) {
+            if (!currentUser || !msg) return false;
+            const me = String(currentUser.name || '').trim().toLowerCase();
+            const myId = String(currentUser.accountId || '').trim().toLowerCase();
+            const myShop = String(currentUser.shopName || '').trim().toLowerCase();
+            const from = String(msg.from || '').trim().toLowerCase();
+            const to = String(msg.to || '').trim().toLowerCase();
+            if (!from || from === me || (myId && from === myId)) return false;
+
+            const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            if (activeRole === 'admin' && (to === 'admin simadu' || to === 'admin' || to === 'adm01' || to === 'all')) return true;
+            if (to === me || (myId && to === myId) || (myShop && to === myShop) || to === 'all') return true;
+            return false;
+        }
+
+        function getUnreadChatCount() {
+            if (!currentUser) return 0;
+            return (db.chats || []).filter(c => isMessageForCurrentUser(c) && !readChatIds.includes(String(c.id))).length;
+        }
+
+        function getUnreadNotifCount() {
+            if (!currentUser) return 0;
+            return getAccountNotifs().filter(n => !readNotifIds.includes(String(n.id))).length;
+        }
+
+        function markAllChatsAsRead() {
+            const unreadIds = (db.chats || []).filter(c => isMessageForCurrentUser(c)).map(c => String(c.id));
+            readChatIds = Array.from(new Set([...readChatIds, ...unreadIds]));
+            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+            updateHomeHeaderBadgesOnly();
+        }
+
+        function markAllNotifsAsRead() {
+            const notifIds = getAccountNotifs().map(n => String(n.id));
+            readNotifIds = Array.from(new Set([...readNotifIds, ...notifIds]));
+            localStorage.setItem('oleng_read_notif_ids', JSON.stringify(readNotifIds));
+            updateHomeHeaderBadgesOnly();
+        }
+
+        function updateHomeHeaderBadgesOnly() {
+            const notifBadge = document.getElementById('home-notif-badge');
+            const chatBadge = document.getElementById('home-chat-badge');
+            const nCount = getUnreadNotifCount();
+            const cCount = getUnreadChatCount();
+
+            if (notifBadge) {
+                notifBadge.textContent = String(nCount);
+                notifBadge.classList.toggle('hidden', nCount <= 0);
+            }
+            if (chatBadge) {
+                chatBadge.textContent = String(cCount);
+                chatBadge.classList.toggle('hidden', cCount <= 0);
+            }
+        }
+
+        function checkAndTriggerIncomingChatPopup(msg) {
+            if (!currentUser || !msg) return;
+            if (!isMessageForCurrentUser(msg)) return;
+            const msgKey = String(msg.id);
+            if (shownPopupChatIds.includes(msgKey) || readChatIds.includes(msgKey)) return;
+
+            shownPopupChatIds.push(msgKey);
+            localStorage.setItem('oleng_shown_popup_chats', JSON.stringify(shownPopupChatIds));
+            playAlarmRingtone();
+            openIncomingChatModal(msg);
+            updateHomeHeaderBadgesOnly();
+        }
+
+        function openIncomingChatModal(msg) {
+            if (!msg) return;
+            activeIncomingChatId = msg.id;
+            playAlarmRingtone();
+            const card = document.getElementById('incoming-chat-card');
+            if (!card) return;
+            const safeFrom = String(msg.from || 'Pengguna').replace(/'/g, "\\'");
+            card.innerHTML = `
+                <div class="flex justify-between items-center border-b pb-2">
+                    <span class="bg-sky-600 text-yellow-300 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase"><i class="fa-solid fa-bell-ring mr-1"></i> CHAT MASUK</span>
+                    <button onclick="closeIncomingChatModal()" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
+                </div>
+                <div class="space-y-1.5 text-xs">
+                    <p class="text-[11px] font-extrabold text-sky-900">Dari: ${msg.from} <span class="text-[10px] text-slate-400 font-semibold">(${msg.time || 'Baru saja'})</span></p>
+                    <p class="text-slate-700 font-semibold bg-slate-100 p-3 rounded-2xl">"${msg.text}"</p>
+                    <p class="text-[10px] font-bold text-amber-600">Status: ${msg.chatStatus || 'Menunggu Konfirmasi'}</p>
+                </div>
+                <div class="grid grid-cols-3 gap-2 pt-2">
+                    <button onclick="handleIncomingChatDecision('${msg.id}', '${safeFrom}', 'accept')" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Terima</button>
+                    <button onclick="handleIncomingChatDecision('${msg.id}', '${safeFrom}', 'reject')" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Tolak</button>
+                    <button onclick="handleIncomingChatDecision('${msg.id}', '${safeFrom}', 'complete')" class="py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Selesai</button>
+                </div>
+            `;
+            document.getElementById('modal-incoming-chat').classList.remove('hidden');
+        }
+
+        function closeIncomingChatModal() {
+            activeIncomingChatId = null;
+            document.getElementById('modal-incoming-chat')?.classList.add('hidden');
+        }
+
+        function handleIncomingChatDecision(msgId, senderName, decision) {
+            const targetMsg = (db.chats || []).find(c => String(c.id) === String(msgId));
+            if (targetMsg) {
+                if (decision === 'accept') targetMsg.chatStatus = 'Diterima';
+                else if (decision === 'reject') targetMsg.chatStatus = 'Ditolak';
+                else if (decision === 'complete') targetMsg.chatStatus = 'Selesai';
+            }
+
+            readChatIds = Array.from(new Set([...readChatIds, String(msgId)]));
+            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+            closeIncomingChatModal();
+
+            if (decision === 'accept') {
+                activeChatTarget = senderName;
+                saveDB(`Chat dari ${senderName} diterima!`);
+                switchView('chat');
+            } else if (decision === 'reject') {
+                saveDB(`Chat dari ${senderName} ditolak.`);
+                updateHomeHeaderBadgesOnly();
+            } else if (decision === 'complete') {
+                saveDB(`Chat dengan ${senderName} dikonfirmasi selesai!`);
+                updateHomeHeaderBadgesOnly();
+            }
+        }
+
         async function pullInitialFromSupabase(forceRefreshUI = false) {
             if (!supabaseClient) return;
             try {
                 let hasChanges = false;
+                const prevChatIds = new Set((db.chats || []).map(c => String(c.id)));
+                const prevOrderIds = new Set((db.orders || []).map(o => String(o.id)));
 
                 // 1. Tarik app_config & state_json
                 const { data: cfg } = await supabaseClient.from('app_config').select('*').eq('id', 1).maybeSingle();
@@ -860,7 +1117,8 @@
                     if (currentUser) {
                         const refreshedSelf = mergedUsers.find(u => String(u.accountId).toUpperCase() === String(currentUser.accountId || '').toUpperCase());
                         if (refreshedSelf) {
-                            currentUser = refreshedSelf;
+                            const keptHomeBal = currentUser.balance;
+                            currentUser = { ...refreshedSelf, balance: keptHomeBal !== undefined ? keptHomeBal : refreshedSelf.balance };
                             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
                         }
                     }
@@ -941,9 +1199,60 @@
                     hasChanges = true;
                 }
 
+                // 6. Tarik semua menu makanan (foods)
+                const { data: foodRows } = await supabaseClient.from('foods').select('*').order('id', { ascending: true });
+                if (Array.isArray(foodRows) && foodRows.length > 0) {
+                    const mappedFoods = foodRows.map(r => ({
+                        id: r.id,
+                        merchantId: r.merchant_id || 1,
+                        name: r.name,
+                        price: Number(r.price || 15000),
+                        desc: r.description || '',
+                        stock: Number(r.stock || 20),
+                        image: r.image_url || 'https://placehold.co/200x200/0284c7/ffffff?text=Menu'
+                    }));
+                    db.foods = mergeByKey(db.foods, mappedFoods, f => String(f.id));
+                    hasChanges = true;
+                }
+
+                // 7. Tarik semua pesan live chat (chats)
+                const { data: chatRows } = await supabaseClient.from('chats').select('*').order('id', { ascending: true });
+                if (Array.isArray(chatRows) && chatRows.length > 0) {
+                    const mappedChats = chatRows.map(r => ({
+                        id: r.id,
+                        from: r.sender_name,
+                        to: r.receiver_name,
+                        text: r.message_text,
+                        time: r.sent_time || '',
+                        chatStatus: 'Baru'
+                    }));
+                    db.chats = mergeByKey(db.chats, mappedChats, c => String(c.id));
+                    hasChanges = true;
+                }
+
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-                if ((hasChanges || forceRefreshUI) && currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
+                const newlyArrivedChats = (db.chats || []).filter(c => !prevChatIds.has(String(c.id)) && isMessageForCurrentUser(c));
+                if (newlyArrivedChats.length > 0) {
+                    playAlarmRingtone();
+                    checkAndTriggerIncomingChatPopup(newlyArrivedChats[newlyArrivedChats.length - 1]);
+                }
+
+                const newlyArrivedOrders = (db.orders || []).filter(o => !prevOrderIds.has(String(o.id)));
+                if (newlyArrivedOrders.length > 0) {
+                    playAlarmRingtone();
+                    checkAndShowIncomingOrderPopup(true);
+                }
+
+                updateHomeHeaderBadgesOnly();
+
+                const chatViewVisible = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden');
+                if (chatViewVisible) {
+                    renderChatContacts();
+                    renderPersonalChatMessages();
+                }
+
+                if ((hasChanges || forceRefreshUI) && !chatViewVisible && currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
                     renderDashboardContent(currentSubTab);
                 }
             } catch (err) {
@@ -993,19 +1302,19 @@
             if (!alarmEnabled) return;
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const notes = [880, 1174.66, 880];
+                const notes = [880, 1174.66, 880, 1318.51];
                 notes.forEach((freq, i) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
                     osc.type = 'triangle';
-                    const start = ctx.currentTime + i * 0.16;
+                    const start = ctx.currentTime + i * 0.14;
                     osc.frequency.setValueAtTime(freq, start);
-                    gain.gain.setValueAtTime(0.14, start);
-                    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.15);
+                    gain.gain.setValueAtTime(0.16, start);
+                    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.13);
                     osc.connect(gain);
                     gain.connect(ctx.destination);
                     osc.start(start);
-                    osc.stop(start + 0.15);
+                    osc.stop(start + 0.13);
                 });
             } catch (e) {}
         }
@@ -1013,9 +1322,13 @@
         function toggleNotificationAlarm() {
             alarmEnabled = !alarmEnabled;
             localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled));
+            const chatAlarmState = document.getElementById('chat-alarm-state');
+            if (chatAlarmState) chatAlarmState.textContent = alarmEnabled ? 'ON' : 'OFF';
             if (alarmEnabled) playAlarmRingtone();
             showToast(`Berhasil! Alarm notifikasi ${alarmEnabled ? 'DINYALAKAN (ON)' : 'DIMATIKAN (OFF)'}.`, 'success');
-            renderDashboardContent(currentSubTab);
+            if (currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
+                renderDashboardContent(currentSubTab);
+            }
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -1045,6 +1358,7 @@
             getSyncedMainBanner();
             toggleRegisterRoleFields();
             updateSupabaseBadgeUI(false);
+            subscribeRealtimeUpdates();
             const savedSession = localStorage.getItem('oleng_user_session');
             if (savedSession) {
                 try {
@@ -1059,10 +1373,10 @@
             await pullInitialFromSupabase(true);
             await syncAllToSupabase();
 
-            // Auto-sync setiap 10 detik agar data antar-HP tetap sinkron
+            // Auto-sync setiap 4 detik agar chat & order antar-HP cepat tersinkron
             setInterval(() => {
                 pullInitialFromSupabase(false);
-            }, 10000);
+            }, 4000);
         });
 
         function switchAuthTab(tab) {
@@ -1173,7 +1487,6 @@
                 return;
             }
 
-            // Tarik dulu data terbaru dari Supabase agar akun yang didaftarkan di HP lain terbaca
             await pullInitialFromSupabase(false);
 
             let foundUser = db.users.find(u => String(u.accountId || '').toUpperCase() === rawId && u.role === role);
@@ -1195,7 +1508,7 @@
                 return;
             }
 
-            currentUser = foundUser;
+            currentUser = { ...foundUser };
             adminViewMode = role === 'admin' ? 'admin' : null;
             currentSubTab = role === 'admin' ? 'admin-dash' : role === 'merchant' ? 'merchant-manage' : role === 'driver' ? 'driver-orders' : 'home';
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
@@ -1396,7 +1709,7 @@
                 adminViewMode = null;
             }
             updateDashboardShell(preserveSavedTab);
-            checkAndShowIncomingOrderPopup();
+            checkAndShowIncomingOrderPopup(false);
         }
 
         function updateDashboardShell(preserveSavedTab = false) {
@@ -1420,7 +1733,7 @@
                 if(btn) btn.className = m === mode ? "px-2.5 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-extrabold cursor-pointer" : "px-2.5 py-1 bg-slate-800 hover:bg-sky-600 text-slate-300 rounded-lg text-[10px] font-extrabold cursor-pointer";
             });
             updateDashboardShell(false);
-            checkAndShowIncomingOrderPopup();
+            checkAndShowIncomingOrderPopup(false);
         }
 
         function renderDashboardNavigation(activeRole) {
@@ -1491,9 +1804,31 @@
         function getAccountOrders() {
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             if (role === 'admin') return db.orders;
-            if (role === 'driver') return db.orders.filter(o => o.driver === currentUser.name || o.status === 'Menunggu Driver' || o.status === 'Driver Menuju Lokasi');
-            if (role === 'merchant') return db.orders.filter(o => o.merchant === currentUser.name || o.merchant === currentUser.shopName || o.type === 'food');
-            return db.orders.filter(o => o.customer === currentUser.name);
+            if (role === 'driver') {
+                const drvObj = db.drivers.find(d =>
+                    (currentUser.accountId && String(d.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
+                    (currentUser.name && String(d.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
+                );
+                const myDriverNames = [currentUser.name, drvObj?.name].filter(Boolean).map(s => s.toLowerCase());
+                return db.orders.filter(o =>
+                    myDriverNames.includes(String(o.driver || '').toLowerCase()) ||
+                    o.status === 'Menunggu Driver' ||
+                    o.status === 'Driver Menuju Lokasi'
+                );
+            }
+            if (role === 'merchant') {
+                const mrcObj = db.merchants.find(m =>
+                    (currentUser.accountId && String(m.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
+                    (currentUser.shopName && String(m.name || '').toLowerCase() === String(currentUser.shopName).toLowerCase()) ||
+                    (currentUser.name && String(m.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
+                );
+                const myShopNames = [currentUser.name, currentUser.shopName, mrcObj?.name].filter(Boolean).map(s => s.toLowerCase());
+                return db.orders.filter(o =>
+                    myShopNames.includes(String(o.merchant || '').toLowerCase()) ||
+                    o.type === 'food'
+                );
+            }
+            return db.orders.filter(o => String(o.customer || '').toLowerCase() === String(currentUser.name || '').toLowerCase());
         }
 
         function getAccountMutations() {
@@ -1505,17 +1840,32 @@
             return (db.walletMutations || []).filter(mut => names.includes(mut.ownerName));
         }
 
-        function checkAndShowIncomingOrderPopup() {
+        function checkAndShowIncomingOrderPopup(forceShowLatest = false) {
             if (!currentUser) return;
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            if (activeRole !== 'driver' && activeRole !== 'merchant') return;
+            if (activeRole !== 'driver' && activeRole !== 'merchant' && activeRole !== 'admin') return;
 
             const candidate = db.orders.find(o => {
-                if (shownPopupOrderIds.includes(o.id)) return false;
                 if (o.status === 'Selesai' || o.status === 'Ditolak') return false;
-                if (activeRole === 'driver') return o.type === 'ojek' || o.type === 'food';
-                if (activeRole === 'merchant') return o.type === 'food';
-                return false;
+                if (!forceShowLatest && shownPopupOrderIds.includes(o.id)) return false;
+                if (activeRole === 'driver') {
+                    const drvObj = db.drivers.find(d =>
+                        (currentUser.accountId && String(d.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
+                        (currentUser.name && String(d.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
+                    );
+                    const myNames = [currentUser.name, drvObj?.name].filter(Boolean).map(s => s.toLowerCase());
+                    return myNames.includes(String(o.driver || '').toLowerCase()) || o.type === 'ojek' || o.type === 'food';
+                }
+                if (activeRole === 'merchant') {
+                    const mrcObj = db.merchants.find(m =>
+                        (currentUser.accountId && String(m.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
+                        (currentUser.shopName && String(m.name || '').toLowerCase() === String(currentUser.shopName).toLowerCase()) ||
+                        (currentUser.name && String(m.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
+                    );
+                    const myShops = [currentUser.name, currentUser.shopName, mrcObj?.name].filter(Boolean).map(s => s.toLowerCase());
+                    return o.type === 'food' || myShops.includes(String(o.merchant || '').toLowerCase());
+                }
+                return true;
             });
 
             if (candidate) {
@@ -1696,7 +2046,8 @@
         }
 
         function renderCustomerHome(container) {
-            const myNotifs = getAccountNotifs();
+            const unreadNotifs = getUnreadNotifCount();
+            const unreadChats = getUnreadChatCount();
             const activeBanner = getSyncedMainBanner();
             container.innerHTML = `
                 <div class="p-4 space-y-4 bg-gradient-to-b from-sky-500 via-sky-600 to-slate-50 min-h-full pb-20">
@@ -1706,16 +2057,17 @@
                             <img src="${currentUser.photo}" class="w-12 h-12 rounded-2xl object-cover border-2 border-yellow-400 shadow-inner">
                             <div>
                                 <span class="text-xs text-sky-200 font-extrabold block">Halo, ${currentUser.name} (ID: ${currentUser.accountId || '-'})</span>
-                                <h3 class="text-sm font-black text-yellow-300 tracking-tight">${currentUser.role === 'customer' ? 'WARGA KEC. LENGKONG' : 'Saldo: Rp ' + (currentUser.balance || 0).toLocaleString()}</h3>
+                                <h3 class="text-sm font-black text-yellow-300 tracking-tight">${currentUser.role === 'customer' ? 'WARGA KEC. LENGKONG' : 'Saldo: Rp ' + Number(currentUser.balance || 0).toLocaleString()}</h3>
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
                             <button onclick="openNotificationModal()" class="relative p-2.5 bg-sky-800 hover:bg-sky-700 rounded-2xl text-white transition shadow cursor-pointer">
                                 <i class="fa-solid fa-bell text-sm"></i>
-                                <span class="absolute top-1 right-1 bg-yellow-400 text-slate-900 text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">${myNotifs.length}</span>
+                                <span id="home-notif-badge" class="absolute -top-1 -right-1 bg-yellow-400 text-slate-900 text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ${unreadNotifs > 0 ? '' : 'hidden'}">${unreadNotifs}</span>
                             </button>
-                            <button onclick="switchView('chat')" class="p-2.5 bg-sky-800 hover:bg-sky-700 rounded-2xl text-white transition shadow cursor-pointer">
+                            <button onclick="switchView('chat')" class="relative p-2.5 bg-sky-800 hover:bg-sky-700 rounded-2xl text-white transition shadow cursor-pointer">
                                 <i class="fa-solid fa-comments text-sm"></i>
+                                <span id="home-chat-badge" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ${unreadChats > 0 ? '' : 'hidden'}">${unreadChats}</span>
                             </button>
                             <button onclick="handleLogout()" class="p-2.5 bg-rose-600 hover:bg-rose-700 rounded-2xl text-white transition shadow cursor-pointer" title="Keluar">
                                 <i class="fa-solid fa-power-off text-sm"></i>
@@ -1776,6 +2128,7 @@
                 </div>
             `;
             applySupabaseBadgeStyle(document.getElementById('home-supabase-badge'), lastSupabaseStatus);
+            updateHomeHeaderBadgesOnly();
             setTimeout(initHomeMap, 200);
         }
 
@@ -2110,7 +2463,7 @@
             updateCartUI();
         }
 
-        function submitFoodOrder() {
+        async function submitFoodOrder() {
             if(db.cart.length === 0) return showToast('Keranjang masih kosong!', 'error');
             const merchant = db.activeMerchant || db.merchants[0];
             const driver = db.drivers.find(d => d.id === selectedDriverId) || db.drivers[0];
@@ -2123,7 +2476,7 @@
                 type: 'food',
                 customer: currentUser.name,
                 merchant: merchant.name,
-                driver: driver.name,
+                driver: driver ? driver.name : 'Asep Supriatna',
                 total: subtotal + ongkir,
                 status: 'Menunggu Driver',
                 items: db.cart.map(i => i.name).join(', '),
@@ -2136,15 +2489,33 @@
 
             db.orders.unshift(newOrder);
             db.cart = [];
-            saveDB(`Pesanan ${newOrder.id} berhasil dikirim & tersinkron!`);
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            if (supabaseClient) {
+                await supabaseClient.from('orders').upsert({
+                    order_code: newOrder.id,
+                    order_type: newOrder.type,
+                    customer_name: newOrder.customer,
+                    merchant_name: newOrder.merchant,
+                    driver_name: newOrder.driver,
+                    items_summary: newOrder.items,
+                    pickup_label: newOrder.pickup,
+                    dest_label: newOrder.dest,
+                    total_amount: Number(newOrder.total || 0),
+                    status: newOrder.status,
+                    settled: false
+                }, { onConflict: 'order_code' });
+            }
+            await syncAllToSupabase();
+            playAlarmRingtone();
+            showToast(`Berhasil! Pesanan ${newOrder.id} masuk ke ${merchant.name} & driver.`, 'success');
             closeCartModal();
             closeMerchantDetail();
-            addAccountNotification(`Order Baru ${newOrder.id}`, `Pesanan ${newOrder.items} ke ${merchant.name} dengan driver ${driver.name}.`, currentUser.name);
+            addAccountNotification(`Order Baru ${newOrder.id}`, `Pesanan ${newOrder.items} ke ${merchant.name} dengan driver ${newOrder.driver}.`, 'ALL');
             renderDashboardContent('history');
-            checkAndShowIncomingOrderPopup();
+            checkAndShowIncomingOrderPopup(true);
         }
 
-        function submitOjekOrder() {
+        async function submitOjekOrder() {
             const to = document.getElementById('ojek-to').value || 'Tujuan Lengkong';
             const from = document.getElementById('ojek-from').value || 'Lokasi Terkini GPS';
             const driver = db.drivers.find(d => d.id === selectedDriverId) || db.drivers[0];
@@ -2156,7 +2527,7 @@
                 type: 'ojek',
                 customer: currentUser.name,
                 merchant: 'Layanan Ojek Online',
-                driver: driver.name,
+                driver: driver ? driver.name : 'Asep Supriatna',
                 total: fare,
                 status: 'Driver Menuju Lokasi',
                 items: `Ojek (${from} → ${to})`,
@@ -2168,13 +2539,32 @@
             };
 
             db.orders.unshift(newOrder);
-            saveDB(`Order ojek ${newOrder.id} berhasil dikirim & tersinkron!`);
-            addAccountNotification(`Order Ojek ${newOrder.id}`, `Rute ${from} → ${to} bersama driver ${driver.name}.`, currentUser.name);
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            if (supabaseClient) {
+                await supabaseClient.from('orders').upsert({
+                    order_code: newOrder.id,
+                    order_type: newOrder.type,
+                    customer_name: newOrder.customer,
+                    merchant_name: newOrder.merchant,
+                    driver_name: newOrder.driver,
+                    items_summary: newOrder.items,
+                    pickup_label: newOrder.pickup,
+                    dest_label: newOrder.dest,
+                    total_amount: Number(newOrder.total || 0),
+                    status: newOrder.status,
+                    settled: false
+                }, { onConflict: 'order_code' });
+            }
+            await syncAllToSupabase();
+            playAlarmRingtone();
+            showToast(`Berhasil! Order ojek ${newOrder.id} masuk ke driver ${newOrder.driver}.`, 'success');
+            addAccountNotification(`Order Ojek ${newOrder.id}`, `Rute ${from} → ${to} bersama driver ${newOrder.driver}.`, 'ALL');
             renderDashboardContent('history');
-            checkAndShowIncomingOrderPopup();
+            checkAndShowIncomingOrderPopup(true);
         }
 
         function renderOrderHistory(container) {
+            markAllNotifsAsRead();
             const myOrders = getAccountOrders();
             const myNotifs = getAccountNotifs();
             const myMutations = getAccountMutations();
@@ -2205,7 +2595,7 @@
                                     <span>Rp ${o.total.toLocaleString()}</span>
                                     <div class="flex gap-1.5">
                                         ${o.status === 'Selesai' && activeRole === 'customer' ? `<button onclick="openRatingModal('${o.id}')" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-lg text-[10px] font-black cursor-pointer"><i class="fa-solid fa-star"></i> ${o.rating ? 'Ubah Rating' : 'Beri Rating'}</button>` : ''}
-                                        ${(activeRole === 'driver' || activeRole === 'merchant') ? `
+                                        ${(activeRole === 'driver' || activeRole === 'merchant' || activeRole === 'admin') ? `
                                             <button onclick="openIncomingOrderModal('${o.id}')" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-lg text-[10px] font-black cursor-pointer">Pop-Up Order</button>
                                             ${o.status !== 'Selesai' && o.status !== 'Ditolak' ? `<button onclick="handleIncomingOrderAction('${o.id}', 'complete')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Selesai</button>` : ''}
                                         ` : ''}
@@ -2438,16 +2828,7 @@
         let tempUserProfilePhoto = null;
 
         function getCurrentWalletBalance() {
-            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            if (role === 'merchant') {
-                const m = db.merchants.find(x => x.whatsapp === currentUser.phone || x.name === currentUser.shopName || x.name === currentUser.name);
-                return m ? (m.balance || 0) : (currentUser.balance || 0);
-            }
-            if (role === 'driver') {
-                const d = db.drivers.find(x => x.phone === currentUser.phone || x.name === currentUser.name);
-                return d ? (d.balance || 0) : (currentUser.balance || 0);
-            }
-            return currentUser.balance || 0;
+            return getProfileSyncedBalance();
         }
 
         function goToAdminTopUpChat() {
@@ -2464,8 +2845,8 @@
         function renderProfile(container) {
             tempUserProfilePhoto = null;
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            const showWalletAndTopUp = activeRole === 'driver' || activeRole === 'merchant';
-            const balanceVal = getCurrentWalletBalance();
+            const showWalletAndTopUp = activeRole === 'driver' || activeRole === 'merchant' || activeRole === 'admin';
+            const balanceVal = getProfileSyncedBalance();
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
@@ -2476,10 +2857,12 @@
                         <span class="text-[10px] bg-yellow-400 text-slate-950 font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span>
                         ${showWalletAndTopUp ? `
                             <div class="pt-2 space-y-2">
-                                <p class="text-sm text-yellow-300 font-black">Saldo Dompet: Rp ${balanceVal.toLocaleString()}</p>
-                                <button onclick="goToAdminTopUpChat()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-2xl text-xs cursor-pointer shadow">
-                                    <i class="fa-solid fa-plus-circle mr-1"></i> Tambah Saldo (Chat Admin)
-                                </button>
+                                <p class="text-sm text-yellow-300 font-black">Saldo Dompet (Sinkron Profil): Rp ${Number(balanceVal || 0).toLocaleString()}</p>
+                                ${activeRole !== 'admin' ? `
+                                    <button onclick="goToAdminTopUpChat()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-2xl text-xs cursor-pointer shadow">
+                                        <i class="fa-solid fa-plus-circle mr-1"></i> Tambah Saldo (Chat Admin)
+                                    </button>
+                                ` : ''}
                             </div>
                         ` : ''}
                     </div>
@@ -3024,6 +3407,7 @@
         }
 
         function openNotificationModal() {
+            markAllNotifsAsRead();
             const myNotifs = getAccountNotifs();
             playAlarmRingtone();
             document.getElementById('modal-notif').classList.remove('hidden');
@@ -3031,28 +3415,112 @@
         }
         function closeNotificationModal() { document.getElementById('modal-notif').classList.add('hidden'); }
 
-        function switchView(view) {
-            if(view === 'chat') { document.getElementById('view-chat').classList.remove('hidden'); renderChatContacts(); renderPersonalChatMessages(); }
+        async function switchView(view) {
+            if(view === 'chat') {
+                markAllChatsAsRead();
+                document.getElementById('view-chat').classList.remove('hidden');
+                const chatAlarmState = document.getElementById('chat-alarm-state');
+                if (chatAlarmState) chatAlarmState.textContent = alarmEnabled ? 'ON' : 'OFF';
+                await pullInitialFromSupabase(false);
+                markAllChatsAsRead();
+                renderChatContacts();
+                renderPersonalChatMessages();
+            }
         }
         function startPersonalChat(target) { activeChatTarget = target; switchView('chat'); }
-        function closeChat() { document.getElementById('view-chat').classList.add('hidden'); }
+        function closeChat() {
+            markAllChatsAsRead();
+            document.getElementById('view-chat').classList.add('hidden');
+            updateHomeHeaderBadgesOnly();
+        }
+        function selectChatPartner(partnerName) {
+            activeChatTarget = partnerName;
+            (db.chats || []).forEach(c => {
+                if (String(c.from || '').trim().toLowerCase() === String(partnerName || '').trim().toLowerCase()) {
+                    if (!readChatIds.includes(String(c.id))) readChatIds.push(String(c.id));
+                }
+            });
+            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+            updateHomeHeaderBadgesOnly();
+            renderChatContacts();
+            renderPersonalChatMessages();
+        }
         function renderChatContacts() {
-            const list = ['Admin SIMADU', ...db.merchants.map(m => m.name), ...db.drivers.map(d => d.name)];
-            document.getElementById('chat-contact-selector').innerHTML = list.map(n => `<button onclick="activeChatTarget='${n}';renderChatContacts();renderPersonalChatMessages();" class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer ${activeChatTarget===n?'bg-sky-600 text-white shadow-xs':'bg-white text-slate-700 border'}">${n}</button>`).join('');
+            const me = String(currentUser?.name || '').trim().toLowerCase();
+            const userNames = (db.users || []).map(u => u.name).filter(n => n && String(n).trim().toLowerCase() !== me);
+            const allPartners = Array.from(new Set(['Admin SIMADU', ...db.merchants.map(m => m.name), ...db.drivers.map(d => d.name), ...userNames]))
+                .filter(n => n && String(n).trim().toLowerCase() !== me);
+
+            // Urutkan agar percakapan dengan chat terbaru berada di paling atas
+            const sortedPartners = allPartners.map(partner => {
+                const pLow = partner.toLowerCase();
+                const related = (db.chats || []).filter(c => {
+                    const f = String(c.from || '').trim().toLowerCase();
+                    const t = String(c.to || '').trim().toLowerCase();
+                    return (f === me && t === pLow) || (f === pLow && t === me) || (pLow === 'admin simadu' && (f === 'admin simadu' || t === 'admin simadu'));
+                });
+                const lastMsg = related.length > 0 ? related[related.length - 1] : null;
+                const unreadFromPartner = related.filter(c => String(c.from || '').trim().toLowerCase() === pLow && !readChatIds.includes(String(c.id))).length;
+                return { partner, lastMsg, unreadFromPartner, sortScore: lastMsg ? Number(lastMsg.id) : 0 };
+            }).sort((a, b) => b.sortScore - a.sortScore);
+
+            document.getElementById('chat-contact-selector').innerHTML = sortedPartners.map(item => {
+                const isSelected = String(activeChatTarget || '').toLowerCase() === item.partner.toLowerCase();
+                const safePartner = item.partner.replace(/'/g, "\\'");
+                const previewText = item.lastMsg ? `${item.lastMsg.from}: ${item.lastMsg.text}` : 'Ketuk untuk mulai chat';
+                const timeText = item.lastMsg?.time || '';
+                return `
+                    <button onclick="selectChatPartner('${safePartner}')" class="w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-2 cursor-pointer transition ${isSelected ? 'bg-sky-100/90 border-l-4 border-sky-600' : 'bg-white hover:bg-slate-50'}">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs font-extrabold text-slate-900 truncate">${item.partner}</span>
+                                <span class="text-[9px] text-slate-400 font-semibold shrink-0">${timeText}</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 truncate mt-0.5">${previewText}</p>
+                        </div>
+                        ${item.unreadFromPartner > 0 ? `<span class="bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">${item.unreadFromPartner}</span>` : ''}
+                    </button>
+                `;
+            }).join('');
         }
         function renderPersonalChatMessages() {
             document.getElementById('chat-title').innerText = `Chat: ${activeChatTarget}`;
-            const msgs = db.chats.filter(c => (c.from === currentUser.name && c.to === activeChatTarget) || (c.from === activeChatTarget && c.to === currentUser.name));
-            document.getElementById('chat-messages').innerHTML = msgs.map(c => `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${c.from===currentUser.name?'bg-sky-600 text-white ml-auto':'bg-white border mr-auto'}"><b>${c.from}</b><p>${c.text}</p><span class="text-[9px] opacity-75">${c.time}</span></div>`).join('') || '<p class="text-xs text-slate-400 text-center py-6">Mulai obrolan dengan '+activeChatTarget+'...</p>';
+            const statusLbl = document.getElementById('chat-status-label');
+            const me = String(currentUser?.name || '').trim().toLowerCase();
+            const target = String(activeChatTarget || '').trim().toLowerCase();
+            const msgs = (db.chats || []).filter(c => {
+                const from = String(c.from || '').trim().toLowerCase();
+                const to = String(c.to || '').trim().toLowerCase();
+                return (from === me && to === target) || (from === target && to === me) || (target === 'admin simadu' && (to === 'admin simadu' || from === 'admin simadu'));
+            });
+            const latestStatus = msgs.length > 0 && msgs[msgs.length - 1].chatStatus ? `Status: ${msgs[msgs.length - 1].chatStatus}` : 'Percakapan tersinkron';
+            if (statusLbl) statusLbl.textContent = latestStatus;
+
+            document.getElementById('chat-messages').innerHTML = msgs.map(c => `<div class="p-3 rounded-2xl text-xs max-w-[80%] shadow-2xs ${String(c.from).trim().toLowerCase()===me?'bg-sky-600 text-white ml-auto':'bg-white border mr-auto'}"><b>${c.from}</b><p class="mt-0.5">${c.text}</p><span class="text-[9px] opacity-75">${c.time}</span></div>`).join('') || '<p class="text-xs text-slate-400 text-center py-6">Mulai obrolan dengan '+activeChatTarget+'...</p>';
         }
-        function sendPersonalChatMessage() {
+        async function sendPersonalChatMessage() {
             const input = document.getElementById('chat-input');
             if(!input.value.trim()) return;
             const timeNow = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            db.chats.push({ id: Date.now(), from: currentUser.name, to: activeChatTarget, text: input.value, time: timeNow });
-            saveDB('Pesan berhasil dikirim & tersinkron!');
+            const newMsg = { id: Date.now(), from: currentUser.name, to: activeChatTarget, text: input.value.trim(), time: timeNow, chatStatus: 'Terkirim' };
+            db.chats.push(newMsg);
+            readChatIds = Array.from(new Set([...readChatIds, String(newMsg.id)]));
+            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
             input.value = '';
+            renderChatContacts();
             renderPersonalChatMessages();
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            if (supabaseClient) {
+                await supabaseClient.from('chats').upsert({
+                    id: Number(newMsg.id),
+                    sender_name: newMsg.from,
+                    receiver_name: newMsg.to,
+                    message_text: newMsg.text,
+                    sent_time: newMsg.time
+                }, { onConflict: 'id' });
+            }
+            await syncAllToSupabase();
+            showToast('Berhasil! Pesan terkirim & tersinkron.', 'success');
         }
 
         function showToast(msg, type='success') {
