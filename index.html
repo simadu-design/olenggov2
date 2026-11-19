@@ -301,7 +301,7 @@
         let userCurrentLatLng = [-7.1234, 106.8456];
         let destLatLng = [-7.1285, 106.8510];
 
-        let customMainBanner = localStorage.getItem('oleng_global_banner') || 'https://placehold.co/600x300/0284c7/facc15?text=OLENG+GO+OJEK+ONLINE+LENGKONG';
+        const DEFAULT_MAIN_BANNER = 'https://placehold.co/600x300/0284c7/facc15?text=OLENG+GO+OJEK+ONLINE+LENGKONG';
 
         const defaultPricing = {
             minFare: 8000,
@@ -311,6 +311,7 @@
         };
 
         const defaultDB = {
+            mainBanner: DEFAULT_MAIN_BANNER,
             pricing: { ...defaultPricing },
             commissionLogs: [],
             users: [
@@ -379,7 +380,23 @@
         if (!db.pricing) db.pricing = { ...defaultPricing };
         if (!db.commissionLogs) db.commissionLogs = [];
 
-        function saveDB() { localStorage.setItem('oleng_go_db', JSON.stringify(db)); }
+        let customMainBanner = db.mainBanner || localStorage.getItem('oleng_global_banner') || DEFAULT_MAIN_BANNER;
+        db.mainBanner = customMainBanner;
+        localStorage.setItem('oleng_global_banner', customMainBanner);
+
+        function getSyncedMainBanner() {
+            const latestDB = JSON.parse(localStorage.getItem('oleng_go_db')) || db;
+            const synced = latestDB.mainBanner || localStorage.getItem('oleng_global_banner') || DEFAULT_MAIN_BANNER;
+            customMainBanner = synced;
+            db.mainBanner = synced;
+            return synced;
+        }
+
+        function saveDB() {
+            db.mainBanner = customMainBanner || db.mainBanner || DEFAULT_MAIN_BANNER;
+            localStorage.setItem('oleng_global_banner', db.mainBanner);
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+        }
 
         function addAccountNotification(title, desc, targetUser = null) {
             const owner = targetUser || (currentUser ? currentUser.name : 'ALL');
@@ -447,6 +464,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
+            getSyncedMainBanner();
             const savedSession = localStorage.getItem('oleng_user_session');
             if (savedSession) {
                 try {
@@ -560,6 +578,7 @@
         }
 
         function enterDashboard(preserveSavedTab = false) {
+            getSyncedMainBanner();
             document.getElementById('view-auth').classList.add('hidden');
             document.getElementById('view-dashboard').classList.remove('hidden');
             const switcherBar = document.getElementById('admin-switcher-bar');
@@ -778,6 +797,7 @@
 
         function renderCustomerHome(container) {
             const myNotifs = getAccountNotifs();
+            const activeBanner = getSyncedMainBanner();
             container.innerHTML = `
                 <div class="p-4 space-y-4 bg-gradient-to-b from-sky-500 via-sky-600 to-slate-50 min-h-full pb-20">
                     
@@ -813,7 +833,7 @@
                     </div>
 
                     <div class="rounded-3xl shadow-xl overflow-hidden border-2 border-yellow-400 bg-white">
-                        <img src="${customMainBanner}" class="w-full h-36 object-cover" alt="Banner Oleng Go">
+                        <img src="${activeBanner}" class="w-full h-36 object-cover" alt="Banner Oleng Go">
                     </div>
 
                     <div class="grid grid-cols-4 gap-2">
@@ -1766,13 +1786,14 @@
         }
 
         function renderAdminBanner(container) {
+            const currentBanner = getSyncedMainBanner();
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
                     <h2 class="font-extrabold text-base text-sky-900">Kontrol Banner Panjang Utama</h2>
                     <div class="bg-white p-4 rounded-3xl border space-y-3 shadow-xs">
                         <label class="text-[11px] font-extrabold text-slate-500 uppercase">UPLOAD BANNER PANJANG (DARI GALERI)</label>
                         <input type="file" accept="image/*" class="w-full p-2 border rounded-2xl text-xs" onchange="previewNewBanner(event)">
-                        <img id="banner-preview" src="${customMainBanner}" class="w-full h-32 object-cover rounded-2xl border">
+                        <img id="banner-preview" src="${currentBanner}" class="w-full h-32 object-cover rounded-2xl border">
                         <button onclick="saveGlobalBanner()" class="w-full py-3.5 bg-sky-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer shadow-md border-b-2 border-yellow-400">Simpan & Terapkan ke Semua User</button>
                     </div>
                 </div>
@@ -1783,15 +1804,23 @@
             const file = e.target.files[0];
             if(file) {
                 const reader = new FileReader();
-                reader.onload = function(evt) { customMainBanner = evt.target.result; document.getElementById('banner-preview').src = customMainBanner; };
+                reader.onload = function(evt) {
+                    customMainBanner = evt.target.result;
+                    const prev = document.getElementById('banner-preview');
+                    if (prev) prev.src = customMainBanner;
+                };
                 reader.readAsDataURL(file);
             }
         }
 
         function saveGlobalBanner() {
-            localStorage.setItem('oleng_global_banner', customMainBanner);
+            const finalBanner = customMainBanner || getSyncedMainBanner();
+            customMainBanner = finalBanner;
+            db.mainBanner = finalBanner;
+            localStorage.setItem('oleng_global_banner', finalBanner);
+            saveDB();
             addAccountNotification('Banner Utama Diperbarui', 'Admin memperbarui banner utama OLENG GO.', 'ALL');
-            showToast('Perubahan berhasil disimpan: Banner utama diperbarui untuk semua user!', 'success');
+            showToast('Perubahan berhasil disimpan: Banner utama tersinkron & tersimpan!', 'success');
             renderDashboardContent('home');
         }
 
