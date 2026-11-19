@@ -359,6 +359,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
         // REGISTRASI SERVICE WORKER PWA
@@ -380,6 +381,14 @@
                 }, 2000);
             }
         });
+
+        // KONFIGURASI SUPABASE PROJECT OLENG GO
+        const SUPABASE_PROJECT_ID = 'yhyjofvdkmuudpqzucnw';
+        const SUPABASE_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co`;
+        const SUPABASE_PUBLISHABLE_KEY = `sb_publishable_${SUPABASE_PROJECT_ID}`;
+        const supabaseClient = (window.supabase && typeof window.supabase.createClient === 'function')
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
+            : null;
 
         let currentUser = null; 
         let currentSubTab = 'home';
@@ -511,10 +520,172 @@
             return synced;
         }
 
+        async function syncAllToSupabase() {
+            if (!supabaseClient) return;
+            try {
+                await supabaseClient.from('app_config').upsert({
+                    id: 1,
+                    main_banner: db.mainBanner || DEFAULT_MAIN_BANNER,
+                    min_fare: Number(db.pricing?.minFare || 8000),
+                    ojek_per_km: Number(db.pricing?.ojekPerKm || 2500),
+                    food_per_km: Number(db.pricing?.foodPerKm || 2000),
+                    commission_percent: Number(db.pricing?.commissionPercent || 10),
+                    admin_whatsapp: '6285624736602'
+                }, { onConflict: 'id' });
+
+                const accountRows = (db.users || []).map(u => ({
+                    account_id: String(u.accountId || '').toUpperCase(),
+                    name: u.name,
+                    phone: u.phone,
+                    role: u.role,
+                    status: u.status || 'Aktif',
+                    address: u.address || 'Kecamatan Lengkong, Sukabumi',
+                    password_hash: u.password || '123',
+                    photo_url: u.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=ID',
+                    balance: Number(u.balance || 0),
+                    ktp: u.ktp || null,
+                    plate: u.plate || null,
+                    bike_type: u.bikeType || null,
+                    owner_name: u.ownerName || null,
+                    shop_name: u.shopName || null
+                })).filter(r => r.account_id);
+
+                if (accountRows.length > 0) {
+                    await supabaseClient.from('accounts').upsert(accountRows, { onConflict: 'account_id' });
+                }
+
+                const merchantRows = (db.merchants || []).map(m => ({
+                    account_id: String(m.accountId || '').toUpperCase() || 'MRCH01',
+                    name: m.name,
+                    owner_name: m.ownerName || m.name,
+                    ktp: m.ktp || '3202000000000000',
+                    subtitle: m.subtitle || m.name,
+                    category: m.category || 'Kuliner',
+                    status: m.status || 'Buka',
+                    banner_url: m.banner || DEFAULT_MAIN_BANNER,
+                    image_url: m.image || 'https://placehold.co/150x150/0284c7/ffffff?text=TOKO',
+                    rating: Number(m.rating || 5.0),
+                    rating_count: Number(m.ratingCount || 0),
+                    lat: Number(m.lat || -7.1240),
+                    lng: Number(m.lng || 106.8460),
+                    address: m.address || 'Kecamatan Lengkong, Sukabumi',
+                    operational_hours: m.operationalHours || '08:00 - 21:00 WIB',
+                    whatsapp: m.whatsapp || '6285624736602',
+                    balance: Number(m.balance || 0)
+                }));
+
+                if (merchantRows.length > 0) {
+                    await supabaseClient.from('merchants').upsert(merchantRows, { onConflict: 'account_id' });
+                }
+
+                const driverRows = (db.drivers || []).map(d => ({
+                    account_id: String(d.accountId || '').toUpperCase() || 'DRIV01',
+                    name: d.name,
+                    ktp: d.ktp || '3202000000000000',
+                    plate: d.plate || 'F 0000 XX',
+                    bike_type: d.bikeType || 'Motor',
+                    vehicle: d.vehicle || 'Motor Mitra Lengkong',
+                    status: d.status || 'Online',
+                    location: d.location || 'Lengkong, Sukabumi',
+                    lat: Number(d.lat || -7.1235),
+                    lng: Number(d.lng || 106.8458),
+                    phone: d.phone || '6285624736602',
+                    rating: Number(d.rating || 5.0),
+                    rating_count: Number(d.ratingCount || 0),
+                    balance: Number(d.balance || 0)
+                }));
+
+                if (driverRows.length > 0) {
+                    await supabaseClient.from('drivers').upsert(driverRows, { onConflict: 'account_id' });
+                }
+
+                const orderRows = (db.orders || []).map(o => ({
+                    order_code: o.id,
+                    order_type: o.type || 'ojek',
+                    customer_name: o.customer,
+                    merchant_name: o.merchant,
+                    driver_name: o.driver,
+                    items_summary: o.items,
+                    pickup_label: o.pickup || 'Lengkong',
+                    dest_label: o.dest || 'Lengkong',
+                    total_amount: Number(o.total || 0),
+                    commission_amount: Number(o.commissionFee || 0),
+                    net_amount: Number(o.netEarnings || 0),
+                    status: o.status || 'Menunggu Driver',
+                    settled: Boolean(o.settled),
+                    rating: o.rating ? Number(o.rating) : null,
+                    review_text: o.reviewText || null
+                }));
+
+                if (orderRows.length > 0) {
+                    await supabaseClient.from('orders').upsert(orderRows, { onConflict: 'order_code' });
+                }
+            } catch (err) {
+                console.warn('Supabase sync info:', err?.message || err);
+            }
+        }
+
+        async function pullInitialFromSupabase() {
+            if (!supabaseClient) return;
+            try {
+                const { data: cfg } = await supabaseClient.from('app_config').select('*').eq('id', 1).maybeSingle();
+                if (cfg) {
+                    if (cfg.main_banner) {
+                        customMainBanner = cfg.main_banner;
+                        db.mainBanner = cfg.main_banner;
+                        localStorage.setItem('oleng_global_banner', cfg.main_banner);
+                    }
+                    db.pricing = {
+                        minFare: Number(cfg.min_fare ?? db.pricing.minFare ?? 8000),
+                        ojekPerKm: Number(cfg.ojek_per_km ?? db.pricing.ojekPerKm ?? 2500),
+                        foodPerKm: Number(cfg.food_per_km ?? db.pricing.foodPerKm ?? 2000),
+                        commissionPercent: Number(cfg.commission_percent ?? db.pricing.commissionPercent ?? 10)
+                    };
+                }
+
+                const { data: accRows } = await supabaseClient.from('accounts').select('*');
+                if (Array.isArray(accRows) && accRows.length > 0) {
+                    const mappedUsers = accRows.map((r, idx) => ({
+                        id: r.id || (idx + 1),
+                        accountId: String(r.account_id || '').toUpperCase(),
+                        name: r.name,
+                        phone: r.phone,
+                        role: r.role,
+                        status: r.status || 'Aktif',
+                        address: r.address || 'Kecamatan Lengkong, Sukabumi',
+                        password: r.password_hash || '123',
+                        photo: r.photo_url || 'https://placehold.co/150x150/0284c7/ffffff?text=ID',
+                        balance: r.role !== 'customer' ? Number(r.balance || 0) : undefined,
+                        ktp: r.ktp,
+                        plate: r.plate,
+                        bikeType: r.bike_type,
+                        ownerName: r.owner_name,
+                        shopName: r.shop_name
+                    }));
+                    db.users = mappedUsers;
+                    if (currentUser) {
+                        const refreshedSelf = mappedUsers.find(u => String(u.accountId).toUpperCase() === String(currentUser.accountId || '').toUpperCase());
+                        if (refreshedSelf) {
+                            currentUser = refreshedSelf;
+                            localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
+                        }
+                    }
+                }
+
+                localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                if (currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
+                    renderDashboardContent(currentSubTab);
+                }
+            } catch (err) {
+                console.warn('Supabase pull info:', err?.message || err);
+            }
+        }
+
         function saveDB() {
             db.mainBanner = customMainBanner || db.mainBanner || DEFAULT_MAIN_BANNER;
             localStorage.setItem('oleng_global_banner', db.mainBanner);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            syncAllToSupabase();
         }
 
         function recordWalletMutation({ ownerName, role, type, label, amount, commission = 0, netAmount = 0 }) {
@@ -611,6 +782,7 @@
                     localStorage.removeItem('oleng_user_session');
                 }
             }
+            pullInitialFromSupabase();
         });
 
         function switchAuthTab(tab) {
