@@ -451,7 +451,8 @@
         let isSyncingNow = false;
         let realtimeChannel = null;
         let activeIncomingChatId = null;
-        let mapLayerMode = localStorage.getItem('oleng_map_layer_mode') || 'street'; // 'street' | 'satellite'
+        let hasPendingMediaSelection = false;
+        let mapLayerMode = localStorage.getItem('oleng_map_layer_mode') || 'street';
         let readChatIds = JSON.parse(localStorage.getItem('oleng_read_chat_ids') || '[]');
         let readNotifIds = JSON.parse(localStorage.getItem('oleng_read_notif_ids') || '[]');
         let shownPopupChatIds = JSON.parse(localStorage.getItem('oleng_shown_popup_chats') || '[]');
@@ -461,6 +462,14 @@
             label: 'Supabase: Mengecek...',
             detail: SUPABASE_REST_ENDPOINT
         };
+
+        function isUserCurrentlyTypingOrEditing() {
+            if (hasPendingMediaSelection) return true;
+            const active = document.activeElement;
+            if (!active) return false;
+            const tag = (active.tagName || '').toUpperCase();
+            return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || active.isContentEditable;
+        }
 
         function notifyBackgroundOnce(key, title, body) {
             const k = String(key);
@@ -586,7 +595,7 @@
                 realtimeChannel = supabaseClient
                     .channel('oleng-go-realtime-sync')
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, (payload) => {
-                        pullInitialFromSupabase(true).then(() => {
+                        pullInitialFromSupabase(false).then(() => {
                             if (payload?.eventType === 'INSERT' && payload?.new) {
                                 const row = payload.new;
                                 const chatObj = {
@@ -605,7 +614,7 @@
                         });
                     })
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-                        pullInitialFromSupabase(true).then(() => {
+                        pullInitialFromSupabase(false).then(() => {
                             if (payload?.eventType === 'INSERT' && payload?.new) {
                                 const r = payload.new;
                                 const ordObj = {
@@ -631,24 +640,20 @@
                             const deletedCode = String(payload.old.account_id).toUpperCase();
                             db.users = (db.users || []).filter(u => String(u.accountId || '').toUpperCase() !== deletedCode);
                             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-                            if (currentUser && String(currentUser.accountId || '').toUpperCase() === deletedCode) {
-                                handleLogout();
-                                return;
-                            }
                         }
-                        pullInitialFromSupabase(true);
+                        pullInitialFromSupabase(false);
                     })
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'merchants' }, () => {
-                        pullInitialFromSupabase(true);
+                        pullInitialFromSupabase(false);
                     })
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => {
-                        pullInitialFromSupabase(true);
+                        pullInitialFromSupabase(false);
                     })
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'foods' }, () => {
-                        pullInitialFromSupabase(true);
+                        pullInitialFromSupabase(false);
                     })
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, () => {
-                        pullInitialFromSupabase(true);
+                        pullInitialFromSupabase(false);
                     })
                     .subscribe();
             } catch (err) {
@@ -1179,7 +1184,7 @@
                 const prevChatIds = new Set((db.chats || []).map(c => String(c.id)));
                 const prevOrderIds = new Set((db.orders || []).map(o => String(o.id)));
 
-                // 1. Tarik app_config & state_json (termasuk banner permanen & tarif admin)
+                // 1. Tarik app_config & state_json
                 const { data: cfg } = await supabaseClient.from('app_config').select('*').eq('id', 1).maybeSingle();
                 if (cfg) {
                     if (cfg.main_banner && cfg.main_banner !== db.mainBanner) {
@@ -1221,7 +1226,7 @@
                     }
                 }
 
-                // 2. Tarik semua akun (accounts) & hormati penghapusan akun oleh Admin
+                // 2. Tarik semua akun (accounts) tanpa menimpa input aktif atau memaksa logout saat reload
                 const { data: accRows } = await supabaseClient.from('accounts').select('*');
                 if (Array.isArray(accRows) && accRows.length > 0) {
                     const remoteAccountCodes = new Set(accRows.map(r => String(r.account_id || '').toUpperCase()).filter(Boolean));
@@ -1232,26 +1237,28 @@
                         const resolvedPass = (r.password_hash && String(r.password_hash).trim())
                             ? String(r.password_hash).trim()
                             : (localMatch?.password || '123');
+                        const resolvedPhoto = (r.photo_url && String(r.photo_url).trim())
+                            ? String(r.photo_url).trim()
+                            : (localMatch?.photo || 'https://placehold.co/150x150/0284c7/ffffff?text=ID');
                         return {
                             id: r.id || (idx + 1),
                             accountId: accUpper,
-                            name: r.name,
-                            phone: r.phone,
-                            role: r.role,
+                            name: r.name || localMatch?.name || 'Pengguna',
+                            phone: r.phone || localMatch?.phone || '',
+                            role: r.role || localMatch?.role || 'customer',
                             status: r.status || 'Aktif',
-                            address: r.address || 'Kecamatan Lengkong, Sukabumi',
+                            address: r.address || localMatch?.address || 'Kecamatan Lengkong, Sukabumi',
                             password: resolvedPass,
-                            photo: r.photo_url || 'https://placehold.co/150x150/0284c7/ffffff?text=ID',
-                            balance: r.role !== 'customer' ? Number(r.balance || 0) : undefined,
-                            ktp: r.ktp,
-                            plate: r.plate,
-                            bikeType: r.bike_type,
-                            ownerName: r.owner_name,
-                            shopName: r.shop_name
+                            photo: resolvedPhoto,
+                            balance: r.role !== 'customer' ? Number(r.balance ?? localMatch?.balance ?? 0) : undefined,
+                            ktp: r.ktp || localMatch?.ktp || null,
+                            plate: r.plate || localMatch?.plate || null,
+                            bikeType: r.bike_type || localMatch?.bikeType || null,
+                            ownerName: r.owner_name || localMatch?.ownerName || null,
+                            shopName: r.shop_name || localMatch?.shopName || null
                         };
                     });
 
-                    // Pertahankan akun lokal yang belum ter-push atau akun yang ada di remote, buang yang sudah dihapus Admin dari remote
                     const keptLocalOnly = localUsersBackup.filter(lu => {
                         const code = String(lu.accountId || '').toUpperCase();
                         return code && !remoteAccountCodes.has(code) && lu._pendingLocal === true;
@@ -1265,13 +1272,14 @@
 
                     if (currentUser) {
                         const myCode = String(currentUser.accountId || '').toUpperCase();
-                        if (myCode && myCode !== 'ADM01' && !remoteAccountCodes.has(myCode) && currentUser._pendingLocal !== true) {
-                            handleLogout();
-                            return;
-                        }
                         const refreshedSelf = mergedUsers.find(u => String(u.accountId).toUpperCase() === myCode);
                         if (refreshedSelf) {
-                            currentUser = { ...refreshedSelf };
+                            currentUser = {
+                                ...refreshedSelf,
+                                photo: (currentUser.photo && String(currentUser.photo).startsWith('data:image') && !String(refreshedSelf.photo || '').startsWith('data:image'))
+                                    ? currentUser.photo
+                                    : refreshedSelf.photo
+                            };
                             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
                         }
                     }
@@ -1321,7 +1329,7 @@
                         lng: Number(r.lng || 106.8458),
                         phone: r.phone || ADMIN_MAIN_WA,
                         rating: Number(r.rating || 5.0),
-                        ratingCount: Number(r.rating_count || 0),
+                        ratingCount: Number(r.ratingCount || 0),
                         balance: Number(r.balance || 0)
                     }));
                     db.drivers = mergeByKey(db.drivers, mappedDrivers, d => String(d.accountId || d.name).toUpperCase());
@@ -1402,6 +1410,10 @@
                 }
 
                 updateHomeHeaderBadgesOnly();
+
+                if (isUserCurrentlyTypingOrEditing()) {
+                    return;
+                }
 
                 const chatViewVisible = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden');
                 if (chatViewVisible) {
@@ -1487,7 +1499,7 @@
             if (chatAlarmState) chatAlarmState.textContent = alarmEnabled ? 'ON' : 'OFF';
             if (alarmEnabled) playAlarmRingtone();
             showToast(`Berhasil! Alarm notifikasi ${alarmEnabled ? 'DINYALAKAN (ON)' : 'DIMATIKAN (OFF)'}.`, 'success');
-            if (currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
+            if (!isUserCurrentlyTypingOrEditing() && currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
                 renderDashboardContent(currentSubTab);
             }
         }
@@ -1536,8 +1548,10 @@
             await syncAllToSupabase();
 
             setInterval(() => {
-                pullInitialFromSupabase(false);
-            }, 4000);
+                if (!isUserCurrentlyTypingOrEditing()) {
+                    pullInitialFromSupabase(false);
+                }
+            }, 6000);
         });
 
         function switchAuthTab(tab) {
@@ -1675,7 +1689,7 @@
             currentSubTab = role === 'admin' ? 'admin-dash' : role === 'merchant' ? 'merchant-manage' : role === 'driver' ? 'driver-orders' : 'home';
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             localStorage.setItem('oleng_last_tab', currentSubTab);
-            addAccountNotification('Login Berhasil', `Akun ID ${currentUser.accountId} (${currentUser.name}) aktif.`, currentUser.name);
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
             showToast(`Berhasil masuk dengan ID ${currentUser.accountId} (${role.toUpperCase()})!`, 'success');
             enterDashboard(true);
         }
@@ -1761,7 +1775,7 @@
                 ...merchantData
             };
 
-            db.users.push(newUser);
+            db.users.unshift(newUser);
 
             if (role === 'merchant') {
                 db.merchants.push({
@@ -1806,13 +1820,16 @@
                 recordWalletMutation({ ownerName: name, role: 'driver', type: 'TOPUP', label: 'Saldo Awal Mitra Ojek', amount: 50000, commission: 0, netAmount: 50000 });
             }
 
-            currentUser = newUser;
+            // Langsung login ke akun baru dengan sandi yang disimpan
+            currentUser = { ...newUser };
+            adminViewMode = role === 'admin' ? 'admin' : null;
+            currentSubTab = role === 'admin' ? 'admin-dash' : role === 'merchant' ? 'merchant-manage' : role === 'driver' ? 'driver-orders' : 'home';
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
+            localStorage.setItem('oleng_last_tab', currentSubTab);
             await syncAllToSupabase();
-            addAccountNotification('Pendaftaran Tersimpan', `Akun ID ${accountId} (${name}) berhasil didaftarkan & tersinkron.`, name);
-            showToast(`Berhasil! Akun ID ${accountId} terdaftar & tersinkron ke semua perangkat.`, 'success');
-            enterDashboard(false);
+            showToast(`Berhasil! Akun ${accountId} terdaftar & langsung masuk dengan sandi Anda.`, 'success');
+            enterDashboard(true);
         }
 
         function openForgotPasswordModal() {
@@ -2898,6 +2915,7 @@
         function previewGalleryImage(e, previewId, type) {
             const file = e.target.files[0];
             if(file) {
+                hasPendingMediaSelection = true;
                 const reader = new FileReader();
                 reader.onload = function(evt) {
                     if(type === 'photo') tempStorePhoto = evt.target.result;
@@ -2907,7 +2925,7 @@
                     
                     const imgEl = document.getElementById(previewId);
                     if(imgEl) { imgEl.src = evt.target.result; imgEl.classList.remove('hidden'); }
-                    showToast('Berhasil memuat gambar! Klik Simpan untuk menyimpan.', 'success');
+                    showToast('File dipilih! Tekan tombol Simpan agar tersimpan permanen.', 'success');
                 };
                 reader.readAsDataURL(file);
             }
@@ -2921,7 +2939,10 @@
                 m.operationalHours = document.getElementById('edit-m-hours').value;
                 if(tempStorePhoto) m.image = tempStorePhoto;
                 if(tempStoreBanner) m.banner = tempStoreBanner;
-                saveDB('Profil & foto toko berhasil disimpan & tersinkron!');
+                tempStorePhoto = null;
+                tempStoreBanner = null;
+                hasPendingMediaSelection = false;
+                saveDB('Profil & foto toko berhasil disimpan permanen!');
                 addAccountNotification('Pengaturan Toko Disimpan', `Perubahan data & galeri ${m.name} tersimpan.`, currentUser.name);
                 renderMerchantManage(document.getElementById('main-content'));
             }
@@ -2929,12 +2950,13 @@
 
         function openMerchantAddMenuModal(merchantId) {
             tempNewFoodPhoto = null;
+            hasPendingMediaSelection = true;
             const modalHTML = `
                 <div id="modal-new-food" class="absolute inset-0 bg-black/60 z-50 flex flex-col justify-end">
                     <div class="bg-white rounded-t-3xl p-6 space-y-3 shadow-2xl border-t-4 border-yellow-400">
                         <div class="flex justify-between items-center border-b pb-2">
                             <h3 class="font-extrabold text-sm text-sky-900">Tambah Menu Makanan Baru</h3>
-                            <button onclick="document.getElementById('modal-new-food').remove()" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
+                            <button onclick="hasPendingMediaSelection=false;document.getElementById('modal-new-food').remove()" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
                         </div>
                         <input type="text" id="add-f-name" placeholder="Nama Makanan / Minuman" class="w-full p-2.5 border rounded-2xl text-xs font-bold">
                         <input type="number" id="add-f-price" placeholder="Harga (Rp)" class="w-full p-2.5 border rounded-2xl text-xs font-bold">
@@ -2966,15 +2988,17 @@
                 stock: 20,
                 image: tempNewFoodPhoto || ('https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name))
             });
+            tempNewFoodPhoto = null;
+            hasPendingMediaSelection = false;
             document.getElementById('modal-new-food')?.remove();
-            saveDB(`Menu baru "${name}" berhasil disimpan & tersinkron!`);
+            saveDB(`Menu baru "${name}" berhasil disimpan permanen!`);
             addAccountNotification('Menu Baru Ditambahkan', `Menu ${name} (Rp ${price.toLocaleString()}) ditambahkan.`, currentUser.name);
             renderMerchantManage(document.getElementById('main-content'));
         }
 
         function deleteMenuFood(foodId) {
             db.foods = db.foods.filter(f => f.id !== foodId);
-            saveDB('Menu berhasil dihapus & perubahan tersinkron!');
+            saveDB('Menu berhasil dihapus & perubahan tersimpan permanen!');
             renderMerchantManage(document.getElementById('main-content'));
         }
 
@@ -2997,6 +3021,7 @@
 
         function renderProfile(container) {
             tempUserProfilePhoto = null;
+            hasPendingMediaSelection = false;
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             const balanceVal = getProfileSyncedBalance();
 
@@ -3053,7 +3078,7 @@
             `;
         }
 
-        function saveFullAccountChanges() {
+        async function saveFullAccountChanges() {
             const newId = (document.getElementById('acc-id')?.value || '').trim().toUpperCase();
             if (!/^[A-Z0-9]{3,20}$/.test(newId)) {
                 showToast('ID akun wajib berisi huruf dan angka (3-20 karakter)!', 'error');
@@ -3066,19 +3091,39 @@
             }
 
             currentUser.accountId = newId;
-            currentUser.name = document.getElementById('acc-name').value;
-            currentUser.phone = document.getElementById('acc-phone').value;
-            currentUser.address = document.getElementById('acc-address').value;
+            currentUser.name = document.getElementById('acc-name').value.trim();
+            currentUser.phone = document.getElementById('acc-phone').value.trim();
+            currentUser.address = document.getElementById('acc-address').value.trim();
             const newPass = document.getElementById('acc-pass').value.trim();
             if(newPass) currentUser.password = newPass;
-            if(tempUserProfilePhoto) currentUser.photo = tempUserProfilePhoto;
+            if(tempUserProfilePhoto) {
+                currentUser.photo = tempUserProfilePhoto;
+            }
+            tempUserProfilePhoto = null;
+            hasPendingMediaSelection = false;
 
             const userIdx = db.users.findIndex(u => u.id === currentUser.id);
             if(userIdx !== -1) db.users[userIdx] = { ...currentUser };
 
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            saveDB('Informasi akun berhasil disimpan & tersinkron!');
-            addAccountNotification('Profil Disimpan', `Informasi akun ${currentUser.name} (ID: ${currentUser.accountId}) berhasil disimpan.`, currentUser.name);
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+
+            if (supabaseClient) {
+                await supabaseClient.from('accounts').upsert({
+                    account_id: String(currentUser.accountId).toUpperCase(),
+                    name: currentUser.name,
+                    phone: currentUser.phone,
+                    role: currentUser.role,
+                    status: currentUser.status || 'Aktif',
+                    address: currentUser.address || 'Kecamatan Lengkong, Sukabumi',
+                    password_hash: currentUser.password || '123',
+                    photo_url: currentUser.photo,
+                    balance: Number(currentUser.balance || 0)
+                }, { onConflict: 'account_id' });
+            }
+
+            await syncAllToSupabase();
+            showToast('Berhasil! Informasi & foto profil tersimpan permanen.', 'success');
             renderProfile(document.getElementById('main-content'));
         }
 
@@ -3209,7 +3254,7 @@
                                         ${u.plate ? `<p class="text-[10px] text-slate-600 font-semibold">Motor: ${u.bikeType || ''} (${u.plate}) • KTP: ${u.ktp || '-'}</p>` : ''}
                                         ${u.ownerName ? `<p class="text-[10px] text-slate-600 font-semibold">Pemilik: ${u.ownerName} • KTP: ${u.ktp || '-'}</p>` : ''}
                                     </div>
-                                    <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-extrabold">${u.status}</span>
+                                    <button onclick="adminToggleUserStatus(${u.id})" class="text-[10px] px-2.5 py-0.5 rounded font-extrabold cursor-pointer ${u.status === 'Aktif' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${u.status || 'Aktif'}</button>
                                 </div>
                                 <div class="flex gap-2 pt-2 border-t border-slate-100 flex-wrap">
                                     ${u.role !== 'customer' ? `<button onclick="adminAddBalance(${u.id})" class="px-2.5 py-1 bg-yellow-400 text-slate-950 rounded-xl text-[10px] font-bold cursor-pointer">+ Tambah Saldo</button>` : ''}
@@ -3223,7 +3268,20 @@
             `;
         }
 
-        function adminCreateAccountId() {
+        async function adminToggleUserStatus(userId) {
+            const u = db.users.find(x => x.id === userId);
+            if (!u) return;
+            u.status = u.status === 'Aktif' ? 'Nonaktif' : 'Aktif';
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            if (supabaseClient && u.accountId) {
+                await supabaseClient.from('accounts').update({ status: u.status }).eq('account_id', String(u.accountId).toUpperCase());
+            }
+            await syncAllToSupabase();
+            showToast(`Berhasil! Status ${u.name} (${u.accountId}) diubah ke ${u.status}.`, 'success');
+            renderAdminUsers(document.getElementById('main-content'));
+        }
+
+        async function adminCreateAccountId() {
             const code = (document.getElementById('new-id-code')?.value || '').trim().toUpperCase();
             const role = document.getElementById('new-id-role')?.value || 'customer';
             const name = (document.getElementById('new-id-name')?.value || '').trim();
@@ -3294,11 +3352,13 @@
                 });
             }
 
-            saveDB(`ID "${code}" berhasil ditambahkan & tersinkron!`);
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            await syncAllToSupabase();
+            showToast(`Berhasil! ID "${code}" tersimpan permanen online!`, 'success');
             renderAdminUsers(document.getElementById('main-content'));
         }
 
-        function adminAddBalance(userId) {
+        async function adminAddBalance(userId) {
             const u = db.users.find(x => x.id === userId);
             if (!u || u.role === 'customer') return showToast('Saldo hanya berlaku untuk Mitra Toko & Driver!', 'error');
             const nominal = parseInt(prompt(`Masukkan nominal penambahan saldo untuk ${u.name} (ID: ${u.accountId || '-'}):`, '50000'));
@@ -3321,17 +3381,23 @@
                     commission: 0,
                     netAmount: nominal
                 });
-                saveDB(`Saldo ${targetLabel} ditambah Rp ${nominal.toLocaleString()} & tersinkron!`);
-                addAccountNotification('Saldo Ditambah Admin', `Saldo ${targetLabel} ditambah Rp ${nominal.toLocaleString()}.`, targetLabel);
+                localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                await syncAllToSupabase();
+                showToast(`Berhasil! Saldo ${targetLabel} ditambah Rp ${nominal.toLocaleString()} & tersimpan online!`, 'success');
                 renderAdminUsers(document.getElementById('main-content'));
             }
         }
 
-        function adminResetPassword(userId) {
+        async function adminResetPassword(userId) {
             const u = db.users.find(x => x.id === userId);
+            if (!u) return;
             u.password = '123';
-            saveDB(`Password ${u.name} direset menjadi '123' & tersinkron!`);
-            addAccountNotification('Reset Password Admin', `Password ${u.name} (ID: ${u.accountId || '-'}) direset menjadi '123'.`, u.name);
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            if (supabaseClient && u.accountId) {
+                await supabaseClient.from('accounts').update({ password_hash: '123' }).eq('account_id', String(u.accountId).toUpperCase());
+            }
+            await syncAllToSupabase();
+            showToast(`Berhasil! Password ${u.name} direset ke '123' & tersimpan online!`, 'success');
         }
 
         async function adminDeleteUser(userId) {
@@ -3355,8 +3421,7 @@
                     await supabaseClient.from('drivers').delete().eq('account_id', codeUpper);
                 }
 
-                await syncAllToSupabase();
-                showToast(`Berhasil! Akun ${target.name} (${codeUpper}) dihapus online real-time.`, 'success');
+                showToast(`Berhasil! Akun ${target.name} (${codeUpper}) dihapus permanen secara online.`, 'success');
                 renderAdminUsers(document.getElementById('main-content'));
             }
         }
@@ -3430,12 +3495,13 @@
         function previewNewBanner(e) {
             const file = e.target.files[0];
             if(file) {
+                hasPendingMediaSelection = true;
                 const reader = new FileReader();
                 reader.onload = function(evt) {
                     customMainBanner = evt.target.result;
                     const prev = document.getElementById('banner-preview');
                     if (prev) prev.src = customMainBanner;
-                    showToast('Berhasil memuat gambar banner! Klik Simpan Permanen untuk menerapkan.', 'success');
+                    showToast('File banner dipilih! Klik Simpan Permanen untuk menerapkan.', 'success');
                 };
                 reader.readAsDataURL(file);
             }
@@ -3445,6 +3511,7 @@
             const finalBanner = customMainBanner || getSyncedMainBanner();
             customMainBanner = finalBanner;
             db.mainBanner = finalBanner;
+            hasPendingMediaSelection = false;
             localStorage.setItem('oleng_global_banner', finalBanner);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
             if (supabaseClient) {
