@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OLENG GO (Powered by SIMADU) - Lengkong Sukabumi</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -58,7 +57,6 @@
                         <button onclick="switchAuthTab('register')" id="tab-register-btn" class="flex-1 font-semibold text-center text-slate-400 pb-1 text-sm cursor-pointer">Daftar / Reset</button>
                     </div>
 
-                    <!-- Form Login -->
                     <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3">
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">No. WhatsApp / Nama</label>
@@ -83,7 +81,6 @@
                         </div>
                     </form>
 
-                    <!-- Form Register / Pendaftaran Ulang -->
                     <form id="form-register" onsubmit="handleRegister(event)" class="space-y-3 hidden">
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">Nama Lengkap</label>
@@ -210,7 +207,7 @@
         <div id="modal-notif" class="absolute inset-0 bg-black/60 z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-6 max-h-[75vh] overflow-y-auto space-y-4 border-t-4 border-yellow-400">
                 <div class="flex justify-between items-center border-b pb-3">
-                    <h3 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-bell text-yellow-500 mr-2"></i>Notifikasi & Riwayat Pesanan</h3>
+                    <h3 class="font-extrabold text-base text-slate-900"><i class="fa-solid fa-bell text-yellow-500 mr-2"></i>Notifikasi Akun Anda</h3>
                     <button onclick="closeNotificationModal()" class="text-slate-400 text-xl font-bold cursor-pointer">&times;</button>
                 </div>
                 <div id="notification-list" class="space-y-3"></div>
@@ -235,7 +232,6 @@
 
     </div>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
@@ -245,6 +241,7 @@
         let activeChatTarget = 'Admin SIMADU';
         let selectedDriverId = 1;
         let searchQuery = '';
+        let alarmEnabled = localStorage.getItem('oleng_alarm_enabled') !== 'false';
         
         let mapInstance = null;
         let checkoutMapInstance = null;
@@ -309,7 +306,8 @@
                 { id: 'ORD-9853', type: 'food', customer: 'Budi Santoso', merchant: 'MADU TOKO', driver: 'Asep Supriatna', total: 55000, status: 'Sedang Diproses', items: 'Paket Nasi Liwet Lengkap Komplit (2x)', pickup: 'MADU TOKO', dest: 'Kp. Lengkong RT 02/01' }
             ],
             notifications: [
-                { id: 1, title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Aplikasi ojek & kuliner warga Lengkong Sukabumi siap digunakan.' }
+                { id: 1, targetUser: 'ALL', title: 'Selamat Datang di OLENG GO!', time: 'Hari ini', desc: 'Aplikasi ojek & kuliner warga Lengkong Sukabumi siap digunakan.' },
+                { id: 2, targetUser: 'Budi Santoso', title: 'Info Pesanan Budi', time: 'Hari ini', desc: 'Pesanan Anda sedang dipantau sistem OLENG GO.' }
             ],
             chats: [
                 { id: 1, from: 'Budi Santoso', to: 'Admin SIMADU', text: 'Halo Admin, aplikasi berjalan lancar.', time: '08:00' }
@@ -321,22 +319,46 @@
         let db = JSON.parse(localStorage.getItem('oleng_go_db')) || defaultDB;
         function saveDB() { localStorage.setItem('oleng_go_db', JSON.stringify(db)); }
 
-        // Audio Beep Notification Sound
-        function playPopupBeepSound() {
+        function addAccountNotification(title, desc, targetUser = null) {
+            const owner = targetUser || (currentUser ? currentUser.name : 'ALL');
+            db.notifications.unshift({
+                id: Date.now(),
+                targetUser: owner,
+                title: title,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                desc: desc
+            });
+            saveDB();
+            playAlarmRingtone();
+        }
+
+        function playAlarmRingtone() {
+            if (!alarmEnabled) return;
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, ctx.currentTime); // nada tinggi
-                gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.25);
-            } catch (e) {
-                console.log('Audio Context dibatasi browser.');
-            }
+                const notes = [880, 1174.66, 880];
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    const start = ctx.currentTime + i * 0.16;
+                    osc.frequency.setValueAtTime(freq, start);
+                    gain.gain.setValueAtTime(0.14, start);
+                    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.15);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(start);
+                    osc.stop(start + 0.15);
+                });
+            } catch (e) {}
+        }
+
+        function toggleNotificationAlarm() {
+            alarmEnabled = !alarmEnabled;
+            localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled));
+            if (alarmEnabled) playAlarmRingtone();
+            showToast(`Alarm notifikasi ${alarmEnabled ? 'DINYALAKAN (ON)' : 'DIMATIKAN (OFF)'}`, 'success');
+            renderDashboardContent(currentSubTab);
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -361,8 +383,14 @@
         document.addEventListener("DOMContentLoaded", function() {
             const savedSession = localStorage.getItem('oleng_user_session');
             if (savedSession) {
-                try { currentUser = JSON.parse(savedSession); enterDashboard(); } 
-                catch (e) { localStorage.removeItem('oleng_user_session'); }
+                try {
+                    currentUser = JSON.parse(savedSession);
+                    adminViewMode = localStorage.getItem('oleng_admin_view_mode') || null;
+                    currentSubTab = localStorage.getItem('oleng_last_tab') || 'home';
+                    enterDashboard(true);
+                } catch (e) {
+                    localStorage.removeItem('oleng_user_session');
+                }
             }
         });
 
@@ -377,7 +405,6 @@
             const password = document.getElementById('login-password').value;
             const role = document.getElementById('login-role').value;
 
-            // KEBIJAKAN ADMIN EKSKLUSIF NO 085624736602
             if(role === 'admin' && identifier !== '085624736602') {
                 showToast('AKSES DITOLAK: Admin Master wajib menggunakan nomor 085624736602!', 'error');
                 return;
@@ -394,11 +421,14 @@
                 return;
             }
 
-            currentUser = foundUser; adminViewMode = null;
+            currentUser = foundUser;
+            adminViewMode = role === 'admin' ? 'admin' : null;
+            currentSubTab = role === 'admin' ? 'admin-dash' : role === 'merchant' ? 'merchant-manage' : role === 'driver' ? 'driver-orders' : 'home';
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            playPopupBeepSound();
+            localStorage.setItem('oleng_last_tab', currentSubTab);
+            addAccountNotification('Login Berhasil', `Akun ${currentUser.name} (${role.toUpperCase()}) aktif.`, currentUser.name);
             showToast(`Berhasil masuk sebagai ${role.toUpperCase()}`, 'success');
-            enterDashboard();
+            enterDashboard(true);
         }
 
         function handleRegister(e) {
@@ -423,14 +453,16 @@
                 db.users.push(newUser);
                 if(role === 'merchant') {
                     db.merchants.push({ id: Date.now(), name: name, subtitle: 'Mitra UMKM Lengkong', category: 'Kuliner', status: 'Buka', banner: 'https://placehold.co/600x300/0284c7/facc15?text='+encodeURIComponent(name), image: newUser.photo, rating: 5.0, lat: -7.1245, lng: 106.8465, address: 'Kecamatan Lengkong, Sukabumi', operationalHours: '08:00 - 21:00 WIB', whatsapp: phone, balance: 50000 });
+                } else if(role === 'driver') {
+                    db.drivers.push({ id: Date.now(), name: name, status: 'Online', vehicle: 'Motor Mitra Lengkong', rating: 5.0, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: phone, balance: 50000 });
                 }
                 currentUser = newUser;
             }
             saveDB();
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-            playPopupBeepSound();
-            showToast('Pendaftaran / Pendaftaran Ulang berhasil!', 'success');
-            enterDashboard();
+            addAccountNotification('Pendaftaran Tersimpan', `Akun ${currentUser.name} berhasil disimpan.`, currentUser.name);
+            showToast('Perubahan berhasil disimpan: Pendaftaran / Pendaftaran Ulang berhasil!', 'success');
+            enterDashboard(false);
         }
 
         function openForgotPasswordModal() {
@@ -447,43 +479,56 @@
             user.password = '123';
             saveDB();
             document.getElementById('modal-forgot').classList.add('hidden');
-            playPopupBeepSound();
-            showToast(`Kata sandi untuk ${user.name} berhasil direset menjadi '123'`, 'success');
+            addAccountNotification('Reset Password', `Password akun ${user.name} direset ke '123'.`, user.name);
+            showToast(`Perubahan berhasil disimpan: Kata sandi untuk ${user.name} direset menjadi '123'`, 'success');
         }
 
         function handleLogout() {
-            currentUser = null; adminViewMode = null; localStorage.removeItem('oleng_user_session');
+            currentUser = null; adminViewMode = null;
+            localStorage.removeItem('oleng_user_session');
+            localStorage.removeItem('oleng_last_tab');
+            localStorage.removeItem('oleng_admin_view_mode');
             document.getElementById('view-auth').classList.remove('hidden');
             document.getElementById('view-dashboard').classList.add('hidden');
             showToast('Anda telah keluar dari akun.', 'info');
         }
 
-        function enterDashboard() {
+        function enterDashboard(preserveSavedTab = false) {
             document.getElementById('view-auth').classList.add('hidden');
             document.getElementById('view-dashboard').classList.remove('hidden');
             const switcherBar = document.getElementById('admin-switcher-bar');
-            if(currentUser.role === 'admin') { switcherBar.classList.remove('hidden'); adminViewMode = 'admin'; } 
-            else { switcherBar.classList.add('hidden'); adminViewMode = null; }
-            updateDashboardShell();
+            if(currentUser.role === 'admin') {
+                switcherBar.classList.remove('hidden');
+                if (!preserveSavedTab || !adminViewMode) adminViewMode = 'admin';
+                localStorage.setItem('oleng_admin_view_mode', adminViewMode);
+            } else {
+                switcherBar.classList.add('hidden');
+                adminViewMode = null;
+            }
+            updateDashboardShell(preserveSavedTab);
         }
 
-        function updateDashboardShell() {
+        function updateDashboardShell(preserveSavedTab = false) {
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             renderDashboardNavigation(activeRole);
-            let def = 'home';
-            if(activeRole === 'merchant') def = 'merchant-manage';
-            else if(activeRole === 'admin') def = 'admin-dash';
-            else if(activeRole === 'driver') def = 'driver-orders';
-            renderDashboardContent(def);
+            let targetTab = currentSubTab;
+            if (!preserveSavedTab || !targetTab) {
+                targetTab = 'home';
+                if(activeRole === 'merchant') targetTab = 'merchant-manage';
+                else if(activeRole === 'admin') targetTab = 'admin-dash';
+                else if(activeRole === 'driver') targetTab = 'driver-orders';
+            }
+            renderDashboardContent(targetTab);
         }
 
         function adminSwitchViewMode(mode) {
             adminViewMode = mode;
+            localStorage.setItem('oleng_admin_view_mode', mode);
             ['customer', 'driver', 'merchant', 'admin'].forEach(m => {
                 const btn = document.getElementById(`mode-btn-${m}`);
                 if(btn) btn.className = m === mode ? "px-2.5 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-extrabold cursor-pointer" : "px-2.5 py-1 bg-slate-800 hover:bg-sky-600 text-slate-300 rounded-lg text-[10px] font-extrabold cursor-pointer";
             });
-            updateDashboardShell();
+            updateDashboardShell(false);
         }
 
         function renderDashboardNavigation(activeRole) {
@@ -499,15 +544,15 @@
             } else if(activeRole === 'merchant') {
                 nav.innerHTML = `
                     <button onclick="renderDashboardContent('merchant-manage')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1">Kelola Toko</span></button>
-                    <button onclick="renderDashboardContent('merchant-orders')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-receipt text-base"></i><span class="text-[9px] mt-1">Pesanan</span></button>
+                    <button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-receipt text-base"></i><span class="text-[9px] mt-1">Riwayat</span></button>
                     <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-yellow-400"><i class="fa-solid fa-house text-lg"></i></div></button>
-                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1">Akun</span></button>
+                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1">Profil</span></button>
                 `;
             } else if(activeRole === 'driver') {
                 nav.innerHTML = `
-                    <button onclick="renderDashboardContent('driver-orders')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-list-check text-base"></i><span class="text-[9px] mt-1">Orderan</span></button>
+                    <button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-3 text-sky-600 font-bold cursor-pointer"><i class="fa-solid fa-list-check text-base"></i><span class="text-[9px] mt-1">Riwayat</span></button>
                     <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-yellow-400"><i class="fa-solid fa-house text-lg"></i></div></button>
-                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1">Akun</span></button>
+                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-slate-400 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1">Profil</span></button>
                 `;
             } else {
                 nav.innerHTML = `
@@ -515,7 +560,7 @@
                     <button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-clock-rotate-left text-base"></i><span class="text-[9px] mt-1 font-bold">Riwayat</span></button>
                     <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-2 text-white cursor-pointer"><div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-5 border-4 border-yellow-400"><i class="fa-solid fa-house text-lg"></i></div></button>
                     <button onclick="renderDashboardContent('ojek')" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-motorcycle text-base"></i><span class="text-[9px] mt-1 font-bold">Ojek</span></button>
-                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1 font-bold">Akun</span></button>
+                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-2 text-slate-500 hover:text-sky-600 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1 font-bold">Profil</span></button>
                 `;
             }
         }
@@ -526,6 +571,7 @@
             if (checkoutMapInstance) { checkoutMapInstance.remove(); checkoutMapInstance = null; }
 
             currentSubTab = tab;
+            localStorage.setItem('oleng_last_tab', tab);
             document.getElementById('view-merchant-detail').classList.add('hidden');
             const container = document.getElementById('main-content');
 
@@ -535,23 +581,34 @@
             else if(tab === 'history') renderOrderHistory(container);
             else if(tab === 'profile') renderProfile(container);
             else if(tab === 'merchant-manage') renderMerchantManage(container);
-            else if(tab === 'merchant-orders') renderMerchantOrders(container);
-            else if(tab === 'driver-orders') renderDriverOrders(container);
+            else if(tab === 'merchant-orders') renderOrderHistory(container);
+            else if(tab === 'driver-orders') renderOrderHistory(container);
             else if(tab === 'admin-dash') renderAdminDash(container);
             else if(tab === 'admin-users') renderAdminUsers(container);
             else if(tab === 'admin-stores') renderAdminStores(container);
             else if(tab === 'admin-drivers') renderAdminDrivers(container);
-            else if(tab === 'admin-orders') renderAdminOrders(container);
+            else if(tab === 'admin-orders') renderOrderHistory(container);
             else if(tab === 'admin-banner') renderAdminBanner(container);
             else renderCustomerHome(container);
         }
 
-        // ================= BERANDA UTAMA =================
+        function getAccountNotifs() {
+            return db.notifications.filter(n => n.targetUser === 'ALL' || n.targetUser === currentUser.name);
+        }
+
+        function getAccountOrders() {
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            if (role === 'admin') return db.orders;
+            if (role === 'driver') return db.orders.filter(o => o.driver === currentUser.name || o.status === 'Menunggu Driver');
+            if (role === 'merchant') return db.orders.filter(o => o.merchant === currentUser.name || o.merchant === currentUser.shopName || o.type === 'food');
+            return db.orders.filter(o => o.customer === currentUser.name);
+        }
+
         function renderCustomerHome(container) {
+            const myNotifs = getAccountNotifs();
             container.innerHTML = `
                 <div class="p-4 space-y-4 bg-gradient-to-b from-sky-500 via-sky-600 to-slate-50 min-h-full pb-20">
                     
-                    <!-- Kartu Profil & Saldo (Konsumen tidak memiliki saldo) -->
                     <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-4 rounded-3xl shadow-xl flex items-center justify-between border-2 border-yellow-400">
                         <div class="flex items-center space-x-3">
                             <img src="${currentUser.photo}" class="w-12 h-12 rounded-2xl object-cover border-2 border-yellow-400 shadow-inner">
@@ -563,7 +620,7 @@
                         <div class="flex items-center space-x-2">
                             <button onclick="openNotificationModal()" class="relative p-2.5 bg-sky-800 hover:bg-sky-700 rounded-2xl text-white transition shadow cursor-pointer">
                                 <i class="fa-solid fa-bell text-sm"></i>
-                                <span class="absolute top-1 right-1 bg-yellow-400 text-slate-900 text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">${db.orders.length}</span>
+                                <span class="absolute top-1 right-1 bg-yellow-400 text-slate-900 text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">${myNotifs.length}</span>
                             </button>
                             <button onclick="switchView('chat')" class="p-2.5 bg-sky-800 hover:bg-sky-700 rounded-2xl text-white transition shadow cursor-pointer">
                                 <i class="fa-solid fa-comments text-sm"></i>
@@ -572,6 +629,16 @@
                                 <i class="fa-solid fa-power-off text-sm"></i>
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Saklar Alarm Notifikasi ON / OFF -->
+                    <div class="bg-white/95 px-4 py-2.5 rounded-2xl border border-sky-200 flex items-center justify-between shadow-xs">
+                        <span class="text-xs font-extrabold text-sky-900 flex items-center gap-2">
+                            <i class="fa-solid fa-bell-ring text-yellow-500"></i> Alarm Notifikasi: ${alarmEnabled ? 'NYALA (ON)' : 'MATI (OFF)'}
+                        </span>
+                        <button onclick="toggleNotificationAlarm()" class="px-3 py-1 rounded-xl text-[11px] font-black cursor-pointer ${alarmEnabled ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-700'}">
+                            ${alarmEnabled ? 'ON' : 'OFF'}
+                        </button>
                     </div>
 
                     <!-- Banner Utama Tersinkron -->
@@ -616,7 +683,6 @@
             setTimeout(initHomeMap, 200);
         }
 
-        // ================= HALAMAN PESANAN MAKANAN (DENGAN PENCARIAN NAMA TOKO) =================
         function renderCustomerFood(container) {
             const filteredMerchants = db.merchants.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()) || m.category.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -632,14 +698,12 @@
                         </button>
                     </div>
 
-                    <!-- Fitur Pencarian Nama Toko -->
                     <div class="bg-white p-3 rounded-2xl border border-sky-200 flex items-center gap-2 shadow-xs">
                         <i class="fa-solid fa-search text-sky-600 pl-2"></i>
                         <input type="text" id="search-merchant-input" value="${searchQuery}" oninput="searchQuery=this.value;renderCustomerFood(document.getElementById('main-content'))" placeholder="Cari nama toko / warung kuliner..." class="w-full text-xs font-semibold focus:outline-none bg-transparent">
                         ${searchQuery ? `<button onclick="searchQuery='';renderCustomerFood(document.getElementById('main-content'))" class="text-xs text-rose-500 font-bold pr-2">&times;</button>` : ''}
                     </div>
 
-                    <!-- Map Lokasi Terkini -->
                     <div class="bg-white p-3.5 rounded-3xl shadow-xs border border-sky-200 space-y-2">
                         <div class="flex justify-between items-center">
                             <span class="text-[11px] font-extrabold text-sky-800 uppercase"><i class="fa-solid fa-map-pin text-yellow-500 mr-1"></i> Peta Lokasi & Pengantaran</span>
@@ -660,7 +724,6 @@
                         </div>
                     </div>
 
-                    <!-- Daftar List Toko (Hasil Filter Pencarian) -->
                     <div class="space-y-3">
                         <h3 class="font-extrabold text-xs text-sky-900 uppercase tracking-wider">Daftar List Toko & Warung Pilihan</h3>
                         <div class="space-y-2.5">
@@ -688,7 +751,6 @@
             setTimeout(() => initInteractiveRouteMap('food-map', 'food-pickup-label', 'food-dest-label'), 250);
         }
 
-        // ================= DETAIL TOKO (DENGAN BANNER SAMPUL & PROFIL LENGKONG) =================
         function openMerchantDetail(merchantId) {
             const merchant = db.merchants.find(m => m.id === merchantId);
             db.activeMerchant = merchant;
@@ -700,7 +762,6 @@
             detailView.classList.remove('hidden');
 
             detailView.innerHTML = `
-                <!-- Banner Sampul Toko -->
                 <div class="relative bg-sky-700 text-white">
                     <img src="${merchant.banner}" class="w-full h-48 object-cover opacity-90" alt="Banner Sampul Toko">
                     <div class="absolute inset-0 bg-gradient-to-t from-sky-900/80 via-transparent to-black/20 flex items-center justify-center">
@@ -712,13 +773,11 @@
                     <button onclick="openCartModal()" class="absolute top-4 right-4 px-3.5 py-2 bg-yellow-400 text-slate-900 rounded-full font-extrabold text-xs shadow-lg flex items-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-cart-shopping"></i> <span id="detail-cart-count">${db.cart.length}</span>
                     </button>
-                    <!-- Foto Profil Toko Mengambang -->
                     <div class="absolute -bottom-8 left-4">
                         <img src="${merchant.image}" class="w-20 h-20 rounded-2xl object-cover border-4 border-white shadow-2xl bg-white" alt="Profil Toko">
                     </div>
                 </div>
 
-                <!-- Konten Info Toko -->
                 <div class="p-4 pt-10 space-y-4 flex-1 pb-24 overflow-y-auto bg-slate-50">
                     <div class="flex justify-between items-start">
                         <div>
@@ -746,7 +805,6 @@
                         </div>
                     </div>
 
-                    <!-- Daftar Menu Makanan & Minuman -->
                     <div class="space-y-3 pt-1">
                         <h3 class="font-extrabold text-sm text-slate-900">Daftar Menu Makanan & Minuman</h3>
                         <div class="space-y-3">
@@ -773,7 +831,6 @@
             document.getElementById('view-merchant-detail').classList.add('hidden');
         }
 
-        // ================= HALAMAN PESAN OJEK (DENGAN PENCARIAN NAMA DRIVER & JARAK GPS) =================
         function renderCustomerOjek(container) {
             const sortedDrivers = getSortedDriversByDistance(userCurrentLatLng[0], userCurrentLatLng[1]);
             const filteredDrivers = sortedDrivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.vehicle.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -784,7 +841,6 @@
                 <div class="p-4 space-y-4 pb-24">
                     <h2 class="font-extrabold text-base text-sky-900">Pesan Ojek Online & Kurir</h2>
                     
-                    <!-- Fitur Pencarian Nama Ojek / Driver -->
                     <div class="bg-white p-3 rounded-2xl border border-sky-200 flex items-center gap-2 shadow-xs">
                         <i class="fa-solid fa-search text-sky-600 pl-2"></i>
                         <input type="text" id="search-driver-input" value="${searchQuery}" oninput="searchQuery=this.value;renderCustomerOjek(document.getElementById('main-content'))" placeholder="Cari nama ojek / driver terdekat..." class="w-full text-xs font-semibold focus:outline-none bg-transparent">
@@ -821,7 +877,6 @@
                         </button>
                     </div>
 
-                    <!-- Daftar List Ojek Online Terdekat (Online/Offline & Urutan Jarak) -->
                     <div class="space-y-2.5">
                         <div class="flex justify-between items-center">
                             <h3 class="font-extrabold text-xs text-sky-900 uppercase">Daftar List Ojek Online Terdekat</h3>
@@ -867,12 +922,11 @@
             else updateCartUI();
         }
 
-        // ================= KELOLA KERANJANG & PESANAN =================
         function addToCart(foodId) {
             const food = db.foods.find(f => f.id === foodId);
             db.cart.push(food);
             saveDB();
-            playPopupBeepSound();
+            playAlarmRingtone();
             showToast(`${food.name} masuk keranjang!`, 'success');
             const counter = document.getElementById('cart-counter');
             if(counter) counter.innerText = db.cart.length;
@@ -972,7 +1026,7 @@
             saveDB();
             closeCartModal();
             closeMerchantDetail();
-            playPopupBeepSound();
+            addAccountNotification(`Order Baru ${newOrder.id}`, `Pesanan ${newOrder.items} ke ${merchant.name} dengan driver ${driver.name}.`, currentUser.name);
             showToast(`Pesanan ${newOrder.id} berhasil dikirim ke driver ${driver.name}!`, 'success');
             renderDashboardContent('history');
         }
@@ -999,29 +1053,66 @@
 
             db.orders.unshift(newOrder);
             saveDB();
-            playPopupBeepSound();
+            addAccountNotification(`Order Ojek ${newOrder.id}`, `Rute ${from} → ${to} bersama driver ${driver.name}.`, currentUser.name);
             showToast(`Order ojek berhasil terkirim ke driver ${driver.name}!`, 'success');
             renderDashboardContent('history');
         }
 
+        function advanceOrderStatus(orderId) {
+            const steps = ['Menunggu Driver', 'Sedang Diproses', 'Sedang Diantar', 'Selesai'];
+            const order = db.orders.find(o => o.id === orderId);
+            if (!order) return;
+            const currentIdx = steps.indexOf(order.status);
+            const nextStatus = steps[(currentIdx + 1) % steps.length];
+            order.status = nextStatus;
+            saveDB();
+            addAccountNotification(`Update Pesanan ${order.id}`, `Status berubah menjadi: ${nextStatus}.`, order.customer);
+            showToast(`Perubahan berhasil disimpan: Status ${order.id} -> ${nextStatus}`, 'success');
+            renderOrderHistory(document.getElementById('main-content'));
+        }
+
+        // ================= RIWAYAT PESANAN & NOTIFIKASI PER AKUN =================
         function renderOrderHistory(container) {
+            const myOrders = getAccountOrders();
+            const myNotifs = getAccountNotifs();
+
             container.innerHTML = `
-                <div class="p-4 space-y-4 pb-24">
-                    <h2 class="font-extrabold text-base text-sky-900">Riwayat & Status Pesanan Sinkron</h2>
+                <div class="p-4 space-y-5 pb-24">
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-extrabold text-base text-sky-900">Riwayat Pesanan & Notifikasi (${currentUser.name})</h2>
+                        <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${alarmEnabled ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-700'}">
+                            Alarm: ${alarmEnabled ? 'ON' : 'OFF'}
+                        </button>
+                    </div>
+
                     <div class="space-y-3">
-                        ${db.orders.map(o => `
+                        <h3 class="text-xs font-black text-sky-800 uppercase">Daftar Pesanan Akun</h3>
+                        ${myOrders.length > 0 ? myOrders.map(o => `
                             <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-2">
                                 <div class="flex justify-between items-center">
                                     <span class="text-[10px] bg-sky-100 text-sky-800 font-extrabold px-2.5 py-0.5 rounded-md uppercase">${o.id}</span>
                                     <span class="text-[10px] bg-yellow-100 text-yellow-800 font-extrabold px-2.5 py-0.5 rounded-md">${o.status}</span>
                                 </div>
-                                <h4 class="font-bold text-xs text-slate-900">${o.merchant}</h4>
+                                <h4 class="font-bold text-xs text-slate-900">${o.merchant} • Pemesan: ${o.customer}</h4>
                                 <p class="text-[11px] text-slate-600">${o.items}</p>
                                 <p class="text-[10px] text-slate-500"><i class="fa-solid fa-motorcycle text-sky-600"></i> Driver: <b>${o.driver}</b></p>
-                                <div class="text-xs font-black text-sky-700 pt-2 border-t border-slate-100 flex justify-between">
-                                    <span>Total Pembayaran</span>
+                                <div class="text-xs font-black text-sky-700 pt-2 border-t border-slate-100 flex justify-between items-center">
                                     <span>Rp ${o.total.toLocaleString()}</span>
+                                    ${currentUser.role !== 'customer' ? `<button onclick="advanceOrderStatus('${o.id}')" class="px-2.5 py-1 bg-sky-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Update Status</button>` : ''}
                                 </div>
+                            </div>
+                        `).join('') : `<p class="text-xs text-slate-400 bg-white p-4 rounded-2xl border text-center">Belum ada riwayat pesanan untuk akun ${currentUser.name}.</p>`}
+                    </div>
+
+                    <div class="space-y-3">
+                        <h3 class="text-xs font-black text-sky-800 uppercase">Notifikasi Akun</h3>
+                        ${myNotifs.map(n => `
+                            <div class="bg-white p-3.5 rounded-2xl border border-sky-100 space-y-1 shadow-xs">
+                                <div class="flex justify-between text-xs font-extrabold text-slate-900">
+                                    <span>${n.title}</span>
+                                    <span class="text-[10px] text-slate-400">${n.time}</span>
+                                </div>
+                                <p class="text-[11px] text-slate-600">${n.desc}</p>
                             </div>
                         `).join('')}
                     </div>
@@ -1029,7 +1120,7 @@
             `;
         }
 
-        // ================= KELOLA TOKO (DENGAN BANNER SAMPUL, PROFIL, STATUS BUKA/TUTUP) =================
+        // ================= KELOLA TOKO (DENGAN BANNER SAMPUL & PROFIL DI ATAS) =================
         let tempStoreBanner = null;
         let tempStorePhoto = null;
         let tempNewFoodPhoto = null;
@@ -1041,18 +1132,24 @@
 
             container.innerHTML = `
                 <div class="p-4 space-y-5 pb-24">
-                    <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-4 rounded-3xl shadow-md border-b-4 border-yellow-400 flex justify-between items-center">
-                        <div>
-                            <span class="text-[10px] text-yellow-300 font-extrabold uppercase">PANEL MITRA TOKO OLENG GO</span>
-                            <h2 class="text-lg font-black">${merchant.name}</h2>
-                            <p class="text-xs text-sky-100">Saldo Dompet: Rp ${(merchant.balance || 0).toLocaleString()}</p>
+                    <!-- Banner Sampul & Profil Toko di Atas Kelola Toko -->
+                    <div class="relative bg-sky-800 text-white rounded-3xl overflow-hidden shadow-lg border-2 border-yellow-400">
+                        <img src="${merchant.banner}" class="w-full h-36 object-cover opacity-85" alt="Banner Sampul Toko">
+                        <div class="p-4 pt-10 bg-gradient-to-t from-sky-950 via-sky-900/95 to-sky-800/80 relative flex items-end justify-between">
+                            <div class="flex items-center space-x-3">
+                                <img src="${merchant.image}" class="w-16 h-16 rounded-2xl object-cover border-2 border-yellow-400 -mt-12 bg-white shadow-md" alt="Profil Toko">
+                                <div>
+                                    <span class="text-[10px] text-yellow-300 font-extrabold uppercase block">PROFIL & SAMPUL TOKO</span>
+                                    <h2 class="text-base font-black">${merchant.name}</h2>
+                                    <p class="text-[11px] text-sky-200">Saldo: Rp ${(merchant.balance || 0).toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <button onclick="toggleMerchantStatus(${merchant.id})" class="px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer shadow ${isOpen ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}">
+                                ${merchant.status}
+                            </button>
                         </div>
-                        <button onclick="toggleMerchantStatus(${merchant.id})" class="px-3.5 py-2 rounded-xl text-xs font-black cursor-pointer shadow ${isOpen ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}">
-                            Status: ${merchant.status}
-                        </button>
                     </div>
 
-                    <!-- Form Pengaturan Toko, Banner Sampul & Profil -->
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
                         <h3 class="font-extrabold text-xs text-sky-900 uppercase border-b pb-2"><i class="fa-solid fa-store text-yellow-500 mr-1"></i> Pengaturan Toko & Upload Galeri</h3>
                         
@@ -1089,7 +1186,6 @@
                         </button>
                     </div>
 
-                    <!-- Kelola Daftar Menu -->
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
                         <div class="flex justify-between items-center border-b pb-2">
                             <h3 class="font-extrabold text-xs text-sky-900 uppercase"><i class="fa-solid fa-utensils text-yellow-500 mr-1"></i> Kelola Daftar Menu</h3>
@@ -1119,7 +1215,8 @@
             if(m) {
                 m.status = m.status === 'Buka' ? 'Tutup' : 'Buka';
                 saveDB();
-                showToast(`Status toko diubah menjadi ${m.status}!`, 'success');
+                addAccountNotification('Status Toko Diperbarui', `${m.name} sekarang berstatus ${m.status}.`, currentUser.name);
+                showToast(`Perubahan berhasil disimpan: Status toko menjadi ${m.status}!`, 'success');
                 renderMerchantManage(document.getElementById('main-content'));
             }
         }
@@ -1150,7 +1247,7 @@
                 if(tempStorePhoto) m.image = tempStorePhoto;
                 if(tempStoreBanner) m.banner = tempStoreBanner;
                 saveDB();
-                playPopupBeepSound();
+                addAccountNotification('Pengaturan Toko Disimpan', `Perubahan data & galeri ${m.name} tersimpan.`, currentUser.name);
                 showToast('Perubahan berhasil disimpan: Profil & foto toko telah diperbarui!', 'success');
                 renderMerchantManage(document.getElementById('main-content'));
             }
@@ -1196,7 +1293,7 @@
                 image: tempNewFoodPhoto || ('https://placehold.co/200x200/0284c7/ffffff?text=' + encodeURIComponent(name))
             });
             saveDB();
-            playPopupBeepSound();
+            addAccountNotification('Menu Baru Ditambahkan', `Menu ${name} (Rp ${price.toLocaleString()}) ditambahkan.`, currentUser.name);
             showToast('Perubahan berhasil disimpan: Menu baru telah ditambahkan!', 'success');
             renderMerchantManage(document.getElementById('main-content'));
         }
@@ -1204,27 +1301,57 @@
         function deleteMenuFood(foodId) {
             db.foods = db.foods.filter(f => f.id !== foodId);
             saveDB();
-            showToast('Menu berhasil dihapus!', 'info');
+            showToast('Perubahan berhasil disimpan: Menu dihapus!', 'info');
             renderMerchantManage(document.getElementById('main-content'));
         }
 
-        function renderMerchantOrders(container) { renderOrderHistory(container); }
-        function renderDriverOrders(container) { renderOrderHistory(container); }
-
-        // ================= MENU AKUN =================
+        // ================= MENU PROFIL (SALDO & TAMBAH SALDO KE LIVE CHAT ADMIN UNTUK OJEK & TOKO) =================
         let tempUserProfilePhoto = null;
+
+        function getCurrentWalletBalance() {
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            if (role === 'merchant') {
+                const m = db.merchants.find(x => x.whatsapp === currentUser.phone || x.name === currentUser.shopName || x.name === currentUser.name);
+                return m ? (m.balance || 0) : (currentUser.balance || 0);
+            }
+            if (role === 'driver') {
+                const d = db.drivers.find(x => x.phone === currentUser.phone || x.name === currentUser.name);
+                return d ? (d.balance || 0) : (currentUser.balance || 0);
+            }
+            return currentUser.balance || 0;
+        }
+
+        function goToAdminTopUpChat() {
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            activeChatTarget = 'Admin SIMADU';
+            switchView('chat');
+            const input = document.getElementById('chat-input');
+            if (input) {
+                input.value = `Halo Admin SIMADU, saya ${currentUser.name} (${role.toUpperCase()}) ingin request tambah saldo akun.`;
+                input.focus();
+            }
+        }
 
         function renderProfile(container) {
             tempUserProfilePhoto = null;
-            const hasWallet = currentUser.role !== 'customer';
-            
+            const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            const showWalletAndTopUp = activeRole === 'driver' || activeRole === 'merchant';
+            const balanceVal = getCurrentWalletBalance();
+
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24">
                     <div class="bg-gradient-to-r from-sky-700 to-sky-900 text-white p-5 rounded-3xl shadow-lg text-center space-y-2 border-b-4 border-yellow-400">
                         <img id="user-prof-preview" src="${currentUser.photo}" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-yellow-400 shadow-md bg-white">
                         <h2 class="font-black text-base">${currentUser.name}</h2>
-                        <span class="text-[10px] bg-yellow-400 text-slate-950 font-black px-3 py-0.5 rounded-full uppercase">${currentUser.role}</span>
-                        ${hasWallet ? `<p class="text-xs text-sky-200 font-bold pt-1">Saldo Dompet: Rp ${(currentUser.balance || 0).toLocaleString()}</p>` : ''}
+                        <span class="text-[10px] bg-yellow-400 text-slate-950 font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span>
+                        ${showWalletAndTopUp ? `
+                            <div class="pt-2 space-y-2">
+                                <p class="text-sm text-yellow-300 font-black">Saldo Dompet: Rp ${balanceVal.toLocaleString()}</p>
+                                <button onclick="goToAdminTopUpChat()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-black rounded-2xl text-xs cursor-pointer shadow">
+                                    <i class="fa-solid fa-plus-circle mr-1"></i> Tambah Saldo (Chat Admin)
+                                </button>
+                            </div>
+                        ` : ''}
                     </div>
 
                     <div class="bg-white p-4 rounded-3xl shadow-xs border border-sky-100 space-y-3">
@@ -1272,7 +1399,7 @@
 
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             saveDB();
-            playPopupBeepSound();
+            addAccountNotification('Profil Disimpan', `Informasi akun ${currentUser.name} berhasil disimpan.`, currentUser.name);
             showToast('Perubahan berhasil disimpan: Informasi akun telah diperbarui!', 'success');
             renderProfile(document.getElementById('main-content'));
         }
@@ -1304,7 +1431,7 @@
                                 <i class="fa-solid fa-arrow-right text-slate-400"></i>
                             </div>
                         </div>
-                        <div onclick="renderDashboardContent('admin-orders')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-purple-500 transition shadow-xs">
+                        <div onclick="renderDashboardContent('history')" class="bg-white p-4 rounded-3xl border border-sky-100 cursor-pointer hover:border-purple-500 transition shadow-xs">
                             <span class="text-[10px] text-slate-500 uppercase font-extrabold">PESANAN MASUK</span>
                             <div class="flex justify-between items-center mt-1">
                                 <h3 class="text-xl font-black text-purple-600">${db.orders.length} Pesanan</h3>
@@ -1348,6 +1475,7 @@
 
         function adminAddBalance(userId) {
             const u = db.users.find(x => x.id === userId);
+            if (!u || u.role === 'customer') return showToast('Saldo hanya berlaku untuk Mitra Toko & Driver!', 'error');
             const nominal = parseInt(prompt(`Masukkan nominal penambahan saldo untuk ${u.name}:`, '50000'));
             if(!isNaN(nominal)) {
                 u.balance = (u.balance || 0) + nominal;
@@ -1359,7 +1487,7 @@
                     if(d) d.balance = u.balance;
                 }
                 saveDB();
-                playPopupBeepSound();
+                addAccountNotification('Saldo Ditambah Admin', `Saldo ${u.name} ditambah Rp ${nominal.toLocaleString()}.`, u.name);
                 showToast(`Perubahan berhasil disimpan: Saldo ${u.name} ditambah Rp ${nominal.toLocaleString()}!`, 'success');
                 renderAdminUsers(document.getElementById('main-content'));
             }
@@ -1369,7 +1497,7 @@
             const u = db.users.find(x => x.id === userId);
             u.password = '123';
             saveDB();
-            playPopupBeepSound();
+            addAccountNotification('Reset Password Admin', `Password ${u.name} direset menjadi '123'.`, u.name);
             showToast(`Perubahan berhasil disimpan: Password ${u.name} direset menjadi '123'`, 'success');
         }
 
@@ -1377,7 +1505,7 @@
             if(confirm('Yakin ingin menghapus akun user ini secara permanen?')) {
                 db.users = db.users.filter(x => x.id !== userId);
                 saveDB();
-                showToast('Akun user berhasil dihapus!', 'info');
+                showToast('Perubahan berhasil disimpan: Akun user dihapus!', 'info');
                 renderAdminUsers(document.getElementById('main-content'));
             }
         }
@@ -1390,13 +1518,17 @@
                         <button onclick="renderDashboardContent('admin-dash')" class="text-xs text-sky-600 font-bold"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
                     </div>
                     <div class="space-y-3">
-                        ${db.merchants.map(m => `
-                            <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
-                                <h4 class="font-bold text-sm text-slate-900">${m.name} (${m.status})</h4>
-                                <p class="text-xs font-black text-yellow-600">Saldo Toko: Rp ${m.balance.toLocaleString()}</p>
-                                <button onclick="adminAddBalance(${db.users.find(u => u.name === m.name)?.id || 3})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-xs font-bold cursor-pointer">Tambah Saldo</button>
-                            </div>
-                        `).join('')}
+                        ${db.merchants.map(m => {
+                            const matchedUser = db.users.find(u => u.name === m.name || u.phone === m.whatsapp);
+                            const uid = matchedUser ? matchedUser.id : 3;
+                            return `
+                                <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
+                                    <h4 class="font-bold text-sm text-slate-900">${m.name} (${m.status})</h4>
+                                    <p class="text-xs font-black text-yellow-600">Saldo Toko: Rp ${(m.balance || 0).toLocaleString()}</p>
+                                    <button onclick="adminAddBalance(${uid})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-xs font-bold cursor-pointer">Tambah Saldo</button>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
             `;
@@ -1410,18 +1542,21 @@
                         <button onclick="renderDashboardContent('admin-dash')" class="text-xs text-sky-600 font-bold"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
                     </div>
                     <div class="space-y-3">
-                        ${db.drivers.map(d => `
-                            <div class="bg-white p-4 rounded-3xl border space-y-1 shadow-xs">
-                                <h4 class="font-bold text-xs text-slate-900">${d.name} (${d.status})</h4>
-                                <p class="text-[10px] text-slate-500">${d.vehicle} • Saldo: Rp ${(d.balance || 0).toLocaleString()}</p>
-                            </div>
-                        `).join('')}
+                        ${db.drivers.map(d => {
+                            const matchedUser = db.users.find(u => u.name === d.name || u.phone === d.phone);
+                            const uid = matchedUser ? matchedUser.id : 2;
+                            return `
+                                <div class="bg-white p-4 rounded-3xl border space-y-2 shadow-xs">
+                                    <h4 class="font-bold text-xs text-slate-900">${d.name} (${d.status})</h4>
+                                    <p class="text-[10px] text-slate-500">${d.vehicle} • Saldo: Rp ${(d.balance || 0).toLocaleString()}</p>
+                                    <button onclick="adminAddBalance(${uid})" class="px-3 py-1.5 bg-yellow-400 rounded-xl text-[10px] font-bold cursor-pointer">Tambah Saldo</button>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
             `;
         }
-
-        function renderAdminOrders(container) { renderOrderHistory(container); }
 
         function renderAdminBanner(container) {
             container.innerHTML = `
@@ -1448,7 +1583,7 @@
 
         function saveGlobalBanner() {
             localStorage.setItem('oleng_global_banner', customMainBanner);
-            playPopupBeepSound();
+            addAccountNotification('Banner Utama Diperbarui', 'Admin memperbarui banner utama OLENG GO.', 'ALL');
             showToast('Perubahan berhasil disimpan: Banner utama diperbarui untuk semua user!', 'success');
             renderDashboardContent('home');
         }
@@ -1516,8 +1651,10 @@
 
         // ================= NOTIFIKASI & LIVE CHAT =================
         function openNotificationModal() {
+            const myNotifs = getAccountNotifs();
+            playAlarmRingtone();
             document.getElementById('modal-notif').classList.remove('hidden');
-            document.getElementById('notification-list').innerHTML = db.notifications.map(n => `<div class="p-3 bg-sky-50 rounded-2xl text-xs border border-sky-100"><b>${n.title}</b><p class="text-slate-600 mt-0.5">${n.desc}</p></div>`).join('');
+            document.getElementById('notification-list').innerHTML = myNotifs.map(n => `<div class="p-3 bg-sky-50 rounded-2xl text-xs border border-sky-100"><b>${n.title}</b> <span class="text-[10px] text-slate-400 float-right">${n.time}</span><p class="text-slate-600 mt-0.5">${n.desc}</p></div>`).join('');
         }
         function closeNotificationModal() { document.getElementById('modal-notif').classList.add('hidden'); }
 
@@ -1533,16 +1670,21 @@
         function renderPersonalChatMessages() {
             document.getElementById('chat-title').innerText = `Chat: ${activeChatTarget}`;
             const msgs = db.chats.filter(c => (c.from === currentUser.name && c.to === activeChatTarget) || (c.from === activeChatTarget && c.to === currentUser.name));
-            document.getElementById('chat-messages').innerHTML = msgs.map(c => `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${c.from===currentUser.name?'bg-sky-600 text-white ml-auto':'bg-white border mr-auto'}">${c.text}</div>`).join('') || '<p class="text-xs text-slate-400 text-center py-6">Mulai obrolan dengan '+activeChatTarget+'...</p>';
+            document.getElementById('chat-messages').innerHTML = msgs.map(c => `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${c.from===currentUser.name?'bg-sky-600 text-white ml-auto':'bg-white border mr-auto'}"><b>${c.from}</b><p>${c.text}</p><span class="text-[9px] opacity-75">${c.time}</span></div>`).join('') || '<p class="text-xs text-slate-400 text-center py-6">Mulai obrolan dengan '+activeChatTarget+'...</p>';
         }
         function sendPersonalChatMessage() {
             const input = document.getElementById('chat-input');
             if(!input.value.trim()) return;
-            db.chats.push({ id: Date.now(), from: currentUser.name, to: activeChatTarget, text: input.value, time: 'Baru saja' });
-            saveDB(); input.value = ''; playPopupBeepSound(); renderPersonalChatMessages();
+            const timeNow = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            db.chats.push({ id: Date.now(), from: currentUser.name, to: activeChatTarget, text: input.value, time: timeNow });
+            saveDB();
+            playAlarmRingtone();
+            input.value = '';
+            renderPersonalChatMessages();
         }
 
         function showToast(msg, type='success') {
+            playAlarmRingtone();
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold flex items-center gap-2 ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-sky-600'}`;
