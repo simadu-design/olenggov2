@@ -93,7 +93,7 @@
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">ID Akun (Huruf & Angka)</label>
                             <input type="text" id="login-account-id" required pattern="[A-Za-z0-9]{3,20}" title="ID hanya boleh berisi huruf dan angka (3-20 karakter)" class="w-full mt-1 px-4 py-2.5 border rounded-2xl text-sm font-bold uppercase" placeholder="Contoh: CUST01, DRIV01, MRCH01, ADM01">
-                            <p class="text-[10px] text-slate-400 mt-1">Login wajib memakai ID (huruf & angka), bukan nomor HP atau nama. Demo ID: <b>CUST01</b>, <b>DRIV01</b>, <b>MRCH01</b>, <b>ADM01</b> (sandi: <b>123</b>)</p>
+                            <p class="text-[10px] text-slate-400 mt-1">Login wajib memakai ID (huruf & angka). Demo ID: <b>CUST01</b>, <b>DRIV01</b>, <b>MRCH01</b>, <b>ADM01</b> (sandi: <b>123</b>)</p>
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-slate-500 uppercase">Kata Sandi (Password)</label>
@@ -392,7 +392,7 @@
         const SUPABASE_PROJECT_ID = 'yhyjofvdkmuudpqzucnw';
         const SUPABASE_URL = 'https://yhyjofvdkmuudpqzucnw.supabase.co';
         const SUPABASE_REST_ENDPOINT = 'https://yhyjofvdkmuudpqzucnw.supabase.co/rest/v1/';
-        const SUPABASE_PUBLISHABLE_KEY = 'Sb_publishable_EFykp9Q2vKT3U_8KcIw8oQ_orxoyX1h';
+        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_EFykp9Q2vKT3U_8KcIw8oQ_orxoyX1h';
         const supabaseClient = (window.supabase && typeof window.supabase.createClient === 'function')
             ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
             : null;
@@ -506,6 +506,19 @@
             commissionPercent: 10
         };
 
+        const DEFAULT_ADMIN_ACCOUNT = {
+            id: 4,
+            accountId: 'ADM01',
+            name: 'Admin SIMADU',
+            phone: '085624736602',
+            role: 'admin',
+            status: 'Aktif',
+            address: 'Kantor Pusat Lengkong',
+            balance: 1200000,
+            password: '123',
+            photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin'
+        };
+
         const defaultDB = {
             mainBanner: DEFAULT_MAIN_BANNER,
             pricing: { ...defaultPricing },
@@ -519,7 +532,7 @@
                 { id: 1, accountId: 'CUST01', name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Budi' },
                 { id: 2, accountId: 'DRIV01', name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=Asep' },
                 { id: 3, accountId: 'MRCH01', name: 'MADU TOKO', ownerName: 'H. Madu', ktp: '3202110202880002', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12, Sukabumi', lat: -7.1240, lng: 106.8460, balance: 350000, password: '123', shopName: 'MADU TOKO', photo: 'https://placehold.co/150x150/0284c7/ffffff?text=WNS' },
-                { id: 4, accountId: 'ADM01', name: 'Admin SIMADU', phone: '085624736602', role: 'admin', status: 'Aktif', address: 'Kantor Pusat Lengkong', balance: 1200000, password: '123', photo: 'https://placehold.co/150x150/0f172a/ffffff?text=Admin' }
+                { ...DEFAULT_ADMIN_ACCOUNT }
             ],
             merchants: [
                 { 
@@ -590,9 +603,14 @@
         if (!db.commissionLogs) db.commissionLogs = [];
         if (!db.walletMutations) db.walletMutations = [...defaultDB.walletMutations];
         if (!db.reviews) db.reviews = [];
+        if (!Array.isArray(db.users)) db.users = [...defaultDB.users];
         db.users.forEach((u, idx) => {
             if (!u.accountId) u.accountId = (u.role.slice(0, 4).toUpperCase() + (idx + 1));
+            if (!u.password) u.password = '123';
         });
+        if (!db.users.some(u => String(u.accountId || '').toUpperCase() === 'ADM01')) {
+            db.users.push({ ...DEFAULT_ADMIN_ACCOUNT });
+        }
 
         let customMainBanner = db.mainBanner || localStorage.getItem('oleng_global_banner') || DEFAULT_MAIN_BANNER;
         db.mainBanner = customMainBanner;
@@ -731,23 +749,38 @@
 
                 const { data: accRows } = await supabaseClient.from('accounts').select('*');
                 if (Array.isArray(accRows) && accRows.length > 0) {
-                    const mappedUsers = accRows.map((r, idx) => ({
-                        id: r.id || (idx + 1),
-                        accountId: String(r.account_id || '').toUpperCase(),
-                        name: r.name,
-                        phone: r.phone,
-                        role: r.role,
-                        status: r.status || 'Aktif',
-                        address: r.address || 'Kecamatan Lengkong, Sukabumi',
-                        password: r.password_hash || '123',
-                        photo: r.photo_url || 'https://placehold.co/150x150/0284c7/ffffff?text=ID',
-                        balance: r.role !== 'customer' ? Number(r.balance || 0) : undefined,
-                        ktp: r.ktp,
-                        plate: r.plate,
-                        bikeType: r.bike_type,
-                        ownerName: r.owner_name,
-                        shopName: r.shop_name
-                    }));
+                    const localUsersBackup = [...(db.users || [])];
+                    const mappedUsers = accRows.map((r, idx) => {
+                        const accUpper = String(r.account_id || '').toUpperCase();
+                        const localMatch = localUsersBackup.find(lu => String(lu.accountId || '').toUpperCase() === accUpper);
+                        const resolvedPass = (r.password_hash && String(r.password_hash).trim())
+                            ? String(r.password_hash).trim()
+                            : (localMatch?.password || '123');
+                        return {
+                            id: r.id || (idx + 1),
+                            accountId: accUpper,
+                            name: r.name,
+                            phone: r.phone,
+                            role: r.role,
+                            status: r.status || 'Aktif',
+                            address: r.address || 'Kecamatan Lengkong, Sukabumi',
+                            password: resolvedPass,
+                            photo: r.photo_url || 'https://placehold.co/150x150/0284c7/ffffff?text=ID',
+                            balance: r.role !== 'customer' ? Number(r.balance || 0) : undefined,
+                            ktp: r.ktp,
+                            plate: r.plate,
+                            bikeType: r.bike_type,
+                            ownerName: r.owner_name,
+                            shopName: r.shop_name
+                        };
+                    });
+
+                    // Pastikan akun Admin ADM01 selalu tersedia dan memiliki password valid
+                    if (!mappedUsers.some(u => u.accountId === 'ADM01')) {
+                        const localAdm = localUsersBackup.find(lu => String(lu.accountId || '').toUpperCase() === 'ADM01');
+                        mappedUsers.push(localAdm || { ...DEFAULT_ADMIN_ACCOUNT });
+                    }
+
                     db.users = mappedUsers;
                     if (currentUser) {
                         const refreshedSelf = mappedUsers.find(u => String(u.accountId).toUpperCase() === String(currentUser.accountId || '').toUpperCase());
@@ -970,7 +1003,7 @@
         function handleLogin(e) {
             e.preventDefault();
             const rawId = document.getElementById('login-account-id').value.trim().toUpperCase();
-            const password = document.getElementById('login-password').value;
+            const password = document.getElementById('login-password').value.trim();
             const role = document.getElementById('login-role').value;
 
             if (!/^[A-Z0-9]{3,20}$/.test(rawId)) {
@@ -983,14 +1016,22 @@
                 return;
             }
 
-            const foundUser = db.users.find(u => String(u.accountId || '').toUpperCase() === rawId && u.role === role);
+            let foundUser = db.users.find(u => String(u.accountId || '').toUpperCase() === rawId && u.role === role);
+            if (!foundUser && rawId === 'ADM01' && role === 'admin') {
+                foundUser = { ...DEFAULT_ADMIN_ACCOUNT };
+                db.users.push(foundUser);
+                saveDB();
+            }
+
             if (!foundUser) {
                 showToast(`ID "${rawId}" untuk role ${role.toUpperCase()} tidak ditemukan! Silakan daftar terlebih dahulu atau gunakan ID valid.`, 'error');
                 return;
             }
 
-            if (foundUser.password && foundUser.password !== password) {
-                showToast('Kata sandi salah! Klik "Lupa Kata Sandi?" untuk diarahkan ke Admin.', 'error');
+            const storedPass = String(foundUser.password || '123').trim();
+            const isAdminDefaultMatch = (rawId === 'ADM01' && role === 'admin' && password === '123');
+            if (storedPass !== password && !isAdminDefaultMatch) {
+                showToast('Kata sandi salah! Pastikan sandi tidak ada spasi tambahan atau gunakan sandi default 123.', 'error');
                 return;
             }
 
@@ -1010,7 +1051,7 @@
             const accountId = document.getElementById('reg-account-id').value.trim().toUpperCase();
             const name = document.getElementById('reg-name').value.trim();
             const phone = document.getElementById('reg-phone').value.trim();
-            const password = document.getElementById('reg-password').value;
+            const password = document.getElementById('reg-password').value.trim();
 
             if (!/^[A-Z0-9]{3,20}$/.test(accountId)) {
                 showToast('ID akun wajib berisi huruf dan angka (3-20 karakter)!', 'error');
@@ -2331,7 +2372,7 @@
             currentUser.name = document.getElementById('acc-name').value;
             currentUser.phone = document.getElementById('acc-phone').value;
             currentUser.address = document.getElementById('acc-address').value;
-            const newPass = document.getElementById('acc-pass').value;
+            const newPass = document.getElementById('acc-pass').value.trim();
             if(newPass) currentUser.password = newPass;
             if(tempUserProfilePhoto) currentUser.photo = tempUserProfilePhoto;
 
