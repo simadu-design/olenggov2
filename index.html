@@ -226,7 +226,6 @@
             </div>
             <div class="text-center text-[10px] text-sky-100 mt-2 font-black uppercase tracking-widest">POWERED BY SIMADU</div>
         </div>
-
         <!-- ================= MAIN APP SHELL ================= -->
         <div id="view-dashboard" class="flex-1 flex flex-col hidden bg-white relative overflow-hidden">
             
@@ -454,7 +453,6 @@
         </div>
 
     </div>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
@@ -3251,7 +3249,6 @@
             document.getElementById('modal-incoming-order').classList.add('hidden');
             renderDashboardContent(currentSubTab, false);
         }
-
         function openRatingModal(orderId) {
             const order = db.orders.find(o => o.id === orderId);
             if (!order) return;
@@ -3623,7 +3620,7 @@
                                 <button onclick="openFullGoogleMapsForCoords(destLatLng[0], destLatLng[1], document.getElementById('ojek-to')?.value || 'Tujuan Ojek Lengkong')" class="px-2 py-1 bg-emerald-600 text-white rounded-xl text-[10px] font-extrabold cursor-pointer">
                                     <i class="fa-solid fa-diamond-turn-right"></i> Google Maps
                                 </button>
-                                <button onclick="toggleMapLayerMode()" class="px-2 py-1 bg-sky-900 text-yellow-300 rounded-xl text-[10px] font-extrabold cursor-pointer">
+                                <button onclick="toggleMapLayerMode()" class="px-2.5 py-1 bg-sky-900 text-yellow-300 rounded-xl text-[10px] font-extrabold cursor-pointer">
                                     <i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span>
                                 </button>
                                 <button onclick="useCurrentGPSLocation('ojek')" class="px-2.5 py-1 bg-yellow-400 text-sky-950 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shadow-xs">
