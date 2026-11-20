@@ -458,6 +458,11 @@
         }
 
         function handleHardwareBackAction() {
+            const confirmLogoutModal = document.getElementById('modal-confirm-logout');
+            if (confirmLogoutModal && !confirmLogoutModal.classList.contains('hidden')) {
+                cancelLogoutModal();
+                return;
+            }
             const partnerModal = document.getElementById('modal-chat-partner-info');
             if (partnerModal && !partnerModal.classList.contains('hidden')) {
                 partnerModal.classList.add('hidden');
@@ -686,6 +691,7 @@
         let mapLayerMode = localStorage.getItem('oleng_map_layer_mode') || 'street';
         let currentMapZoom = Number(localStorage.getItem('oleng_map_zoom') || 15);
         let currentMapCenter = null;
+        let gpsWatchId = null;
         let homeUserMarker = null;
         let readChatIds = JSON.parse(localStorage.getItem('oleng_read_chat_ids') || '[]');
         let readNotifIds = JSON.parse(localStorage.getItem('oleng_read_notif_ids') || '[]');
@@ -2037,14 +2043,17 @@
             const savedSession = localStorage.getItem('oleng_user_session');
             if (savedSession) {
                 try {
-                    currentUser = JSON.parse(savedSession);
-                    adminViewMode = localStorage.getItem('oleng_admin_view_mode') || null;
-                    currentSubTab = localStorage.getItem('oleng_last_tab') || 'home';
-                    tabNavigationHistory = [currentSubTab];
-                    enterDashboard(true);
-                } catch (e) {
-                    localStorage.removeItem('oleng_user_session');
-                }
+                    const parsedSession = JSON.parse(savedSession);
+                    if (parsedSession && parsedSession.phone) {
+                        currentUser = parsedSession;
+                        adminViewMode = localStorage.getItem('oleng_admin_view_mode') || null;
+                        currentSubTab = localStorage.getItem('oleng_last_tab') || 'home';
+                        tabNavigationHistory = [currentSubTab];
+                        document.getElementById('view-auth')?.classList.add('hidden');
+                        document.getElementById('view-dashboard')?.classList.remove('hidden');
+                        enterDashboard(true);
+                    }
+                } catch (e) {}
             }
             await pullInitialFromSupabase(false);
             await syncAllToSupabase();
@@ -2409,14 +2418,50 @@
             window.open(`https://wa.me/${ADMIN_MAIN_WA}?text=${text}`, '_blank');
         }
 
-        async function handleLogout() {
+        function handleLogout() {
+            pushAppNavigationState('confirm-logout');
+            let modal = document.getElementById('modal-confirm-logout');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'modal-confirm-logout';
+                modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-xs z-[90] flex flex-col justify-center items-center p-4';
+                document.body.appendChild(modal);
+            }
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-5 w-full max-w-xs space-y-4 shadow-2xl border-4 border-yellow-400 text-center">
+                    <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center text-xl mx-auto">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="font-black text-sm text-sky-950">Konfirmasi Keluar Akun</h3>
+                        <p class="text-xs text-sky-800">Apakah Anda yakin ingin keluar dari akun <b>${currentUser?.name || 'OLENG GO'}</b>?</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2.5 pt-1">
+                        <button type="button" onclick="confirmLogoutExecute()" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-2xl text-xs cursor-pointer shadow">
+                            Keluar
+                        </button>
+                        <button type="button" onclick="cancelLogoutModal()" class="py-2.5 bg-sky-100 hover:bg-sky-200 text-sky-900 font-black rounded-2xl text-xs cursor-pointer">
+                            Batal
+                        </button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+        }
+
+        function cancelLogoutModal() {
+            document.getElementById('modal-confirm-logout')?.classList.add('hidden');
+        }
+
+        async function confirmLogoutExecute() {
+            document.getElementById('modal-confirm-logout')?.classList.add('hidden');
             const departingUser = currentUser ? { ...currentUser } : null;
             currentUser = null; adminViewMode = null;
             localStorage.removeItem('oleng_user_session');
             localStorage.removeItem('oleng_last_tab');
             localStorage.removeItem('oleng_admin_view_mode');
-            document.getElementById('view-auth').classList.remove('hidden');
-            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-dashboard')?.classList.add('hidden');
+            document.getElementById('view-auth')?.classList.remove('hidden');
             switchAuthTab('login');
             if (departingUser) {
                 await recordAccountAuthEventToSupabase('LOGOUT', departingUser);
@@ -3876,6 +3921,10 @@
 
                         <button onclick="saveFullAccountChanges()" class="w-full py-3.5 bg-sky-700 hover:bg-sky-800 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer border-b-2 border-yellow-400">
                             Simpan Perubahan Akun & Password Baru
+                        </button>
+
+                        <button type="button" onclick="handleLogout()" class="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer mt-2 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-right-from-bracket"></i> Keluar Akun (Logout)
                         </button>
                     </div>
                 </div>
