@@ -238,9 +238,9 @@
             <div id="chat-partner-info-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-sky-600"></div>
         </div>
 
-        <!-- Pop-Up Order Masuk (Pop-Up -> Cek Detail -> Terima / Tolak / Konfirmasi Order Selesai) -->
+        <!-- Pop-Up Order Masuk (Pop-Up -> Cek Detail -> Terima / Tolak / Tahapan / Konfirmasi Order Selesai) -->
         <div id="modal-incoming-order" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
-            <div id="incoming-order-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-yellow-400"></div>
+            <div id="incoming-order-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-yellow-400 max-h-[90vh] overflow-y-auto"></div>
         </div>
 
         <!-- Pop-Up Notifikasi Chat Masuk Berbunyi Nada -->
@@ -276,7 +276,7 @@
             </div>
         </div>
 
-        <!-- Cart Checkout Modal -->
+        <!-- Cart Checkout Modal (Pilih/Batal Pilih Driver -> KONFIRMASI DRIVER -> Kirim Pesanan) -->
         <div id="modal-cart" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-5 max-h-[92vh] overflow-y-auto space-y-4 shadow-2xl border-t-4 border-yellow-400">
                 <div class="flex justify-between items-center border-b pb-3">
@@ -315,8 +315,16 @@
                 </div>
 
                 <div class="bg-sky-50 p-3 rounded-2xl border border-sky-200 space-y-2">
-                    <label class="text-[11px] font-extrabold text-sky-900 uppercase block"><i class="fa-solid fa-motorcycle text-yellow-500 mr-1"></i> Pilih Driver Terdekat</label>
-                    <div id="checkout-driver-list" class="space-y-2 max-h-32 overflow-y-auto pr-1"></div>
+                    <div class="flex justify-between items-center">
+                        <label class="text-[11px] font-extrabold text-sky-900 uppercase block"><i class="fa-solid fa-motorcycle text-yellow-500 mr-1"></i> Driver Aktif & Tersedia</label>
+                        <button type="button" onclick="refreshActiveDriversList('cart')" class="px-2 py-1 bg-white border border-sky-300 text-sky-800 rounded-lg text-[10px] font-extrabold cursor-pointer">
+                            <i class="fa-solid fa-rotate"></i> Refresh Driver
+                        </button>
+                    </div>
+                    <div id="checkout-driver-list" class="space-y-2 max-h-36 overflow-y-auto pr-1"></div>
+                    <button type="button" id="btn-confirm-cart-driver" onclick="confirmDraftDriverSelection('cart')" class="w-full py-2.5 bg-amber-400 hover:bg-amber-500 text-sky-950 font-black rounded-xl text-xs cursor-pointer shadow-xs border border-sky-700">
+                        <i class="fa-solid fa-check-circle mr-1"></i> KONFIRMASI DRIVER
+                    </button>
                 </div>
 
                 <div id="cart-items-container" class="space-y-2 divide-y divide-sky-100 max-h-36 overflow-y-auto"></div>
@@ -438,9 +446,39 @@
         const ADMIN_MAIN_WA = '6285624736602';
         const ADMIN_OWN_STORE_ID = 'TOKOADM01';
 
+        const ORDER_STATUS_LABELS = {
+            searching_driver: 'Mencari / Konfirmasi Driver',
+            driver_assigned: 'Driver Menerima Tugas',
+            merchant_confirmation: 'Menunggu Persetujuan Toko',
+            merchant_accepted: 'Toko Menyetujui',
+            preparing: 'Toko Menyiapkan Barang',
+            driver_arriving: 'Driver Menuju Toko',
+            picked_up: 'Barang Diambil',
+            delivering: 'Dalam Pengantaran',
+            completed: 'Selesai',
+            cancelled: 'Dibatalkan'
+        };
+
+        const ORDER_ALLOWED_TRANSITIONS = {
+            searching_driver: ['driver_assigned', 'merchant_confirmation', 'cancelled'],
+            driver_assigned: ['merchant_confirmation', 'searching_driver', 'cancelled'],
+            merchant_confirmation: ['merchant_accepted', 'preparing', 'searching_driver', 'cancelled'],
+            merchant_accepted: ['preparing', 'driver_arriving', 'cancelled'],
+            preparing: ['driver_arriving', 'cancelled'],
+            driver_arriving: ['picked_up', 'cancelled'],
+            picked_up: ['delivering', 'cancelled'],
+            delivering: ['completed', 'cancelled'],
+            completed: [],
+            cancelled: []
+        };
+
         let tabNavigationHistory = ['home'];
         let isHandlingHardwareBack = false;
         let lastHistoryPushTime = 0;
+
+        // Pilihan sementara driver (belum mengunci driver & belum kirim permintaan sampai KONFIRMASI DRIVER)
+        let draftSelectedDriverId = null;
+        let confirmedOrderDriverId = null;
 
         function pushAppNavigationState(label = 'nav') {
             if (isHandlingHardwareBack) return;
@@ -966,7 +1004,7 @@
                                     driver: r.driver_name,
                                     items: r.items_summary,
                                     total: Number(r.total_amount || 0),
-                                    status: r.status || 'Menunggu Driver'
+                                    status: r.status || 'searching_driver'
                                 };
                                 if (isOrderTargetedToCurrentUser(ordObj)) {
                                     notifyBackgroundOnce('order-' + ordObj.id, `Order Baru ${ordObj.id}`, `${ordObj.items} (${ordObj.customer})`);
@@ -1008,7 +1046,7 @@
         let currentSubTab = 'home';
         let adminViewMode = null;
         let activeChatTarget = 'Admin SIMADU';
-        let selectedDriverId = 1;
+        let selectedDriverId = null;
         let searchQuery = '';
         let alarmEnabled = localStorage.getItem('oleng_alarm_enabled') !== 'false';
         let shownPopupOrderIds = JSON.parse(localStorage.getItem('oleng_shown_popup_orders') || '[]');
@@ -1031,7 +1069,8 @@
             minFare: 8000,
             ojekPerKm: 2500,
             foodPerKm: 2000,
-            commissionPercent: 10
+            commissionPercent: 10,
+            driverResponseTimeoutSec: 45
         };
 
         const DEFAULT_ADMIN_ACCOUNT = {
@@ -1074,6 +1113,7 @@
             commissionLogs: [],
             walletMutations: [],
             authLogs: [],
+            driverChangeLogs: [],
             reviews: [],
             users: [
                 { id: 1, accountId: 'CUST01', name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: 'https://placehold.co/150x150/0369a1/ffffff?text=Budi' },
@@ -1110,8 +1150,8 @@
                 { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung asli bumbu rempah bakar madu manis...', stock: 12, image: 'https://placehold.co/200x200/0369a1/ffffff?text=Ayam+Bakar' }
             ],
             drivers: [
-                { id: 1, accountId: 'DRIV01', name: 'Asep Supriatna', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', status: 'Online', vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, ratingCount: 1, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '6285624736602', balance: 150000 },
-                { id: 2, accountId: 'DRIV02', name: 'Ujang Hendra', ktp: '3202110404910004', plate: 'F 8891 ZY', bikeType: 'Yamaha Mio', status: 'Online', vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, ratingCount: 1, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '6285624736602', balance: 120000 }
+                { id: 1, accountId: 'DRIV01', name: 'Asep Supriatna', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, ratingCount: 1, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '6285624736602', balance: 150000, photo: 'https://placehold.co/150x150/0369a1/ffffff?text=Asep' },
+                { id: 2, accountId: 'DRIV02', name: 'Ujang Hendra', ktp: '3202110404910004', plate: 'F 8891 ZY', bikeType: 'Yamaha Mio', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, ratingCount: 1, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '6285624736602', balance: 120000, photo: 'https://placehold.co/150x150/0369a1/ffffff?text=Ujang' }
             ],
             orders: [],
             notifications: [],
@@ -1122,9 +1162,11 @@
 
         let db = JSON.parse(localStorage.getItem('oleng_go_db')) || defaultDB;
         if (!db.pricing) db.pricing = { ...defaultPricing };
+        if (typeof db.pricing.driverResponseTimeoutSec !== 'number') db.pricing.driverResponseTimeoutSec = 45;
         if (!db.commissionLogs) db.commissionLogs = [];
         if (!db.walletMutations) db.walletMutations = [];
         if (!db.authLogs) db.authLogs = [];
+        if (!db.driverChangeLogs) db.driverChangeLogs = [];
         if (!db.reviews) db.reviews = [];
         if (!Array.isArray(db.users)) db.users = [...defaultDB.users];
         if (!Array.isArray(db.merchants)) db.merchants = [...defaultDB.merchants];
@@ -1140,6 +1182,94 @@
         });
         if (!db.users.some(u => normalizePhone(u.phone) === '085624736602' && u.role === 'admin')) {
             db.users.push({ ...DEFAULT_ADMIN_ACCOUNT });
+        }
+
+        function normalizeOrderStatusCode(rawStatus) {
+            const s = String(rawStatus || '').trim().toLowerCase();
+            if (['searching_driver', 'menunggu driver', 'menunggu konfirmasi'].includes(s)) return 'searching_driver';
+            if (['driver_assigned'].includes(s)) return 'driver_assigned';
+            if (['merchant_confirmation'].includes(s)) return 'merchant_confirmation';
+            if (['merchant_accepted'].includes(s)) return 'merchant_accepted';
+            if (['preparing', 'sedang diproses'].includes(s)) return 'preparing';
+            if (['driver_arriving'].includes(s)) return 'driver_arriving';
+            if (['picked_up'].includes(s)) return 'picked_up';
+            if (['delivering'].includes(s)) return 'delivering';
+            if (['completed', 'selesai'].includes(s)) return 'completed';
+            if (['cancelled', 'ditolak', 'dibatalkan'].includes(s)) return 'cancelled';
+            return 'searching_driver';
+        }
+
+        function getOrderStatusLabel(rawStatus) {
+            const code = normalizeOrderStatusCode(rawStatus);
+            return ORDER_STATUS_LABELS[code] || rawStatus || 'Mencari Driver';
+        }
+
+        function appendOrderStatusHistory(order, toStatus, actorRole = 'system', actorName = 'Sistem', note = '') {
+            const code = normalizeOrderStatusCode(toStatus);
+            if (!Array.isArray(order.statusHistory)) order.statusHistory = [];
+            const last = order.statusHistory[order.statusHistory.length - 1];
+            const fromCode = last ? normalizeOrderStatusCode(last.toStatus) : null;
+            if (fromCode && code !== fromCode && Array.isArray(ORDER_ALLOWED_TRANSITIONS[fromCode])) {
+                if (!ORDER_ALLOWED_TRANSITIONS[fromCode].includes(code) && code !== 'cancelled') {
+                    return false;
+                }
+            }
+            order.status = code;
+            order.statusHistory.push({
+                fromStatus: fromCode,
+                toStatus: code,
+                label: ORDER_STATUS_LABELS[code] || code,
+                actorRole,
+                actorName,
+                note,
+                at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+            return true;
+        }
+
+        function recordDriverChangeLog(order, prevDriver, newDriver, reason = '', actionType = 'ASSIGN') {
+            const entry = {
+                id: 'DCHG-' + Date.now() + '-' + Math.floor(Math.random() * 90 + 10),
+                orderId: order.id,
+                previousDriver: prevDriver || '-',
+                newDriver: newDriver || '-',
+                reason: reason || '-',
+                actionType,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            if (!Array.isArray(order.driverChangeHistory)) order.driverChangeHistory = [];
+            order.driverChangeHistory.push(entry);
+            if (!Array.isArray(db.driverChangeLogs)) db.driverChangeLogs = [];
+            db.driverChangeLogs.unshift(entry);
+        }
+
+        function syncDriverAvailabilityLocks() {
+            const activeStatuses = ['driver_assigned', 'merchant_confirmation', 'merchant_accepted', 'preparing', 'driver_arriving', 'picked_up', 'delivering'];
+            (db.drivers || []).forEach(d => {
+                if (!d.status) d.status = 'Online';
+                if (d.status !== 'Online') {
+                    d.availability = 'offline';
+                    return;
+                }
+                const busyOrder = (db.orders || []).find(o => {
+                    const st = normalizeOrderStatusCode(o.status);
+                    if (!activeStatuses.includes(st)) return false;
+                    return String(o.driver || '').trim().toLowerCase() === String(d.name || '').trim().toLowerCase() ||
+                        (o.assignedDriverPhone && normalizePhone(o.assignedDriverPhone) === normalizePhone(d.phone));
+                });
+                if (busyOrder) {
+                    const st = normalizeOrderStatusCode(busyOrder.status);
+                    d.availability = (st === 'driver_assigned' || st === 'merchant_confirmation') ? 'reserved' : 'busy';
+                    d.activeOrderId = busyOrder.id;
+                } else {
+                    d.activeOrderId = null;
+                    if (!['available', 'reserved', 'busy', 'offline'].includes(d.availability)) {
+                        d.availability = 'available';
+                    } else if (d.availability === 'reserved' || d.availability === 'busy') {
+                        d.availability = 'available';
+                    }
+                }
+            });
         }
 
         function getAdminOwnStore() {
@@ -1225,6 +1355,8 @@
                             plate: u.plate || '',
                             bikeType: u.bikeType || '',
                             status: 'Online',
+                            availability: 'available',
+                            activeOrderId: null,
                             vehicle: u.vehicle || (u.bikeType && u.plate ? `${u.bikeType} - ${u.plate}` : 'Motor Mitra Lengkong'),
                             rating: 5.0,
                             ratingCount: 0,
@@ -1232,12 +1364,15 @@
                             lat: typeof u.lat === 'number' ? u.lat : (-7.1235 - idx * 0.0004),
                             lng: typeof u.lng === 'number' ? u.lng : (106.8458 + idx * 0.0004),
                             phone: cleanPhone || ADMIN_MAIN_WA,
-                            balance: Number(u.balance || 0)
+                            balance: Number(u.balance || 0),
+                            photo: u.photo || 'https://placehold.co/150x150/0369a1/ffffff?text=' + encodeURIComponent((u.name || 'D').charAt(0).toUpperCase())
                         };
                         db.drivers.push(d);
                     } else {
                         d.accountId = accId;
                         d.phone = cleanPhone || d.phone;
+                        if (!d.photo && u.photo) d.photo = u.photo;
+                        if (!d.availability) d.availability = 'available';
                         if (typeof u.balance === 'number') {
                             d.balance = Math.max(Number(d.balance || 0), Number(u.balance || 0));
                             u.balance = d.balance;
@@ -1245,6 +1380,7 @@
                     }
                 }
             });
+            syncDriverAvailabilityLocks();
         }
 
         ensureRoleListsSyncedFromUsers();
@@ -1311,6 +1447,7 @@
                     walletMutations: db.walletMutations || [],
                     commissionLogs: db.commissionLogs || [],
                     authLogs: db.authLogs || [],
+                    driverChangeLogs: db.driverChangeLogs || [],
                     reviews: db.reviews || [],
                     updatedAt: Date.now()
                 };
@@ -1426,7 +1563,7 @@
                     total_amount: Number(o.total || 0),
                     commission_amount: Number(o.commissionFee || 0),
                     net_amount: Number(o.netEarnings || 0),
-                    status: o.status || 'Menunggu Driver',
+                    status: o.status || 'searching_driver',
                     settled: Boolean(o.settled),
                     rating: o.rating ? Number(o.rating) : null,
                     review_text: o.reviewText || null
@@ -1530,10 +1667,10 @@
             const myShop = String(currentUser.shopName || '').trim().toLowerCase();
             const adminStore = getAdminOwnStore();
             const adminStoreName = String(adminStore?.name || '').trim().toLowerCase();
+            const st = normalizeOrderStatusCode(order.status);
 
             if (role === 'admin') {
-                return (adminStoreName && String(order.merchant || '').trim().toLowerCase() === adminStoreName) ||
-                    String(order.merchant || '').trim().toLowerCase() === 'layanan ojek online';
+                return true;
             }
 
             if (role === 'customer') {
@@ -1547,7 +1684,7 @@
                 );
                 const allowedDrivers = [me, drvObj ? String(drvObj.name || '').trim().toLowerCase() : ''].filter(Boolean);
                 const ordDrv = String(order.driver || '').trim().toLowerCase();
-                return allowedDrivers.includes(ordDrv) || (order.type === 'ojek' && !ordDrv);
+                return allowedDrivers.includes(ordDrv) || (st === 'searching_driver' && !ordDrv);
             }
 
             if (role === 'merchant') {
@@ -1557,7 +1694,10 @@
                     (myShop && String(m.name || '').trim().toLowerCase() === myShop))
                 );
                 const allowedMerchants = [myShop, mrcObj ? String(mrcObj.name || '').trim().toLowerCase() : ''].filter(Boolean);
-                return allowedMerchants.includes(String(order.merchant || '').trim().toLowerCase());
+                const isStoreTarget = allowedMerchants.includes(String(order.merchant || '').trim().toLowerCase());
+                // Toko baru menerima notifikasi pesanan setelah driver berhasil menerima tugas
+                if (!isStoreTarget) return false;
+                return ['driver_assigned', 'merchant_confirmation', 'merchant_accepted', 'preparing', 'driver_arriving', 'picked_up', 'delivering', 'completed', 'cancelled'].includes(st);
             }
 
             return false;
@@ -1657,7 +1797,32 @@
             switchView('chat');
         }
 
+        function processDriverResponseTimeouts() {
+            const timeoutSec = Number(db.pricing?.driverResponseTimeoutSec || 45);
+            const nowMs = Date.now();
+            let expiredAny = false;
+            (db.orders || []).forEach(o => {
+                const st = normalizeOrderStatusCode(o.status);
+                if ((st === 'searching_driver' || st === 'driver_assigned') && o.driverResponseDeadline && nowMs > Number(o.driverResponseDeadline)) {
+                    const prevDrv = o.driver || '-';
+                    o.driver = null;
+                    o.assignedDriverPhone = null;
+                    o.driverResponseDeadline = null;
+                    o.driverConfirmed = false;
+                    appendOrderStatusHistory(o, 'searching_driver', 'system', 'Timeout Respons', `Batas waktu ${timeoutSec} detik terlewati tanpa respons driver.`);
+                    recordDriverChangeLog(o, prevDrv, null, `Tidak merespons dalam ${timeoutSec} detik`, 'TIMEOUT');
+                    addAccountNotification(`Respons Driver Kedaluwarsa (${o.id})`, `Driver ${prevDrv} tidak merespons dalam ${timeoutSec} detik. Silakan pilih driver lain.`, o.customer);
+                    expiredAny = true;
+                }
+            });
+            if (expiredAny) {
+                syncDriverAvailabilityLocks();
+                localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            }
+        }
+
         async function pullInitialFromSupabase(forceRefreshUI = false) {
+            processDriverResponseTimeouts();
             if (!supabaseClient) return;
             try {
                 let hasChanges = false;
@@ -1676,7 +1841,8 @@
                         minFare: Number(cfg.min_fare ?? db.pricing.minFare ?? 8000),
                         ojekPerKm: Number(cfg.ojek_per_km ?? db.pricing.ojekPerKm ?? 2500),
                         foodPerKm: Number(cfg.food_per_km ?? db.pricing.foodPerKm ?? 2000),
-                        commissionPercent: Number(cfg.commission_percent ?? db.pricing.commissionPercent ?? 10)
+                        commissionPercent: Number(cfg.commission_percent ?? db.pricing.commissionPercent ?? 10),
+                        driverResponseTimeoutSec: Number(cfg.driver_response_timeout_sec ?? db.pricing.driverResponseTimeoutSec ?? 45)
                     };
                     if (JSON.stringify(nextPricing) !== JSON.stringify(db.pricing)) {
                         db.pricing = nextPricing;
@@ -1701,6 +1867,9 @@
                         }
                         if (Array.isArray(st.authLogs) && st.authLogs.length > 0) {
                             db.authLogs = mergeByKey(db.authLogs, st.authLogs, a => String(a.id));
+                        }
+                        if (Array.isArray(st.driverChangeLogs) && st.driverChangeLogs.length > 0) {
+                            db.driverChangeLogs = mergeByKey(db.driverChangeLogs, st.driverChangeLogs, d => String(d.id));
                         }
                         if (Array.isArray(st.reviews) && st.reviews.length > 0) {
                             db.reviews = mergeByKey(db.reviews, st.reviews, r => String(r.id));
@@ -1800,13 +1969,16 @@
                         bikeType: r.bike_type || '',
                         vehicle: r.vehicle || 'Motor Mitra Lengkong',
                         status: r.status || 'Online',
+                        availability: r.availability_status || 'available',
+                        activeOrderId: r.active_order_code || null,
                         location: r.location || 'Lengkong, Sukabumi',
                         lat: Number(r.lat || -7.1235),
                         lng: Number(r.lng || 106.8458),
                         phone: normalizePhone(r.phone) || ADMIN_MAIN_WA,
                         rating: Number(r.rating || 5.0),
                         ratingCount: Number(r.ratingCount || 0),
-                        balance: Number(r.balance || 0)
+                        balance: Number(r.balance || 0),
+                        photo: 'https://placehold.co/150x150/0369a1/ffffff?text=' + encodeURIComponent((r.name || 'D').charAt(0).toUpperCase())
                     }));
                     db.drivers = mergeByKey(db.drivers, mappedDrivers, d => normalizePhone(d.phone) || String(d.accountId || d.name).toUpperCase());
                     hasChanges = true;
@@ -1828,10 +2000,18 @@
                         total: Number(r.total_amount || 0),
                         commissionFee: Number(r.commission_amount || 0),
                         netEarnings: Number(r.net_amount || 0),
-                        status: r.status || 'Menunggu Driver',
+                        status: normalizeOrderStatusCode(r.status || 'searching_driver'),
                         settled: Boolean(r.settled),
                         rating: r.rating ? Number(r.rating) : null,
-                        reviewText: r.review_text || ''
+                        reviewText: r.review_text || '',
+                        storeRejectionReason: r.store_rejection_reason || '',
+                        cancellationReason: r.cancellation_reason || '',
+                        cancelledBy: r.cancelled_by || '',
+                        cancelledAt: r.cancelled_at || '',
+                        refundStatus: r.refund_status || 'none',
+                        refundAmount: Number(r.refund_amount || 0),
+                        statusHistory: Array.isArray(r.status_history) ? r.status_history : [],
+                        driverChangeHistory: Array.isArray(r.driver_change_history) ? r.driver_change_history : []
                     }));
                     db.orders = mergeByKey(db.orders, mappedOrders, o => String(o.id).toUpperCase());
                     hasChanges = true;
@@ -1865,6 +2045,7 @@
                     hasChanges = true;
                 }
 
+                syncDriverAvailabilityLocks();
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
                 const newlyArrivedChats = (db.chats || []).filter(c => !prevChatIds.has(String(c.id)) && isMessageForCurrentUser(c));
@@ -1999,11 +2180,60 @@
             return Math.max(minFare, Math.round(raw / 500) * 500);
         }
 
+        function getAvailableOnlineDriversSorted(fromLat, fromLng) {
+            syncDriverAvailabilityLocks();
+            return (db.drivers || [])
+                .filter(d => d.status === 'Online' && (d.availability === 'available' || !d.availability))
+                .map(d => {
+                    const dist = calculateDistance(fromLat, fromLng, d.lat, d.lng);
+                    return { ...d, distance: dist };
+                })
+                .sort((a, b) => a.distance - b.distance);
+        }
+
         function getSortedDriversByDistance(fromLat, fromLng) {
-            return db.drivers.map(d => {
-                const dist = calculateDistance(fromLat, fromLng, d.lat, d.lng);
-                return { ...d, distance: dist };
-            }).sort((a, b) => a.distance - b.distance);
+            return getAvailableOnlineDriversSorted(fromLat, fromLng);
+        }
+
+        // Pilihan sementara driver (belum mengunci driver untuk pelanggan lain & belum kirim permintaan)
+        function toggleDraftDriverSelection(driverId, context = 'ojek') {
+            const d = (db.drivers || []).find(x => Number(x.id) === Number(driverId));
+            if (!d) return;
+            if (d.status !== 'Online' || (d.availability && d.availability !== 'available')) {
+                return showToast(`Driver ${d.name} sedang tidak tersedia.`, 'error');
+            }
+            if (Number(draftSelectedDriverId) === Number(driverId)) {
+                draftSelectedDriverId = null;
+                showToast(`Pilihan sementara untuk ${d.name} dibatalkan. Silakan pilih driver lain.`, 'info');
+            } else {
+                draftSelectedDriverId = Number(driverId);
+                showToast(`Driver ${d.name} ditandai sebagai pilihan sementara. Tekan KONFIRMASI DRIVER untuk mengirim permintaan.`, 'info');
+            }
+            if (context === 'ojek' && currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'), false);
+            else if (context === 'cart') updateCartUI();
+        }
+
+        function confirmDraftDriverSelection(context = 'ojek') {
+            if (!draftSelectedDriverId) {
+                return showToast('Pilih satu driver terlebih dahulu sebelum menekan KONFIRMASI DRIVER!', 'error');
+            }
+            const d = (db.drivers || []).find(x => Number(x.id) === Number(draftSelectedDriverId));
+            if (!d || d.status !== 'Online' || (d.availability && d.availability !== 'available')) {
+                draftSelectedDriverId = null;
+                return showToast('Driver pilihan sudah tidak tersedia. Silakan pilih driver aktif lain.', 'error');
+            }
+            confirmedOrderDriverId = Number(d.id);
+            selectedDriverId = Number(d.id);
+            showToast(`Driver ${d.name} dikonfirmasi! Permintaan pengantaran siap dikirim.`, 'success');
+            if (context === 'ojek' && currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'), false);
+            else if (context === 'cart') updateCartUI();
+        }
+
+        function refreshActiveDriversList(context = 'ojek') {
+            pullInitialFromSupabase(false);
+            showToast('Daftar driver aktif diperbarui.', 'success');
+            if (context === 'ojek' && currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'), false);
+            else if (context === 'cart') updateCartUI();
         }
 
         function startLiveHighAccuracyGPSWatcher() {
@@ -2059,6 +2289,7 @@
             await syncAllToSupabase();
 
             setInterval(() => {
+                processDriverResponseTimeouts();
                 if (!isUserCurrentlyTypingOrEditing()) {
                     pullInitialFromSupabase(false);
                 }
@@ -2361,6 +2592,8 @@
                     plate: driverData.plate,
                     bikeType: driverData.bikeType,
                     status: 'Online',
+                    availability: 'available',
+                    activeOrderId: null,
                     vehicle: driverData.vehicle,
                     rating: 5.0,
                     ratingCount: 0,
@@ -2368,7 +2601,8 @@
                     lat: userCurrentLatLng[0],
                     lng: userCurrentLatLng[1],
                     phone,
-                    balance: 50000
+                    balance: 50000,
+                    photo: newUser.photo
                 });
             }
 
@@ -2620,12 +2854,14 @@
         }
 
         function checkAndShowIncomingOrderPopup(forceShowLatest = false) {
+            processDriverResponseTimeouts();
             if (!currentUser) return;
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             if (activeRole !== 'driver' && activeRole !== 'merchant' && activeRole !== 'admin') return;
 
             const candidate = db.orders.find(o => {
-                if (o.status === 'Selesai' || o.status === 'Ditolak' || o.status === 'Dibatalkan') return false;
+                const st = normalizeOrderStatusCode(o.status);
+                if (st === 'completed' || st === 'cancelled') return false;
                 if (!forceShowLatest && shownPopupOrderIds.includes(o.id)) return false;
                 return isOrderTargetedToCurrentUser(o);
             });
@@ -2636,6 +2872,7 @@
         }
 
         function openIncomingOrderModal(orderId, showFullDetail = false) {
+            processDriverResponseTimeouts();
             const order = db.orders.find(o => o.id === orderId);
             if (!order) return;
 
@@ -2647,6 +2884,10 @@
             playAlarmRingtone();
             pushAppNavigationState('incoming-order');
             const card = document.getElementById('incoming-order-card');
+            const st = normalizeOrderStatusCode(order.status);
+            const statusText = getOrderStatusLabel(st);
+            const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+
             if (!showFullDetail) {
                 card.innerHTML = `
                     <div class="flex justify-between items-center border-b pb-2">
@@ -2655,8 +2896,8 @@
                     </div>
                     <div class="space-y-1.5 text-xs">
                         <h3 class="font-black text-sm text-sky-900">Ada Order Baru untuk Anda!</h3>
-                        <p class="text-slate-600 font-semibold">Kode Order: <b>${order.id}</b> • Status: <span class="text-amber-600 font-bold">${order.status}</span></p>
-                        <p class="text-[11px] text-slate-500">Ketuk <b>Cek</b> untuk melihat detail isi order, jemput/tujuan, lalu Terima atau Tolak.</p>
+                        <p class="text-slate-600 font-semibold">Kode Order: <b>${order.id}</b> • Status: <span class="text-amber-600 font-bold">${statusText} (${st})</span></p>
+                        <p class="text-[11px] text-slate-500">Ketuk <b>Cek</b> untuk melihat detail isi order, jemput/tujuan, lalu proses sesuai peran.</p>
                     </div>
                     <div class="grid grid-cols-2 gap-2 pt-2">
                         <button onclick="openIncomingOrderModal('${order.id}', true)" class="py-3 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-xs font-black cursor-pointer shadow border-b-2 border-yellow-400">
@@ -2668,11 +2909,56 @@
                     </div>
                 `;
             } else {
-                const isAccepted = order.status === 'Sedang Diproses' || order.status === 'Driver Menuju Lokasi' || order.status === 'Sedang Diantar';
                 const isOjekOrder = order.type === 'ojek' || String(order.merchant || '').toLowerCase().includes('ojek');
                 const pickupCoordsHtml = isOjekOrder
                     ? `<p class="text-[11px] text-sky-900 font-bold">Koordinat Jemput: <span class="font-black text-sky-700">${getOjekPickupCoordsText(order)}</span></p>`
                     : '';
+                const historyHtml = Array.isArray(order.statusHistory) && order.statusHistory.length > 0
+                    ? `<div class="mt-2 pt-2 border-t border-sky-200 space-y-1"><span class="text-[10px] font-black text-sky-900 uppercase block">Riwayat Status:</span>${order.statusHistory.map(h => `<p class="text-[10px] text-sky-800">• <b>${h.label || h.toStatus}</b> (${h.at || ''}) ${h.note ? `- ${h.note}` : ''}</p>`).join('')}</div>`
+                    : '';
+
+                let roleActionButtons = '';
+                if (st !== 'completed' && st !== 'cancelled') {
+                    if (activeRole === 'driver' || activeRole === 'admin') {
+                        if (st === 'searching_driver' || st === 'driver_assigned') {
+                            roleActionButtons += `
+                                <div class="grid grid-cols-2 gap-2 pt-1">
+                                    <button onclick="handleIncomingOrderAction('${order.id}', 'accept')" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">TERIMA PESANAN</button>
+                                    <button onclick="handleIncomingOrderAction('${order.id}', 'reject')" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">TOLAK PESANAN</button>
+                                </div>
+                            `;
+                        }
+                        if (['merchant_accepted', 'preparing'].includes(st)) {
+                            roleActionButtons += `<button onclick="advanceOrderStage('${order.id}', 'driver_arriving')" class="w-full py-2.5 bg-sky-700 text-white rounded-xl text-xs font-black cursor-pointer mt-1">Menuju Toko (driver_arriving)</button>`;
+                        }
+                        if (st === 'driver_arriving') {
+                            roleActionButtons += `<button onclick="advanceOrderStage('${order.id}', 'picked_up')" class="w-full py-2.5 bg-amber-500 text-sky-950 rounded-xl text-xs font-black cursor-pointer mt-1">Barang Diambil (picked_up)</button>`;
+                        }
+                        if (st === 'picked_up') {
+                            roleActionButtons += `<button onclick="advanceOrderStage('${order.id}', 'delivering')" class="w-full py-2.5 bg-indigo-700 text-white rounded-xl text-xs font-black cursor-pointer mt-1">Mulai Antar (delivering)</button>`;
+                        }
+                        if (st === 'delivering') {
+                            roleActionButtons += `<button onclick="handleIncomingOrderAction('${order.id}', 'complete')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black cursor-pointer shadow border-b-2 border-yellow-400 mt-1">Konfirmasi Order Selesai (completed)</button>`;
+                        }
+                        if (['driver_assigned', 'merchant_confirmation', 'merchant_accepted', 'preparing', 'driver_arriving'].includes(st)) {
+                            roleActionButtons += `<button onclick="driverCancelAssignedOrder('${order.id}')" class="w-full py-2 bg-rose-100 text-rose-800 rounded-xl text-[11px] font-black cursor-pointer mt-1">Batalkan Tugas Driver (Cari Pengganti)</button>`;
+                        }
+                    }
+                    if (activeRole === 'merchant' || activeRole === 'admin') {
+                        if (['driver_assigned', 'merchant_confirmation'].includes(st)) {
+                            roleActionButtons += `
+                                <div class="grid grid-cols-2 gap-2 pt-1">
+                                    <button onclick="merchantRespondOrder('${order.id}', true)" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">TERIMA PESANAN</button>
+                                    <button onclick="merchantRespondOrder('${order.id}', false)" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">TOLAK PESANAN</button>
+                                </div>
+                            `;
+                        }
+                        if (st === 'merchant_accepted') {
+                            roleActionButtons += `<button onclick="advanceOrderStage('${order.id}', 'preparing')" class="w-full py-2.5 bg-amber-400 text-sky-950 rounded-xl text-xs font-black cursor-pointer mt-1">Siapkan Barang (preparing)</button>`;
+                        }
+                    }
+                }
+
                 card.innerHTML = `
                     <div class="flex justify-between items-center border-b pb-2">
                         <span class="bg-yellow-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">DETAIL ORDER (${order.id})</span>
@@ -2685,13 +2971,14 @@
                         <p class="text-[11px] text-sky-800">Jemput: <b>${order.pickup || 'Lokasi Awal'}</b></p>
                         ${pickupCoordsHtml}
                         <p class="text-[11px] text-sky-800">Tujuan: <b>${order.dest || 'Wilayah Lengkong'}</b></p>
-                        <p class="text-[11px] font-bold text-amber-600 pt-1">Status: ${order.status}</p>
+                        <p class="text-[11px] text-sky-800">Driver: <b>${order.driver || 'Belum ditugaskan'}</b></p>
+                        <p class="text-[11px] font-bold text-amber-700 pt-1">Status: ${statusText} (${st})</p>
+                        ${order.storeRejectionReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Toko Tolak: ${order.storeRejectionReason}</p>` : ''}
+                        ${order.cancellationReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Batal: ${order.cancellationReason}</p>` : ''}
                         <p class="text-sm font-black text-sky-700 pt-1">Total: Rp ${Number(order.total || 0).toLocaleString()}</p>
+                        ${historyHtml}
                     </div>
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-                        <button onclick="handleIncomingOrderAction('${order.id}', 'accept')" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Terima</button>
-                        <button onclick="handleIncomingOrderAction('${order.id}', 'reject')" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer shadow">Tolak</button>
-                    </div>
+                    ${roleActionButtons}
                     <div class="grid grid-cols-1 gap-2 pt-1">
                         ${isOjekOrder ? `
                             <button type="button" onclick="openPickupGoogleMapsNavigation(db.orders.find(x => x.id === '${order.id}'), userCurrentLatLng?.[0], userCurrentLatLng?.[1], '${String(order.pickup || 'Alun-Alun Lengkong').replace(/'/g, "\\'")}')" class="w-full py-2.5 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-xs font-black cursor-pointer shadow">
@@ -2702,14 +2989,130 @@
                             <i class="fa-solid fa-diamond-turn-right mr-1"></i> Navigasi Google Maps
                         </button>
                     </div>
-                    ${isAccepted ? `
-                        <button onclick="handleIncomingOrderAction('${order.id}', 'complete')" class="w-full py-3 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-xs font-black cursor-pointer shadow border-b-2 border-yellow-400">
-                            <i class="fa-solid fa-check-double mr-1"></i> Konfirmasi Order Selesai
-                        </button>
-                    ` : ''}
                 `;
             }
             document.getElementById('modal-incoming-order').classList.remove('hidden');
+        }
+
+        function merchantRespondOrder(orderId, accepted) {
+            const order = db.orders.find(o => o.id === orderId);
+            if (!order) return;
+            const st = normalizeOrderStatusCode(order.status);
+            if (!order.driver || !['driver_assigned', 'merchant_confirmation'].includes(st)) {
+                return showToast('Toko hanya memproses pesanan setelah driver menerima tugas.', 'error');
+            }
+            if (accepted) {
+                appendOrderStatusHistory(order, 'merchant_accepted', 'merchant', order.merchant, 'Toko menyetujui pesanan');
+                appendOrderStatusHistory(order, 'preparing', 'merchant', order.merchant, 'Toko mulai menyiapkan barang');
+                addAccountNotification(`Toko Menyetujui (${order.id})`, `Toko ${order.merchant} menyetujui & sedang menyiapkan pesanan ${order.items}.`, order.customer);
+                addAccountNotification(`Toko Menyetujui (${order.id})`, `Pesanan di ${order.merchant} disetujui & sedang disiapkan. Silakan menuju toko.`, order.driver);
+                saveDB(`Toko menyetujui & menyiapkan pesanan ${order.id} (preparing).`);
+                openIncomingOrderModal(order.id, true);
+            } else {
+                const reason = (prompt('Wajib masukkan alasan toko menolak pesanan:') || '').trim();
+                if (!reason) {
+                    return showToast('Alasan penolakan toko wajib diisi!', 'error');
+                }
+                const prevDriver = order.driver;
+                order.storeRejectionReason = reason;
+                order.driver = null;
+                order.assignedDriverPhone = null;
+                order.refundStatus = 'refunded_to_customer';
+                order.refundAmount = Number(order.total || 0);
+                appendOrderStatusHistory(order, 'cancelled', 'merchant', order.merchant, `Ditolak toko: ${reason}`);
+                recordDriverChangeLog(order, prevDriver, null, `Toko menolak: ${reason}`, 'STORE_REJECT');
+                addAccountNotification(`Pesanan Ditolak Toko (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Refund Rp ${Number(order.total || 0).toLocaleString()} diproses.`, order.customer);
+                addAccountNotification(`Tugas Dibatalkan (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Penugasan dilepas.`, prevDriver);
+                saveDB(`Pesanan ${order.id} ditolak toko & status menjadi cancelled.`);
+                document.getElementById('modal-incoming-order')?.classList.add('hidden');
+                renderDashboardContent(currentSubTab, false);
+            }
+        }
+
+        function advanceOrderStage(orderId, nextStage) {
+            const order = db.orders.find(o => o.id === orderId);
+            if (!order) return;
+            const curStage = normalizeOrderStatusCode(order.status);
+            const isStoreOrder = order.type === 'food' && String(order.merchant || '').toLowerCase() !== 'layanan ojek online';
+            if (nextStage === 'picked_up' && isStoreOrder && !['merchant_accepted', 'preparing', 'driver_arriving'].includes(curStage)) {
+                return showToast('Barang belum bisa diambil sebelum toko menyetujui pesanan!', 'error');
+            }
+            const ok = appendOrderStatusHistory(order, nextStage, 'driver', order.driver || 'Driver', `Tahap ${nextStage}`);
+            if (!ok) {
+                return showToast(`Transisi status dari ${curStage} ke ${nextStage} tidak valid.`, 'error');
+            }
+            addAccountNotification(`Update Status (${order.id})`, `Status pesanan: ${getOrderStatusLabel(nextStage)} (${nextStage}).`, order.customer);
+            if (isStoreOrder) {
+                addAccountNotification(`Update Driver (${order.id})`, `Driver ${order.driver}: ${getOrderStatusLabel(nextStage)}.`, order.merchant);
+            }
+            saveDB(`Status pesanan ${order.id} diperbarui ke ${nextStage}.`);
+            openIncomingOrderModal(order.id, true);
+        }
+
+        function driverCancelAssignedOrder(orderId) {
+            const order = db.orders.find(o => o.id === orderId);
+            if (!order) return;
+            const st = normalizeOrderStatusCode(order.status);
+            if (['picked_up', 'delivering', 'completed', 'cancelled'].includes(st)) {
+                return showToast('Pesanan pada tahap ini tidak dapat dibatalkan driver melalui tombol biasa.', 'error');
+            }
+            const reason = (prompt('Masukkan alasan driver membatalkan pekerjaan:') || '').trim();
+            if (!reason) {
+                return showToast('Alasan pembatalan driver wajib diisi!', 'error');
+            }
+            const prevDriver = order.driver;
+            order.driver = null;
+            order.assignedDriverPhone = null;
+            order.driverConfirmed = false;
+            order.driverResponseDeadline = null;
+            order.cancellationReason = reason;
+            order.cancelledBy = 'driver';
+            appendOrderStatusHistory(order, 'searching_driver', 'driver', prevDriver || 'Driver', `Driver batal (${reason}), mencari driver pengganti`);
+            recordDriverChangeLog(order, prevDriver, null, reason, 'DRIVER_CANCEL');
+            addAccountNotification(`Driver Membatalkan (${order.id})`, `Driver ${prevDriver} membatalkan (${reason}). Pesanan tetap aktif, silakan pilih driver lain.`, order.customer);
+            if (order.type === 'food') {
+                addAccountNotification(`Driver Diganti (${order.id})`, `Driver ${prevDriver} membatalkan tugas (${reason}). Menunggu driver pengganti.`, order.merchant);
+            }
+            saveDB(`Penugasan ${prevDriver} dilepas. Pesanan ${order.id} kembali mencari driver pengganti.`);
+            document.getElementById('modal-incoming-order')?.classList.add('hidden');
+            renderDashboardContent(currentSubTab, false);
+        }
+
+        function customerCancelOrderWithReason(orderId) {
+            const order = db.orders.find(o => o.id === orderId);
+            if (!order) return;
+            const st = normalizeOrderStatusCode(order.status);
+            if (st === 'completed') {
+                return showToast('Pesanan yang sudah selesai tidak dapat dibatalkan.', 'error');
+            }
+            if (['picked_up', 'delivering'].includes(st)) {
+                return showToast('Barang sudah diambil driver. Gunakan pembatalan khusus & koordinasi dengan Admin.', 'error');
+            }
+            if (!confirm(`Konfirmasi BATALKAN PESANAN ${order.id}? Tindakan ini membatalkan seluruh transaksi.`)) {
+                return;
+            }
+            const reason = (prompt('Masukkan alasan pembatalan pesanan:') || '').trim();
+            if (!reason) {
+                return showToast('Alasan pembatalan wajib diisi!', 'error');
+            }
+            const prevDriver = order.driver;
+            order.driver = null;
+            order.assignedDriverPhone = null;
+            order.cancellationReason = reason;
+            order.cancelledBy = 'customer';
+            order.cancelledAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            order.refundStatus = 'refund_processed';
+            order.refundAmount = Number(order.total || 0);
+            appendOrderStatusHistory(order, 'cancelled', 'customer', order.customer, `Dibatalkan pelanggan: ${reason}`);
+            if (prevDriver) {
+                recordDriverChangeLog(order, prevDriver, null, `Pelanggan membatalkan: ${reason}`, 'CUSTOMER_CANCEL');
+                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, prevDriver);
+            }
+            if (order.type === 'food') {
+                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, order.merchant);
+            }
+            saveDB(`Pesanan ${order.id} dibatalkan (cancelled) & refund dicatat.`);
+            renderDashboardContent(currentSubTab, false);
         }
 
         function handleIncomingOrderAction(orderId, action) {
@@ -2717,26 +3120,46 @@
             if (!order) return;
 
             if (action === 'cancel') {
-                order.status = 'Dibatalkan';
-                saveDB(`Order ${order.id} dibatalkan.`);
-                addAccountNotification(`Order ${order.id} Dibatalkan`, `Pesanan ${order.customer} (${order.items}) dibatalkan pemesan.`, order.driver);
-                addAccountNotification(`Order ${order.id} Dibatalkan`, `Pesanan ${order.customer} (${order.items}) dibatalkan pemesan.`, order.merchant);
-                renderDashboardContent(currentSubTab, false);
+                customerCancelOrderWithReason(orderId);
                 return;
             }
 
             if (action === 'accept') {
-                order.status = 'Sedang Diproses';
-                saveDB(`Order ${order.id} diterima! Silakan selesaikan lalu tekan Konfirmasi Order Selesai.`);
-                addAccountNotification(`Order ${order.id} Diterima`, `Pesanan ${order.items} telah diterima & sedang diproses.`, order.customer);
+                const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+                const assignedName = activeRole === 'driver' ? currentUser.name : (order.driver || currentUser.name);
+                const assignedPhone = activeRole === 'driver' ? normalizePhone(currentUser.phone) : normalizePhone(order.assignedDriverPhone);
+                const prevDriver = order.driver;
+                order.driver = assignedName;
+                order.assignedDriverPhone = assignedPhone;
+                order.driverResponseDeadline = null;
+                appendOrderStatusHistory(order, 'driver_assigned', 'driver', assignedName, 'Driver menerima pekerjaan');
+                if (prevDriver !== assignedName) {
+                    recordDriverChangeLog(order, prevDriver, assignedName, 'Driver menerima tugas', 'ACCEPT');
+                }
+                const isStoreOrder = order.type === 'food' && String(order.merchant || '').toLowerCase() !== 'layanan ojek online';
+                if (isStoreOrder) {
+                    appendOrderStatusHistory(order, 'merchant_confirmation', 'system', 'Sistem', 'Menunggu persetujuan toko setelah driver menerima tugas');
+                    addAccountNotification(`Permintaan Persetujuan Toko (${order.id})`, `Driver ${assignedName} menerima tugas untuk pesanan ${order.items} (${order.customer}). Silakan Terima/Tolak.`, order.merchant);
+                }
+                addAccountNotification(`Driver Menerima (${order.id})`, `Driver ${assignedName} menerima pesanan Anda.`, order.customer);
+                saveDB(`Order ${order.id} diterima oleh ${assignedName} (driver_assigned).`);
                 openIncomingOrderModal(order.id, true);
                 return;
             } else if (action === 'reject') {
-                order.status = 'Ditolak';
-                saveDB(`Order ${order.id} ditolak & tersinkron.`);
-                addAccountNotification(`Order ${order.id} Ditolak`, `Maaf, order ${order.items} ditolak. Silakan pilih mitra lain.`, order.customer);
+                const prevDriver = order.driver || currentUser?.name || '-';
+                order.driver = null;
+                order.assignedDriverPhone = null;
+                order.driverConfirmed = false;
+                order.driverResponseDeadline = null;
+                appendOrderStatusHistory(order, 'searching_driver', 'driver', prevDriver, 'Driver menolak tugas, menunggu pilihan driver lain');
+                recordDriverChangeLog(order, prevDriver, null, 'Driver menolak tugas', 'REJECT');
+                addAccountNotification(`Driver Menolak (${order.id})`, `Driver ${prevDriver} menolak tugas. Silakan pilih driver aktif lain tanpa checkout ulang.`, order.customer);
+                saveDB(`Tugas ${order.id} ditolak & dilepas. Pelanggan dapat memilih driver lain.`);
             } else if (action === 'complete') {
-                order.status = 'Selesai';
+                const ok = appendOrderStatusHistory(order, 'completed', 'driver', order.driver || 'Driver', 'Pesanan selesai diantar');
+                if (!ok) {
+                    return showToast('Transisi ke completed tidak valid pada tahap ini.', 'error');
+                }
                 if (!order.settled) {
                     const pct = Number(db.pricing?.commissionPercent || 10);
                     const commissionFee = Math.round((order.total * pct) / 100);
@@ -2789,8 +3212,8 @@
                     order.settled = true;
                     order.commissionFee = commissionFee;
                     order.netEarnings = netEarnings;
-                    saveDB(`Order ${order.id} dikonfirmasi selesai! Saldo bersih +Rp ${netEarnings.toLocaleString()} masuk & notif terkirim ke pemesan.`);
-                    addAccountNotification(`Order ${order.id} Selesai`, `Pesanan ${order.items} sudah dikonfirmasi selesai. Silakan beri rating & ulasan!`, order.customer);
+                    saveDB(`Order ${order.id} dikonfirmasi selesai (completed)! Saldo bersih +Rp ${netEarnings.toLocaleString()} masuk.`);
+                    addAccountNotification(`Order ${order.id} Selesai`, `Pesanan ${order.items} sudah selesai. Silakan beri rating & ulasan!`, order.customer);
                 } else {
                     saveDB(`Status order ${order.id} tersinkron.`);
                 }
@@ -3147,11 +3570,12 @@
         }
 
         function renderCustomerOjek(container) {
-            const sortedDrivers = getSortedDriversByDistance(userCurrentLatLng[0], userCurrentLatLng[1]);
-            const filteredDrivers = sortedDrivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.vehicle.toLowerCase().includes(searchQuery.toLowerCase()));
+            const availableDrivers = getAvailableOnlineDriversSorted(userCurrentLatLng[0], userCurrentLatLng[1]);
+            const filteredDrivers = availableDrivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.vehicle.toLowerCase().includes(searchQuery.toLowerCase()));
             const distanceKm = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]);
             const estFare = calculateShippingCost(distanceKm, 'ojek');
             const layerBtnLabel = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
+            const confirmedDrv = confirmedOrderDriverId ? availableDrivers.find(x => Number(x.id) === Number(confirmedOrderDriverId)) : null;
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24 bg-white min-h-full">
@@ -3196,6 +3620,13 @@
                             <span class="text-sm font-black text-sky-700" id="ojek-fare-label">Rp ${estFare.toLocaleString()}</span>
                         </div>
 
+                        <div class="bg-amber-50 p-2.5 rounded-2xl border border-amber-300 text-[11px] font-bold text-sky-950 flex items-center justify-between gap-2">
+                            <span>Driver Terkonfirmasi: <b>${confirmedDrv ? confirmedDrv.name : 'Belum dikonfirmasi'}</b></span>
+                            <button type="button" onclick="confirmDraftDriverSelection('ojek')" class="px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-[10px] font-black cursor-pointer shrink-0">
+                                KONFIRMASI DRIVER
+                            </button>
+                        </div>
+
                         <button onclick="submitOjekOrder()" class="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-sky-950 font-black rounded-2xl shadow-md transition text-xs cursor-pointer border-b-2 border-sky-700">
                             Pesan Ojek Sekarang
                         </button>
@@ -3203,50 +3634,44 @@
 
                     <div class="space-y-2.5">
                         <div class="flex justify-between items-center">
-                            <h3 class="font-extrabold text-xs text-sky-950 uppercase">Daftar List Ojek Online Terdekat</h3>
-                            <span class="text-[10px] bg-sky-100 text-sky-900 px-2 py-0.5 rounded-md font-bold">Online / Offline</span>
+                            <h3 class="font-extrabold text-xs text-sky-950 uppercase">Daftar Driver Aktif & Tersedia</h3>
+                            <button type="button" onclick="refreshActiveDriversList('ojek')" class="px-2.5 py-1 bg-sky-100 text-sky-900 rounded-xl text-[10px] font-extrabold cursor-pointer">
+                                <i class="fa-solid fa-rotate"></i> Refresh
+                            </button>
                         </div>
                         <div class="space-y-2.5">
                             ${filteredDrivers.length > 0 ? filteredDrivers.map((d, index) => {
-                                const isSelected = selectedDriverId === d.id;
-                                const isOnline = d.status === 'Online';
+                                const isDraft = Number(draftSelectedDriverId) === Number(d.id);
+                                const isConfirmed = Number(confirmedOrderDriverId) === Number(d.id);
+                                const avatarSrc = d.photo || ('https://placehold.co/150x150/0369a1/ffffff?text=' + encodeURIComponent((d.name || 'D').charAt(0).toUpperCase()));
                                 return `
-                                    <div onclick="selectDriver(${d.id})" class="bg-white p-3.5 rounded-2xl border-2 transition cursor-pointer flex items-center justify-between gap-2 ${isSelected ? 'border-sky-700 bg-yellow-50/70 shadow-sm' : 'border-sky-100'}">
+                                    <div class="bg-white p-3.5 rounded-2xl border-2 transition flex items-center justify-between gap-2 ${isDraft || isConfirmed ? 'border-sky-700 bg-yellow-50/70 shadow-sm' : 'border-sky-100'}">
                                         <div class="flex items-center space-x-3 min-w-0 flex-1">
-                                            <div class="w-12 h-12 bg-sky-100 text-sky-800 rounded-2xl flex items-center justify-center text-lg font-bold shadow-xs shrink-0">
-                                                <i class="fa-solid fa-motorcycle"></i>
-                                            </div>
+                                            <img src="${avatarSrc}" class="w-12 h-12 rounded-2xl object-cover border border-sky-200 shrink-0" alt="Driver">
                                             <div class="min-w-0">
-                                                <h4 class="font-bold text-xs text-sky-950 truncate">${d.name} <span class="text-[9px] ${isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'} px-1.5 py-0.5 rounded font-extrabold ml-1">${d.status}</span></h4>
-                                                ${index === 0 && isOnline ? '<span class="bg-yellow-400 text-sky-950 px-2 py-0.5 rounded text-[9px] font-black inline-block my-0.5">Terdekat Paling Atas</span>' : ''}
-                                                <p class="text-[10px] text-sky-700 truncate">${d.vehicle} • <i class="fa-solid fa-star text-yellow-400"></i> <b>${d.rating || 5.0}</b></p>
+                                                <h4 class="font-bold text-xs text-sky-950 truncate">${d.name} <span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-extrabold ml-1">Online • Available</span></h4>
+                                                ${isDraft ? '<span class="bg-sky-700 text-yellow-300 px-2 py-0.5 rounded text-[9px] font-black inline-block my-0.5">DRIVER DIPILIH (SEMENTARA)</span>' : ''}
+                                                ${isConfirmed ? '<span class="bg-emerald-600 text-white px-2 py-0.5 rounded text-[9px] font-black inline-block my-0.5">TERKONFIRMASI</span>' : ''}
+                                                ${index === 0 ? '<span class="bg-yellow-400 text-sky-950 px-2 py-0.5 rounded text-[9px] font-black inline-block my-0.5">Terdekat</span>' : ''}
+                                                <p class="text-[10px] text-sky-700 truncate">${d.vehicle} ${d.plate ? `• <b>${d.plate}</b>` : ''} • <i class="fa-solid fa-star text-yellow-400"></i> <b>${d.rating || 5.0}</b></p>
                                                 <p class="text-[10px] text-sky-800 font-bold mt-0.5 truncate"><i class="fa-solid fa-location-dot"></i> Jarak GPS: ${d.distance} km (${d.location})</p>
                                             </div>
                                         </div>
-                                        <div class="flex flex-col gap-1 shrink-0" onclick="event.stopPropagation()">
-                                            <button onclick="selectDriver(${d.id})" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black cursor-pointer shadow-2xs ${isSelected ? 'bg-emerald-600 text-white' : 'bg-yellow-400 text-sky-950'}">
-                                                ${isSelected ? '<i class="fa-solid fa-check"></i> Terpilih' : 'Pilih Ojek'}
+                                        <div class="flex flex-col gap-1 shrink-0">
+                                            <button type="button" onclick="toggleDraftDriverSelection(${d.id}, 'ojek')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black cursor-pointer shadow-2xs ${isDraft ? 'bg-rose-600 text-white' : 'bg-yellow-400 text-sky-950'}">
+                                                ${isDraft ? 'BATAL PILIH' : 'PILIH'}
                                             </button>
                                             <a href="https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin OLENG GO (' + ADMIN_MAIN_WA + '), saya pesan ojek bersama ' + d.name + '.')}" target="_blank" class="px-2.5 py-1 bg-emerald-600 text-white rounded-xl text-[10px] font-bold text-center"><i class="fa-brands fa-whatsapp"></i> WA Utama</a>
-                                            <button onclick="startPersonalChat('${d.name}')" class="px-2.5 py-1 bg-sky-700 text-white rounded-xl text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments"></i> Chat</button>
+                                            <button type="button" onclick="startPersonalChat('${d.name}')" class="px-2.5 py-1 bg-sky-700 text-white rounded-xl text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments"></i> Chat</button>
                                         </div>
                                     </div>
                                 `;
-                            }).join('') : `<p class="text-center text-xs text-sky-600 py-6">Driver "${searchQuery}" tidak ditemukan.</p>`}
+                            }).join('') : `<p class="text-center text-xs text-rose-700 font-bold bg-rose-50 border border-rose-200 p-4 rounded-2xl">Driver aktif yang tersedia belum ada saat ini. Tekan Refresh untuk memuat ulang.</p>`}
                         </div>
                     </div>
                 </div>
             `;
             setTimeout(() => initInteractiveRouteMap('ojek-map', 'ojek-from', 'ojek-to', true, 'ojek'), 250);
-        }
-
-        function selectDriver(driverId) {
-            selectedDriverId = driverId;
-            const d = db.drivers.find(x => x.id === driverId);
-            showToast(`Berhasil memilih ojek ${d.name} (${d.distance} km)!`, 'success');
-            if(currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'), false);
-            else if(currentSubTab === 'food') renderCustomerFood(document.getElementById('main-content'), false);
-            else updateCartUI();
         }
 
         function addToCart(foodId) {
@@ -3280,22 +3705,39 @@
             const container = document.getElementById('cart-items-container');
             const driverListEl = document.getElementById('checkout-driver-list');
             const merchant = db.activeMerchant || db.merchants[0];
+            const confirmBtn = document.getElementById('btn-confirm-cart-driver');
             
             document.getElementById('cart-pickup-label').innerText = merchant.name;
 
-            const sortedDrivers = getSortedDriversByDistance(merchant.lat, merchant.lng);
-            driverListEl.innerHTML = sortedDrivers.map((d, idx) => {
-                const isSel = selectedDriverId === d.id;
+            const sortedDrivers = getAvailableOnlineDriversSorted(merchant.lat, merchant.lng);
+            if (confirmBtn) {
+                const confDrv = confirmedOrderDriverId ? sortedDrivers.find(x => Number(x.id) === Number(confirmedOrderDriverId)) : null;
+                confirmBtn.innerHTML = confDrv
+                    ? `<i class="fa-solid fa-check-circle mr-1"></i> DRIVER TERKONFIRMASI: ${confDrv.name}`
+                    : `<i class="fa-solid fa-check-circle mr-1"></i> KONFIRMASI DRIVER`;
+            }
+
+            driverListEl.innerHTML = sortedDrivers.length > 0 ? sortedDrivers.map((d, idx) => {
+                const isDraft = Number(draftSelectedDriverId) === Number(d.id);
+                const isConf = Number(confirmedOrderDriverId) === Number(d.id);
+                const avatarSrc = d.photo || ('https://placehold.co/150x150/0369a1/ffffff?text=' + encodeURIComponent((d.name || 'D').charAt(0).toUpperCase()));
                 return `
-                    <div onclick="selectDriver(${d.id})" class="p-2 rounded-xl border flex justify-between items-center cursor-pointer ${isSel ? 'border-sky-700 bg-white shadow-xs' : 'border-sky-200 bg-white/80'}">
-                        <div>
-                            <span class="font-bold text-xs text-sky-950">${d.name} (${d.status}) ${idx === 0 ? '<span class="text-[9px] bg-yellow-400 text-sky-950 px-1.5 rounded font-black">TERDEKAT</span>' : ''}</span>
-                            <span class="block text-[10px] text-sky-700 font-bold">Jarak GPS: ${d.distance} km</span>
+                    <div class="p-2 rounded-xl border flex justify-between items-center gap-2 ${isDraft || isConf ? 'border-sky-700 bg-white shadow-xs' : 'border-sky-200 bg-white/80'}">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <img src="${avatarSrc}" class="w-9 h-9 rounded-xl object-cover border shrink-0" alt="Driver">
+                            <div class="min-w-0">
+                                <span class="font-bold text-xs text-sky-950 block truncate">${d.name} ${idx === 0 ? '<span class="text-[9px] bg-yellow-400 text-sky-950 px-1.5 rounded font-black">TERDEKAT</span>' : ''}</span>
+                                <span class="block text-[10px] text-sky-700 font-bold truncate">${d.vehicle} • ${d.distance} km</span>
+                                ${isDraft ? '<span class="text-[9px] font-black text-sky-700">DRIVER DIPILIH</span>' : ''}
+                                ${isConf ? '<span class="text-[9px] font-black text-emerald-700">TERKONFIRMASI</span>' : ''}
+                            </div>
                         </div>
-                        <input type="radio" ${isSel ? 'checked' : ''}>
+                        <button type="button" onclick="toggleDraftDriverSelection(${d.id}, 'cart')" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer shrink-0 ${isDraft ? 'bg-rose-600 text-white' : 'bg-yellow-400 text-sky-950'}">
+                            ${isDraft ? 'BATAL PILIH' : 'PILIH'}
+                        </button>
                     </div>
                 `;
-            }).join('');
+            }).join('') : `<p class="text-xs text-rose-700 font-bold text-center py-2">Driver aktif yang tersedia belum ada saat ini.</p>`;
 
             if(db.cart.length === 0) {
                 container.innerHTML = `<p class="text-center text-sky-600 py-3 text-xs">Keranjang masih kosong.</p>`;
@@ -3343,8 +3785,15 @@
 
         async function submitFoodOrder() {
             if(db.cart.length === 0) return showToast('Keranjang masih kosong!', 'error');
+            const activeDriverId = confirmedOrderDriverId || draftSelectedDriverId;
+            if (!activeDriverId) {
+                return showToast('Silakan PILIH driver lalu tekan KONFIRMASI DRIVER terlebih dahulu!', 'error');
+            }
             const merchant = db.activeMerchant || db.merchants[0];
-            const driver = db.drivers.find(d => d.id === selectedDriverId) || db.drivers[0];
+            const driver = db.drivers.find(d => Number(d.id) === Number(activeDriverId));
+            if (!driver || driver.status !== 'Online' || (driver.availability && driver.availability !== 'available')) {
+                return showToast('Driver pilihan sudah tidak tersedia. Silakan pilih driver aktif lain.', 'error');
+            }
             const subtotal = db.cart.reduce((sum, i) => sum + i.price, 0);
             const distKm = calculateDistance(merchant.lat, merchant.lng, destLatLng[0], destLatLng[1]);
             const ongkir = calculateShippingCost(distKm, 'food');
@@ -3357,15 +3806,20 @@
             });
 
             const compactItemsText = formatCompactOrderItems(db.cart);
+            const orderCode = 'ORD-' + Math.floor(1000 + Math.random() * 9000);
+            const timeoutMs = Number(db.pricing?.driverResponseTimeoutSec || 45) * 1000;
 
             const newOrder = {
-                id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+                id: orderCode,
                 type: 'food',
                 customer: currentUser.name,
                 merchant: merchant.name,
-                driver: driver ? driver.name : 'Asep Supriatna',
+                driver: driver.name,
+                assignedDriverPhone: normalizePhone(driver.phone),
+                driverConfirmed: true,
+                driverResponseDeadline: Date.now() + timeoutMs,
                 total: subtotal + ongkir,
-                status: 'Menunggu Konfirmasi',
+                status: 'searching_driver',
                 items: compactItemsText,
                 pickup: merchant.name,
                 pickupLat: Number(merchant.lat),
@@ -3375,16 +3829,29 @@
                 destLng: Number(destLatLng[1]),
                 settled: false,
                 rating: null,
-                reviewText: ''
+                reviewText: '',
+                statusHistory: [{
+                    fromStatus: null,
+                    toStatus: 'searching_driver',
+                    label: ORDER_STATUS_LABELS.searching_driver,
+                    actorRole: 'customer',
+                    actorName: currentUser.name,
+                    note: `Konfirmasi driver ${driver.name}`,
+                    at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }],
+                driverChangeHistory: []
             };
+            recordDriverChangeLog(newOrder, null, driver.name, 'Konfirmasi driver oleh pelanggan', 'CONFIRM');
 
             db.orders.unshift(newOrder);
             db.cart = [];
+            draftSelectedDriverId = null;
+            confirmedOrderDriverId = null;
+            syncDriverAvailabilityLocks();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-            addAccountNotification(`Order Masuk ${newOrder.id}`, `Pesanan ${newOrder.items} dari ${currentUser.name} ke toko ${merchant.name}.`, merchant.name);
-            addAccountNotification(`Order Antar ${newOrder.id}`, `Ambil pesanan di ${merchant.name} untuk ${currentUser.name}.`, newOrder.driver);
-            showToast(`Berhasil! Pesanan ${newOrder.id} terkirim ke toko ${merchant.name} & driver ${newOrder.driver}.`, 'success');
+            addAccountNotification(`Permintaan Kerja (${newOrder.id})`, `Toko ${merchant.name} • Jemput: ${newOrder.pickup} → ${newOrder.dest} (${distKm} km, Ongkir Rp ${ongkir.toLocaleString()}).`, newOrder.driver);
+            showToast(`Berhasil! Pesanan ${newOrder.id} dikirim ke driver ${driver.name}. Menunggu respons driver.`, 'success');
             closeCartModal();
             closeMerchantDetail();
             renderDashboardContent('history', false);
@@ -3392,20 +3859,32 @@
         }
 
         async function submitOjekOrder() {
+            const activeDriverId = confirmedOrderDriverId || draftSelectedDriverId;
+            if (!activeDriverId) {
+                return showToast('Silakan PILIH driver lalu tekan KONFIRMASI DRIVER terlebih dahulu!', 'error');
+            }
+            const driver = db.drivers.find(d => Number(d.id) === Number(activeDriverId));
+            if (!driver || driver.status !== 'Online' || (driver.availability && driver.availability !== 'available')) {
+                return showToast('Driver pilihan sudah tidak tersedia. Silakan pilih driver aktif lain.', 'error');
+            }
             const to = document.getElementById('ojek-to').value || `Titik Map (${destLatLng[0]}, ${destLatLng[1]})`;
             const from = document.getElementById('ojek-from').value || 'Lokasi Terkini GPS';
-            const driver = db.drivers.find(d => d.id === selectedDriverId) || db.drivers[0];
             const distKm = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]);
             const fare = calculateShippingCost(distKm, 'ojek');
+            const orderCode = 'OJK-' + Math.floor(1000 + Math.random() * 9000);
+            const timeoutMs = Number(db.pricing?.driverResponseTimeoutSec || 45) * 1000;
 
             const newOrder = {
-                id: 'OJK-' + Math.floor(1000 + Math.random() * 9000),
+                id: orderCode,
                 type: 'ojek',
                 customer: currentUser.name,
                 merchant: 'Layanan Ojek Online',
-                driver: driver ? driver.name : 'Asep Supriatna',
+                driver: driver.name,
+                assignedDriverPhone: normalizePhone(driver.phone),
+                driverConfirmed: true,
+                driverResponseDeadline: Date.now() + timeoutMs,
                 total: fare,
-                status: 'Menunggu Konfirmasi',
+                status: 'searching_driver',
                 items: `Ojek (${from} → ${to})`,
                 pickup: from,
                 pickupLat: Number(userCurrentLatLng[0]),
@@ -3415,19 +3894,34 @@
                 destLng: Number(destLatLng[1]),
                 settled: false,
                 rating: null,
-                reviewText: ''
+                reviewText: '',
+                statusHistory: [{
+                    fromStatus: null,
+                    toStatus: 'searching_driver',
+                    label: ORDER_STATUS_LABELS.searching_driver,
+                    actorRole: 'customer',
+                    actorName: currentUser.name,
+                    note: `Konfirmasi driver ${driver.name}`,
+                    at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }],
+                driverChangeHistory: []
             };
+            recordDriverChangeLog(newOrder, null, driver.name, 'Konfirmasi driver ojek oleh pelanggan', 'CONFIRM');
 
             db.orders.unshift(newOrder);
+            draftSelectedDriverId = null;
+            confirmedOrderDriverId = null;
+            syncDriverAvailabilityLocks();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-            addAccountNotification(`Order Ojek Masuk ${newOrder.id}`, `Jemput ${currentUser.name} (${from} → ${to}).`, newOrder.driver);
-            showToast(`Berhasil! Order ojek ${newOrder.id} terkirim ke ojek ${newOrder.driver}.`, 'success');
+            addAccountNotification(`Permintaan Ojek (${newOrder.id})`, `Jemput ${currentUser.name} (${from} → ${to}, ${distKm} km, Tarif Rp ${fare.toLocaleString()}).`, newOrder.driver);
+            showToast(`Berhasil! Order ojek ${newOrder.id} dikirim ke driver ${driver.name}. Menunggu respons driver.`, 'success');
             renderDashboardContent('history', false);
             syncAllToSupabase();
         }
 
         function renderOrderHistory(container) {
+            processDriverResponseTimeouts();
             markAllNotifsAsRead();
             const myOrders = getAccountOrders();
             const myNotifs = getAccountNotifs();
@@ -3447,31 +3941,32 @@
                         <h3 class="text-xs font-black text-sky-900 uppercase">Daftar Pesanan Real Akun Anda</h3>
                         ${myOrders.length > 0 ? myOrders.map(o => {
                             const isOjekRow = o.type === 'ojek' || String(o.merchant || '').toLowerCase().includes('ojek');
+                            const st = normalizeOrderStatusCode(o.status);
+                            const stLabel = getOrderStatusLabel(st);
+                            const canCustomerCancel = activeRole === 'customer' && !['picked_up', 'delivering', 'completed', 'cancelled'].includes(st);
                             return `
                             <div class="bg-white p-4 rounded-3xl shadow-xs border-2 border-sky-100 space-y-2">
-                                <div class="flex justify-between items-center">
+                                <div class="flex justify-between items-center gap-2">
                                     <span class="text-[10px] bg-sky-100 text-sky-900 font-extrabold px-2.5 py-0.5 rounded-md uppercase">${o.id}</span>
-                                    <span class="text-[10px] bg-yellow-100 text-amber-900 font-extrabold px-2.5 py-0.5 rounded-md">${o.status}</span>
+                                    <span class="text-[10px] bg-yellow-100 text-amber-900 font-extrabold px-2.5 py-0.5 rounded-md">${stLabel} (${st})</span>
                                 </div>
                                 <h4 class="font-bold text-xs text-sky-950">${o.merchant} • Pemesan: ${o.customer}</h4>
                                 <p class="text-[11px] text-sky-900 font-semibold">${o.items}</p>
-                                <p class="text-[10px] text-sky-700"><i class="fa-solid fa-motorcycle text-sky-700"></i> Driver: <b>${o.driver}</b></p>
+                                <p class="text-[10px] text-sky-700"><i class="fa-solid fa-motorcycle text-sky-700"></i> Driver: <b>${o.driver || 'Menunggu driver aktif'}</b></p>
+                                ${o.storeRejectionReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Toko Tolak: ${o.storeRejectionReason}</p>` : ''}
+                                ${o.cancellationReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Batal: ${o.cancellationReason}</p>` : ''}
+                                ${o.refundStatus && o.refundStatus !== 'none' ? `<p class="text-[10px] text-emerald-700 font-bold">Refund: ${o.refundStatus} (Rp ${Number(o.refundAmount || 0).toLocaleString()})</p>` : ''}
                                 ${o.rating ? `<p class="text-[11px] font-bold text-amber-600"><i class="fa-solid fa-star text-yellow-400"></i> Rating: ${o.rating}/5 ${o.reviewText ? `— "${o.reviewText}"` : ''}</p>` : ''}
                                 <div class="text-xs font-black text-sky-800 pt-2 border-t border-sky-100 flex justify-between items-center flex-wrap gap-2">
                                     <span>Rp ${o.total.toLocaleString()}</span>
                                     <div class="flex gap-1.5 flex-wrap">
                                         ${isOjekRow ? `<button type="button" onclick="openPickupGoogleMapsNavigation(db.orders.find(x => x.id === '${o.id}'), userCurrentLatLng?.[0], userCurrentLatLng?.[1], '${String(o.pickup || 'Alun-Alun Lengkong').replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-sky-700 text-white rounded-lg text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-location-dot"></i> Maps Jemput</button>` : ''}
                                         <button type="button" onclick="openGoogleMapsNavigation(db.orders.find(x => x.id === '${o.id}'), '${String(o.merchant || '').replace(/'/g, "\\'")}', destLatLng?.[0], destLatLng?.[1], '${String(o.dest || o.items || 'Lengkong, Sukabumi').replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-diamond-turn-right"></i> Google Maps</button>
-                                        ${activeRole === 'customer' && o.status === 'Menunggu Konfirmasi' ? `<button onclick="handleIncomingOrderAction('${o.id}', 'cancel')" class="px-2.5 py-1 bg-rose-100 text-rose-800 rounded-lg text-[10px] font-bold cursor-pointer">Batalkan</button>` : ''}
-                                        ${o.status === 'Selesai' && activeRole === 'customer' ? `<button onclick="openRatingModal('${o.id}')" class="px-2.5 py-1 bg-yellow-400 text-sky-950 rounded-lg text-[10px] font-black cursor-pointer"><i class="fa-solid fa-star"></i> ${o.rating ? 'Ubah Rating' : 'Beri Rating'}</button>` : ''}
+                                        ${canCustomerCancel ? `<button onclick="customerCancelOrderWithReason('${o.id}')" class="px-2.5 py-1 bg-rose-100 text-rose-800 rounded-lg text-[10px] font-bold cursor-pointer">BATALKAN PESANAN</button>` : ''}
+                                        ${st === 'completed' && activeRole === 'customer' ? `<button onclick="openRatingModal('${o.id}')" class="px-2.5 py-1 bg-yellow-400 text-sky-950 rounded-lg text-[10px] font-black cursor-pointer"><i class="fa-solid fa-star"></i> ${o.rating ? 'Ubah Rating' : 'Beri Rating'}</button>` : ''}
                                         ${(activeRole === 'driver' || activeRole === 'merchant' || activeRole === 'admin') ? `
                                             <button onclick="openIncomingOrderModal('${o.id}', false)" class="px-2.5 py-1 bg-yellow-400 text-sky-950 rounded-lg text-[10px] font-black cursor-pointer">Pop-Up</button>
-                                            <button onclick="openIncomingOrderModal('${o.id}', true)" class="px-2.5 py-1 bg-sky-700 text-white rounded-lg text-[10px] font-black cursor-pointer">Cek</button>
-                                            ${o.status !== 'Selesai' && o.status !== 'Ditolak' && o.status !== 'Dibatalkan' ? `
-                                                <button onclick="handleIncomingOrderAction('${o.id}', 'accept')" class="px-2.5 py-1 bg-sky-900 text-white rounded-lg text-[10px] font-bold cursor-pointer">Terima</button>
-                                                <button onclick="handleIncomingOrderAction('${o.id}', 'reject')" class="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Tolak</button>
-                                                <button onclick="handleIncomingOrderAction('${o.id}', 'complete')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold cursor-pointer">Konfirmasi Order Selesai</button>
-                                            ` : ''}
+                                            <button onclick="openIncomingOrderModal('${o.id}', true)" class="px-2.5 py-1 bg-sky-700 text-white rounded-lg text-[10px] font-black cursor-pointer">Cek & Proses</button>
                                         ` : ''}
                                     </div>
                                 </div>
@@ -3968,6 +4463,18 @@
             ensureRoleListsSyncedFromUsers();
             const totalCommission = db.commissionLogs.reduce((sum, item) => sum + Number(item.amount || 0), 0);
             const p = db.pricing || defaultPricing;
+            const onlineDriversCount = (db.drivers || []).filter(d => d.status === 'Online').length;
+            const availableDriversCount = getAvailableOnlineDriversSorted(userCurrentLatLng[0], userCurrentLatLng[1]).length;
+            const busyDriversCount = (db.drivers || []).filter(d => d.availability === 'busy' || d.availability === 'reserved').length;
+
+            const countByStatus = (code) => (db.orders || []).filter(o => normalizeOrderStatusCode(o.status) === code).length;
+            const waitingDriverCount = countByStatus('searching_driver');
+            const waitingStoreCount = countByStatus('merchant_confirmation');
+            const preparingCount = countByStatus('preparing') + countByStatus('merchant_accepted');
+            const deliveringCount = countByStatus('delivering') + countByStatus('driver_arriving') + countByStatus('picked_up');
+            const cancelledCount = countByStatus('cancelled');
+            const recentDriverChanges = (db.driverChangeLogs || []).slice(0, 5);
+            const recentCancelledOrders = (db.orders || []).filter(o => normalizeOrderStatusCode(o.status) === 'cancelled').slice(0, 5);
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24 bg-white min-h-full">
@@ -3991,14 +4498,40 @@
                             <h3 class="text-lg font-black text-amber-500 mt-1">${db.merchants.length} Toko</h3>
                         </div>
                         <div onclick="renderDashboardContent('admin-drivers')" class="bg-white p-3.5 rounded-3xl border-2 border-sky-100 cursor-pointer hover:border-emerald-500 transition shadow-xs text-center">
-                            <span class="text-[10px] text-sky-700 uppercase font-extrabold block">OJOL / DRIVER</span>
-                            <h3 class="text-lg font-black text-emerald-700 mt-1">${db.drivers.length} Driver</h3>
+                            <span class="text-[10px] text-sky-700 uppercase font-extrabold block">DRIVER AKTIF / TERSEDIA</span>
+                            <h3 class="text-sm font-black text-emerald-700 mt-1">Aktif: ${onlineDriversCount} • Tersedia: ${availableDriversCount}</h3>
+                            <span class="text-[9px] text-sky-700 font-bold">Bekerja: ${busyDriversCount}</span>
                         </div>
                         <div onclick="renderDashboardContent('history')" class="bg-white p-3.5 rounded-3xl border-2 border-sky-100 cursor-pointer hover:border-sky-700 transition shadow-xs text-center">
-                            <span class="text-[10px] text-sky-700 uppercase font-extrabold block">KOMISI</span>
-                            <h3 class="text-sm font-black text-sky-900 mt-1">Rp ${totalCommission.toLocaleString()}</h3>
+                            <span class="text-[10px] text-sky-700 uppercase font-extrabold block">ALL ORDERS & KOMISI</span>
+                            <h3 class="text-xs font-black text-sky-900 mt-1">${db.orders.length} Order • Rp ${totalCommission.toLocaleString()}</h3>
                         </div>
                     </div>
+
+                    <div class="bg-sky-50 p-3.5 rounded-3xl border border-sky-200 space-y-2 text-xs">
+                        <h3 class="font-black text-xs text-sky-950 uppercase">Monitoring Status Pesanan</h3>
+                        <div class="grid grid-cols-2 gap-1.5 text-[11px] font-bold text-sky-900">
+                            <span>Menunggu Driver: <b>${waitingDriverCount}</b></span>
+                            <span>Menunggu Toko: <b>${waitingStoreCount}</b></span>
+                            <span>Sedang Disiapkan: <b>${preparingCount}</b></span>
+                            <span>Dalam Pengantaran: <b>${deliveringCount}</b></span>
+                            <span>Dibatalkan: <b class="text-rose-700">${cancelledCount}</b></span>
+                        </div>
+                    </div>
+
+                    ${recentCancelledOrders.length > 0 ? `
+                        <div class="bg-white p-3.5 rounded-3xl border border-rose-200 space-y-1.5 text-xs">
+                            <h3 class="font-black text-xs text-rose-800 uppercase">Alasan Pembatalan Terbaru</h3>
+                            ${recentCancelledOrders.map(c => `<p class="text-[11px] text-sky-900">• <b>${c.id}</b> (${c.cancelledBy || '-'}): ${c.cancellationReason || c.storeRejectionReason || '-'}</p>`).join('')}
+                        </div>
+                    ` : ''}
+
+                    ${recentDriverChanges.length > 0 ? `
+                        <div class="bg-white p-3.5 rounded-3xl border border-sky-200 space-y-1.5 text-xs">
+                            <h3 class="font-black text-xs text-sky-950 uppercase">Riwayat Pergantian Driver</h3>
+                            ${recentDriverChanges.map(ch => `<p class="text-[11px] text-sky-800">• <b>${ch.orderId}</b> (${ch.actionType}): ${ch.previousDriver} → ${ch.newDriver} (${ch.reason})</p>`).join('')}
+                        </div>
+                    ` : ''}
 
                     <div class="grid grid-cols-2 gap-2.5">
                         <button onclick="renderDashboardContent('admin-own-store')" class="py-2.5 px-3 bg-white hover:bg-sky-50 text-sky-950 font-extrabold rounded-2xl text-xs border-2 border-sky-200 shadow-2xs cursor-pointer flex items-center justify-center gap-1.5">
@@ -4010,7 +4543,7 @@
                     </div>
 
                     <div class="bg-white p-4 rounded-3xl border-2 border-yellow-400 space-y-3 shadow-sm">
-                        <h3 class="font-black text-xs text-sky-950 uppercase border-b pb-2 text-center"><i class="fa-solid fa-sliders text-yellow-500 mr-1"></i> Pengaturan Tarif & Komisi (%)</h3>
+                        <h3 class="font-black text-xs text-sky-950 uppercase border-b pb-2 text-center"><i class="fa-solid fa-sliders text-yellow-500 mr-1"></i> Pengaturan Tarif, Komisi & Timeout Driver</h3>
                         
                         <div class="grid grid-cols-2 gap-2.5">
                             <div>
@@ -4030,9 +4563,13 @@
                                 <input type="number" id="cfg-food-km" value="${p.foodPerKm}" class="w-full mt-1 p-2.5 border-2 border-sky-200 bg-white rounded-2xl text-xs font-bold">
                             </div>
                         </div>
+                        <div>
+                            <label class="text-[10px] font-extrabold text-sky-800 uppercase">Batas Waktu Respons Driver (Detik)</label>
+                            <input type="number" id="cfg-driver-timeout" value="${p.driverResponseTimeoutSec || 45}" min="10" max="300" class="w-full mt-1 p-2.5 border-2 border-sky-200 bg-white rounded-2xl text-xs font-bold">
+                        </div>
 
                         <button onclick="saveAdminPricingConfig()" class="w-full py-3 bg-sky-700 hover:bg-sky-800 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer border-b-2 border-yellow-400">
-                            Simpan Pengaturan Tarif & Komisi
+                            Simpan Pengaturan Tarif, Komisi & Timeout
                         </button>
                     </div>
                 </div>
@@ -4044,10 +4581,11 @@
                 minFare: Math.max(1000, parseInt(document.getElementById('cfg-min-fare').value) || 8000),
                 ojekPerKm: Math.max(500, parseInt(document.getElementById('cfg-ojek-km').value) || 2500),
                 foodPerKm: Math.max(500, parseInt(document.getElementById('cfg-food-km').value) || 2000),
-                commissionPercent: Math.min(100, Math.max(0, parseInt(document.getElementById('cfg-commission').value) || 0))
+                commissionPercent: Math.min(100, Math.max(0, parseInt(document.getElementById('cfg-commission').value) || 0)),
+                driverResponseTimeoutSec: Math.min(300, Math.max(10, parseInt(document.getElementById('cfg-driver-timeout')?.value) || 45))
             };
-            saveDB('Pengaturan tarif & komisi berhasil disimpan & diterapkan online!');
-            addAccountNotification('Tarif & Komisi Diperbarui', `Min order Rp ${db.pricing.minFare.toLocaleString()}, Ojek/km Rp ${db.pricing.ojekPerKm.toLocaleString()}, Food/km Rp ${db.pricing.foodPerKm.toLocaleString()}, Komisi ${db.pricing.commissionPercent}%.`, 'ALL');
+            saveDB('Pengaturan tarif, komisi & timeout driver berhasil disimpan & diterapkan online!');
+            addAccountNotification('Tarif & Komisi Diperbarui', `Min order Rp ${db.pricing.minFare.toLocaleString()}, Ojek/km Rp ${db.pricing.ojekPerKm.toLocaleString()}, Food/km Rp ${db.pricing.foodPerKm.toLocaleString()}, Komisi ${db.pricing.commissionPercent}%, Timeout ${db.pricing.driverResponseTimeoutSec}s.`, 'ALL');
             renderAdminDash(document.getElementById('main-content'));
         }
 
@@ -4334,7 +4872,7 @@
                             return `
                                 <div class="bg-white p-4 rounded-3xl border-2 border-sky-100 space-y-2 shadow-xs">
                                     <span class="text-[10px] bg-sky-100 text-sky-950 font-black px-2 py-0.5 rounded-md">HP: ${d.phone || '-'}</span>
-                                    <h4 class="font-bold text-xs text-sky-950">${d.name} (${d.status}) • <i class="fa-solid fa-star text-yellow-400"></i> ${d.rating || 5.0}</h4>
+                                    <h4 class="font-bold text-xs text-sky-950">${d.name} (${d.status} • ${d.availability || 'available'}) • <i class="fa-solid fa-star text-yellow-400"></i> ${d.rating || 5.0}</h4>
                                     <p class="text-[10px] text-sky-700">${d.vehicle} • KTP: ${d.ktp || '-'} • ${d.location || 'Lengkong'}</p>
                                     <p class="text-xs font-black text-emerald-700">Saldo Driver: Rp ${drvBal.toLocaleString()}</p>
                                     <button onclick="adminAddBalance(${uid})" class="px-3 py-1.5 bg-yellow-400 text-sky-950 rounded-xl text-[10px] font-bold cursor-pointer">Tambah Saldo</button>
