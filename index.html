@@ -50,7 +50,7 @@
 </head>
 <body class="h-full flex flex-col items-center justify-center">
 
-    <!-- SPLASH SCREEN 2 DETIK -->
+    <!-- SPLASH SCREEN 2 DETIK (SELALU TERTUTUP MAKSIMAL 2 DETIK) -->
     <div id="oleng-splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-sky-600 via-sky-700 to-sky-950 text-white transition-opacity duration-500">
         <div class="flex flex-col items-center space-y-4 px-6 text-center">
             <div class="w-28 h-28 rounded-3xl bg-white p-2 shadow-2xl border-4 border-yellow-400 flex items-center justify-center overflow-hidden">
@@ -63,6 +63,22 @@
             <div class="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mt-2"></div>
         </div>
     </div>
+
+    <script>
+        (function () {
+            function hideOlengSplashScreen() {
+                const splash = document.getElementById('oleng-splash-screen');
+                if (!splash) return;
+                splash.classList.add('opacity-0');
+                setTimeout(() => {
+                    if (splash && splash.parentNode) splash.style.display = 'none';
+                }, 400);
+            }
+            setTimeout(hideOlengSplashScreen, 1800);
+            window.addEventListener('load', () => setTimeout(hideOlengSplashScreen, 400));
+            window.addEventListener('error', () => setTimeout(hideOlengSplashScreen, 200));
+        })();
+    </script>
 
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-[9998] flex flex-col gap-2 pointer-events-none max-w-xs"></div>
@@ -238,7 +254,7 @@
             <div id="chat-partner-info-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-sky-600"></div>
         </div>
 
-        <!-- Pop-Up Order Masuk (Pop-Up -> Cek Detail -> Terima / Tolak / Tahapan / Konfirmasi Order Selesai) -->
+        <!-- Pop-Up Order Masuk -->
         <div id="modal-incoming-order" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
             <div id="incoming-order-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-yellow-400 max-h-[90vh] overflow-y-auto"></div>
         </div>
@@ -276,7 +292,7 @@
             </div>
         </div>
 
-        <!-- Cart Checkout Modal (Pilih/Batal Pilih Driver -> KONFIRMASI DRIVER -> Kirim Pesanan) -->
+        <!-- Cart Checkout Modal -->
         <div id="modal-cart" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-5 max-h-[92vh] overflow-y-auto space-y-4 shadow-2xl border-t-4 border-yellow-400">
                 <div class="flex justify-between items-center border-b pb-3">
@@ -381,7 +397,7 @@
             </div>
         </div>
 
-        <!-- Live Chat View (Privat Antar-Akun + Klik Profil Detail + Galeri + Kamera + Emot & Stiker) -->
+        <!-- Live Chat View -->
         <div id="view-chat" class="absolute inset-0 bg-white z-50 hidden flex flex-col">
             <div class="bg-sky-700 text-white px-4 py-3 flex items-center justify-between shadow border-b-2 border-yellow-400">
                 <div class="flex items-center space-x-2.5 min-w-0">
@@ -447,8 +463,8 @@
         const ADMIN_OWN_STORE_ID = 'TOKOADM01';
 
         const ORDER_STATUS_LABELS = {
-            searching_driver: 'Mencari / Konfirmasi Driver',
-            driver_assigned: 'Driver Menerima Tugas',
+            searching_driver: 'Mencari Driver',
+            driver_assigned: 'Driver Ditemukan',
             merchant_confirmation: 'Menunggu Persetujuan Toko',
             merchant_accepted: 'Toko Menyetujui',
             preparing: 'Toko Menyiapkan Barang',
@@ -476,9 +492,9 @@
         let isHandlingHardwareBack = false;
         let lastHistoryPushTime = 0;
 
-        // Pilihan sementara driver (belum mengunci driver & belum kirim permintaan sampai KONFIRMASI DRIVER)
         let draftSelectedDriverId = null;
         let confirmedOrderDriverId = null;
+        let sentNotifDedupeKeys = JSON.parse(localStorage.getItem('oleng_sent_notif_keys') || '[]');
 
         function pushAppNavigationState(label = 'nav') {
             if (isHandlingHardwareBack) return;
@@ -701,18 +717,6 @@
                 }
             } catch (e) {}
         }
-
-        window.addEventListener('DOMContentLoaded', function () {
-            const splash = document.getElementById('oleng-splash-screen');
-            if (splash) {
-                setTimeout(() => {
-                    splash.classList.add('opacity-0');
-                    setTimeout(() => {
-                        splash.style.display = 'none';
-                    }, 500);
-                }, 2000);
-            }
-        });
 
         const SUPABASE_PROJECT_ID = 'yhyjofvdkmuudpqzucnw';
         const SUPABASE_URL = 'https://yhyjofvdkmuudpqzucnw.supabase.co';
@@ -1070,7 +1074,8 @@
             ojekPerKm: 2500,
             foodPerKm: 2000,
             commissionPercent: 10,
-            driverResponseTimeoutSec: 45
+            driverResponseTimeoutSec: 45,
+            driverSearchTimeoutSec: 60
         };
 
         const DEFAULT_ADMIN_ACCOUNT = {
@@ -1163,6 +1168,7 @@
         let db = JSON.parse(localStorage.getItem('oleng_go_db')) || defaultDB;
         if (!db.pricing) db.pricing = { ...defaultPricing };
         if (typeof db.pricing.driverResponseTimeoutSec !== 'number') db.pricing.driverResponseTimeoutSec = 45;
+        if (typeof db.pricing.driverSearchTimeoutSec !== 'number') db.pricing.driverSearchTimeoutSec = 60;
         if (!db.commissionLogs) db.commissionLogs = [];
         if (!db.walletMutations) db.walletMutations = [];
         if (!db.authLogs) db.authLogs = [];
@@ -1563,7 +1569,7 @@
                     total_amount: Number(o.total || 0),
                     commission_amount: Number(o.commissionFee || 0),
                     net_amount: Number(o.netEarnings || 0),
-                    status: o.status || 'searching_driver',
+                    status: normalizeOrderStatusCode(o.status || 'searching_driver'),
                     settled: Boolean(o.settled),
                     rating: o.rating ? Number(o.rating) : null,
                     review_text: o.reviewText || null
@@ -1665,8 +1671,6 @@
             const me = String(currentUser.name || '').trim().toLowerCase();
             const myPhone = normalizePhone(currentUser.phone);
             const myShop = String(currentUser.shopName || '').trim().toLowerCase();
-            const adminStore = getAdminOwnStore();
-            const adminStoreName = String(adminStore?.name || '').trim().toLowerCase();
             const st = normalizeOrderStatusCode(order.status);
 
             if (role === 'admin') {
@@ -1695,7 +1699,6 @@
                 );
                 const allowedMerchants = [myShop, mrcObj ? String(mrcObj.name || '').trim().toLowerCase() : ''].filter(Boolean);
                 const isStoreTarget = allowedMerchants.includes(String(order.merchant || '').trim().toLowerCase());
-                // Toko baru menerima notifikasi pesanan setelah driver berhasil menerima tugas
                 if (!isStoreTarget) return false;
                 return ['driver_assigned', 'merchant_confirmation', 'merchant_accepted', 'preparing', 'driver_arriving', 'picked_up', 'delivering', 'completed', 'cancelled'].includes(st);
             }
@@ -1798,24 +1801,40 @@
         }
 
         function processDriverResponseTimeouts() {
-            const timeoutSec = Number(db.pricing?.driverResponseTimeoutSec || 45);
+            const respTimeoutSec = Number(db.pricing?.driverResponseTimeoutSec || 45);
+            const searchTimeoutSec = Number(db.pricing?.driverSearchTimeoutSec || 60);
             const nowMs = Date.now();
-            let expiredAny = false;
+            let changedAny = false;
+
             (db.orders || []).forEach(o => {
                 const st = normalizeOrderStatusCode(o.status);
-                if ((st === 'searching_driver' || st === 'driver_assigned') && o.driverResponseDeadline && nowMs > Number(o.driverResponseDeadline)) {
+                if (st === 'completed' || st === 'cancelled') return;
+
+                if (o.driverResponseDeadline && nowMs > Number(o.driverResponseDeadline)) {
                     const prevDrv = o.driver || '-';
                     o.driver = null;
                     o.assignedDriverPhone = null;
                     o.driverResponseDeadline = null;
                     o.driverConfirmed = false;
-                    appendOrderStatusHistory(o, 'searching_driver', 'system', 'Timeout Respons', `Batas waktu ${timeoutSec} detik terlewati tanpa respons driver.`);
-                    recordDriverChangeLog(o, prevDrv, null, `Tidak merespons dalam ${timeoutSec} detik`, 'TIMEOUT');
-                    addAccountNotification(`Respons Driver Kedaluwarsa (${o.id})`, `Driver ${prevDrv} tidak merespons dalam ${timeoutSec} detik. Silakan pilih driver lain.`, o.customer);
-                    expiredAny = true;
+                    appendOrderStatusHistory(o, 'searching_driver', 'system', 'Timeout Respons', `Batas waktu respons driver (${respTimeoutSec}s) habis.`);
+                    recordDriverChangeLog(o, prevDrv, null, `Tidak merespons dalam ${respTimeoutSec} detik`, 'TIMEOUT');
+                    addAccountNotification(`Respons Driver Habis (${o.id})`, `Driver ${prevDrv} tidak merespons. Silakan pilih driver aktif lain.`, o.customer, `${o.id}-resp-timeout-${prevDrv}`);
+                    changedAny = true;
+                }
+
+                if (normalizeOrderStatusCode(o.status) === 'searching_driver' && o.driverSearchDeadline && nowMs > Number(o.driverSearchDeadline)) {
+                    o.cancellationReason = `Batas waktu pencarian driver (${searchTimeoutSec}s) habis tanpa driver.`;
+                    o.cancelledBy = 'system';
+                    o.cancelledAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    o.refundStatus = 'refund_processed';
+                    o.refundAmount = Number(o.total || 0);
+                    appendOrderStatusHistory(o, 'cancelled', 'system', 'Sistem', o.cancellationReason);
+                    addAccountNotification(`Pesanan Dibatalkan Otomatis (${o.id})`, `Tidak ada driver dalam batas waktu. Pesanan dibatalkan & refund diproses.`, o.customer, `${o.id}-search-timeout`);
+                    changedAny = true;
                 }
             });
-            if (expiredAny) {
+
+            if (changedAny) {
                 syncDriverAvailabilityLocks();
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
             }
@@ -1842,7 +1861,8 @@
                         ojekPerKm: Number(cfg.ojek_per_km ?? db.pricing.ojekPerKm ?? 2500),
                         foodPerKm: Number(cfg.food_per_km ?? db.pricing.foodPerKm ?? 2000),
                         commissionPercent: Number(cfg.commission_percent ?? db.pricing.commissionPercent ?? 10),
-                        driverResponseTimeoutSec: Number(cfg.driver_response_timeout_sec ?? db.pricing.driverResponseTimeoutSec ?? 45)
+                        driverResponseTimeoutSec: Number(cfg.driver_response_timeout_sec ?? db.pricing.driverResponseTimeoutSec ?? 45),
+                        driverSearchTimeoutSec: Number(cfg.driver_search_timeout_sec ?? db.pricing.driverSearchTimeoutSec ?? 60)
                     };
                     if (JSON.stringify(nextPricing) !== JSON.stringify(db.pricing)) {
                         db.pricing = nextPricing;
@@ -2003,15 +2023,7 @@
                         status: normalizeOrderStatusCode(r.status || 'searching_driver'),
                         settled: Boolean(r.settled),
                         rating: r.rating ? Number(r.rating) : null,
-                        reviewText: r.review_text || '',
-                        storeRejectionReason: r.store_rejection_reason || '',
-                        cancellationReason: r.cancellation_reason || '',
-                        cancelledBy: r.cancelled_by || '',
-                        cancelledAt: r.cancelled_at || '',
-                        refundStatus: r.refund_status || 'none',
-                        refundAmount: Number(r.refund_amount || 0),
-                        statusHistory: Array.isArray(r.status_history) ? r.status_history : [],
-                        driverChangeHistory: Array.isArray(r.driver_change_history) ? r.driver_change_history : []
+                        reviewText: r.review_text || ''
                     }));
                     db.orders = mergeByKey(db.orders, mappedOrders, o => String(o.id).toUpperCase());
                     hasChanges = true;
@@ -2114,8 +2126,15 @@
             });
         }
 
-        function addAccountNotification(title, desc, targetUser = null) {
+        function addAccountNotification(title, desc, targetUser = null, dedupKey = null) {
             const owner = targetUser || (currentUser ? currentUser.name : 'ALL');
+            if (dedupKey) {
+                const fullKey = `${String(dedupKey)}::${String(owner).toLowerCase()}`;
+                if (sentNotifDedupeKeys.includes(fullKey)) return;
+                sentNotifDedupeKeys.push(fullKey);
+                sentNotifDedupeKeys = sentNotifDedupeKeys.slice(-300);
+                localStorage.setItem('oleng_sent_notif_keys', JSON.stringify(sentNotifDedupeKeys));
+            }
             const notifId = Date.now() + Math.floor(Math.random() * 90);
             db.notifications.unshift({
                 id: notifId,
@@ -2180,7 +2199,7 @@
             return Math.max(minFare, Math.round(raw / 500) * 500);
         }
 
-        function getAvailableOnlineDriversSorted(fromLat, fromLng) {
+        function getAvailableOnlineDriversSorted(fromLat, fromLng, maxRadiusKm = null) {
             syncDriverAvailabilityLocks();
             return (db.drivers || [])
                 .filter(d => d.status === 'Online' && (d.availability === 'available' || !d.availability))
@@ -2188,6 +2207,7 @@
                     const dist = calculateDistance(fromLat, fromLng, d.lat, d.lng);
                     return { ...d, distance: dist };
                 })
+                .filter(d => (typeof maxRadiusKm === 'number' && !isNaN(maxRadiusKm)) ? d.distance <= maxRadiusKm : true)
                 .sort((a, b) => a.distance - b.distance);
         }
 
@@ -2195,7 +2215,6 @@
             return getAvailableOnlineDriversSorted(fromLat, fromLng);
         }
 
-        // Pilihan sementara driver (belum mengunci driver untuk pelanggan lain & belum kirim permintaan)
         function toggleDraftDriverSelection(driverId, context = 'ojek') {
             const d = (db.drivers || []).find(x => Number(x.id) === Number(driverId));
             if (!d) return;
@@ -2264,15 +2283,15 @@
         }
 
         document.addEventListener("DOMContentLoaded", async function() {
-            getSyncedMainBanner();
-            toggleRegisterRoleFields();
-            requestBackgroundNotificationPermission();
-            startLiveHighAccuracyGPSWatcher();
-            updateSupabaseBadgeUI(false);
-            subscribeRealtimeUpdates();
-            const savedSession = localStorage.getItem('oleng_user_session');
-            if (savedSession) {
-                try {
+            try {
+                getSyncedMainBanner();
+                toggleRegisterRoleFields();
+                requestBackgroundNotificationPermission();
+                startLiveHighAccuracyGPSWatcher();
+                updateSupabaseBadgeUI(false);
+                subscribeRealtimeUpdates();
+                const savedSession = localStorage.getItem('oleng_user_session');
+                if (savedSession) {
                     const parsedSession = JSON.parse(savedSession);
                     if (parsedSession && parsedSession.phone) {
                         currentUser = parsedSession;
@@ -2283,10 +2302,17 @@
                         document.getElementById('view-dashboard')?.classList.remove('hidden');
                         enterDashboard(true);
                     }
-                } catch (e) {}
+                }
+                pullInitialFromSupabase(false).then(() => syncAllToSupabase()).catch(() => {});
+            } catch (e) {
+                console.warn('Init error:', e);
+            } finally {
+                const splash = document.getElementById('oleng-splash-screen');
+                if (splash) {
+                    splash.classList.add('opacity-0');
+                    setTimeout(() => { splash.style.display = 'none'; }, 400);
+                }
             }
-            await pullInitialFromSupabase(false);
-            await syncAllToSupabase();
 
             setInterval(() => {
                 processDriverResponseTimeouts();
@@ -2971,7 +2997,7 @@
                         <p class="text-[11px] text-sky-800">Jemput: <b>${order.pickup || 'Lokasi Awal'}</b></p>
                         ${pickupCoordsHtml}
                         <p class="text-[11px] text-sky-800">Tujuan: <b>${order.dest || 'Wilayah Lengkong'}</b></p>
-                        <p class="text-[11px] text-sky-800">Driver: <b>${order.driver || 'Belum ditugaskan'}</b></p>
+                        <p class="text-[11px] text-sky-800">Driver: <b>${order.driver || 'Mencari driver pengganti / aktif'}</b></p>
                         <p class="text-[11px] font-bold text-amber-700 pt-1">Status: ${statusText} (${st})</p>
                         ${order.storeRejectionReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Toko Tolak: ${order.storeRejectionReason}</p>` : ''}
                         ${order.cancellationReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Batal: ${order.cancellationReason}</p>` : ''}
@@ -3004,12 +3030,12 @@
             if (accepted) {
                 appendOrderStatusHistory(order, 'merchant_accepted', 'merchant', order.merchant, 'Toko menyetujui pesanan');
                 appendOrderStatusHistory(order, 'preparing', 'merchant', order.merchant, 'Toko mulai menyiapkan barang');
-                addAccountNotification(`Toko Menyetujui (${order.id})`, `Toko ${order.merchant} menyetujui & sedang menyiapkan pesanan ${order.items}.`, order.customer);
-                addAccountNotification(`Toko Menyetujui (${order.id})`, `Pesanan di ${order.merchant} disetujui & sedang disiapkan. Silakan menuju toko.`, order.driver);
+                addAccountNotification(`Toko Menyetujui (${order.id})`, `Toko ${order.merchant} menyetujui & sedang menyiapkan pesanan ${order.items}.`, order.customer, `${order.id}-m-acc-${order.driver}`);
+                addAccountNotification(`Toko Menyetujui (${order.id})`, `Pesanan di ${order.merchant} disetujui & sedang disiapkan. Silakan menuju toko.`, order.driver, `${order.id}-m-acc-drv-${order.driver}`);
                 saveDB(`Toko menyetujui & menyiapkan pesanan ${order.id} (preparing).`);
                 openIncomingOrderModal(order.id, true);
             } else {
-                const reason = (prompt('Wajib masukkan alasan toko menolak pesanan:') || '').trim();
+                const reason = (prompt('Wajib pilih/isi alasan penolakan (contoh: Stok habis / Toko tutup / Tidak dapat memproses pesanan):') || '').trim();
                 if (!reason) {
                     return showToast('Alasan penolakan toko wajib diisi!', 'error');
                 }
@@ -3017,12 +3043,12 @@
                 order.storeRejectionReason = reason;
                 order.driver = null;
                 order.assignedDriverPhone = null;
-                order.refundStatus = 'refunded_to_customer';
+                order.refundStatus = 'refund_processed';
                 order.refundAmount = Number(order.total || 0);
                 appendOrderStatusHistory(order, 'cancelled', 'merchant', order.merchant, `Ditolak toko: ${reason}`);
                 recordDriverChangeLog(order, prevDriver, null, `Toko menolak: ${reason}`, 'STORE_REJECT');
-                addAccountNotification(`Pesanan Ditolak Toko (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Refund Rp ${Number(order.total || 0).toLocaleString()} diproses.`, order.customer);
-                addAccountNotification(`Tugas Dibatalkan (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Penugasan dilepas.`, prevDriver);
+                addAccountNotification(`Pesanan Ditolak Toko (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Refund diproses.`, order.customer, `${order.id}-m-rej-cust`);
+                addAccountNotification(`Tugas Dibatalkan (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Tugas Anda dibatalkan.`, prevDriver, `${order.id}-m-rej-drv-${prevDriver}`);
                 saveDB(`Pesanan ${order.id} ditolak toko & status menjadi cancelled.`);
                 document.getElementById('modal-incoming-order')?.classList.add('hidden');
                 renderDashboardContent(currentSubTab, false);
@@ -3041,9 +3067,9 @@
             if (!ok) {
                 return showToast(`Transisi status dari ${curStage} ke ${nextStage} tidak valid.`, 'error');
             }
-            addAccountNotification(`Update Status (${order.id})`, `Status pesanan: ${getOrderStatusLabel(nextStage)} (${nextStage}).`, order.customer);
+            addAccountNotification(`Update Status (${order.id})`, `Status pesanan: ${getOrderStatusLabel(nextStage)} (${nextStage}).`, order.customer, `${order.id}-st-${nextStage}-cust`);
             if (isStoreOrder) {
-                addAccountNotification(`Update Driver (${order.id})`, `Driver ${order.driver}: ${getOrderStatusLabel(nextStage)}.`, order.merchant);
+                addAccountNotification(`Update Driver (${order.id})`, `Driver ${order.driver}: ${getOrderStatusLabel(nextStage)}.`, order.merchant, `${order.id}-st-${nextStage}-mrc`);
             }
             saveDB(`Status pesanan ${order.id} diperbarui ke ${nextStage}.`);
             openIncomingOrderModal(order.id, true);
@@ -3054,7 +3080,7 @@
             if (!order) return;
             const st = normalizeOrderStatusCode(order.status);
             if (['picked_up', 'delivering', 'completed', 'cancelled'].includes(st)) {
-                return showToast('Pesanan pada tahap ini tidak dapat dibatalkan driver melalui tombol biasa.', 'error');
+                return showToast('Pesanan yang sudah diambil tidak dapat dibatalkan driver melalui tombol biasa.', 'error');
             }
             const reason = (prompt('Masukkan alasan driver membatalkan pekerjaan:') || '').trim();
             if (!reason) {
@@ -3065,13 +3091,15 @@
             order.assignedDriverPhone = null;
             order.driverConfirmed = false;
             order.driverResponseDeadline = null;
+            order.replacementSearchActive = true;
+            order.replacementDeadline = Date.now() + Number(db.pricing?.driverSearchTimeoutSec || 60) * 1000;
             order.cancellationReason = reason;
             order.cancelledBy = 'driver';
             appendOrderStatusHistory(order, 'searching_driver', 'driver', prevDriver || 'Driver', `Driver batal (${reason}), mencari driver pengganti`);
             recordDriverChangeLog(order, prevDriver, null, reason, 'DRIVER_CANCEL');
-            addAccountNotification(`Driver Membatalkan (${order.id})`, `Driver ${prevDriver} membatalkan (${reason}). Pesanan tetap aktif, silakan pilih driver lain.`, order.customer);
+            addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan (${reason}). Sistem mencari driver pengganti tanpa checkout ulang.`, order.customer, `${order.id}-dcancel-cust-${prevDriver}`);
             if (order.type === 'food') {
-                addAccountNotification(`Driver Diganti (${order.id})`, `Driver ${prevDriver} membatalkan tugas (${reason}). Menunggu driver pengganti.`, order.merchant);
+                addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan tugas. Sistem sedang mencari driver pengganti.`, order.merchant, `${order.id}-dcancel-mrc-${prevDriver}`);
             }
             saveDB(`Penugasan ${prevDriver} dilepas. Pesanan ${order.id} kembali mencari driver pengganti.`);
             document.getElementById('modal-incoming-order')?.classList.add('hidden');
@@ -3106,10 +3134,10 @@
             appendOrderStatusHistory(order, 'cancelled', 'customer', order.customer, `Dibatalkan pelanggan: ${reason}`);
             if (prevDriver) {
                 recordDriverChangeLog(order, prevDriver, null, `Pelanggan membatalkan: ${reason}`, 'CUSTOMER_CANCEL');
-                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, prevDriver);
+                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, prevDriver, `${order.id}-ccancel-drv-${prevDriver}`);
             }
             if (order.type === 'food') {
-                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, order.merchant);
+                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, order.merchant, `${order.id}-ccancel-mrc`);
             }
             saveDB(`Pesanan ${order.id} dibatalkan (cancelled) & refund dicatat.`);
             renderDashboardContent(currentSubTab, false);
@@ -3132,17 +3160,18 @@
                 order.driver = assignedName;
                 order.assignedDriverPhone = assignedPhone;
                 order.driverResponseDeadline = null;
-                appendOrderStatusHistory(order, 'driver_assigned', 'driver', assignedName, 'Driver menerima pekerjaan');
+                order.replacementSearchActive = false;
+                appendOrderStatusHistory(order, 'driver_assigned', 'driver', assignedName, 'Driver menerima tawaran pengantaran');
                 if (prevDriver !== assignedName) {
                     recordDriverChangeLog(order, prevDriver, assignedName, 'Driver menerima tugas', 'ACCEPT');
                 }
                 const isStoreOrder = order.type === 'food' && String(order.merchant || '').toLowerCase() !== 'layanan ojek online';
                 if (isStoreOrder) {
-                    appendOrderStatusHistory(order, 'merchant_confirmation', 'system', 'Sistem', 'Menunggu persetujuan toko setelah driver menerima tugas');
-                    addAccountNotification(`Permintaan Persetujuan Toko (${order.id})`, `Driver ${assignedName} menerima tugas untuk pesanan ${order.items} (${order.customer}). Silakan Terima/Tolak.`, order.merchant);
+                    appendOrderStatusHistory(order, 'merchant_confirmation', 'system', 'Sistem', 'Driver tersedia, menunggu persetujuan toko');
+                    addAccountNotification(`Driver Tersedia (${order.id})`, `Driver ${assignedName} sudah tersedia untuk pesanan ${order.items} (${order.customer}). Silakan Terima/Tolak.`, order.merchant, `${order.id}-m-req-${assignedName}`);
                 }
-                addAccountNotification(`Driver Menerima (${order.id})`, `Driver ${assignedName} menerima pesanan Anda.`, order.customer);
-                saveDB(`Order ${order.id} diterima oleh ${assignedName} (driver_assigned).`);
+                addAccountNotification(`Driver Ditemukan (${order.id})`, `Driver ${assignedName} menerima tugas. Menunggu konfirmasi toko.`, order.customer, `${order.id}-d-acc-cust-${assignedName}`);
+                saveDB(`Order ${order.id} diterima oleh ${assignedName} (driver_assigned → merchant_confirmation).`);
                 openIncomingOrderModal(order.id, true);
                 return;
             } else if (action === 'reject') {
@@ -3151,12 +3180,12 @@
                 order.assignedDriverPhone = null;
                 order.driverConfirmed = false;
                 order.driverResponseDeadline = null;
-                appendOrderStatusHistory(order, 'searching_driver', 'driver', prevDriver, 'Driver menolak tugas, menunggu pilihan driver lain');
+                appendOrderStatusHistory(order, 'searching_driver', 'driver', prevDriver, 'Driver menolak tugas, mencari driver lain');
                 recordDriverChangeLog(order, prevDriver, null, 'Driver menolak tugas', 'REJECT');
-                addAccountNotification(`Driver Menolak (${order.id})`, `Driver ${prevDriver} menolak tugas. Silakan pilih driver aktif lain tanpa checkout ulang.`, order.customer);
+                addAccountNotification(`Driver Menolak (${order.id})`, `Driver ${prevDriver} menolak tugas. Silakan pilih driver aktif lain tanpa checkout ulang.`, order.customer, `${order.id}-d-rej-cust-${prevDriver}`);
                 saveDB(`Tugas ${order.id} ditolak & dilepas. Pelanggan dapat memilih driver lain.`);
             } else if (action === 'complete') {
-                const ok = appendOrderStatusHistory(order, 'completed', 'driver', order.driver || 'Driver', 'Pesanan selesai diantar');
+                const ok = appendOrderStatusHistory(order, 'completed', 'driver', order.driver || 'Driver', 'Pesanan diterima pelanggan');
                 if (!ok) {
                     return showToast('Transisi ke completed tidak valid pada tahap ini.', 'error');
                 }
@@ -3213,7 +3242,7 @@
                     order.commissionFee = commissionFee;
                     order.netEarnings = netEarnings;
                     saveDB(`Order ${order.id} dikonfirmasi selesai (completed)! Saldo bersih +Rp ${netEarnings.toLocaleString()} masuk.`);
-                    addAccountNotification(`Order ${order.id} Selesai`, `Pesanan ${order.items} sudah selesai. Silakan beri rating & ulasan!`, order.customer);
+                    addAccountNotification(`Order ${order.id} Selesai`, `Pesanan ${order.items} sudah selesai. Silakan beri rating & ulasan!`, order.customer, `${order.id}-comp-cust`);
                 } else {
                     saveDB(`Status order ${order.id} tersinkron.`);
                 }
@@ -3807,7 +3836,8 @@
 
             const compactItemsText = formatCompactOrderItems(db.cart);
             const orderCode = 'ORD-' + Math.floor(1000 + Math.random() * 9000);
-            const timeoutMs = Number(db.pricing?.driverResponseTimeoutSec || 45) * 1000;
+            const respTimeoutMs = Number(db.pricing?.driverResponseTimeoutSec || 45) * 1000;
+            const searchTimeoutMs = Number(db.pricing?.driverSearchTimeoutSec || 60) * 1000;
 
             const newOrder = {
                 id: orderCode,
@@ -3817,7 +3847,8 @@
                 driver: driver.name,
                 assignedDriverPhone: normalizePhone(driver.phone),
                 driverConfirmed: true,
-                driverResponseDeadline: Date.now() + timeoutMs,
+                driverResponseDeadline: Date.now() + respTimeoutMs,
+                driverSearchDeadline: Date.now() + searchTimeoutMs,
                 total: subtotal + ongkir,
                 status: 'searching_driver',
                 items: compactItemsText,
@@ -3836,7 +3867,7 @@
                     label: ORDER_STATUS_LABELS.searching_driver,
                     actorRole: 'customer',
                     actorName: currentUser.name,
-                    note: `Konfirmasi driver ${driver.name}`,
+                    note: `Pesanan dibuat, mencari/menugaskan driver ${driver.name}`,
                     at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 }],
                 driverChangeHistory: []
@@ -3850,8 +3881,9 @@
             syncDriverAvailabilityLocks();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-            addAccountNotification(`Permintaan Kerja (${newOrder.id})`, `Toko ${merchant.name} • Jemput: ${newOrder.pickup} → ${newOrder.dest} (${distKm} km, Ongkir Rp ${ongkir.toLocaleString()}).`, newOrder.driver);
-            showToast(`Berhasil! Pesanan ${newOrder.id} dikirim ke driver ${driver.name}. Menunggu respons driver.`, 'success');
+            addAccountNotification(`Pesanan Dibuat (${newOrder.id})`, `Pesanan ${newOrder.items} dibuat. Sedang mencari driver ${driver.name}.`, currentUser.name, `${newOrder.id}-created-cust`);
+            addAccountNotification(`Tawaran Pesanan Baru (${newOrder.id})`, `Toko ${merchant.name} • Jemput: ${newOrder.pickup} → ${newOrder.dest} (${distKm} km, Ongkir Rp ${ongkir.toLocaleString()}).`, newOrder.driver, `${newOrder.id}-offer-drv-${driver.name}`);
+            showToast(`Berhasil! Pesanan ${newOrder.id} berstatus searching_driver. Menunggu driver menerima sebelum toko menyiapkan.`, 'success');
             closeCartModal();
             closeMerchantDetail();
             renderDashboardContent('history', false);
@@ -3872,7 +3904,8 @@
             const distKm = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]);
             const fare = calculateShippingCost(distKm, 'ojek');
             const orderCode = 'OJK-' + Math.floor(1000 + Math.random() * 9000);
-            const timeoutMs = Number(db.pricing?.driverResponseTimeoutSec || 45) * 1000;
+            const respTimeoutMs = Number(db.pricing?.driverResponseTimeoutSec || 45) * 1000;
+            const searchTimeoutMs = Number(db.pricing?.driverSearchTimeoutSec || 60) * 1000;
 
             const newOrder = {
                 id: orderCode,
@@ -3882,7 +3915,8 @@
                 driver: driver.name,
                 assignedDriverPhone: normalizePhone(driver.phone),
                 driverConfirmed: true,
-                driverResponseDeadline: Date.now() + timeoutMs,
+                driverResponseDeadline: Date.now() + respTimeoutMs,
+                driverSearchDeadline: Date.now() + searchTimeoutMs,
                 total: fare,
                 status: 'searching_driver',
                 items: `Ojek (${from} → ${to})`,
@@ -3914,8 +3948,8 @@
             syncDriverAvailabilityLocks();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-            addAccountNotification(`Permintaan Ojek (${newOrder.id})`, `Jemput ${currentUser.name} (${from} → ${to}, ${distKm} km, Tarif Rp ${fare.toLocaleString()}).`, newOrder.driver);
-            showToast(`Berhasil! Order ojek ${newOrder.id} dikirim ke driver ${driver.name}. Menunggu respons driver.`, 'success');
+            addAccountNotification(`Tawaran Ojek Baru (${newOrder.id})`, `Jemput ${currentUser.name} (${from} → ${to}, ${distKm} km, Tarif Rp ${fare.toLocaleString()}).`, newOrder.driver, `${newOrder.id}-offer-drv-${driver.name}`);
+            showToast(`Berhasil! Order ojek ${newOrder.id} terkirim ke driver ${driver.name}. Menunggu respons driver.`, 'success');
             renderDashboardContent('history', false);
             syncAllToSupabase();
         }
@@ -3952,7 +3986,7 @@
                                 </div>
                                 <h4 class="font-bold text-xs text-sky-950">${o.merchant} • Pemesan: ${o.customer}</h4>
                                 <p class="text-[11px] text-sky-900 font-semibold">${o.items}</p>
-                                <p class="text-[10px] text-sky-700"><i class="fa-solid fa-motorcycle text-sky-700"></i> Driver: <b>${o.driver || 'Menunggu driver aktif'}</b></p>
+                                <p class="text-[10px] text-sky-700"><i class="fa-solid fa-motorcycle text-sky-700"></i> Driver: <b>${o.driver || 'Mencari driver aktif'}</b></p>
                                 ${o.storeRejectionReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Toko Tolak: ${o.storeRejectionReason}</p>` : ''}
                                 ${o.cancellationReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Batal: ${o.cancellationReason}</p>` : ''}
                                 ${o.refundStatus && o.refundStatus !== 'none' ? `<p class="text-[10px] text-emerald-700 font-bold">Refund: ${o.refundStatus} (Rp ${Number(o.refundAmount || 0).toLocaleString()})</p>` : ''}
@@ -4563,9 +4597,15 @@
                                 <input type="number" id="cfg-food-km" value="${p.foodPerKm}" class="w-full mt-1 p-2.5 border-2 border-sky-200 bg-white rounded-2xl text-xs font-bold">
                             </div>
                         </div>
-                        <div>
-                            <label class="text-[10px] font-extrabold text-sky-800 uppercase">Batas Waktu Respons Driver (Detik)</label>
-                            <input type="number" id="cfg-driver-timeout" value="${p.driverResponseTimeoutSec || 45}" min="10" max="300" class="w-full mt-1 p-2.5 border-2 border-sky-200 bg-white rounded-2xl text-xs font-bold">
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="text-[10px] font-extrabold text-sky-800 uppercase">Respons Driver (Detik)</label>
+                                <input type="number" id="cfg-driver-timeout" value="${p.driverResponseTimeoutSec || 45}" min="10" max="300" class="w-full mt-1 p-2.5 border-2 border-sky-200 bg-white rounded-2xl text-xs font-bold">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-extrabold text-sky-800 uppercase">Cari Driver (Detik)</label>
+                                <input type="number" id="cfg-search-timeout" value="${p.driverSearchTimeoutSec || 60}" min="15" max="600" class="w-full mt-1 p-2.5 border-2 border-sky-200 bg-white rounded-2xl text-xs font-bold">
+                            </div>
                         </div>
 
                         <button onclick="saveAdminPricingConfig()" class="w-full py-3 bg-sky-700 hover:bg-sky-800 text-white font-extrabold rounded-2xl text-xs shadow-md cursor-pointer border-b-2 border-yellow-400">
@@ -4582,10 +4622,11 @@
                 ojekPerKm: Math.max(500, parseInt(document.getElementById('cfg-ojek-km').value) || 2500),
                 foodPerKm: Math.max(500, parseInt(document.getElementById('cfg-food-km').value) || 2000),
                 commissionPercent: Math.min(100, Math.max(0, parseInt(document.getElementById('cfg-commission').value) || 0)),
-                driverResponseTimeoutSec: Math.min(300, Math.max(10, parseInt(document.getElementById('cfg-driver-timeout')?.value) || 45))
+                driverResponseTimeoutSec: Math.min(300, Math.max(10, parseInt(document.getElementById('cfg-driver-timeout')?.value) || 45)),
+                driverSearchTimeoutSec: Math.min(600, Math.max(15, parseInt(document.getElementById('cfg-search-timeout')?.value) || 60))
             };
             saveDB('Pengaturan tarif, komisi & timeout driver berhasil disimpan & diterapkan online!');
-            addAccountNotification('Tarif & Komisi Diperbarui', `Min order Rp ${db.pricing.minFare.toLocaleString()}, Ojek/km Rp ${db.pricing.ojekPerKm.toLocaleString()}, Food/km Rp ${db.pricing.foodPerKm.toLocaleString()}, Komisi ${db.pricing.commissionPercent}%, Timeout ${db.pricing.driverResponseTimeoutSec}s.`, 'ALL');
+            addAccountNotification('Tarif & Komisi Diperbarui', `Min order Rp ${db.pricing.minFare.toLocaleString()}, Ojek/km Rp ${db.pricing.ojekPerKm.toLocaleString()}, Food/km Rp ${db.pricing.foodPerKm.toLocaleString()}, Komisi ${db.pricing.commissionPercent}%, Timeout ${db.pricing.driverResponseTimeoutSec}s/${db.pricing.driverSearchTimeoutSec}s.`, 'ALL');
             renderAdminDash(document.getElementById('main-content'));
         }
 
