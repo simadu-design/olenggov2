@@ -2,7 +2,7 @@
 <html lang="id" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>OLENG GO (Powered by SIMADU) - Lengkong Sukabumi</title>
     <!-- PWA Manifest & Custom Icons -->
     <link rel="manifest" href="./manifest.json">
@@ -54,13 +54,23 @@
             --oleng-yellow: #FFD400;
             --oleng-text-primary: #171717;
             --oleng-text-secondary: #404040;
+            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
         }
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background: var(--oleng-black);
             color: var(--oleng-text-primary);
+            margin: 0;
         }
-        .map-container { height: 220px; width: 100%; border-radius: 1.25rem; z-index: 1 !important; position: relative; border: 1px solid var(--oleng-gray-border); }
+        .map-container {
+            height: clamp(150px, 21dvh, 205px);
+            width: 100%;
+            border-radius: 1.25rem;
+            z-index: 1 !important;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--oleng-gray-border);
+        }
         .leaflet-container { z-index: 1 !important; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -113,12 +123,8 @@
             line-height: 1.35;
             text-transform: uppercase;
         }
-        .oleng-global-footer--light .oleng-global-footer__brand {
-            color: #171717;
-        }
-        .oleng-global-footer--dark .oleng-global-footer__brand {
-            color: #FFFFFF;
-        }
+        .oleng-global-footer--light .oleng-global-footer__brand { color: #171717; }
+        .oleng-global-footer--dark .oleng-global-footer__brand { color: #FFFFFF; }
         .oleng-global-footer__subbrand {
             font-size: 10px;
             font-weight: 700;
@@ -126,12 +132,8 @@
             line-height: 1.35;
             text-transform: uppercase;
         }
-        .oleng-global-footer--light .oleng-global-footer__subbrand {
-            color: #B47B2B;
-        }
-        .oleng-global-footer--dark .oleng-global-footer__subbrand {
-            color: #E7C37A;
-        }
+        .oleng-global-footer--light .oleng-global-footer__subbrand { color: #B47B2B; }
+        .oleng-global-footer--dark .oleng-global-footer__subbrand { color: #E7C37A; }
         .oleng-global-footer__tagline {
             font-size: 9px;
             font-weight: 600;
@@ -139,12 +141,8 @@
             line-height: 1.35;
             text-transform: uppercase;
         }
-        .oleng-global-footer--light .oleng-global-footer__tagline {
-            color: #737373;
-        }
-        .oleng-global-footer--dark .oleng-global-footer__tagline {
-            color: #9E9E9E;
-        }
+        .oleng-global-footer--light .oleng-global-footer__tagline { color: #737373; }
+        .oleng-global-footer--dark .oleng-global-footer__tagline { color: #9E9E9E; }
         .oleng-global-footer__copy {
             font-size: 9px;
             font-weight: 500;
@@ -153,12 +151,8 @@
             margin-top: 1px;
             text-transform: uppercase;
         }
-        .oleng-global-footer--light .oleng-global-footer__copy {
-            color: #9CA3AF;
-        }
-        .oleng-global-footer--dark .oleng-global-footer__copy {
-            color: #7A7A7A;
-        }
+        .oleng-global-footer--light .oleng-global-footer__copy { color: #9CA3AF; }
+        .oleng-global-footer--dark .oleng-global-footer__copy { color: #7A7A7A; }
     </style>
 </head>
 <body class="h-full flex flex-col items-center justify-center">
@@ -351,9 +345,9 @@
                 </div>
             </div>
 
-            <main id="main-content" class="flex-1 overflow-y-auto pb-28 hide-scrollbar bg-[#F3F3F3]"></main>
+            <main id="main-content" class="flex-1 overflow-y-auto pb-28 hide-scrollbar bg-[#F3F3F3]" style="padding-bottom: calc(96px + var(--safe-area-bottom));"></main>
 
-            <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-[#171717] text-white border-t-2 border-[#FF7900] px-3 py-2 flex justify-around items-center z-35"></nav>
+            <nav id="bottom-nav" class="fixed md:absolute bottom-0 left-0 right-0 max-w-md mx-auto bg-[#171717] text-white border-t-2 border-[#FF7900] px-3 py-2 flex justify-around items-center z-40" style="padding-bottom: calc(8px + var(--safe-area-bottom));"></nav>
         </div>
 
         <!-- ================= MODALS & SUB-VIEWS ================= -->
@@ -685,6 +679,8 @@
         let activeOrderAlarmTargetId = null;
         let playedOrderAlertIds = JSON.parse(localStorage.getItem('oleng_played_order_alerts') || '[]');
         let devicePushToken = localStorage.getItem('oleng_device_push_token') || '';
+        let realtimeReconnectTimer = null;
+        let realtimeReconnectAttempts = 0;
 
         function cleanupAllMapsAndModals() {
             if (mapInstance) {
@@ -1066,9 +1062,31 @@
             }
         }
 
+        async function reconcilePendingOrdersOnReconnect() {
+            if (!navigator.onLine || !supabaseClient) return;
+            await flushPendingSyncQueue();
+            await pullInitialFromSupabase(false);
+            const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+            if (activeRole === 'driver') {
+                const pendingOffer = (db.orders || []).find(o => {
+                    const st = normalizeOrderStatusCode(o.status);
+                    return ['searching_driver', 'driver_assigned'].includes(st) && shouldDriverReceiveOfferAlarm(o);
+                });
+                if (pendingOffer) {
+                    startOrderAlarmLoopForOrder(pendingOffer.id);
+                    checkAndShowIncomingOrderPopup(true);
+                }
+            }
+        }
+
         window.addEventListener('online', function () {
-            flushPendingSyncQueue();
-            pullInitialFromSupabase(false);
+            if (realtimeReconnectTimer) {
+                clearTimeout(realtimeReconnectTimer);
+                realtimeReconnectTimer = null;
+            }
+            realtimeReconnectAttempts = 0;
+            subscribeRealtimeUpdates();
+            reconcilePendingOrdersOnReconnect();
         });
 
         async function recordAccountAuthEventToSupabase(actionType, accountObj) {
@@ -1212,7 +1230,7 @@
             localStorage.setItem('oleng_map_layer_mode', mapLayerMode);
             const labelText = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
             document.querySelectorAll('.map-layer-label').forEach(el => { el.textContent = labelText; });
-            showToast(`Berhasil! Tampilan peta diubah ke mode ${mapLayerMode === 'satellite' ? 'Satelit' : 'Peta Jalan'}.`, 'success');
+            showToast(`Berhasil! Tampilan peta diubah ke mode ${mapLayerMode === 'satellite' ? 'Satelit' : 'Peta Jalan'}.`, 'success', 'none');
             if (currentSubTab === 'home') initHomeMap();
             else if (currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
             else if (currentSubTab === 'food') renderCustomerFood(document.getElementById('main-content'));
@@ -1239,7 +1257,7 @@
                     label: 'Supabase: Mode Lokal (SDK Offline)',
                     detail: 'SDK Supabase belum termuat, data tersimpan di perangkat'
                 };
-                if (showNotify) showToast('Mode Lokal aktif: SDK Supabase belum termuat.', 'info');
+                if (showNotify) showToast('Mode Lokal aktif: SDK Supabase belum termuat.', 'info', 'none');
                 return lastSupabaseStatus;
             }
 
@@ -1265,7 +1283,7 @@
                         label: `Supabase: Gagal (${res.error.code || 'ERR'})`,
                         detail: res.error.message
                     };
-                    if (showNotify) showToast(`Gagal konek Supabase: ${res.error.message}`, 'error');
+                    if (showNotify) showToast(`Gagal konek Supabase: ${res.error.message}`, 'error', 'none');
                     return lastSupabaseStatus;
                 }
 
@@ -1275,7 +1293,7 @@
                     detail: `Tersinkron ke ${SUPABASE_PROJECT_ID}`
                 };
                 flushPendingSyncQueue();
-                if (showNotify) showToast('Berhasil! Data & chat tersinkron dengan Supabase.', 'success');
+                if (showNotify) showToast('Berhasil! Data & chat tersinkron dengan Supabase.', 'success', 'none');
                 return lastSupabaseStatus;
             } catch (err) {
                 lastSupabaseStatus = {
@@ -1283,7 +1301,7 @@
                     label: 'Supabase: Gagal (Timeout/Jaringan)',
                     detail: err?.message || String(err)
                 };
-                if (showNotify) showToast(`Gagal konek Supabase: ${lastSupabaseStatus.detail}`, 'error');
+                if (showNotify) showToast(`Gagal konek Supabase: ${lastSupabaseStatus.detail}`, 'error', 'none');
                 return lastSupabaseStatus;
             }
         }
@@ -1323,11 +1341,36 @@
             await updateSupabaseBadgeUI(showNotify);
         }
 
+        function scheduleRealtimeReconnect() {
+            if (realtimeReconnectTimer) return;
+            const delayMs = Math.min(12000, 1500 * Math.pow(1.6, realtimeReconnectAttempts));
+            realtimeReconnectAttempts += 1;
+            realtimeReconnectTimer = setTimeout(() => {
+                realtimeReconnectTimer = null;
+                if (!navigator.onLine) return;
+                if (realtimeChannel && supabaseClient) {
+                    try { supabaseClient.removeChannel(realtimeChannel); } catch (e) {}
+                    realtimeChannel = null;
+                }
+                subscribeRealtimeUpdates();
+                reconcilePendingOrdersOnReconnect();
+            }, delayMs);
+        }
+
         function subscribeRealtimeUpdates() {
             if (!supabaseClient || realtimeChannel) return;
             try {
+                const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+                const myShopName = String(currentUser?.shopName || '').trim();
+                const ordersFilter = (activeRole === 'merchant' && myShopName && activeRole !== 'admin')
+                    ? `merchant_name=eq.${myShopName}`
+                    : undefined;
+
+                const ordersSubConfig = { event: '*', schema: 'public', table: 'orders' };
+                if (ordersFilter) ordersSubConfig.filter = ordersFilter;
+
                 realtimeChannel = supabaseClient
-                    .channel('oleng-go-realtime-sync')
+                    .channel('oleng-go-realtime-sync-' + (activeRole || 'guest'))
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, (payload) => {
                         pullInitialFromSupabase(false).then(() => {
                             if (payload?.eventType === 'INSERT' && payload?.new) {
@@ -1347,13 +1390,14 @@
                                         markMessagesFromPartnerAsRead(chatObj.from);
                                     } else {
                                         notifyBackgroundOnce('chat-' + row.id, `Chat Masuk dari ${row.sender_name}`, String(row.message_text || '').startsWith('data:image') ? '📷 Mengirim foto' : row.message_text, { type: 'chat', sender: row.sender_name, tag: 'chat-' + chatObj.from });
+                                        playChatIncomingAlarm();
                                         checkAndTriggerIncomingChatPopup(chatObj);
                                     }
                                 }
                             }
                         });
                     })
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+                    .on('postgres_changes', ordersSubConfig, (payload) => {
                         pullInitialFromSupabase(false).then(() => {
                             if ((payload?.eventType === 'INSERT' || payload?.eventType === 'UPDATE') && payload?.new) {
                                 const r = payload.new;
@@ -1363,16 +1407,19 @@
                                     customer: r.customer_name,
                                     merchant: r.merchant_name,
                                     driver: r.driver_name,
+                                    assignedDriverPhone: r.claimed_by_phone || null,
                                     items: r.items_summary,
                                     total: Number(r.total_amount || 0),
                                     status: r.status || 'searching_driver'
                                 };
                                 if (isOrderTargetedToCurrentUser(ordObj)) {
                                     notifyBackgroundOnce('order-' + ordObj.id + '-' + ordObj.status, `Update Order ${ordObj.id}`, `${ordObj.items} • ${getOrderStatusLabel(ordObj.status)}`, { type: 'order', orderId: ordObj.id, tag: 'order-' + ordObj.id });
-                                    const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
-                                    if (activeRole === 'driver' && shouldDriverReceiveOfferAlarm(ordObj)) {
+                                    const curRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+                                    if (curRole === 'driver' && shouldDriverReceiveOfferAlarm(ordObj)) {
                                         startOrderAlarmLoopForOrder(ordObj.id);
                                         checkAndShowIncomingOrderPopup(true);
+                                    } else if (curRole === 'merchant' && payload?.eventType === 'INSERT') {
+                                        playOrderIncomingAlarm();
                                     }
                                 }
                             }
@@ -1400,9 +1447,16 @@
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, () => {
                         pullInitialFromSupabase(false);
                     })
-                    .subscribe();
+                    .subscribe((status) => {
+                        if (status === 'SUBSCRIBED') {
+                            realtimeReconnectAttempts = 0;
+                        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                            scheduleRealtimeReconnect();
+                        }
+                    });
             } catch (err) {
                 console.warn('Realtime info:', err?.message || err);
+                scheduleRealtimeReconnect();
             }
         }
 
@@ -1581,6 +1635,7 @@
                 }
             }
             order.status = code;
+            order.serverUpdatedAt = new Date().toISOString();
             order.statusHistory.push({
                 fromStatus: fromCode,
                 toStatus: code,
@@ -1855,6 +1910,7 @@
             isSyncingNow = true;
             try {
                 let firstError = null;
+                const serverNowIso = new Date().toISOString();
                 const extraState = {
                     foods: db.foods || [],
                     notifications: db.notifications || [],
@@ -1864,6 +1920,7 @@
                     authLogs: db.authLogs || [],
                     driverChangeLogs: db.driverChangeLogs || [],
                     reviews: db.reviews || [],
+                    serverUpdatedAt: serverNowIso,
                     updatedAt: Date.now()
                 };
 
@@ -1936,12 +1993,18 @@
                     address: m.address || '',
                     operational_hours: m.operationalHours || '',
                     whatsapp: normalizePhone(m.whatsapp) || ADMIN_MAIN_WA,
-                    balance: Number(m.balance || 0)
+                    balance: Number(m.balance || 0),
+                    server_updated_at: serverNowIso
                 }));
 
                 if (merchantRows.length > 0) {
                     const mRes = await supabaseClient.from('merchants').upsert(merchantRows, { onConflict: 'account_id' });
-                    if (mRes.error && !firstError) firstError = mRes.error.message;
+                    if (mRes.error && String(mRes.error.message || '').includes('server_updated_at')) {
+                        const mFallback = await supabaseClient.from('merchants').upsert(merchantRows.map(({ server_updated_at, ...rest }) => rest), { onConflict: 'account_id' });
+                        if (mFallback.error && !firstError) firstError = mFallback.error.message;
+                    } else if (mRes.error && !firstError) {
+                        firstError = mRes.error.message;
+                    }
                 }
 
                 const driverRows = (db.drivers || []).map((d, i) => ({
@@ -1960,12 +2023,18 @@
                     phone: normalizePhone(d.phone) || ADMIN_MAIN_WA,
                     rating: Number(d.rating || 5.0),
                     rating_count: Number(d.ratingCount || 0),
-                    balance: Number(d.balance || 0)
+                    balance: Number(d.balance || 0),
+                    server_updated_at: serverNowIso
                 }));
 
                 if (driverRows.length > 0) {
                     const dRes = await supabaseClient.from('drivers').upsert(driverRows, { onConflict: 'account_id' });
-                    if (dRes.error && !firstError) firstError = dRes.error.message;
+                    if (dRes.error && String(dRes.error.message || '').includes('server_updated_at')) {
+                        const dFallback = await supabaseClient.from('drivers').upsert(driverRows.map(({ server_updated_at, ...rest }) => rest), { onConflict: 'account_id' });
+                        if (dFallback.error && !firstError) firstError = dFallback.error.message;
+                    } else if (dRes.error && !firstError) {
+                        firstError = dRes.error.message;
+                    }
                 }
 
                 const orderRows = (db.orders || []).map(o => ({
@@ -1974,6 +2043,8 @@
                     customer_name: o.customer,
                     merchant_name: o.merchant,
                     driver_name: o.driver,
+                    claimed_by_phone: o.assignedDriverPhone || null,
+                    claimed_at: o.claimedAt || null,
                     items_summary: o.items,
                     pickup_label: o.pickup || 'Lengkong',
                     dest_label: o.dest || 'Lengkong',
@@ -1983,11 +2054,15 @@
                     status: normalizeOrderStatusCode(o.status || 'searching_driver'),
                     settled: Boolean(o.settled),
                     rating: o.rating ? Number(o.rating) : null,
-                    review_text: o.reviewText || null
+                    review_text: o.reviewText || null,
+                    server_updated_at: o.serverUpdatedAt || serverNowIso
                 }));
 
                 if (orderRows.length > 0) {
-                    await supabaseClient.from('orders').upsert(orderRows, { onConflict: 'order_code' });
+                    const oRes = await supabaseClient.from('orders').upsert(orderRows, { onConflict: 'order_code' });
+                    if (oRes.error && (String(oRes.error.message || '').includes('server_updated_at') || String(oRes.error.message || '').includes('claimed_by_phone'))) {
+                        await supabaseClient.from('orders').upsert(orderRows.map(({ server_updated_at, claimed_by_phone, claimed_at, ...rest }) => rest), { onConflict: 'order_code' });
+                    }
                 }
 
                 const foodRows = (db.foods || []).map(f => ({
@@ -2009,7 +2084,8 @@
                     sender_name: c.from,
                     receiver_name: c.to,
                     message_text: c.text,
-                    sent_time: c.time || ''
+                    sent_time: c.time || '',
+                    server_updated_at: serverNowIso
                 }));
 
                 if (chatRows.length > 0) {
@@ -2110,7 +2186,8 @@
                 if (!drvObj || drvObj.status !== 'Online') return false;
                 const allowedDrivers = [me, String(drvObj.name || '').trim().toLowerCase()].filter(Boolean);
                 const ordDrv = String(order.driver || '').trim().toLowerCase();
-                return allowedDrivers.includes(ordDrv) || (st === 'searching_driver' && !ordDrv);
+                const ordPhone = normalizePhone(order.assignedDriverPhone);
+                return allowedDrivers.includes(ordDrv) || (myPhone && ordPhone === myPhone) || (st === 'searching_driver' && !ordDrv);
             }
 
             if (role === 'merchant') {
@@ -2169,14 +2246,14 @@
 
             stopOrderAlarmLoop();
             activeOrderAlarmTargetId = order.id;
-            playAlarmRingtone();
+            playOrderIncomingAlarm();
             activeOrderAlarmLoopId = setInterval(() => {
                 const curOrder = (db.orders || []).find(o => o.id === orderId);
                 if (!curOrder || !shouldDriverReceiveOfferAlarm(curOrder)) {
                     stopOrderAlarmLoop();
                     return;
                 }
-                playAlarmRingtone();
+                playOrderIncomingAlarm();
             }, 3200);
         }
 
@@ -2301,7 +2378,7 @@
 
             shownPopupChatIds.push(msgKey);
             localStorage.setItem('oleng_shown_popup_chats', JSON.stringify(shownPopupChatIds));
-            playAlarmRingtone();
+            playChatIncomingAlarm();
             openIncomingChatModal(msg);
             updateHomeHeaderBadgesOnly();
         }
@@ -2309,7 +2386,7 @@
         function openIncomingChatModal(msg) {
             if (!msg) return;
             activeIncomingChatId = msg.id;
-            playAlarmRingtone();
+            playChatIncomingAlarm();
             const card = document.getElementById('incoming-chat-card');
             if (!card) return;
             const safeFrom = String(msg.from || 'Pengguna').replace(/'/g, "\\'");
@@ -2364,6 +2441,7 @@
                     if (activeOrderAlarmTargetId === o.id) stopOrderAlarmLoop();
                     o.driver = null;
                     o.assignedDriverPhone = null;
+                    o.claimedByPhone = null;
                     o.driverResponseDeadline = null;
                     o.driverConfirmed = false;
                     appendOrderStatusHistory(o, 'searching_driver', 'system', 'Timeout Respons', `Batas waktu respons driver (${respTimeoutSec}s) habis.`);
@@ -2523,7 +2601,8 @@
                         address: r.address || '',
                         operationalHours: r.operational_hours || '',
                         whatsapp: normalizePhone(r.whatsapp) || ADMIN_MAIN_WA,
-                        balance: Number(r.balance || 0)
+                        balance: Number(r.balance || 0),
+                        serverUpdatedAt: r.server_updated_at || null
                     }));
                     db.merchants = mergeByKey(db.merchants, mappedMerchants, m => String(m.accountId || '').toUpperCase() === ADMIN_OWN_STORE_ID ? ADMIN_OWN_STORE_ID : (normalizePhone(m.whatsapp) || String(m.accountId || m.name).toUpperCase()));
                     hasChanges = true;
@@ -2558,6 +2637,7 @@
                             rating: Number(r.rating || 5.0),
                             ratingCount: Number(r.ratingCount || 0),
                             balance: Number(r.balance || 0),
+                            serverUpdatedAt: r.server_updated_at || null,
                             photo: (matchedAcc && matchedAcc.photo) ? matchedAcc.photo : './olengorange2.png'
                         };
                     });
@@ -2575,6 +2655,8 @@
                         customer: r.customer_name,
                         merchant: r.merchant_name,
                         driver: r.driver_name,
+                        assignedDriverPhone: r.claimed_by_phone ? normalizePhone(r.claimed_by_phone) : null,
+                        claimedAt: r.claimed_at || null,
                         items: r.items_summary,
                         pickup: r.pickup_label || 'Lengkong',
                         dest: r.dest_label || 'Lengkong',
@@ -2584,7 +2666,8 @@
                         status: normalizeOrderStatusCode(r.status || 'searching_driver'),
                         settled: Boolean(r.settled),
                         rating: r.rating ? Number(r.rating) : null,
-                        reviewText: r.review_text || ''
+                        reviewText: r.review_text || '',
+                        serverUpdatedAt: r.server_updated_at || null
                     }));
                     db.orders = mergeByKey(db.orders, mappedOrders, o => String(o.id).toUpperCase());
                     hasChanges = true;
@@ -2641,7 +2724,7 @@
                     const isChatOpenNow = chatViewVisibleNow && String(activeChatTarget || '').trim().toLowerCase() === String(latestC.from || '').trim().toLowerCase();
                     if (!isChatOpenNow) {
                         notifyBackgroundOnce('chat-' + latestC.id, `Chat Masuk dari ${latestC.from}`, String(latestC.text || '').startsWith('data:image') ? '📷 Mengirim foto' : latestC.text, { type: 'chat', sender: latestC.from, tag: 'chat-' + latestC.from });
-                        playAlarmRingtone();
+                        playChatIncomingAlarm();
                         checkAndTriggerIncomingChatPopup(latestC);
                     }
                 }
@@ -2654,6 +2737,8 @@
                     if (activeRole === 'driver' && shouldDriverReceiveOfferAlarm(latestO)) {
                         startOrderAlarmLoopForOrder(latestO.id);
                         checkAndShowIncomingOrderPopup(true);
+                    } else if (activeRole === 'merchant') {
+                        playOrderIncomingAlarm();
                     }
                 }
 
@@ -2678,13 +2763,13 @@
             }
         }
 
-        function saveDB(successMessage = null, shouldSyncRemote = true) {
+        function saveDB(successMessage = null, shouldSyncRemote = true, soundKind = 'none') {
             ensureRoleListsSyncedFromUsers();
             db.mainBanner = customMainBanner || db.mainBanner || DEFAULT_MAIN_BANNER;
             localStorage.setItem('oleng_global_banner', db.mainBanner);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
             if (successMessage) {
-                showToast(`Berhasil! ${successMessage}`, 'success');
+                showToast(`Berhasil! ${successMessage}`, 'success', soundKind);
             }
             if (shouldSyncRemote) {
                 if (!navigator.onLine) {
@@ -2712,7 +2797,7 @@
             });
         }
 
-        function addAccountNotification(title, desc, targetUser = null, dedupKey = null) {
+        function addAccountNotification(title, desc, targetUser = null, dedupKey = null, soundKind = 'none') {
             const owner = targetUser || (currentUser ? currentUser.name : 'ALL');
             if (dedupKey) {
                 const fullKey = `${String(dedupKey)}::${String(owner).toLowerCase()}`;
@@ -2729,15 +2814,16 @@
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 desc: desc
             });
-            saveDB();
+            saveDB(null, true, 'none');
             updateHomeHeaderBadgesOnly();
             if (currentUser && (owner === 'ALL' || String(owner).toLowerCase() === String(currentUser.name || '').toLowerCase())) {
-                playAlarmRingtone();
+                if (soundKind === 'order') playOrderIncomingAlarm();
+                else if (soundKind === 'chat') playChatIncomingAlarm();
                 notifyBackgroundOnce('notif-' + notifId + '-' + owner, title, desc, { type: 'notif', tag: 'notif-' + notifId });
             }
         }
 
-        function playAlarmRingtone() {
+        function playOrderIncomingAlarm() {
             if (!alarmEnabled) return;
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2758,14 +2844,38 @@
             } catch (e) {}
         }
 
+        function playChatIncomingAlarm() {
+            if (!alarmEnabled) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const notes = [659.25, 880, 1046.5];
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    const start = ctx.currentTime + i * 0.12;
+                    osc.frequency.setValueAtTime(freq, start);
+                    gain.gain.setValueAtTime(0.22, start);
+                    gain.gain.exponentialRampToValueAtTime(0.002, start + 0.12);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(start);
+                    osc.stop(start + 0.12);
+                });
+            } catch (e) {}
+        }
+
+        function playAlarmRingtone() {
+            playOrderIncomingAlarm();
+        }
+
         function toggleNotificationAlarm() {
             alarmEnabled = !alarmEnabled;
             localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled));
             if (!alarmEnabled) stopOrderAlarmLoop();
             const chatAlarmState = document.getElementById('chat-alarm-state');
             if (chatAlarmState) chatAlarmState.textContent = alarmEnabled ? 'ON' : 'OFF';
-            if (alarmEnabled) playAlarmRingtone();
-            showToast(`Berhasil! Alarm notifikasi ${alarmEnabled ? 'DINYALAKAN (ON)' : 'DIMATIKAN (OFF)'}.`, 'success');
+            showToast(`Berhasil! Alarm notifikasi ${alarmEnabled ? 'DINYALAKAN (ON)' : 'DIMATIKAN (OFF)'}.`, 'success', 'none');
             if (!isUserCurrentlyTypingOrEditing() && currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
                 renderDashboardContent(currentSubTab, false);
             }
@@ -2805,17 +2915,17 @@
             const code = String(inputEl?.value || promoCodeDraft || '').trim().toUpperCase();
             if (!code) {
                 appliedPromoCode = '';
-                showToast('Masukkan kode promo (contoh: LENGKONGHEBAT).', 'error');
+                showToast('Masukkan kode promo (contoh: LENGKONGHEBAT).', 'error', 'none');
                 return;
             }
             if (code !== 'LENGKONGHEBAT' && code !== 'SIMADU10') {
                 appliedPromoCode = '';
-                showToast(`Kode promo "${code}" tidak valid. Coba LENGKONGHEBAT.`, 'error');
+                showToast(`Kode promo "${code}" tidak valid. Coba LENGKONGHEBAT.`, 'error', 'none');
                 return;
             }
             appliedPromoCode = code;
             promoCodeDraft = code;
-            showToast(`Kode promo ${code} berhasil diterapkan!`, 'success');
+            showToast(`Kode promo ${code} berhasil diterapkan!`, 'success', 'none');
             if (context === 'cart') updateCartUI();
             else updateOjekFareUI();
         }
@@ -2846,7 +2956,7 @@
                 (currentUser.phone && normalizePhone(d.phone) === normalizePhone(currentUser.phone))
             );
             if (!drv) {
-                showToast('Data mitra driver tidak ditemukan.', 'error');
+                showToast('Data mitra driver tidak ditemukan.', 'error', 'none');
                 return false;
             }
 
@@ -2860,31 +2970,33 @@
                         (o.assignedDriverPhone && normalizePhone(o.assignedDriverPhone) === normalizePhone(drv.phone));
                 });
                 if (stillRunningOrder) {
-                    showToast(`Masih ada pesanan aktif (${stillRunningOrder.id}). Selesaikan terlebih dahulu sebelum ONLINE.`, 'error');
+                    showToast(`Masih ada pesanan aktif (${stillRunningOrder.id}). Selesaikan terlebih dahulu sebelum ONLINE.`, 'error', 'none');
                     return false;
                 }
                 drv.status = 'Online';
                 drv.availability = 'available';
                 drv.activeOrderId = null;
                 drv.activitySummary = 'Online • Siap menerima orderan di Lengkong';
+                drv.serverUpdatedAt = new Date().toISOString();
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(pos => {
                         drv.lat = Number(pos.coords.latitude.toFixed(6));
                         drv.lng = Number(pos.coords.longitude.toFixed(6));
                         userCurrentLatLng = [drv.lat, drv.lng];
-                        saveDB();
+                        saveDB(null, true, 'none');
                     }, () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
                 }
-                addAccountNotification('Driver Kembali ONLINE', `Driver ${drv.name} (${drv.phone || '-'}) kini ONLINE dan siap menerima order baru.`, 'ALL', 'drv-online-' + drv.name + '-' + Date.now());
-                saveDB(`Status driver ${drv.name} tersimpan ONLINE & siap menerima order baru.`);
+                addAccountNotification('Driver Kembali ONLINE', `Driver ${drv.name} (${drv.phone || '-'}) kini ONLINE dan siap menerima order baru.`, 'ALL', 'drv-online-' + drv.name + '-' + Date.now(), 'none');
+                saveDB(`Status driver ${drv.name} tersimpan ONLINE & siap menerima order baru.`, true, 'none');
             } else {
                 stopOrderAlarmLoop();
                 drv.status = 'Offline';
                 drv.availability = 'offline';
                 drv.activeOrderId = null;
                 drv.activitySummary = 'Offline • Tidak menerima order baru';
-                addAccountNotification('Driver OFFLINE', `Driver ${drv.name} (${drv.phone || '-'}) kini OFFLINE & tidak menerima order baru.`, 'ALL', 'drv-offline-' + drv.name + '-' + Date.now());
-                saveDB(`Status driver ${drv.name} tersimpan OFFLINE.`);
+                drv.serverUpdatedAt = new Date().toISOString();
+                addAccountNotification('Driver OFFLINE', `Driver ${drv.name} (${drv.phone || '-'}) kini OFFLINE & tidak menerima order baru.`, 'ALL', 'drv-offline-' + drv.name + '-' + Date.now(), 'none');
+                saveDB(`Status driver ${drv.name} tersimpan OFFLINE.`, true, 'none');
             }
 
             if (fromPostComplete) {
@@ -2902,7 +3014,7 @@
                 String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase() ||
                 (currentUser.phone && normalizePhone(d.phone) === normalizePhone(currentUser.phone))
             );
-            if (!drv) return showToast('Data mitra driver tidak ditemukan.', 'error');
+            if (!drv) return showToast('Data mitra driver tidak ditemukan.', 'error', 'none');
             const targetStatus = drv.status === 'Online' ? 'Offline' : 'Online';
             setDriverOnlineStatusExplicit(targetStatus, false);
         }
@@ -2978,18 +3090,18 @@
             if (!d) return;
             syncDriverAvailabilityLocks();
             if (d.status !== 'Online') {
-                return showToast(`Driver ${d.name} sedang OFFLINE & tidak dapat dipilih.`, 'error');
+                return showToast(`Driver ${d.name} sedang OFFLINE & tidak dapat dipilih.`, 'error', 'none');
             }
             const isBusy = (d.availability && d.availability !== 'available') || Boolean(d.activeOrderId);
             if (isBusy) {
-                showToast(`Notif Aktivitas: ${d.name} sedang mengerjakan orderan (${d.activitySummary || 'order aktif'}). Pilih driver yang Siap Order.`, 'info');
+                showToast(`Notif Aktivitas: ${d.name} sedang mengerjakan orderan (${d.activitySummary || 'order aktif'}). Pilih driver yang Siap Order.`, 'info', 'none');
             }
             if (Number(draftSelectedDriverId) === Number(driverId)) {
                 draftSelectedDriverId = null;
-                showToast(`Pilihan sementara untuk ${d.name} dibatalkan. Silakan pilih driver lain.`, 'info');
+                showToast(`Pilihan sementara untuk ${d.name} dibatalkan. Silakan pilih driver lain.`, 'info', 'none');
             } else {
                 draftSelectedDriverId = Number(driverId);
-                showToast(`Driver ${d.name} ditandai sebagai pilihan sementara. Tekan KONFIRMASI DRIVER untuk mengirim permintaan.`, 'info');
+                showToast(`Driver ${d.name} ditandai sebagai pilihan sementara. Tekan KONFIRMASI DRIVER untuk mengirim permintaan.`, 'info', 'none');
             }
             if (context === 'ojek' && currentSubTab === 'ojek') renderOjekDriversListOnly();
             else if (context === 'cart') updateCartUI();
@@ -2997,20 +3109,20 @@
 
         function confirmDraftDriverSelection(context = 'ojek') {
             if (!draftSelectedDriverId) {
-                return showToast('Pilih satu driver terlebih dahulu sebelum menekan KONFIRMASI DRIVER!', 'error');
+                return showToast('Pilih satu driver terlebih dahulu sebelum menekan KONFIRMASI DRIVER!', 'error', 'none');
             }
             syncDriverAvailabilityLocks();
             const d = (db.drivers || []).find(x => Number(x.id) === Number(draftSelectedDriverId));
             if (!d || d.status !== 'Online') {
                 draftSelectedDriverId = null;
-                return showToast('Driver pilihan sedang OFFLINE. Silakan pilih driver ONLINE yang tersedia.', 'error');
+                return showToast('Driver pilihan sedang OFFLINE. Silakan pilih driver ONLINE yang tersedia.', 'error', 'none');
             }
             if (d.availability && d.availability !== 'available') {
-                return showToast(`Notif Aktivitas: ${d.name} sedang mengerjakan orderan. Pilih driver yang Siap Order.`, 'error');
+                return showToast(`Notif Aktivitas: ${d.name} sedang mengerjakan orderan. Pilih driver yang Siap Order.`, 'error', 'none');
             }
             confirmedOrderDriverId = Number(d.id);
             selectedDriverId = Number(d.id);
-            showToast(`Driver ${d.name} dikonfirmasi! Permintaan pengantaran siap dikirim.`, 'success');
+            showToast(`Driver ${d.name} dikonfirmasi! Permintaan pengantaran siap dikirim.`, 'success', 'none');
             if (context === 'ojek' && currentSubTab === 'ojek') {
                 renderCustomerOjek(document.getElementById('main-content'), false);
             } else if (context === 'cart') {
@@ -3020,7 +3132,7 @@
 
         function refreshActiveDriversList(context = 'ojek') {
             pullInitialFromSupabase(false);
-            showToast('Daftar ojek online & aktivitas diperbarui.', 'success');
+            showToast('Daftar ojek online & aktivitas diperbarui.', 'success', 'none');
             if (context === 'ojek' && currentSubTab === 'ojek') renderOjekDriversListOnly();
             else if (context === 'cart') updateCartUI();
         }
@@ -3041,6 +3153,7 @@
                         if (drv && drv.status === 'Online' && (Math.abs(drv.lat - lat) > 0.0002 || Math.abs(drv.lng - lng) > 0.0002)) {
                             drv.lat = lat;
                             drv.lng = lng;
+                            drv.serverUpdatedAt = new Date().toISOString();
                             localStorage.setItem('oleng_go_db', JSON.stringify(db));
                         }
                     }
@@ -3207,7 +3320,7 @@
                     btn.innerHTML = '<i class="fa-solid fa-lock text-[#FF7900]"></i> Kunci Lokasi';
                 }
                 updateCoordsLabel(e.latlng.lat, e.latlng.lng);
-                showToast('Titik lokasi toko diperbarui! Klik Kunci Lokasi.', 'success');
+                showToast('Titik lokasi toko diperbarui! Klik Kunci Lokasi.', 'success', 'none');
             });
         }
 
@@ -3222,7 +3335,7 @@
             if (addrInput && !addrInput.value.trim()) {
                 addrInput.value = `Lokasi Terkunci Map (${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}) - Lengkong, Sukabumi`;
             }
-            showToast(`Berhasil! Lokasi toko dikunci di ${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}.`, 'success');
+            showToast(`Berhasil! Lokasi toko dikunci di ${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}.`, 'success', 'none');
         }
 
         function useCurrentGPSForMerchantReg() {
@@ -3230,9 +3343,9 @@
                 navigator.geolocation.getCurrentPosition(pos => {
                     regMerchantLatLng = [Number(pos.coords.latitude.toFixed(6)), Number(pos.coords.longitude.toFixed(6))];
                     initRegisterMerchantMap();
-                    showToast('Berhasil! Posisi GPS akurat dimuat ke peta toko.', 'success');
+                    showToast('Berhasil! Posisi GPS akurat dimuat ke peta toko.', 'success', 'none');
                 }, () => {
-                    showToast('GPS tidak aktif, gunakan titik peta manual.', 'info');
+                    showToast('GPS tidak aktif, gunakan titik peta manual.', 'info', 'none');
                 }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
             }
         }
@@ -3247,12 +3360,12 @@
             const role = document.getElementById('login-role').value;
 
             if (phone.length < 9) {
-                showToast('Masukkan nomor HP yang valid (minimal 9 digit angka)!', 'error');
+                showToast('Masukkan nomor HP yang valid (minimal 9 digit angka)!', 'error', 'none');
                 return;
             }
 
             if (role === 'admin' && phone !== '085624736602') {
-                showToast('AKSES DITOLAK: Login Admin wajib menggunakan Nomor HP 085624736602!', 'error');
+                showToast('AKSES DITOLAK: Login Admin wajib menggunakan Nomor HP 085624736602!', 'error', 'none');
                 return;
             }
 
@@ -3269,12 +3382,12 @@
             }
 
             if (!foundUser) {
-                showToast(`Nomor HP "${rawPhone}" belum terdaftar! Silakan daftar akun terlebih dahulu.`, 'error');
+                showToast(`Nomor HP "${rawPhone}" belum terdaftar! Silakan daftar akun terlebih dahulu.`, 'error', 'none');
                 return;
             }
 
             if (foundUser.status && String(foundUser.status).toLowerCase() === 'nonaktif') {
-                showToast(`Akun dengan Nomor HP "${rawPhone}" sedang dinonaktifkan Admin!`, 'error');
+                showToast(`Akun dengan Nomor HP "${rawPhone}" sedang dinonaktifkan Admin!`, 'error', 'none');
                 return;
             }
 
@@ -3287,7 +3400,7 @@
             );
 
             if (!passwordMatched) {
-                showToast('Kata sandi salah! Periksa kembali kata sandi Anda.', 'error');
+                showToast('Kata sandi salah! Periksa kembali kata sandi Anda.', 'error', 'none');
                 return;
             }
 
@@ -3299,8 +3412,13 @@
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             localStorage.setItem('oleng_last_tab', currentSubTab);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            if (realtimeChannel && supabaseClient) {
+                try { supabaseClient.removeChannel(realtimeChannel); } catch (err) {}
+                realtimeChannel = null;
+            }
+            subscribeRealtimeUpdates();
             await recordAccountAuthEventToSupabase('LOGIN', currentUser);
-            showToast(`Berhasil masuk dengan Nomor HP ${currentUser.phone} (${String(currentUser.role).toUpperCase()})!`, 'success');
+            showToast(`Berhasil masuk dengan Nomor HP ${currentUser.phone} (${String(currentUser.role).toUpperCase()})!`, 'success', 'none');
             enterDashboard(true);
         }
 
@@ -3314,17 +3432,17 @@
             const password = String(document.getElementById('reg-password').value || '').trim();
 
             if (phone.length < 9) {
-                showToast('Nomor WhatsApp / HP wajib diisi minimal 9 digit angka!', 'error');
+                showToast('Nomor WhatsApp / HP wajib diisi minimal 9 digit angka!', 'error', 'none');
                 return;
             }
             if (!password) {
-                showToast('Kata sandi wajib diisi!', 'error');
+                showToast('Kata sandi wajib diisi!', 'error', 'none');
                 return;
             }
 
             const duplicatePhone = db.users.find(u => normalizePhone(u.phone) === phone && u.role === role);
             if (duplicatePhone) {
-                showToast(`Nomor HP "${rawPhone}" sudah terdaftar pada peran ${role.toUpperCase()}! Silakan langsung login.`, 'error');
+                showToast(`Nomor HP "${rawPhone}" sudah terdaftar pada peran ${role.toUpperCase()}! Silakan langsung login.`, 'error', 'none');
                 switchAuthTab('login');
                 document.getElementById('login-phone').value = phone;
                 document.getElementById('login-role').value = role;
@@ -3332,7 +3450,7 @@
             }
 
             if (role === 'admin' && phone !== '085624736602') {
-                showToast('Pendaftaran Admin Master wajib menggunakan nomor 085624736602!', 'error');
+                showToast('Pendaftaran Admin Master wajib menggunakan nomor 085624736602!', 'error', 'none');
                 return;
             }
 
@@ -3342,7 +3460,7 @@
                 const plate = document.getElementById('reg-driver-plate').value.trim().toUpperCase();
                 const bikeType = document.getElementById('reg-driver-bike').value.trim();
                 if (!ktp || !plate || !bikeType) {
-                    showToast('Mitra Ojek wajib mengisi Nama, Nomor KTP, Nomor Plat Motor, dan Jenis Motor!', 'error');
+                    showToast('Mitra Ojek wajib mengisi Nama, Nomor KTP, Nomor Plat Motor, dan Jenis Motor!', 'error', 'none');
                     return;
                 }
                 driverData = { ktp, plate, bikeType, vehicle: `${bikeType} - ${plate}` };
@@ -3356,11 +3474,11 @@
                 const address = document.getElementById('reg-merchant-address').value.trim();
 
                 if (!name || !phone || !ownerName || !shopName || !ktp) {
-                    showToast('Mitra Toko wajib mengisi Nama, Nomor WA, Nama Pemilik Toko, Nama Toko, dan Nomor KTP!', 'error');
+                    showToast('Mitra Toko wajib mengisi Nama, Nomor WA, Nama Pemilik Toko, Nama Toko, dan Nomor KTP!', 'error', 'none');
                     return;
                 }
                 if (!isRegMerchantLocationLocked) {
-                    showToast('Silakan klik/geser pin dan klik tombol "Kunci Lokasi" pada peta toko terlebih dahulu!', 'error');
+                    showToast('Silakan klik/geser pin dan klik tombol "Kunci Lokasi" pada peta toko terlebih dahulu!', 'error', 'none');
                     return;
                 }
 
@@ -3450,7 +3568,7 @@
             document.getElementById('form-register').reset();
             resetMerchantRegistrationFormInputs();
             await recordAccountAuthEventToSupabase('REGISTER', newUser);
-            showToast(`Pendaftaran berhasil! Nomor HP ${phone} & sandi tersimpan, silakan masuk.`, 'success');
+            showToast(`Pendaftaran berhasil! Nomor HP ${phone} & sandi tersimpan, silakan masuk.`, 'success', 'none');
         }
 
         function openForgotPasswordModal() {
@@ -3476,13 +3594,13 @@
                 chatInput.value = `Halo Admin SIMADU, saya lupa kata sandi untuk Nomor HP: ${refVal}. Mohon bantu reset password.`;
                 chatInput.focus();
             }
-            showToast('Berhasil! Diarahkan ke Live Chat Admin SIMADU.', 'success');
+            showToast('Berhasil! Diarahkan ke Live Chat Admin SIMADU.', 'success', 'none');
         }
 
         function redirectForgotPasswordToAdminWA() {
             const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'No. HP Belum Diisi';
             const text = encodeURIComponent(`Halo Admin SIMADU, saya lupa kata sandi untuk Nomor HP: ${refVal}. Mohon bantuan reset password.`);
-            showToast('Berhasil! Membuka WhatsApp Admin SIMADU.', 'success');
+            showToast('Berhasil! Membuka WhatsApp Admin SIMADU.', 'success', 'none');
             window.open(`https://wa.me/${ADMIN_MAIN_WA}?text=${text}`, '_blank');
         }
 
@@ -3727,7 +3845,7 @@
             if (activeRole === 'driver' && shouldDriverReceiveOfferAlarm(order)) {
                 startOrderAlarmLoopForOrder(order.id);
             } else {
-                playAlarmRingtone();
+                playOrderIncomingAlarm();
             }
 
             pushAppNavigationState('incoming-order');
@@ -3767,7 +3885,7 @@
 
                 let roleActionButtons = '';
                 if (st !== 'completed' && st !== 'cancelled') {
-                    if (activeRole === 'driver' || activeRole === 'admin') {
+                    if (activeRole === 'driver') {
                         if (st === 'searching_driver' || st === 'driver_assigned') {
                             roleActionButtons += `
                                 <div class="grid grid-cols-2 gap-2 pt-1">
@@ -3792,7 +3910,7 @@
                             roleActionButtons += `<button onclick="driverCancelAssignedOrder('${order.id}')" class="w-full py-2 bg-rose-100 text-rose-900 border border-rose-300 rounded-xl text-[11px] font-black cursor-pointer mt-1">Batalkan Tugas Driver (Cari Pengganti)</button>`;
                         }
                     }
-                    if (activeRole === 'merchant' || activeRole === 'admin') {
+                    if (activeRole === 'merchant') {
                         if (['driver_assigned', 'merchant_confirmation'].includes(st)) {
                             roleActionButtons += `
                                 <div class="grid grid-cols-2 gap-2 pt-1">
@@ -3846,37 +3964,68 @@
             document.getElementById('modal-incoming-order').classList.remove('hidden');
         }
 
+        function claimOrderByDriverAtomic(order, driverName, driverPhone) {
+            const st = normalizeOrderStatusCode(order.status);
+            if (['completed', 'cancelled', 'picked_up', 'delivering'].includes(st)) {
+                return { ok: false, reason: 'Pesanan sudah diproses atau selesai.' };
+            }
+            const existingClaimPhone = normalizePhone(order.assignedDriverPhone || order.claimedByPhone);
+            const existingDriverName = String(order.driver || '').trim().toLowerCase();
+            const myPhone = normalizePhone(driverPhone);
+            const myName = String(driverName || '').trim().toLowerCase();
+
+            const alreadyClaimedByOther = (
+                (existingClaimPhone && myPhone && existingClaimPhone !== myPhone) ||
+                (existingDriverName && myName && existingDriverName !== myName && st !== 'searching_driver')
+            );
+            if (alreadyClaimedByOther) {
+                return { ok: false, reason: `Pesanan ${order.id} sudah diterima oleh mitra lain (${order.driver}).` };
+            }
+
+            order.driver = driverName;
+            order.driverPhoto = resolveDriverPhoto(driverName);
+            order.assignedDriverPhone = myPhone;
+            order.claimedByPhone = myPhone;
+            order.claimedAt = new Date().toISOString();
+            order.driverConfirmed = true;
+            order.driverResponseDeadline = null;
+            order.replacementSearchActive = false;
+            order.serverUpdatedAt = new Date().toISOString();
+            return { ok: true };
+        }
+
         function merchantRespondOrder(orderId, accepted) {
             const order = db.orders.find(o => o.id === orderId);
             if (!order) return;
             stopOrderAlarmLoop();
             const st = normalizeOrderStatusCode(order.status);
             if (!order.driver || !['driver_assigned', 'merchant_confirmation'].includes(st)) {
-                return showToast('Toko hanya memproses pesanan setelah driver menerima tugas.', 'error');
+                return showToast('Toko hanya memproses pesanan setelah driver menerima tugas.', 'error', 'none');
             }
             if (accepted) {
                 appendOrderStatusHistory(order, 'merchant_accepted', 'merchant', order.merchant, 'Toko menyetujui pesanan');
                 appendOrderStatusHistory(order, 'preparing', 'merchant', order.merchant, 'Toko mulai menyiapkan barang');
-                addAccountNotification(`Toko Menyetujui (${order.id})`, `Toko ${order.merchant} menyetujui & sedang menyiapkan pesanan ${order.items}.`, order.customer, `${order.id}-m-acc-${order.driver}`);
-                addAccountNotification(`Toko Menyetujui (${order.id})`, `Pesanan di ${order.merchant} disetujui & sedang disiapkan. Silakan menuju toko.`, order.driver, `${order.id}-m-acc-drv-${order.driver}`);
-                saveDB(`Toko menyetujui & menyiapkan pesanan ${order.id} (preparing).`);
+                addAccountNotification(`Toko Menyetujui (${order.id})`, `Toko ${order.merchant} menyetujui & sedang menyiapkan pesanan ${order.items}.`, order.customer, `${order.id}-m-acc-${order.driver}`, 'none');
+                addAccountNotification(`Toko Menyetujui (${order.id})`, `Pesanan di ${order.merchant} disetujui & sedang disiapkan. Silakan menuju toko.`, order.driver, `${order.id}-m-acc-drv-${order.driver}`, 'order');
+                saveDB(`Toko menyetujui & menyiapkan pesanan ${order.id} (preparing).`, true, 'none');
                 openIncomingOrderModal(order.id, true);
             } else {
                 const reason = (prompt('Wajib pilih/isi alasan penolakan (contoh: Stok habis / Toko tutup / Tidak dapat memproses pesanan):') || '').trim();
                 if (!reason) {
-                    return showToast('Alasan penolakan toko wajib diisi!', 'error');
+                    return showToast('Alasan penolakan toko wajib diisi!', 'error', 'none');
                 }
                 const prevDriver = order.driver;
                 order.storeRejectionReason = reason;
                 order.driver = null;
                 order.assignedDriverPhone = null;
+                order.claimedByPhone = null;
                 order.refundStatus = 'refund_processed';
                 order.refundAmount = Number(order.total || 0);
                 appendOrderStatusHistory(order, 'cancelled', 'merchant', order.merchant, `Ditolak toko: ${reason}`);
                 recordDriverChangeLog(order, prevDriver, null, `Toko menolak: ${reason}`, 'STORE_REJECT');
-                addAccountNotification(`Pesanan Ditolak Toko (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Refund diproses.`, order.customer, `${order.id}-m-rej-cust`);
-                addAccountNotification(`Tugas Dibatalkan (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Tugas Anda dibatalkan.`, prevDriver, `${order.id}-m-rej-drv-${prevDriver}`);
-                saveDB(`Pesanan ${order.id} ditolak toko & status menjadi cancelled.`);
+                addAccountNotification(`Pesanan Ditolak Toko (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Refund diproses.`, order.customer, `${order.id}-m-rej-cust`, 'none');
+                addAccountNotification(`Tugas Dibatalkan (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Tugas Anda dibatalkan.`, prevDriver, `${order.id}-m-rej-drv-${prevDriver}`, 'none');
+                saveDB(`Pesanan ${order.id} ditolak toko & status menjadi cancelled.`, true, 'none');
                 document.getElementById('modal-incoming-order')?.classList.add('hidden');
                 renderDashboardContent(currentSubTab, false);
             }
@@ -3888,17 +4037,17 @@
             const curStage = normalizeOrderStatusCode(order.status);
             const isStoreOrder = order.type === 'food' && String(order.merchant || '').toLowerCase() !== 'layanan ojek online';
             if (nextStage === 'picked_up' && isStoreOrder && !['merchant_accepted', 'preparing', 'driver_arriving'].includes(curStage)) {
-                return showToast('Barang belum bisa diambil sebelum toko menyetujui pesanan!', 'error');
+                return showToast('Barang belum bisa diambil sebelum toko menyetujui pesanan!', 'error', 'none');
             }
             const ok = appendOrderStatusHistory(order, nextStage, 'driver', order.driver || 'Driver', `Tahap ${nextStage}`);
             if (!ok) {
-                return showToast(`Transisi status dari ${curStage} ke ${nextStage} tidak valid.`, 'error');
+                return showToast(`Transisi status dari ${curStage} ke ${nextStage} tidak valid.`, 'error', 'none');
             }
-            addAccountNotification(`Update Status (${order.id})`, `Status pesanan: ${getOrderStatusLabel(nextStage)} (${nextStage}).`, order.customer, `${order.id}-st-${nextStage}-cust`);
+            addAccountNotification(`Update Status (${order.id})`, `Status pesanan: ${getOrderStatusLabel(nextStage)} (${nextStage}).`, order.customer, `${order.id}-st-${nextStage}-cust`, 'none');
             if (isStoreOrder) {
-                addAccountNotification(`Update Driver (${order.id})`, `Driver ${order.driver}: ${getOrderStatusLabel(nextStage)}.`, order.merchant, `${order.id}-st-${nextStage}-mrc`);
+                addAccountNotification(`Update Driver (${order.id})`, `Driver ${order.driver}: ${getOrderStatusLabel(nextStage)}.`, order.merchant, `${order.id}-st-${nextStage}-mrc`, 'none');
             }
-            saveDB(`Status pesanan ${order.id} diperbarui ke ${nextStage}.`);
+            saveDB(`Status pesanan ${order.id} diperbarui ke ${nextStage}.`, true, 'none');
             openIncomingOrderModal(order.id, true);
         }
 
@@ -3908,15 +4057,16 @@
             stopOrderAlarmLoop();
             const st = normalizeOrderStatusCode(order.status);
             if (['picked_up', 'delivering', 'completed', 'cancelled'].includes(st)) {
-                return showToast('Pesanan yang sudah diambil tidak dapat dibatalkan driver melalui tombol biasa.', 'error');
+                return showToast('Pesanan yang sudah diambil tidak dapat dibatalkan driver melalui tombol biasa.', 'error', 'none');
             }
             const reason = (prompt('Masukkan alasan driver membatalkan pekerjaan:') || '').trim();
             if (!reason) {
-                return showToast('Alasan pembatalan driver wajib diisi!', 'error');
+                return showToast('Alasan pembatalan driver wajib diisi!', 'error', 'none');
             }
             const prevDriver = order.driver;
             order.driver = null;
             order.assignedDriverPhone = null;
+            order.claimedByPhone = null;
             order.driverConfirmed = false;
             order.driverResponseDeadline = null;
             order.replacementSearchActive = true;
@@ -3925,11 +4075,11 @@
             order.cancelledBy = 'driver';
             appendOrderStatusHistory(order, 'searching_driver', 'driver', prevDriver || 'Driver', `Driver batal (${reason}), mencari driver pengganti`);
             recordDriverChangeLog(order, prevDriver, null, reason, 'DRIVER_CANCEL');
-            addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan (${reason}). Sistem mencari driver pengganti tanpa checkout ulang.`, order.customer, `${order.id}-dcancel-cust-${prevDriver}`);
+            addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan (${reason}). Sistem mencari driver pengganti tanpa checkout ulang.`, order.customer, `${order.id}-dcancel-cust-${prevDriver}`, 'none');
             if (order.type === 'food') {
-                addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan tugas. Sistem sedang mencari driver pengganti.`, order.merchant, `${order.id}-dcancel-mrc-${prevDriver}`);
+                addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan tugas. Sistem sedang mencari driver pengganti.`, order.merchant, `${order.id}-dcancel-mrc-${prevDriver}`, 'none');
             }
-            saveDB(`Penugasan ${prevDriver} dilepas. Pesanan ${order.id} kembali mencari driver pengganti.`);
+            saveDB(`Penugasan ${prevDriver} dilepas. Pesanan ${order.id} kembali mencari driver pengganti.`, true, 'none');
             document.getElementById('modal-incoming-order')?.classList.add('hidden');
             renderDashboardContent(currentSubTab, false);
         }
@@ -3940,21 +4090,22 @@
             if (activeOrderAlarmTargetId === order.id) stopOrderAlarmLoop();
             const st = normalizeOrderStatusCode(order.status);
             if (st === 'completed') {
-                return showToast('Pesanan yang sudah selesai tidak dapat dibatalkan.', 'error');
+                return showToast('Pesanan yang sudah selesai tidak dapat dibatalkan.', 'error', 'none');
             }
             if (['picked_up', 'delivering'].includes(st)) {
-                return showToast('Barang sudah diambil driver. Gunakan pembatalan khusus & koordinasi dengan Admin.', 'error');
+                return showToast('Barang sudah diambil driver. Gunakan pembatalan khusus & koordinasi dengan Admin.', 'error', 'none');
             }
             if (!confirm(`Konfirmasi BATALKAN PESANAN ${order.id}? Tindakan ini membatalkan seluruh transaksi.`)) {
                 return;
             }
             const reason = (prompt('Masukkan alasan pembatalan pesanan:') || '').trim();
             if (!reason) {
-                return showToast('Alasan pembatalan wajib diisi!', 'error');
+                return showToast('Alasan pembatalan wajib diisi!', 'error', 'none');
             }
             const prevDriver = order.driver;
             order.driver = null;
             order.assignedDriverPhone = null;
+            order.claimedByPhone = null;
             order.cancellationReason = reason;
             order.cancelledBy = 'customer';
             order.cancelledAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -3963,12 +4114,12 @@
             appendOrderStatusHistory(order, 'cancelled', 'customer', order.customer, `Dibatalkan pelanggan: ${reason}`);
             if (prevDriver) {
                 recordDriverChangeLog(order, prevDriver, null, `Pelanggan membatalkan: ${reason}`, 'CUSTOMER_CANCEL');
-                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, prevDriver, `${order.id}-ccancel-drv-${prevDriver}`);
+                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, prevDriver, `${order.id}-ccancel-drv-${prevDriver}`, 'none');
             }
             if (order.type === 'food') {
-                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, order.merchant, `${order.id}-ccancel-mrc`);
+                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, order.merchant, `${order.id}-ccancel-mrc`, 'none');
             }
-            saveDB(`Pesanan ${order.id} dibatalkan (cancelled) & refund dicatat.`);
+            saveDB(`Pesanan ${order.id} dibatalkan (cancelled) & refund dicatat.`, true, 'none');
             renderDashboardContent(currentSubTab, false);
         }
 
@@ -3984,14 +4135,18 @@
             if (action === 'accept') {
                 stopOrderAlarmLoop();
                 const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
-                const assignedName = activeRole === 'driver' ? currentUser.name : (order.driver || currentUser.name);
-                const assignedPhone = activeRole === 'driver' ? normalizePhone(currentUser.phone) : normalizePhone(order.assignedDriverPhone);
+                if (activeRole !== 'driver') {
+                    return showToast('Hanya mitra driver yang dapat menerima tugas pengantaran.', 'error', 'none');
+                }
+                const assignedName = currentUser.name;
+                const assignedPhone = normalizePhone(currentUser.phone);
                 const prevDriver = order.driver;
-                order.driver = assignedName;
-                order.driverPhoto = resolveDriverPhoto(assignedName);
-                order.assignedDriverPhone = assignedPhone;
-                order.driverResponseDeadline = null;
-                order.replacementSearchActive = false;
+                const claimRes = claimOrderByDriverAtomic(order, assignedName, assignedPhone);
+                if (!claimRes.ok) {
+                    showToast(claimRes.reason, 'error', 'none');
+                    pullInitialFromSupabase(false);
+                    return;
+                }
                 appendOrderStatusHistory(order, 'driver_assigned', 'driver', assignedName, 'Driver menerima tawaran pengantaran');
                 if (prevDriver !== assignedName) {
                     recordDriverChangeLog(order, prevDriver, assignedName, 'Driver menerima tugas', 'ACCEPT');
@@ -3999,10 +4154,10 @@
                 const isStoreOrder = order.type === 'food' && String(order.merchant || '').toLowerCase() !== 'layanan ojek online';
                 if (isStoreOrder) {
                     appendOrderStatusHistory(order, 'merchant_confirmation', 'system', 'Sistem', 'Driver tersedia, menunggu persetujuan toko');
-                    addAccountNotification(`Driver Tersedia (${order.id})`, `Driver ${assignedName} sudah tersedia untuk pesanan ${order.items} (${order.customer}). Silakan Terima/Tolak.`, order.merchant, `${order.id}-m-req-${assignedName}`);
+                    addAccountNotification(`Driver Tersedia (${order.id})`, `Driver ${assignedName} sudah tersedia untuk pesanan ${order.items} (${order.customer}). Silakan Terima/Tolak.`, order.merchant, `${order.id}-m-req-${assignedName}`, 'order');
                 }
-                addAccountNotification(`Driver Ditemukan (${order.id})`, `Driver ${assignedName} menerima tugas. Menunggu konfirmasi toko.`, order.customer, `${order.id}-d-acc-cust-${assignedName}`);
-                saveDB(`Order ${order.id} diterima oleh ${assignedName} (driver_assigned → merchant_confirmation).`);
+                addAccountNotification(`Driver Ditemukan (${order.id})`, `Driver ${assignedName} menerima tugas. Menunggu konfirmasi toko.`, order.customer, `${order.id}-d-acc-cust-${assignedName}`, 'none');
+                saveDB(`Order ${order.id} diterima oleh ${assignedName} (driver_assigned → merchant_confirmation).`, true, 'none');
                 openIncomingOrderModal(order.id, true);
                 return;
             } else if (action === 'reject') {
@@ -4010,12 +4165,13 @@
                 const prevDriver = order.driver || currentUser?.name || '-';
                 order.driver = null;
                 order.assignedDriverPhone = null;
+                order.claimedByPhone = null;
                 order.driverConfirmed = false;
                 order.driverResponseDeadline = null;
                 appendOrderStatusHistory(order, 'searching_driver', 'driver', prevDriver, 'Driver menolak tugas, mencari driver lain');
                 recordDriverChangeLog(order, prevDriver, null, 'Driver menolak tugas', 'REJECT');
-                addAccountNotification(`Driver Menolak (${order.id})`, `Driver ${prevDriver} menolak tugas. Silakan pilih driver aktif lain tanpa checkout ulang.`, order.customer, `${order.id}-d-rej-cust-${prevDriver}`);
-                saveDB(`Tugas ${order.id} ditolak & dilepas. Pelanggan dapat memilih driver lain.`);
+                addAccountNotification(`Driver Menolak (${order.id})`, `Driver ${prevDriver} menolak tugas. Silakan pilih driver aktif lain tanpa checkout ulang.`, order.customer, `${order.id}-d-rej-cust-${prevDriver}`, 'none');
+                saveDB(`Tugas ${order.id} ditolak & dilepas. Pelanggan dapat memilih driver lain.`, true, 'none');
             } else if (action === 'complete') {
                 stopOrderAlarmLoop();
                 const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
@@ -4027,7 +4183,7 @@
                 );
                 const assignedDrvName = String(order.driver || '').trim().toLowerCase();
                 const assignedDrvPhone = normalizePhone(order.assignedDriverPhone);
-                const isAuthorizedDriver = activeRole === 'admin' || (
+                const isAuthorizedDriver = (
                     activeRole === 'driver' && drvMatch && (
                         assignedDrvName === me ||
                         assignedDrvName === String(drvMatch.name || '').trim().toLowerCase() ||
@@ -4035,13 +4191,13 @@
                     )
                 );
                 if (!isAuthorizedDriver) {
-                    return showToast('Validasi gagal: hanya driver yang ditugaskan pada order ini yang dapat menyelesaikan pesanan.', 'error');
+                    return showToast('Validasi gagal: hanya driver yang ditugaskan pada order ini yang dapat menyelesaikan pesanan.', 'error', 'none');
                 }
 
                 order.status = 'delivering';
                 const ok = appendOrderStatusHistory(order, 'completed', 'driver', order.driver || currentUser?.name || 'Driver', 'Pesanan tervalidasi selesai');
                 if (!ok) {
-                    return showToast('Transisi ke completed tidak valid pada tahap ini.', 'error');
+                    return showToast('Transisi ke completed tidak valid pada tahap ini.', 'error', 'none');
                 }
                 order.completedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 order.driverResponseDeadline = null;
@@ -4052,37 +4208,20 @@
                     const commissionFee = Math.round((order.total * pct) / 100);
                     const netEarnings = Math.max(0, order.total - commissionFee);
 
-                    if (activeRole === 'merchant' || activeRole === 'admin') {
-                        const m = db.merchants.find(x => x.name === order.merchant || normalizePhone(x.whatsapp) === normalizePhone(currentUser.phone));
-                        const ownerLabel = m ? m.name : order.merchant;
-                        if (m) m.balance = Number(m.balance || 0) + netEarnings;
-                        const u = db.users.find(x => (x.role === 'merchant' || x.role === 'admin') && (x.name === order.merchant || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
-                        if (u) u.balance = Number(u.balance || 0) + netEarnings;
-                        recordWalletMutation({
-                            ownerName: ownerLabel,
-                            role: 'merchant',
-                            type: 'ORDER_COMPLETE',
-                            label: `Order ${order.id} Selesai (Bersih +Komisi ${pct}%)`,
-                            amount: order.total,
-                            commission: commissionFee,
-                            netAmount: netEarnings
-                        });
-                    } else {
-                        const d = db.drivers.find(x => x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
-                        const driverLabel = d ? d.name : order.driver;
-                        if (d) d.balance = Number(d.balance || 0) + netEarnings;
-                        const u = db.users.find(x => x.role === 'driver' && (x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
-                        if (u) u.balance = Number(u.balance || 0) + netEarnings;
-                        recordWalletMutation({
-                            ownerName: driverLabel,
-                            role: 'driver',
-                            type: 'ORDER_COMPLETE',
-                            label: `Order ${order.id} Selesai (Bersih +Komisi ${pct}%)`,
-                            amount: order.total,
-                            commission: commissionFee,
-                            netAmount: netEarnings
-                        });
-                    }
+                    const d = db.drivers.find(x => x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
+                    const driverLabel = d ? d.name : order.driver;
+                    if (d) d.balance = Number(d.balance || 0) + netEarnings;
+                    const u = db.users.find(x => x.role === 'driver' && (x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
+                    if (u) u.balance = Number(u.balance || 0) + netEarnings;
+                    recordWalletMutation({
+                        ownerName: driverLabel,
+                        role: 'driver',
+                        type: 'ORDER_COMPLETE',
+                        label: `Order ${order.id} Selesai (Bersih +Komisi ${pct}%)`,
+                        amount: order.total,
+                        commission: commissionFee,
+                        netAmount: netEarnings
+                    });
 
                     const adminUser = db.users.find(x => x.role === 'admin');
                     if (adminUser) adminUser.balance = Number(adminUser.balance || 0) + commissionFee;
@@ -4098,10 +4237,10 @@
                     order.settled = true;
                     order.commissionFee = commissionFee;
                     order.netEarnings = netEarnings;
-                    saveDB(`Order ${order.id} dikonfirmasi selesai (completed)! Saldo bersih +Rp ${netEarnings.toLocaleString()} masuk.`);
-                    addAccountNotification(`Order ${order.id} Selesai`, `Pesanan ${order.items} sudah selesai. Silakan beri rating & ulasan!`, order.customer, `${order.id}-comp-cust`);
+                    saveDB(`Order ${order.id} dikonfirmasi selesai (completed)! Saldo bersih +Rp ${netEarnings.toLocaleString()} masuk.`, true, 'none');
+                    addAccountNotification(`Order ${order.id} Selesai`, `Pesanan ${order.items} sudah selesai. Silakan beri rating & ulasan!`, order.customer, `${order.id}-comp-cust`, 'none');
                 } else {
-                    saveDB(`Status order ${order.id} tersinkron.`);
+                    saveDB(`Status order ${order.id} tersinkron.`, true, 'none');
                 }
 
                 document.getElementById('modal-incoming-order')?.classList.add('hidden');
@@ -4175,7 +4314,7 @@
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
 
-            saveDB(`Rating ${selectedRatingStar} bintang & ulasan tersimpan.`);
+            saveDB(`Rating ${selectedRatingStar} bintang & ulasan tersimpan.`, true, 'none');
             closeRatingModal();
             renderDashboardContent('history', false);
         }
@@ -4195,11 +4334,11 @@
                 : (currentUser.photo || './olengorange2.png');
 
             container.innerHTML = `
-                <div class="p-4 space-y-4 bg-[#F3F3F3] min-h-full pb-20">
+                <div class="p-3.5 space-y-3 bg-[#F3F3F3] min-h-full">
                     
-                    <div class="bg-[#171717] text-white p-4 rounded-3xl shadow-md flex items-center justify-between border-2 border-[#FF7900]">
+                    <div class="bg-[#171717] text-white p-3.5 rounded-3xl shadow-md flex items-center justify-between border-2 border-[#FF7900]">
                         <div class="flex items-center space-x-3">
-                            <img src="${headerAvatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 ${activeRole === 'driver' ? 'rounded-full' : 'rounded-2xl'} object-cover border-2 border-[#FF7900] bg-white">
+                            <img src="${headerAvatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-11 h-11 ${activeRole === 'driver' ? 'rounded-full' : 'rounded-2xl'} object-cover border-2 border-[#FF7900] bg-white">
                             <div>
                                 <span class="text-xs text-[#F3F3F3] font-extrabold block">Halo, ${currentUser.name}</span>
                                 <h3 class="text-xs font-black text-[#FF7900] tracking-tight">${currentUser.phone || 'WARGA LENGKONG'}</h3>
@@ -4220,7 +4359,7 @@
                         </div>
                     </div>
 
-                    <div class="bg-white px-4 py-2.5 rounded-2xl border border-[#D4D4D4] flex items-center justify-between gap-2 flex-wrap">
+                    <div class="bg-white px-3.5 py-2 rounded-2xl border border-[#D4D4D4] flex items-center justify-between gap-2 flex-wrap">
                         <div class="flex items-center gap-1.5 flex-wrap">
                             <i class="fa-solid fa-bell-ring text-[#FF7900] text-xs"></i>
                             <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${alarmEnabled ? 'bg-[#FF7900] text-[#171717] border border-[#171717]' : 'bg-[#F3F3F3] text-[#171717] border border-[#D4D4D4]'}">
@@ -4244,29 +4383,29 @@
                     </div>
 
                     <div class="rounded-3xl shadow-sm overflow-hidden border-2 border-[#FF7900] bg-white">
-                        <img src="${activeBanner}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-full h-36 object-cover" alt="Banner Oleng Go">
+                        <img src="${activeBanner}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-full h-32 object-cover" alt="Banner Oleng Go">
                     </div>
 
                     <div class="grid grid-cols-4 gap-2">
-                        <button onclick="renderDashboardContent('ojek')" class="bg-white p-3 rounded-2xl border border-[#D4D4D4] flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7900] transition">
-                            <div class="w-12 h-12 bg-[#FF7900] text-[#171717] rounded-2xl flex items-center justify-center text-xl mb-1.5 border border-[#171717]"><i class="fa-solid fa-motorcycle"></i></div>
+                        <button onclick="renderDashboardContent('ojek')" class="bg-white p-2.5 rounded-2xl border border-[#D4D4D4] flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7900] transition">
+                            <div class="w-11 h-11 bg-[#FF7900] text-[#171717] rounded-2xl flex items-center justify-center text-lg mb-1 border border-[#171717]"><i class="fa-solid fa-motorcycle"></i></div>
                             <span class="text-[10px] font-extrabold text-[#171717] text-center leading-tight">Pesan Ojek</span>
                         </button>
-                        <button onclick="renderDashboardContent('food')" class="bg-white p-3 rounded-2xl border border-[#D4D4D4] flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7900] transition">
-                            <div class="w-12 h-12 bg-[#171717] text-[#FF7900] rounded-2xl flex items-center justify-center text-xl mb-1.5"><i class="fa-solid fa-utensils"></i></div>
+                        <button onclick="renderDashboardContent('food')" class="bg-white p-2.5 rounded-2xl border border-[#D4D4D4] flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7900] transition">
+                            <div class="w-11 h-11 bg-[#171717] text-[#FF7900] rounded-2xl flex items-center justify-center text-lg mb-1"><i class="fa-solid fa-utensils"></i></div>
                             <span class="text-[10px] font-extrabold text-[#171717] text-center leading-tight">Pesan Makanan</span>
                         </button>
-                        <button onclick="switchView('chat')" class="bg-white p-3 rounded-2xl border border-[#D4D4D4] flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7900] transition">
-                            <div class="w-12 h-12 bg-[#F3F3F3] text-[#171717] rounded-2xl flex items-center justify-center text-xl mb-1.5 border border-[#FF7900]"><i class="fa-solid fa-comments"></i></div>
+                        <button onclick="switchView('chat')" class="bg-white p-2.5 rounded-2xl border border-[#D4D4D4] flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7900] transition">
+                            <div class="w-11 h-11 bg-[#F3F3F3] text-[#171717] rounded-2xl flex items-center justify-center text-lg mb-1 border border-[#FF7900]"><i class="fa-solid fa-comments"></i></div>
                             <span class="text-[10px] font-extrabold text-[#171717] text-center leading-tight">Live Chat Bantuan</span>
                         </button>
-                        <button onclick="renderDashboardContent('history')" class="bg-white p-3 rounded-2xl border border-[#D4D4D4] flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7900] transition">
-                            <div class="w-12 h-12 bg-[#FFD400] text-[#171717] rounded-2xl flex items-center justify-center text-xl mb-1.5 border border-[#171717]"><i class="fa-solid fa-receipt"></i></div>
+                        <button onclick="renderDashboardContent('history')" class="bg-white p-2.5 rounded-2xl border border-[#D4D4D4] flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7900] transition">
+                            <div class="w-11 h-11 bg-[#FFD400] text-[#171717] rounded-2xl flex items-center justify-center text-lg mb-1 border border-[#171717]"><i class="fa-solid fa-receipt"></i></div>
                             <span class="text-[10px] font-extrabold text-[#171717] text-center leading-tight">Riwayat Pesanan</span>
                         </button>
                     </div>
 
-                    <div class="bg-white p-4 rounded-3xl border border-[#D4D4D4] space-y-2.5">
+                    <div class="bg-white p-3.5 rounded-3xl border border-[#D4D4D4] space-y-2">
                         <div class="flex justify-between items-center gap-2 flex-wrap">
                             <h3 class="font-extrabold text-xs text-[#171717] uppercase tracking-wider flex items-center gap-1.5">
                                 <i class="fa-solid fa-map-location-dot text-[#FF7900]"></i> Peta Ojek & Toko Lengkong
@@ -4284,7 +4423,7 @@
                             </div>
                         </div>
                         <div id="map" class="map-container border-2 border-[#FF7900]"></div>
-                        <div class="flex items-center justify-between text-[10px] text-[#171717] font-bold pt-1">
+                        <div class="flex items-center justify-between text-[10px] text-[#171717] font-bold pt-0.5">
                             <span><i class="fa-solid fa-store text-[#FF7900]"></i> Mitra Toko</span>
                             <span><i class="fa-solid fa-motorcycle text-[#171717]"></i> Mitra Ojek</span>
                         </div>
@@ -4656,10 +4795,10 @@
             const food = db.foods.find(f => Number(f.id) === Number(foodId));
             if (!food) return;
             if (Number(food.stock ?? 20) <= 0) {
-                return showToast(`Menu "${food.name}" sedang habis!`, 'error');
+                return showToast(`Menu "${food.name}" sedang habis!`, 'error', 'none');
             }
             db.cart.push(food);
-            saveDB(`${food.name} masuk keranjang.`, false);
+            saveDB(`${food.name} masuk keranjang.`, false, 'none');
             const counter = document.getElementById('cart-counter');
             if(counter) counter.innerText = db.cart.length;
             const detailCounter = document.getElementById('detail-cart-count');
@@ -4769,20 +4908,20 @@
 
         function removeFromCart(idx) {
             db.cart.splice(idx, 1);
-            saveDB('Item dihapus dari keranjang.', false);
+            saveDB('Item dihapus dari keranjang.', false, 'none');
             updateCartUI();
         }
 
         async function submitFoodOrder() {
-            if(db.cart.length === 0) return showToast('Keranjang masih kosong!', 'error');
+            if(db.cart.length === 0) return showToast('Keranjang masih kosong!', 'error', 'none');
             const activeDriverId = confirmedOrderDriverId || draftSelectedDriverId;
             if (!activeDriverId) {
-                return showToast('Silakan PILIH driver lalu tekan KONFIRMASI DRIVER terlebih dahulu!', 'error');
+                return showToast('Silakan PILIH driver lalu tekan KONFIRMASI DRIVER terlebih dahulu!', 'error', 'none');
             }
             const merchant = db.activeMerchant || db.merchants[0];
             const driver = db.drivers.find(d => Number(d.id) === Number(activeDriverId));
             if (!driver || driver.status !== 'Online' || (driver.availability && driver.availability !== 'available')) {
-                return showToast('Driver pilihan sedang sibuk/tidak tersedia. Silakan pilih driver yang Siap Order.', 'error');
+                return showToast('Driver pilihan sedang sibuk/tidak tersedia. Silakan pilih driver yang Siap Order.', 'error', 'none');
             }
             const subtotal = db.cart.reduce((sum, i) => sum + i.price, 0);
             const distKm = calculateDistance(merchant.lat, merchant.lng, destLatLng[0], destLatLng[1]);
@@ -4830,6 +4969,7 @@
                 settled: false,
                 rating: null,
                 reviewText: '',
+                serverUpdatedAt: new Date().toISOString(),
                 statusHistory: [{
                     fromStatus: null,
                     toStatus: 'searching_driver',
@@ -4853,12 +4993,11 @@
             syncDriverAvailabilityLocks();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-            addAccountNotification(`Pesanan Dibuat (${newOrder.id})`, `Pesanan ${newOrder.items} dibuat. Notifikasi instan terkirim ke ${merchant.name} & ${driver.name}.`, currentUser.name, `${newOrder.id}-created-cust`);
-            addAccountNotification(`Order Makanan Baru (${newOrder.id})`, `Pemesan ${currentUser.name} • ${newOrder.items} • Tujuan: ${newOrder.dest}${notesVal ? ` • Catatan: ${notesVal}` : ''}.`, merchant.name, `${newOrder.id}-instant-mrc-${merchant.name}`);
-            addAccountNotification(`Tawaran Pesanan Baru (${newOrder.id})`, `Toko ${merchant.name} • Jemput: ${newOrder.pickup} → ${newOrder.dest} (${distKm} km, Total Rp ${finalTotal.toLocaleString()}).`, newOrder.driver, `${newOrder.id}-offer-drv-${driver.name}`);
-            playAlarmRingtone();
-            triggerSystemBackgroundNotification(`Order Baru ${newOrder.id}`, `${newOrder.merchant} • ${newOrder.items}`, { type: 'order', orderId: newOrder.id, tag: 'order-' + newOrder.id });
-            showToast(`Berhasil! Pesanan ${newOrder.id} terkirim & notif instan masuk ke ${merchant.name} dan ${driver.name}.`, 'success');
+            addAccountNotification(`Pesanan Dibuat (${newOrder.id})`, `Pesanan ${newOrder.items} dibuat. Notifikasi instan terkirim ke ${merchant.name} & ${driver.name}.`, currentUser.name, `${newOrder.id}-created-cust`, 'none');
+            addAccountNotification(`Order Makanan Baru (${newOrder.id})`, `Pemesan ${currentUser.name} • ${newOrder.items} • Tujuan: ${newOrder.dest}${notesVal ? ` • Catatan: ${notesVal}` : ''}.`, merchant.name, `${newOrder.id}-instant-mrc-${merchant.name}`, 'order');
+            addAccountNotification(`Tawaran Pesanan Baru (${newOrder.id})`, `Toko ${merchant.name} • Jemput: ${newOrder.pickup} → ${newOrder.dest} (${distKm} km, Total Rp ${finalTotal.toLocaleString()}).`, newOrder.driver, `${newOrder.id}-offer-drv-${driver.name}`, 'order');
+            triggerSystemBackgroundNotification(`Order Baru ${newOrder.id}`, `${newOrder.merchant} • ${newOrder.items}`, { type: 'order', orderId: newOrder.id, tag: 'order-' + newOrder.id, renotify: true });
+            showToast(`Berhasil! Pesanan ${newOrder.id} terkirim & notif instan masuk ke ${merchant.name} dan ${driver.name}.`, 'success', 'none');
             closeCartModal();
             closeMerchantDetail();
             renderDashboardContent('history', false);
@@ -4868,11 +5007,11 @@
         async function submitOjekOrder() {
             const activeDriverId = confirmedOrderDriverId || draftSelectedDriverId;
             if (!activeDriverId) {
-                return showToast('Silakan PILIH driver lalu tekan KONFIRMASI DRIVER terlebih dahulu!', 'error');
+                return showToast('Silakan PILIH driver lalu tekan KONFIRMASI DRIVER terlebih dahulu!', 'error', 'none');
             }
             const driver = db.drivers.find(d => Number(d.id) === Number(activeDriverId));
             if (!driver || driver.status !== 'Online' || (driver.availability && driver.availability !== 'available')) {
-                return showToast('Driver pilihan sedang sibuk/tidak tersedia. Silakan pilih driver yang Siap Order.', 'error');
+                return showToast('Driver pilihan sedang sibuk/tidak tersedia. Silakan pilih driver yang Siap Order.', 'error', 'none');
             }
             const to = document.getElementById('ojek-to').value || `Titik Map (${destLatLng[0]}, ${destLatLng[1]})`;
             const from = document.getElementById('ojek-from').value || 'Lokasi Terkini GPS';
@@ -4912,6 +5051,7 @@
                 settled: false,
                 rating: null,
                 reviewText: '',
+                serverUpdatedAt: new Date().toISOString(),
                 statusHistory: [{
                     fromStatus: null,
                     toStatus: 'searching_driver',
@@ -4934,10 +5074,9 @@
             syncDriverAvailabilityLocks();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-            addAccountNotification(`Tawaran Ojek Baru (${newOrder.id})`, `Jemput ${currentUser.name} (${from} → ${to}, ${distKm} km, Tarif Rp ${finalFare.toLocaleString()})${notesVal ? ` • Catatan: ${notesVal}` : ''}.`, newOrder.driver, `${newOrder.id}-offer-drv-${driver.name}`);
-            playAlarmRingtone();
-            triggerSystemBackgroundNotification(`Order Ojek Baru ${newOrder.id}`, `Jemput ${newOrder.customer} (${newOrder.pickup} → ${newOrder.dest})`, { type: 'order', orderId: newOrder.id, tag: 'order-' + newOrder.id });
-            showToast(`Berhasil! Order ojek ${newOrder.id} terkirim & notif instan masuk ke driver ${driver.name}.`, 'success');
+            addAccountNotification(`Tawaran Ojek Baru (${newOrder.id})`, `Jemput ${currentUser.name} (${from} → ${to}, ${distKm} km, Tarif Rp ${finalFare.toLocaleString()})${notesVal ? ` • Catatan: ${notesVal}` : ''}.`, newOrder.driver, `${newOrder.id}-offer-drv-${driver.name}`, 'order');
+            triggerSystemBackgroundNotification(`Order Ojek Baru ${newOrder.id}`, `Jemput ${newOrder.customer} (${newOrder.pickup} → ${newOrder.dest})`, { type: 'order', orderId: newOrder.id, tag: 'order-' + newOrder.id, renotify: true });
+            showToast(`Berhasil! Order ojek ${newOrder.id} terkirim & notif instan masuk ke driver ${driver.name}.`, 'success', 'none');
             renderDashboardContent('history', false);
             syncAllToSupabase();
         }
@@ -4993,7 +5132,7 @@
                                         <button type="button" onclick="openGoogleMapsNavigation(db.orders.find(x => x.id === '${o.id}'), '${String(o.merchant || '').replace(/'/g, "\\'")}', destLatLng?.[0], destLatLng?.[1], '${String(o.dest || o.items || 'Lengkong, Sukabumi').replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-diamond-turn-right"></i> Google Maps</button>
                                         ${canCustomerCancel ? `<button onclick="customerCancelOrderWithReason('${o.id}')" class="px-2.5 py-1 bg-rose-100 text-rose-900 border border-rose-300 rounded-lg text-[10px] font-bold cursor-pointer">BATALKAN PESANAN</button>` : ''}
                                         ${st === 'completed' && activeRole === 'customer' ? `<button onclick="openRatingModal('${o.id}')" class="px-2.5 py-1 bg-[#FF7900] text-[#171717] border border-[#171717] rounded-lg text-[10px] font-black cursor-pointer"><i class="fa-solid fa-star"></i> ${o.rating ? 'Ubah Rating' : 'Beri Rating'}</button>` : ''}
-                                        ${(activeRole === 'driver' || activeRole === 'merchant' || activeRole === 'admin') ? `
+                                        ${(activeRole === 'driver' || activeRole === 'merchant') ? `
                                             <button onclick="openIncomingOrderModal('${o.id}', false)" class="px-2.5 py-1 bg-[#FFD400] text-[#171717] border border-[#171717] rounded-lg text-[10px] font-black cursor-pointer">Pop-Up</button>
                                             <button onclick="openIncomingOrderModal('${o.id}', true)" class="px-2.5 py-1 bg-[#FF7900] text-[#171717] border border-[#171717] rounded-lg text-[10px] font-black cursor-pointer">Cek & Proses</button>
                                         ` : ''}
@@ -5250,7 +5389,7 @@
             const m = db.merchants.find(x => Number(x.id) === Number(storeId));
             if (m) {
                 m.status = m.status === 'Buka' ? 'Tutup' : 'Buka';
-                saveDB(`Status toko Admin (${m.name}) menjadi ${m.status} secara permanen!`);
+                saveDB(`Status toko Admin (${m.name}) menjadi ${m.status} secara permanen!`, true, 'none');
                 renderAdminOwnStoreManage(document.getElementById('main-content'));
             }
         }
@@ -5266,7 +5405,7 @@
                 tempStorePhoto = null;
                 tempStoreBanner = null;
                 hasPendingMediaSelection = false;
-                saveDB(`Toko Admin "${m.name}" berhasil disimpan permanen!`);
+                saveDB(`Toko Admin "${m.name}" berhasil disimpan permanen!`, true, 'none');
                 renderAdminOwnStoreManage(document.getElementById('main-content'));
             }
         }
@@ -5275,8 +5414,8 @@
             const m = db.merchants.find(x => x.id === merchantId);
             if(m) {
                 m.status = m.status === 'Buka' ? 'Tutup' : 'Buka';
-                saveDB(`Status toko diubah menjadi ${m.status} & tersinkron!`);
-                addAccountNotification('Status Toko Diperbarui', `${m.name} sekarang berstatus ${m.status}.`, m.name);
+                saveDB(`Status toko diubah menjadi ${m.status} & tersinkron!`, true, 'none');
+                addAccountNotification('Status Toko Diperbarui', `${m.name} sekarang berstatus ${m.status}.`, m.name, null, 'none');
                 renderMerchantManage(document.getElementById('main-content'));
             }
         }
@@ -5294,7 +5433,7 @@
 
                 const imgEl = document.getElementById(previewId);
                 if(imgEl) { imgEl.src = compressedUrl; imgEl.classList.remove('hidden'); }
-                showToast('File dipilih! Tekan tombol Simpan agar perubahan diterapkan & tersimpan permanen.', 'success');
+                showToast('File dipilih! Tekan tombol Simpan agar perubahan diterapkan & tersimpan permanen.', 'success', 'none');
             }
         }
 
@@ -5302,7 +5441,7 @@
             const m = db.merchants.find(x => x.id === merchantId);
             if(m) {
                 const newName = (document.getElementById('edit-m-name')?.value || '').trim();
-                if (!newName) return showToast('Nama toko wajib diisi!', 'error');
+                if (!newName) return showToast('Nama toko wajib diisi!', 'error', 'none');
                 m.name = newName;
                 m.address = (document.getElementById('edit-m-address')?.value || '').trim();
                 m.operationalHours = (document.getElementById('edit-m-hours')?.value || '').trim();
@@ -5319,7 +5458,7 @@
                 tempStorePhoto = null;
                 tempStoreBanner = null;
                 hasPendingMediaSelection = false;
-                saveDB('Profil & foto toko berhasil disimpan permanen!');
+                saveDB('Profil & foto toko berhasil disimpan permanen!', true, 'none');
                 renderMerchantManage(document.getElementById('main-content'));
             }
         }
@@ -5354,7 +5493,7 @@
             const name = document.getElementById('add-f-name').value;
             const price = parseInt(document.getElementById('add-f-price').value) || 15000;
             const desc = document.getElementById('add-f-desc').value || 'Menu spesial khas Lengkong.';
-            if(!name) return showToast('Nama menu harus diisi!', 'error');
+            if(!name) return showToast('Nama menu harus diisi!', 'error', 'none');
 
             db.foods.push({
                 id: Date.now(),
@@ -5368,13 +5507,13 @@
             tempNewFoodPhoto = null;
             hasPendingMediaSelection = false;
             document.getElementById('modal-new-food')?.remove();
-            saveDB(`Menu baru "${name}" berhasil disimpan permanen!`);
+            saveDB(`Menu baru "${name}" berhasil disimpan permanen!`, true, 'none');
             renderDashboardContent(currentSubTab, false);
         }
 
         function deleteMenuFood(foodId) {
             db.foods = db.foods.filter(f => f.id !== foodId);
-            saveDB('Menu berhasil dihapus & perubahan tersimpan permanen!');
+            saveDB('Menu berhasil dihapus & perubahan tersimpan permanen!', true, 'none');
             renderDashboardContent(currentSubTab, false);
         }
 
@@ -5471,12 +5610,12 @@
         async function saveFullAccountChanges() {
             const newPhone = normalizePhone(document.getElementById('acc-phone')?.value || '');
             if (newPhone.length < 9) {
-                showToast('Nomor WhatsApp / HP wajib valid minimal 9 digit!', 'error');
+                showToast('Nomor WhatsApp / HP wajib valid minimal 9 digit!', 'error', 'none');
                 return;
             }
             const taken = db.users.find(u => u.id !== currentUser.id && normalizePhone(u.phone) === newPhone && u.role === currentUser.role);
             if (taken) {
-                showToast(`Nomor HP "${newPhone}" sudah dipakai akun lain pada peran ${currentUser.role.toUpperCase()}!`, 'error');
+                showToast(`Nomor HP "${newPhone}" sudah dipakai akun lain pada peran ${currentUser.role.toUpperCase()}!`, 'error', 'none');
                 return;
             }
 
@@ -5509,8 +5648,9 @@
 
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            showToast(newPass ? 'Berhasil! Password baru & profil tersimpan ke Supabase.' : 'Berhasil! Informasi & foto profil tersimpan permanen.', 'success');
+            showToast(newPass ? 'Berhasil! Password baru & profil tersimpan ke Supabase.' : 'Berhasil! Informasi & foto profil tersimpan permanen.', 'success', 'none');
             renderProfile(document.getElementById('main-content'));
+            mountGlobalFootersAcrossApp();
             syncAllToSupabase();
         }
 
@@ -5646,8 +5786,8 @@
                 driverResponseTimeoutSec: Math.min(300, Math.max(10, parseInt(document.getElementById('cfg-driver-timeout')?.value) || 45)),
                 driverSearchTimeoutSec: Math.min(600, Math.max(15, parseInt(document.getElementById('cfg-search-timeout')?.value) || 60))
             };
-            saveDB('Pengaturan tarif, komisi & timeout driver berhasil disimpan & diterapkan online!');
-            addAccountNotification('Tarif & Komisi Diperbarui', `Min order Rp ${db.pricing.minFare.toLocaleString()}, Ojek/km Rp ${db.pricing.ojekPerKm.toLocaleString()}, Food/km Rp ${db.pricing.foodPerKm.toLocaleString()}, Komisi ${db.pricing.commissionPercent}%, Timeout ${db.pricing.driverResponseTimeoutSec}s/${db.pricing.driverSearchTimeoutSec}s.`, 'ALL');
+            saveDB('Pengaturan tarif, komisi & timeout driver berhasil disimpan & diterapkan online!', true, 'none');
+            addAccountNotification('Tarif & Komisi Diperbarui', `Min order Rp ${db.pricing.minFare.toLocaleString()}, Ojek/km Rp ${db.pricing.ojekPerKm.toLocaleString()}, Food/km Rp ${db.pricing.foodPerKm.toLocaleString()}, Komisi ${db.pricing.commissionPercent}%, Timeout ${db.pricing.driverResponseTimeoutSec}s/${db.pricing.driverSearchTimeoutSec}s.`, 'ALL', null, 'none');
             renderAdminDash(document.getElementById('main-content'));
         }
 
@@ -5741,7 +5881,7 @@
             if (!u) return;
             u.status = u.status === 'Aktif' ? 'Nonaktif' : 'Aktif';
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            showToast(`Berhasil! Status ${u.name} (${u.phone}) diubah ke ${u.status}.`, 'success');
+            showToast(`Berhasil! Status ${u.name} (${u.phone}) diubah ke ${u.status}.`, 'success', 'none');
             renderAdminUsers(document.getElementById('main-content'));
             syncAllToSupabase();
         }
@@ -5753,15 +5893,15 @@
             const password = (document.getElementById('new-user-pass')?.value || '123456').trim() || '123456';
 
             if (phone.length < 9) {
-                showToast('Nomor HP wajib minimal 9 digit angka!', 'error');
+                showToast('Nomor HP wajib minimal 9 digit angka!', 'error', 'none');
                 return;
             }
             if (!name) {
-                showToast('Nama lengkap wajib diisi!', 'error');
+                showToast('Nama lengkap wajib diisi!', 'error', 'none');
                 return;
             }
             if (db.users.some(u => normalizePhone(u.phone) === phone && u.role === role)) {
-                showToast(`Nomor HP "${phone}" sudah ada untuk peran ${role.toUpperCase()}!`, 'error');
+                showToast(`Nomor HP "${phone}" sudah ada untuk peran ${role.toUpperCase()}!`, 'error', 'none');
                 return;
             }
 
@@ -5784,13 +5924,13 @@
 
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
             await recordAccountAuthEventToSupabase('ADMIN_CREATE', newAcc);
-            showToast(`Berhasil! Akun HP "${phone}" tersimpan permanen online!`, 'success');
+            showToast(`Berhasil! Akun HP "${phone}" tersimpan permanen online!`, 'success', 'none');
             renderAdminUsers(document.getElementById('main-content'));
         }
 
         async function adminAddBalance(userId) {
             const u = db.users.find(x => x.id === userId);
-            if (!u || u.role === 'customer') return showToast('Saldo hanya berlaku untuk Mitra Toko & Driver!', 'error');
+            if (!u || u.role === 'customer') return showToast('Saldo hanya berlaku untuk Mitra Toko & Driver!', 'error', 'none');
             const nominal = parseInt(prompt(`Masukkan nominal penambahan saldo untuk ${u.name} (HP: ${u.phone || '-'}):`, '50000'));
             if(!isNaN(nominal) && nominal !== 0) {
                 const cleanPhone = normalizePhone(u.phone);
@@ -5849,7 +5989,7 @@
                     netAmount: nominal
                 });
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
-                showToast(`Berhasil! Saldo ${targetLabel} menjadi Rp ${currentBal.toLocaleString()} (+Rp ${nominal.toLocaleString()})!`, 'success');
+                showToast(`Berhasil! Saldo ${targetLabel} menjadi Rp ${currentBal.toLocaleString()} (+Rp ${nominal.toLocaleString()})!`, 'success', 'none');
                 renderAdminUsers(document.getElementById('main-content'));
                 syncAllToSupabase();
             }
@@ -5865,14 +6005,14 @@
             }
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
             await recordAccountAuthEventToSupabase('RESET_PASSWORD_123456', u);
-            showToast(`Berhasil! Password ${u.name} direset ke 123456 & tersimpan di Supabase!`, 'success');
+            showToast(`Berhasil! Password ${u.name} direset ke 123456 & tersimpan di Supabase!`, 'success', 'none');
         }
 
         async function adminDeleteUser(userId) {
             const target = db.users.find(x => x.id === userId);
             if (!target) return;
             if (normalizePhone(target.phone) === '085624736602' && target.role === 'admin') {
-                return showToast('Akun Admin Utama 085624736602 tidak dapat dihapus!', 'error');
+                return showToast('Akun Admin Utama 085624736602 tidak dapat dihapus!', 'error', 'none');
             }
             if(confirm(`Yakin ingin menghapus akun ${target.name} (HP: ${target.phone || '-'}) secara online real-time?`)) {
                 const codeUpper = String(target.accountId || '').toUpperCase();
@@ -5882,7 +6022,7 @@
                 db.drivers = (db.drivers || []).filter(d => String(d.accountId || '').toUpperCase() !== codeUpper && normalizePhone(d.phone) !== targetPhone);
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-                showToast(`Berhasil! Akun ${target.name} (${target.phone}) dihapus permanen secara online.`, 'success');
+                showToast(`Berhasil! Akun ${target.name} (${target.phone}) dihapus permanen secara online.`, 'success', 'none');
                 renderAdminUsers(document.getElementById('main-content'));
 
                 if (supabaseClient && codeUpper) {
@@ -5988,7 +6128,7 @@
                 customMainBanner = compressedBanner;
                 const prev = document.getElementById('banner-preview');
                 if (prev) prev.src = customMainBanner;
-                showToast('File banner dipilih! Tekan Simpan Permanen agar diterapkan.', 'success');
+                showToast('File banner dipilih! Tekan Simpan Permanen agar diterapkan.', 'success', 'none');
             }
         }
 
@@ -5999,8 +6139,8 @@
             hasPendingMediaSelection = false;
             localStorage.setItem('oleng_global_banner', finalBanner);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            showToast('Berhasil! Banner utama disimpan permanen untuk semua user!', 'success');
-            addAccountNotification('Banner Utama Permanen Diperbarui', 'Admin memperbarui banner utama OLENG GO.', 'ALL');
+            showToast('Berhasil! Banner utama disimpan permanen untuk semua user!', 'success', 'none');
+            addAccountNotification('Banner Utama Permanen Diperbarui', 'Admin memperbarui banner utama OLENG GO.', 'ALL', null, 'none');
             renderDashboardContent('home', false);
             syncAllToSupabase();
         }
@@ -6072,7 +6212,7 @@
 
         function recenterHomeMapToAccurateGPS() {
             if (!navigator.geolocation) {
-                return showToast('Perangkat tidak mendukung GPS.', 'error');
+                return showToast('Perangkat tidak mendukung GPS.', 'error', 'none');
             }
             navigator.geolocation.getCurrentPosition(pos => {
                 const lat = Number(pos.coords.latitude.toFixed(6));
@@ -6083,9 +6223,9 @@
                 if (mapInstance) {
                     mapInstance.setView([lat, lng], Math.max(mapInstance.getZoom(), 16));
                 }
-                showToast(`Lokasi GPS akurat terkunci (${lat}, ${lng})!`, 'success');
+                showToast(`Lokasi GPS akurat terkunci (${lat}, ${lng})!`, 'success', 'none');
             }, () => {
-                showToast('Aktifkan izin lokasi (GPS) di browser HP Anda.', 'error');
+                showToast('Aktifkan izin lokasi (GPS) di browser HP Anda.', 'error', 'none');
             }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
         }
 
@@ -6118,7 +6258,7 @@
 
             map.on('click', (e) => {
                 applyNewDestination(e.latlng.lat, e.latlng.lng);
-                showToast('Titik tujuan dipilih pada peta!', 'success');
+                showToast('Titik tujuan dipilih pada peta!', 'success', 'none');
             });
 
             pickupMarker.on('dragend', () => {
@@ -6126,13 +6266,13 @@
                 userCurrentLatLng = [Number(pos.lat.toFixed(6)), Number(pos.lng.toFixed(6))];
                 if(isOjek) updateOjekFareUI();
                 else if (mapId === 'checkout-map') updateCartUI();
-                showToast('Berhasil memperbarui titik awal peta!', 'success');
+                showToast('Berhasil memperbarui titik awal peta!', 'success', 'none');
             });
 
             destMarker.on('dragend', () => {
                 const pos = destMarker.getLatLng();
                 applyNewDestination(pos.lat, pos.lng);
-                showToast('Berhasil memperbarui titik tujuan peta!', 'success');
+                showToast('Berhasil memperbarui titik tujuan peta!', 'success', 'none');
             });
 
             if(mapId === 'checkout-map') checkoutMapInstance = map;
@@ -6160,15 +6300,16 @@
                         if (drv && drv.status === 'Online') {
                             drv.lat = userCurrentLatLng[0];
                             drv.lng = userCurrentLatLng[1];
-                            saveDB();
+                            drv.serverUpdatedAt = new Date().toISOString();
+                            saveDB(null, true, 'none');
                         }
                     }
-                    showToast(`Berhasil! Lokasi terkini GPS akurat dikunci (${userCurrentLatLng[0]}, ${userCurrentLatLng[1]}).`, 'success');
+                    showToast(`Berhasil! Lokasi terkini GPS akurat dikunci (${userCurrentLatLng[0]}, ${userCurrentLatLng[1]}).`, 'success', 'none');
                     if(context === 'ojek') renderCustomerOjek(document.getElementById('main-content'), false);
                     else if(context === 'food') renderCustomerFood(document.getElementById('main-content'), false);
                     else if(context === 'cart') openCartModal();
                 }, () => {
-                    showToast('GPS tidak aktif, pastikan izin lokasi browser diaktifkan.', 'error');
+                    showToast('GPS tidak aktif, pastikan izin lokasi browser diaktifkan.', 'error', 'none');
                 }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
             }
         }
@@ -6176,7 +6317,6 @@
         function openNotificationModal() {
             markAllNotifsAsRead();
             const myNotifs = getAccountNotifs();
-            playAlarmRingtone();
             pushAppNavigationState('notif');
             document.getElementById('modal-notif')?.classList.remove('hidden');
             const listEl = document.getElementById('notification-list');
@@ -6250,7 +6390,7 @@
             renderPersonalChatMessages();
             updateHomeHeaderBadgesOnly();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            showToast('Terkirim!', 'success');
+            showToast('Terkirim!', 'success', 'none');
             if (!navigator.onLine) {
                 queueOfflineSyncOperation('CHAT_SEND', newMsg);
             } else {
@@ -6373,8 +6513,9 @@
             pushChatPayload(textVal);
         }
 
-        function showToast(msg, type='success') {
-            playAlarmRingtone();
+        function showToast(msg, type='success', soundKind='none') {
+            if (soundKind === 'order') playOrderIncomingAlarm();
+            else if (soundKind === 'chat') playChatIncomingAlarm();
             const container = document.getElementById('toast-container');
             if (!container) return;
             const toast = document.createElement('div');
