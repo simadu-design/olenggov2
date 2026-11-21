@@ -60,30 +60,6 @@
             background: var(--oleng-black);
             color: var(--oleng-text-primary);
         }
-        .oleng-surface-card {
-            background: var(--oleng-white);
-            border: 1px solid var(--oleng-gray-border);
-            border-radius: 1.5rem;
-            color: var(--oleng-text-primary);
-        }
-        .oleng-surface-muted {
-            background: var(--oleng-gray-light);
-            border: 1px solid var(--oleng-gray-border);
-            color: var(--oleng-text-primary);
-        }
-        .oleng-btn-primary {
-            background: var(--oleng-orange);
-            color: var(--oleng-black);
-            border: 1px solid var(--oleng-black);
-        }
-        .oleng-btn-primary:hover {
-            background: var(--oleng-orange-hover);
-        }
-        .oleng-btn-dark {
-            background: var(--oleng-black);
-            color: var(--oleng-white);
-            border: 1px solid var(--oleng-orange);
-        }
         .map-container { height: 220px; width: 100%; border-radius: 1.25rem; z-index: 1 !important; position: relative; border: 1px solid var(--oleng-gray-border); }
         .leaflet-container { z-index: 1 !important; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -311,6 +287,11 @@
             <div id="incoming-order-card" class="bg-white text-[#171717] rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-xl border-2 border-[#FF7900] max-h-[90vh] overflow-y-auto"></div>
         </div>
 
+        <!-- Modal Konfirmasi Pasca Order Selesai (Kembali Online / Tetap Offline) -->
+        <div id="modal-post-complete-driver" class="absolute inset-0 bg-black/75 z-[65] hidden flex flex-col justify-center items-center p-4">
+            <div id="post-complete-driver-card" class="bg-white text-[#171717] rounded-3xl p-5 w-full max-w-sm space-y-4 shadow-2xl border-2 border-[#FF7900]"></div>
+        </div>
+
         <!-- Pop-Up Notifikasi Chat Masuk Berbunyi Nada -->
         <div id="modal-incoming-chat" class="absolute inset-0 bg-black/70 z-50 hidden flex flex-col justify-center items-center p-4">
             <div id="incoming-chat-card" class="bg-white text-[#171717] rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-xl border-2 border-[#FF7900]"></div>
@@ -384,7 +365,7 @@
 
                 <div class="bg-[#F3F3F3] p-3 rounded-2xl border border-[#D4D4D4] space-y-2">
                     <div class="flex justify-between items-center">
-                        <label class="text-[11px] font-extrabold text-[#171717] uppercase block"><i class="fa-solid fa-motorcycle text-[#FF7900] mr-1"></i> Driver Online Lengkong</label>
+                        <label class="text-[11px] font-extrabold text-[#171717] uppercase block"><i class="fa-solid fa-motorcycle text-[#FF7900] mr-1"></i> Driver Online Tersedia</label>
                         <button type="button" onclick="refreshActiveDriversList('cart')" class="px-2 py-1 bg-white border border-[#171717] text-[#171717] rounded-lg text-[10px] font-extrabold cursor-pointer">
                             <i class="fa-solid fa-rotate"></i> Refresh Driver
                         </button>
@@ -565,6 +546,11 @@
         let promoCodeDraft = '';
         let appliedPromoCode = '';
         let sentNotifDedupeKeys = JSON.parse(localStorage.getItem('oleng_sent_notif_keys') || '[]');
+        let pendingSyncQueue = JSON.parse(localStorage.getItem('oleng_pending_sync_queue') || '[]');
+        let activeOrderAlarmLoopId = null;
+        let activeOrderAlarmTargetId = null;
+        let playedOrderAlertIds = JSON.parse(localStorage.getItem('oleng_played_order_alerts') || '[]');
+        let devicePushToken = localStorage.getItem('oleng_device_push_token') || '';
 
         function pushAppNavigationState(label = 'nav') {
             if (isHandlingHardwareBack) return;
@@ -587,6 +573,11 @@
                 cancelLogoutModal();
                 return;
             }
+            const postCompleteModal = document.getElementById('modal-post-complete-driver');
+            if (postCompleteModal && !postCompleteModal.classList.contains('hidden')) {
+                postCompleteModal.classList.add('hidden');
+                return;
+            }
             const partnerModal = document.getElementById('modal-chat-partner-info');
             if (partnerModal && !partnerModal.classList.contains('hidden')) {
                 partnerModal.classList.add('hidden');
@@ -599,6 +590,7 @@
             }
             const incomingOrderModal = document.getElementById('modal-incoming-order');
             if (incomingOrderModal && !incomingOrderModal.classList.contains('hidden')) {
+                stopOrderAlarmLoop();
                 incomingOrderModal.classList.add('hidden');
                 return;
             }
@@ -752,19 +744,51 @@
                 .join(', ');
         }
 
+        function ensureDevicePushToken(accountObj = null) {
+            if (!devicePushToken) {
+                const randPart = Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 10);
+                devicePushToken = 'OLENG_WEB_TOKEN_' + randPart.toUpperCase();
+                localStorage.setItem('oleng_device_push_token', devicePushToken);
+            }
+            const targetAcc = accountObj || currentUser;
+            if (targetAcc && Array.isArray(db.users)) {
+                const u = db.users.find(x => (targetAcc.id && x.id === targetAcc.id) || (targetAcc.phone && normalizePhone(x.phone) === normalizePhone(targetAcc.phone)));
+                if (u) {
+                    u.pushToken = devicePushToken;
+                    u.pushTokenUpdatedAt = new Date().toISOString();
+                }
+            }
+            return devicePushToken;
+        }
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {
-                navigator.serviceWorker.register('./sw.js').catch(function () {});
+                navigator.serviceWorker.register('./sw.js').then(function (reg) {
+                    if (reg && reg.pushManager && typeof reg.pushManager.subscribe === 'function') {
+                        reg.pushManager.getSubscription().then(function (sub) {
+                            if (sub && sub.endpoint) {
+                                devicePushToken = sub.endpoint;
+                                localStorage.setItem('oleng_device_push_token', devicePushToken);
+                            }
+                        }).catch(function () {});
+                    }
+                }).catch(function () {});
             });
         }
 
         function requestBackgroundNotificationPermission() {
+            ensureDevicePushToken();
             if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission().catch(function () {});
+                Notification.requestPermission().then(function (perm) {
+                    if (perm === 'granted') {
+                        ensureDevicePushToken();
+                    }
+                }).catch(function () {});
             }
         }
 
-        function triggerSystemBackgroundNotification(title, body) {
+        function triggerSystemBackgroundNotification(title, body, extraData = {}) {
+            ensureDevicePushToken();
             if (!('Notification' in window) || Notification.permission !== 'granted') return;
             try {
                 if (navigator.serviceWorker && navigator.serviceWorker.ready) {
@@ -774,7 +798,10 @@
                                 body: body,
                                 icon: './icon-192.png',
                                 badge: './icon-192.png',
-                                vibrate: [250, 120, 250, 120, 250]
+                                tag: extraData.tag || ('oleng-' + Date.now()),
+                                renotify: Boolean(extraData.renotify),
+                                vibrate: [400, 150, 400, 150, 500],
+                                data: extraData
                             });
                         } else {
                             new Notification(title, { body, icon: './icon-192.png' });
@@ -814,6 +841,361 @@
             label: 'Supabase: Mengecek...',
             detail: SUPABASE_REST_ENDPOINT
         };
+
+        function queueOfflineSyncOperation(opType, payload = {}) {
+            const item = {
+                opId: 'SYNC-' + Date.now() + '-' + Math.floor(Math.random() * 900 + 100),
+                opType,
+                payload,
+                at: Date.now()
+            };
+            pendingSyncQueue.push(item);
+            pendingSyncQueue = pendingSyncQueue.slice(-150);
+            localStorage.setItem('oleng_pending_sync_queue', JSON.stringify(pendingSyncQueue));
+        }
+
+        async function flushPendingSyncQueue() {
+            if (!navigator.onLine || !supabaseClient || !Array.isArray(pendingSyncQueue) || pendingSyncQueue.length === 0) return;
+            const res = await syncAllToSupabase();
+            if (res && res.ok) {
+                pendingSyncQueue = [];
+                localStorage.setItem('oleng_pending_sync_queue', '[]');
+            }
+        }
+
+        window.addEventListener('online', function () {
+            flushPendingSyncQueue();
+            pullInitialFromSupabase(false);
+        });
+
+        async function recordAccountAuthEventToSupabase(actionType, accountObj) {
+            try {
+                const token = ensureDevicePushToken(accountObj);
+                const evt = {
+                    id: 'AUTH-' + Date.now() + '-' + Math.floor(Math.random() * 900 + 100),
+                    action: actionType,
+                    accountId: accountObj?.accountId || '',
+                    name: accountObj?.name || '',
+                    phone: normalizePhone(accountObj?.phone || ''),
+                    role: accountObj?.role || '',
+                    pushToken: token,
+                    time: new Date().toLocaleString('id-ID')
+                };
+                if (!Array.isArray(db.authLogs)) db.authLogs = [];
+                db.authLogs.unshift(evt);
+                db.authLogs = db.authLogs.slice(0, 100);
+                localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                const syncRes = await syncAllToSupabase();
+                if (!syncRes || !syncRes.ok) {
+                    queueOfflineSyncOperation(actionType, evt);
+                }
+            } catch (e) {}
+        }
+
+        function openChatPartnerProfileModal(partnerName) {
+            const targetLow = String(partnerName || '').trim().toLowerCase();
+            if (!targetLow) return;
+
+            let matchedUser = (db.users || []).find(u =>
+                String(u.name || '').trim().toLowerCase() === targetLow ||
+                String(u.shopName || '').trim().toLowerCase() === targetLow
+            );
+
+            let matchedStore = (db.merchants || []).find(m =>
+                String(m.name || '').trim().toLowerCase() === targetLow ||
+                (matchedUser && normalizePhone(m.whatsapp) === normalizePhone(matchedUser.phone) && String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID)
+            );
+
+            let matchedDriver = (db.drivers || []).find(d =>
+                String(d.name || '').trim().toLowerCase() === targetLow ||
+                (matchedUser && normalizePhone(d.phone) === normalizePhone(matchedUser.phone))
+            );
+
+            const displayName = matchedUser?.name || matchedStore?.name || matchedDriver?.name || partnerName;
+            const displayRole = matchedUser?.role || (matchedStore ? 'merchant' : matchedDriver ? 'driver' : 'customer');
+            const displayPhone = normalizePhone(matchedUser?.phone || matchedStore?.whatsapp || matchedDriver?.phone) || (targetLow === 'admin simadu' ? '085624736602' : 'Belum tercatat');
+            const displayAddress = matchedUser?.address || matchedStore?.address || matchedDriver?.location || 'Kecamatan Lengkong, Sukabumi';
+            const displayShop = matchedStore?.name || matchedUser?.shopName || '-';
+            const displayPhoto = matchedUser?.photo || matchedStore?.image || 'https://placehold.co/150x150/171717/FF7900?text=USR';
+
+            const card = document.getElementById('chat-partner-info-card');
+            if (!card) return;
+            pushAppNavigationState('partner-profile');
+            card.innerHTML = `
+                <div class="flex justify-between items-center border-b-2 border-[#F3F3F3] pb-2">
+                    <span class="bg-[#FF7900] text-[#171717] text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">DETAIL PROFIL CHAT</span>
+                    <button onclick="document.getElementById('modal-chat-partner-info').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <img src="${displayPhoto}" class="w-14 h-14 rounded-2xl object-cover border-2 border-[#FF7900] shrink-0" alt="Foto Profil">
+                    <div class="min-w-0">
+                        <h4 class="font-black text-sm text-[#171717] truncate">${displayName}</h4>
+                        <span class="text-[10px] bg-[#171717] text-[#FFD400] font-black px-2 py-0.5 rounded uppercase inline-block mt-0.5">${displayRole}</span>
+                    </div>
+                </div>
+                <div class="bg-[#F3F3F3] p-3 rounded-2xl border border-[#D4D4D4] space-y-1.5 text-xs">
+                    <p><span class="text-[#404040] font-bold">No. HP / WA:</span> <b class="text-[#171717]">${displayPhone}</b></p>
+                    <p><span class="text-[#404040] font-bold">Toko:</span> <b class="text-[#171717]">${displayShop}</b></p>
+                    <p><span class="text-[#404040] font-bold">Alamat:</span> <span class="text-[#171717] font-semibold">${displayAddress}</span></p>
+                </div>
+                <button onclick="document.getElementById('modal-chat-partner-info').classList.add('hidden')" class="w-full py-2.5 bg-[#171717] text-white font-extrabold rounded-2xl border border-[#FF7900] text-xs cursor-pointer">Tutup</button>
+            `;
+            document.getElementById('modal-chat-partner-info').classList.remove('hidden');
+        }
+
+        function isUserCurrentlyTypingOrEditing() {
+            if (hasPendingMediaSelection || isMerchantDetailOpen()) return true;
+            const active = document.activeElement;
+            if (!active) return false;
+            const tag = (active.tagName || '').toUpperCase();
+            return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || active.isContentEditable;
+        }
+
+        function compressImageFileToDataUrl(file, maxSize = 320, quality = 0.7) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function (evt) {
+                    const img = new Image();
+                    img.onload = function () {
+                        let w = img.width || maxSize;
+                        let h = img.height || maxSize;
+                        if (w > h && w > maxSize) {
+                            h = Math.round((h * maxSize) / w);
+                            w = maxSize;
+                        } else if (h >= w && h > maxSize) {
+                            w = Math.round((w * maxSize) / h);
+                            h = maxSize;
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.max(1, w);
+                        canvas.height = Math.max(1, h);
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = () => resolve(evt.target.result);
+                    img.src = evt.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function notifyBackgroundOnce(key, title, body, extraData = {}) {
+            const k = String(key);
+            if (notifiedBackgroundKeys.includes(k)) return;
+            notifiedBackgroundKeys.push(k);
+            localStorage.setItem('oleng_bg_notified_keys', JSON.stringify(notifiedBackgroundKeys.slice(-250)));
+            triggerSystemBackgroundNotification(title, body, extraData);
+        }
+
+        function getBaseTileLayerForMode() {
+            if (mapLayerMode === 'satellite') {
+                return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 19,
+                    attribution: 'Tiles &copy; Esri'
+                });
+            }
+            return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            });
+        }
+
+        function toggleMapLayerMode() {
+            mapLayerMode = mapLayerMode === 'satellite' ? 'street' : 'satellite';
+            localStorage.setItem('oleng_map_layer_mode', mapLayerMode);
+            const labelText = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
+            document.querySelectorAll('.map-layer-label').forEach(el => { el.textContent = labelText; });
+            showToast(`Berhasil! Tampilan peta diubah ke mode ${mapLayerMode === 'satellite' ? 'Satelit' : 'Peta Jalan'}.`, 'success');
+            if (currentSubTab === 'home') initHomeMap();
+            else if (currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
+            else if (currentSubTab === 'food') renderCustomerFood(document.getElementById('main-content'));
+            else if (!document.getElementById('modal-cart')?.classList.contains('hidden')) openCartModal();
+        }
+
+        function openMainAdminWhatsApp(customMessage = '') {
+            const msg = customMessage || `Halo Admin OLENG GO (${ADMIN_MAIN_WA}), saya ${currentUser?.name || 'Pengguna'} (${currentUser?.phone || '-'}) menghubungi terkait layanan/peta Lengkong.`;
+            window.open(`https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        function withSupabaseTimeout(promiseLike, ms = 5000) {
+            return Promise.race([
+                Promise.resolve(promiseLike),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout koneksi Supabase')), ms))
+            ]);
+        }
+
+        async function checkSupabaseConnectionStatus(showNotify = false) {
+            const sdkLoaded = Boolean(window.supabase && typeof window.supabase.createClient === 'function');
+            if (!sdkLoaded || !supabaseClient) {
+                lastSupabaseStatus = {
+                    ok: false,
+                    label: 'Supabase: Mode Lokal (SDK Offline)',
+                    detail: 'SDK Supabase belum termuat, data tersimpan di perangkat'
+                };
+                if (showNotify) showToast('Mode Lokal aktif: SDK Supabase belum termuat.', 'info');
+                return lastSupabaseStatus;
+            }
+
+            try {
+                let res = await withSupabaseTimeout(
+                    supabaseClient.from('app_config').select('id').eq('id', 1).maybeSingle(),
+                    5000
+                );
+
+                if (res && res.error) {
+                    const fallbackRes = await withSupabaseTimeout(
+                        supabaseClient.from('accounts').select('account_id').limit(1),
+                        5000
+                    );
+                    if (fallbackRes && !fallbackRes.error) {
+                        res = { data: fallbackRes.data, error: null };
+                    }
+                }
+
+                if (res && res.error) {
+                    lastSupabaseStatus = {
+                        ok: false,
+                        label: `Supabase: Gagal (${res.error.code || 'ERR'})`,
+                        detail: res.error.message
+                    };
+                    if (showNotify) showToast(`Gagal konek Supabase: ${res.error.message}`, 'error');
+                    return lastSupabaseStatus;
+                }
+
+                lastSupabaseStatus = {
+                    ok: true,
+                    label: 'Supabase: Terhubung',
+                    detail: `Tersinkron ke ${SUPABASE_PROJECT_ID}`
+                };
+                flushPendingSyncQueue();
+                if (showNotify) showToast('Berhasil! Data & chat tersinkron dengan Supabase.', 'success');
+                return lastSupabaseStatus;
+            } catch (err) {
+                lastSupabaseStatus = {
+                    ok: false,
+                    label: 'Supabase: Gagal (Timeout/Jaringan)',
+                    detail: err?.message || String(err)
+                };
+                if (showNotify) showToast(`Gagal konek Supabase: ${lastSupabaseStatus.detail}`, 'error');
+                return lastSupabaseStatus;
+            }
+        }
+
+        function applySupabaseBadgeStyle(el, statusObj) {
+            if (!el) return;
+            el.textContent = statusObj.label;
+            el.title = statusObj.detail || statusObj.label;
+            if (statusObj.ok) {
+                el.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-950 border border-emerald-600 cursor-pointer';
+            } else if (statusObj.label.includes('Mengecek')) {
+                el.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-[#F3F3F3] text-[#171717] border border-[#FF7900] cursor-pointer';
+            } else {
+                el.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-100 text-rose-950 border border-rose-600 cursor-pointer';
+            }
+        }
+
+        async function updateSupabaseBadgeUI(showNotify = false) {
+            const authBadge = document.getElementById('supabase-status-badge');
+            const homeBadge = document.getElementById('home-supabase-badge');
+            const checkingObj = { ok: false, label: 'Supabase: Mengecek...', detail: 'Sedang memeriksa koneksi...' };
+            applySupabaseBadgeStyle(authBadge, checkingObj);
+            applySupabaseBadgeStyle(homeBadge, checkingObj);
+
+            const statusObj = await checkSupabaseConnectionStatus(showNotify);
+            applySupabaseBadgeStyle(document.getElementById('supabase-status-badge'), statusObj);
+            applySupabaseBadgeStyle(document.getElementById('home-supabase-badge'), statusObj);
+            return statusObj;
+        }
+
+        async function manualForceSync(showNotify = true) {
+            ensureRoleListsSyncedFromUsers();
+            await updateSupabaseBadgeUI(false);
+            try { await withSupabaseTimeout(pullInitialFromSupabase(true), 6000); } catch (e) {}
+            ensureRoleListsSyncedFromUsers();
+            try { await withSupabaseTimeout(syncAllToSupabase(), 6000); } catch (e) {}
+            await updateSupabaseBadgeUI(showNotify);
+        }
+
+        function subscribeRealtimeUpdates() {
+            if (!supabaseClient || realtimeChannel) return;
+            try {
+                realtimeChannel = supabaseClient
+                    .channel('oleng-go-realtime-sync')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, (payload) => {
+                        pullInitialFromSupabase(false).then(() => {
+                            if (payload?.eventType === 'INSERT' && payload?.new) {
+                                const row = payload.new;
+                                const chatObj = {
+                                    id: row.id,
+                                    from: row.sender_name,
+                                    to: row.receiver_name,
+                                    text: row.message_text,
+                                    time: row.sent_time || ''
+                                };
+                                if (isMessageForCurrentUser(chatObj)) {
+                                    const isChatOpenNow = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden') && String(activeChatTarget || '').trim().toLowerCase() === String(chatObj.from || '').trim().toLowerCase();
+                                    if (!isChatOpenNow) {
+                                        notifyBackgroundOnce('chat-' + row.id, `Chat Masuk dari ${row.sender_name}`, String(row.message_text || '').startsWith('data:image') ? '📷 Mengirim foto' : row.message_text, { type: 'chat', sender: row.sender_name, tag: 'chat-' + chatObj.from });
+                                        checkAndTriggerIncomingChatPopup(chatObj);
+                                    }
+                                }
+                            }
+                        });
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+                        pullInitialFromSupabase(false).then(() => {
+                            if ((payload?.eventType === 'INSERT' || payload?.eventType === 'UPDATE') && payload?.new) {
+                                const r = payload.new;
+                                const ordObj = {
+                                    id: r.order_code,
+                                    type: r.order_type || 'ojek',
+                                    customer: r.customer_name,
+                                    merchant: r.merchant_name,
+                                    driver: r.driver_name,
+                                    items: r.items_summary,
+                                    total: Number(r.total_amount || 0),
+                                    status: r.status || 'searching_driver'
+                                };
+                                if (isOrderTargetedToCurrentUser(ordObj)) {
+                                    notifyBackgroundOnce('order-' + ordObj.id + '-' + ordObj.status, `Update Order ${ordObj.id}`, `${ordObj.items} • ${getOrderStatusLabel(ordObj.status)}`, { type: 'order', orderId: ordObj.id, tag: 'order-' + ordObj.id });
+                                    const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+                                    if (activeRole === 'driver' && shouldDriverReceiveOfferAlarm(ordObj)) {
+                                        startOrderAlarmLoopForOrder(ordObj.id);
+                                        checkAndShowIncomingOrderPopup(true);
+                                    }
+                                }
+                            }
+                        });
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, (payload) => {
+                        if (payload?.eventType === 'DELETE' && payload?.old?.account_id) {
+                            const deletedCode = String(payload.old.account_id).toUpperCase();
+                            db.users = (db.users || []).filter(u => String(u.accountId || '').toUpperCase() !== deletedCode);
+                            db.merchants = (db.merchants || []).filter(m => String(m.accountId || '').toUpperCase() !== deletedCode);
+                            db.drivers = (db.drivers || []).filter(d => String(d.accountId || '').toUpperCase() !== deletedCode);
+                            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                        }
+                        pullInitialFromSupabase(false);
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'merchants' }, () => {
+                        pullInitialFromSupabase(false);
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => {
+                        pullInitialFromSupabase(false);
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'foods' }, () => {
+                        pullInitialFromSupabase(false);
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, () => {
+                        pullInitialFromSupabase(false);
+                    })
+                    .subscribe();
+            } catch (err) {
+                console.warn('Realtime info:', err?.message || err);
+            }
+        }
 
         let currentUser = null; 
         let currentSubTab = 'home';
@@ -1025,7 +1407,7 @@
                 if (d.status !== 'Online') {
                     d.availability = 'offline';
                     d.activeOrderId = null;
-                    d.activitySummary = 'Offline di wilayah Lengkong';
+                    d.activitySummary = 'Offline • Tidak menerima order baru';
                     return;
                 }
                 const busyOrder = (db.orders || []).find(o => {
@@ -1057,7 +1439,7 @@
                     isBusy: false,
                     badgeText: 'Offline',
                     badgeClass: 'bg-[#F3F3F3] text-[#404040] border border-[#D4D4D4]',
-                    notifText: driver.activitySummary || 'Offline di wilayah Lengkong'
+                    notifText: driver.activitySummary || 'Offline • Tidak menerima order baru'
                 };
             }
             const isBusy = driver.availability === 'busy' || driver.availability === 'reserved' || Boolean(driver.activeOrderId);
@@ -1244,123 +1626,6 @@
                 }
             });
             return Array.from(map.values());
-        }
-
-        function withSupabaseTimeout(promiseLike, ms = 5000) {
-            return Promise.race([
-                Promise.resolve(promiseLike),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout koneksi Supabase')), ms))
-            ]);
-        }
-
-        async function checkSupabaseConnectionStatus(showNotify = false) {
-            const sdkLoaded = Boolean(window.supabase && typeof window.supabase.createClient === 'function');
-            if (!sdkLoaded || !supabaseClient) {
-                lastSupabaseStatus = {
-                    ok: false,
-                    label: 'Supabase: Mode Lokal (SDK Offline)',
-                    detail: 'SDK Supabase belum termuat, data tersimpan di perangkat'
-                };
-                if (showNotify) showToast('Mode Lokal aktif: SDK Supabase belum termuat.', 'info');
-                return lastSupabaseStatus;
-            }
-
-            try {
-                let res = await withSupabaseTimeout(
-                    supabaseClient.from('app_config').select('id').eq('id', 1).maybeSingle(),
-                    5000
-                );
-
-                if (res && res.error) {
-                    const fallbackRes = await withSupabaseTimeout(
-                        supabaseClient.from('accounts').select('account_id').limit(1),
-                        5000
-                    );
-                    if (fallbackRes && !fallbackRes.error) {
-                        res = { data: fallbackRes.data, error: null };
-                    }
-                }
-
-                if (res && res.error) {
-                    lastSupabaseStatus = {
-                        ok: false,
-                        label: `Supabase: Gagal (${res.error.code || 'ERR'})`,
-                        detail: res.error.message
-                    };
-                    if (showNotify) showToast(`Gagal konek Supabase: ${res.error.message}`, 'error');
-                    return lastSupabaseStatus;
-                }
-
-                lastSupabaseStatus = {
-                    ok: true,
-                    label: 'Supabase: Terhubung',
-                    detail: `Tersinkron ke ${SUPABASE_PROJECT_ID}`
-                };
-                if (showNotify) showToast('Berhasil! Data & chat tersinkron dengan Supabase.', 'success');
-                return lastSupabaseStatus;
-            } catch (err) {
-                lastSupabaseStatus = {
-                    ok: false,
-                    label: 'Supabase: Gagal (Timeout/Jaringan)',
-                    detail: err?.message || String(err)
-                };
-                if (showNotify) showToast(`Gagal konek Supabase: ${lastSupabaseStatus.detail}`, 'error');
-                return lastSupabaseStatus;
-            }
-        }
-
-        function applySupabaseBadgeStyle(el, statusObj) {
-            if (!el) return;
-            el.textContent = statusObj.label;
-            el.title = statusObj.detail || statusObj.label;
-            if (statusObj.ok) {
-                el.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-950 border border-emerald-600 cursor-pointer';
-            } else if (statusObj.label.includes('Mengecek')) {
-                el.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-[#F3F3F3] text-[#171717] border border-[#FF7900] cursor-pointer';
-            } else {
-                el.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-100 text-rose-950 border border-rose-600 cursor-pointer';
-            }
-        }
-
-        async function updateSupabaseBadgeUI(showNotify = false) {
-            const authBadge = document.getElementById('supabase-status-badge');
-            const homeBadge = document.getElementById('home-supabase-badge');
-            const checkingObj = { ok: false, label: 'Supabase: Mengecek...', detail: 'Sedang memeriksa koneksi...' };
-            applySupabaseBadgeStyle(authBadge, checkingObj);
-            applySupabaseBadgeStyle(homeBadge, checkingObj);
-
-            const statusObj = await checkSupabaseConnectionStatus(showNotify);
-            applySupabaseBadgeStyle(document.getElementById('supabase-status-badge'), statusObj);
-            applySupabaseBadgeStyle(document.getElementById('home-supabase-badge'), statusObj);
-            return statusObj;
-        }
-
-        async function manualForceSync(showNotify = true) {
-            ensureRoleListsSyncedFromUsers();
-            await updateSupabaseBadgeUI(false);
-            try { await withSupabaseTimeout(pullInitialFromSupabase(true), 6000); } catch (e) {}
-            ensureRoleListsSyncedFromUsers();
-            try { await withSupabaseTimeout(syncAllToSupabase(), 6000); } catch (e) {}
-            await updateSupabaseBadgeUI(showNotify);
-        }
-
-        async function recordAccountAuthEventToSupabase(actionType, accountObj) {
-            try {
-                const evt = {
-                    id: 'AUTH-' + Date.now() + '-' + Math.floor(Math.random() * 900 + 100),
-                    action: actionType,
-                    accountId: accountObj?.accountId || '',
-                    name: accountObj?.name || '',
-                    phone: normalizePhone(accountObj?.phone || ''),
-                    role: accountObj?.role || '',
-                    time: new Date().toLocaleString('id-ID')
-                };
-                if (!Array.isArray(db.authLogs)) db.authLogs = [];
-                db.authLogs.unshift(evt);
-                db.authLogs = db.authLogs.slice(0, 100);
-                localStorage.setItem('oleng_go_db', JSON.stringify(db));
-                await syncAllToSupabase();
-            } catch (e) {}
         }
 
         async function syncAllToSupabase() {
@@ -1611,7 +1876,8 @@
                     (myPhone && normalizePhone(d.phone) === myPhone) ||
                     (me && String(d.name || '').trim().toLowerCase() === me)
                 );
-                const allowedDrivers = [me, drvObj ? String(drvObj.name || '').trim().toLowerCase() : ''].filter(Boolean);
+                if (!drvObj || drvObj.status !== 'Online') return false;
+                const allowedDrivers = [me, String(drvObj.name || '').trim().toLowerCase()].filter(Boolean);
                 const ordDrv = String(order.driver || '').trim().toLowerCase();
                 return allowedDrivers.includes(ordDrv) || (st === 'searching_driver' && !ordDrv);
             }
@@ -1629,6 +1895,58 @@
             }
 
             return false;
+        }
+
+        function shouldDriverReceiveOfferAlarm(order) {
+            if (!currentUser || !order) return false;
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            if (role !== 'driver') return false;
+            const st = normalizeOrderStatusCode(order.status);
+            if (!['searching_driver', 'driver_assigned'].includes(st)) return false;
+            const me = String(currentUser.name || '').trim().toLowerCase();
+            const myPhone = normalizePhone(currentUser.phone);
+            const drvObj = (db.drivers || []).find(d =>
+                (myPhone && normalizePhone(d.phone) === myPhone) ||
+                (me && String(d.name || '').trim().toLowerCase() === me)
+            );
+            if (!drvObj || drvObj.status !== 'Online') return false;
+            const ordDrv = String(order.driver || '').trim().toLowerCase();
+            const ordPhone = normalizePhone(order.assignedDriverPhone);
+            const matchesMe = ordDrv === me || (drvObj.name && ordDrv === String(drvObj.name).trim().toLowerCase()) || (myPhone && ordPhone === myPhone);
+            return matchesMe || (st === 'searching_driver' && !ordDrv);
+        }
+
+        function stopOrderAlarmLoop() {
+            if (activeOrderAlarmLoopId !== null) {
+                clearInterval(activeOrderAlarmLoopId);
+                activeOrderAlarmLoopId = null;
+            }
+            activeOrderAlarmTargetId = null;
+        }
+
+        function startOrderAlarmLoopForOrder(orderId) {
+            const order = (db.orders || []).find(o => o.id === orderId);
+            if (!order || !shouldDriverReceiveOfferAlarm(order)) {
+                if (activeOrderAlarmTargetId === orderId) stopOrderAlarmLoop();
+                return;
+            }
+            const alertKey = String(order.id) + '::' + String(currentUser?.phone || currentUser?.name || '');
+            if (playedOrderAlertIds.includes(alertKey)) return;
+            playedOrderAlertIds.push(alertKey);
+            playedOrderAlertIds = playedOrderAlertIds.slice(-200);
+            localStorage.setItem('oleng_played_order_alerts', JSON.stringify(playedOrderAlertIds));
+
+            stopOrderAlarmLoop();
+            activeOrderAlarmTargetId = order.id;
+            playAlarmRingtone();
+            activeOrderAlarmLoopId = setInterval(() => {
+                const curOrder = (db.orders || []).find(o => o.id === orderId);
+                if (!curOrder || !shouldDriverReceiveOfferAlarm(curOrder)) {
+                    stopOrderAlarmLoop();
+                    return;
+                }
+                playAlarmRingtone();
+            }, 3200);
         }
 
         function getUnreadChatCount() {
@@ -1674,6 +1992,8 @@
         function checkAndTriggerIncomingChatPopup(msg) {
             if (!currentUser || !msg) return;
             if (!isMessageForCurrentUser(msg)) return;
+            const isChatOpenNow = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden') && String(activeChatTarget || '').trim().toLowerCase() === String(msg.from || '').trim().toLowerCase();
+            if (isChatOpenNow) return;
             const msgKey = String(msg.id);
             if (shownPopupChatIds.includes(msgKey) || readChatIds.includes(msgKey)) return;
 
@@ -1737,6 +2057,7 @@
 
                 if (o.driverResponseDeadline && nowMs > Number(o.driverResponseDeadline)) {
                     const prevDrv = o.driver || '-';
+                    if (activeOrderAlarmTargetId === o.id) stopOrderAlarmLoop();
                     o.driver = null;
                     o.assignedDriverPhone = null;
                     o.driverResponseDeadline = null;
@@ -1748,6 +2069,7 @@
                 }
 
                 if (normalizeOrderStatusCode(o.status) === 'searching_driver' && o.driverSearchDeadline && nowMs > Number(o.driverSearchDeadline)) {
+                    if (activeOrderAlarmTargetId === o.id) stopOrderAlarmLoop();
                     o.cancellationReason = `Batas waktu pencarian driver (${searchTimeoutSec}s) habis tanpa driver.`;
                     o.cancelledBy = 'system';
                     o.cancelledAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -1988,17 +2310,23 @@
                 const newlyArrivedChats = (db.chats || []).filter(c => !prevChatIds.has(String(c.id)) && isMessageForCurrentUser(c));
                 if (newlyArrivedChats.length > 0) {
                     const latestC = newlyArrivedChats[newlyArrivedChats.length - 1];
-                    notifyBackgroundOnce('chat-' + latestC.id, `Chat Masuk dari ${latestC.from}`, String(latestC.text || '').startsWith('data:image') ? '📷 Mengirim foto' : latestC.text);
-                    playAlarmRingtone();
-                    checkAndTriggerIncomingChatPopup(latestC);
+                    const isChatOpenNow = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden') && String(activeChatTarget || '').trim().toLowerCase() === String(latestC.from || '').trim().toLowerCase();
+                    if (!isChatOpenNow) {
+                        notifyBackgroundOnce('chat-' + latestC.id, `Chat Masuk dari ${latestC.from}`, String(latestC.text || '').startsWith('data:image') ? '📷 Mengirim foto' : latestC.text, { type: 'chat', sender: latestC.from, tag: 'chat-' + latestC.from });
+                        playAlarmRingtone();
+                        checkAndTriggerIncomingChatPopup(latestC);
+                    }
                 }
 
                 const newlyArrivedOrders = (db.orders || []).filter(o => !prevOrderIds.has(String(o.id)) && isOrderTargetedToCurrentUser(o));
                 if (newlyArrivedOrders.length > 0) {
                     const latestO = newlyArrivedOrders[0];
-                    notifyBackgroundOnce('order-' + latestO.id, `Order Masuk ${latestO.id}`, `${latestO.items} • Tujuan: ${latestO.dest || 'Lengkong'}`);
-                    playAlarmRingtone();
-                    checkAndShowIncomingOrderPopup(true);
+                    notifyBackgroundOnce('order-' + latestO.id, `Order Masuk ${latestO.id}`, `${latestO.items} • Tujuan: ${latestO.dest || 'Lengkong'}`, { type: 'order', orderId: latestO.id, tag: 'order-' + latestO.id });
+                    const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+                    if (activeRole === 'driver' && shouldDriverReceiveOfferAlarm(latestO)) {
+                        startOrderAlarmLoopForOrder(latestO.id);
+                        checkAndShowIncomingOrderPopup(true);
+                    }
                 }
 
                 updateHomeHeaderBadgesOnly();
@@ -2023,79 +2351,6 @@
             }
         }
 
-        function subscribeRealtimeUpdates() {
-            if (!supabaseClient || realtimeChannel) return;
-            try {
-                realtimeChannel = supabaseClient
-                    .channel('oleng-go-realtime-sync')
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, (payload) => {
-                        pullInitialFromSupabase(false).then(() => {
-                            if (payload?.eventType === 'INSERT' && payload?.new) {
-                                const row = payload.new;
-                                const chatObj = {
-                                    id: row.id,
-                                    from: row.sender_name,
-                                    to: row.receiver_name,
-                                    text: row.message_text,
-                                    time: row.sent_time || ''
-                                };
-                                if (isMessageForCurrentUser(chatObj)) {
-                                    notifyBackgroundOnce('chat-' + row.id, `Chat Masuk dari ${row.sender_name}`, String(row.message_text || '').startsWith('data:image') ? '📷 Mengirim foto' : row.message_text);
-                                    checkAndTriggerIncomingChatPopup(chatObj);
-                                }
-                            }
-                        });
-                    })
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-                        pullInitialFromSupabase(false).then(() => {
-                            if (payload?.eventType === 'INSERT' && payload?.new) {
-                                const r = payload.new;
-                                const ordObj = {
-                                    id: r.order_code,
-                                    type: r.order_type || 'ojek',
-                                    customer: r.customer_name,
-                                    merchant: r.merchant_name,
-                                    driver: r.driver_name,
-                                    items: r.items_summary,
-                                    total: Number(r.total_amount || 0),
-                                    status: r.status || 'searching_driver'
-                                };
-                                if (isOrderTargetedToCurrentUser(ordObj)) {
-                                    notifyBackgroundOnce('order-' + ordObj.id, `Order Baru ${ordObj.id}`, `${ordObj.items} (${ordObj.customer})`);
-                                    playAlarmRingtone();
-                                    checkAndShowIncomingOrderPopup(true);
-                                }
-                            }
-                        });
-                    })
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, (payload) => {
-                        if (payload?.eventType === 'DELETE' && payload?.old?.account_id) {
-                            const deletedCode = String(payload.old.account_id).toUpperCase();
-                            db.users = (db.users || []).filter(u => String(u.accountId || '').toUpperCase() !== deletedCode);
-                            db.merchants = (db.merchants || []).filter(m => String(m.accountId || '').toUpperCase() !== deletedCode);
-                            db.drivers = (db.drivers || []).filter(d => String(d.accountId || '').toUpperCase() !== deletedCode);
-                            localStorage.setItem('oleng_go_db', JSON.stringify(db));
-                        }
-                        pullInitialFromSupabase(false);
-                    })
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'merchants' }, () => {
-                        pullInitialFromSupabase(false);
-                    })
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => {
-                        pullInitialFromSupabase(false);
-                    })
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'foods' }, () => {
-                        pullInitialFromSupabase(false);
-                    })
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, () => {
-                        pullInitialFromSupabase(false);
-                    })
-                    .subscribe();
-            } catch (err) {
-                console.warn('Realtime info:', err?.message || err);
-            }
-        }
-
         function saveDB(successMessage = null, shouldSyncRemote = true) {
             ensureRoleListsSyncedFromUsers();
             db.mainBanner = customMainBanner || db.mainBanner || DEFAULT_MAIN_BANNER;
@@ -2105,7 +2360,13 @@
                 showToast(`Berhasil! ${successMessage}`, 'success');
             }
             if (shouldSyncRemote) {
-                syncAllToSupabase();
+                if (!navigator.onLine) {
+                    queueOfflineSyncOperation('DB_UPDATE', { updatedAt: Date.now() });
+                } else {
+                    syncAllToSupabase().then(res => {
+                        if (!res || !res.ok) queueOfflineSyncOperation('DB_UPDATE', { updatedAt: Date.now() });
+                    });
+                }
             }
         }
 
@@ -2144,7 +2405,7 @@
             saveDB();
             if (currentUser && (owner === 'ALL' || String(owner).toLowerCase() === String(currentUser.name || '').toLowerCase())) {
                 playAlarmRingtone();
-                notifyBackgroundOnce('notif-' + notifId + '-' + owner, title, desc);
+                notifyBackgroundOnce('notif-' + notifId + '-' + owner, title, desc, { type: 'notif', tag: 'notif-' + notifId });
             }
         }
 
@@ -2152,19 +2413,19 @@
             if (!alarmEnabled) return;
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const notes = [880, 1174.66, 880, 1318.51, 1174.66];
+                const notes = [880, 1174.66, 880, 1318.51, 1174.66, 1567.98];
                 notes.forEach((freq, i) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
-                    osc.type = 'triangle';
-                    const start = ctx.currentTime + i * 0.15;
+                    osc.type = 'sawtooth';
+                    const start = ctx.currentTime + i * 0.16;
                     osc.frequency.setValueAtTime(freq, start);
-                    gain.gain.setValueAtTime(0.18, start);
-                    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.14);
+                    gain.gain.setValueAtTime(0.28, start);
+                    gain.gain.exponentialRampToValueAtTime(0.002, start + 0.15);
                     osc.connect(gain);
                     gain.connect(ctx.destination);
                     osc.start(start);
-                    osc.stop(start + 0.14);
+                    osc.stop(start + 0.15);
                 });
             } catch (e) {}
         }
@@ -2172,6 +2433,7 @@
         function toggleNotificationAlarm() {
             alarmEnabled = !alarmEnabled;
             localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled));
+            if (!alarmEnabled) stopOrderAlarmLoop();
             const chatAlarmState = document.getElementById('chat-alarm-state');
             if (chatAlarmState) chatAlarmState.textContent = alarmEnabled ? 'ON' : 'OFF';
             if (alarmEnabled) playAlarmRingtone();
@@ -2249,6 +2511,63 @@
             window.open(`https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent(summary)}`, '_blank');
         }
 
+        function setDriverOnlineStatusExplicit(nextStatus, fromPostComplete = false) {
+            if (!currentUser) return false;
+            const drv = (db.drivers || []).find(d =>
+                String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase() ||
+                (currentUser.phone && normalizePhone(d.phone) === normalizePhone(currentUser.phone))
+            );
+            if (!drv) {
+                showToast('Data mitra driver tidak ditemukan.', 'error');
+                return false;
+            }
+
+            syncDriverAvailabilityLocks();
+            if (nextStatus === 'Online') {
+                const activeStatuses = ['driver_assigned', 'merchant_confirmation', 'merchant_accepted', 'preparing', 'driver_arriving', 'picked_up', 'delivering'];
+                const stillRunningOrder = (db.orders || []).find(o => {
+                    const st = normalizeOrderStatusCode(o.status);
+                    if (!activeStatuses.includes(st)) return false;
+                    return String(o.driver || '').trim().toLowerCase() === String(drv.name || '').trim().toLowerCase() ||
+                        (o.assignedDriverPhone && normalizePhone(o.assignedDriverPhone) === normalizePhone(drv.phone));
+                });
+                if (stillRunningOrder) {
+                    showToast(`Masih ada pesanan aktif (${stillRunningOrder.id}). Selesaikan terlebih dahulu sebelum ONLINE.`, 'error');
+                    return false;
+                }
+                drv.status = 'Online';
+                drv.availability = 'available';
+                drv.activeOrderId = null;
+                drv.activitySummary = 'Online • Siap menerima orderan di Lengkong';
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        drv.lat = Number(pos.coords.latitude.toFixed(6));
+                        drv.lng = Number(pos.coords.longitude.toFixed(6));
+                        userCurrentLatLng = [drv.lat, drv.lng];
+                        saveDB();
+                    }, () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
+                }
+                addAccountNotification('Driver Kembali ONLINE', `Driver ${drv.name} (${drv.phone || '-'}) kini ONLINE dan siap menerima order baru.`, 'ALL', 'drv-online-' + drv.name + '-' + Date.now());
+                saveDB(`Status driver ${drv.name} tersimpan ONLINE & siap menerima order baru.`);
+            } else {
+                stopOrderAlarmLoop();
+                drv.status = 'Offline';
+                drv.availability = 'offline';
+                drv.activeOrderId = null;
+                drv.activitySummary = 'Offline • Tidak menerima order baru';
+                addAccountNotification('Driver OFFLINE', `Driver ${drv.name} (${drv.phone || '-'}) kini OFFLINE & tidak menerima order baru.`, 'ALL', 'drv-offline-' + drv.name + '-' + Date.now());
+                saveDB(`Status driver ${drv.name} tersimpan OFFLINE.`);
+            }
+
+            if (fromPostComplete) {
+                document.getElementById('modal-post-complete-driver')?.classList.add('hidden');
+            }
+            if (currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
+                renderDashboardContent(currentSubTab, false);
+            }
+            return true;
+        }
+
         function toggleCurrentDriverOnlineStatus() {
             if (!currentUser) return;
             const drv = (db.drivers || []).find(d =>
@@ -2256,10 +2575,35 @@
                 (currentUser.phone && normalizePhone(d.phone) === normalizePhone(currentUser.phone))
             );
             if (!drv) return showToast('Data mitra driver tidak ditemukan.', 'error');
-            drv.status = drv.status === 'Online' ? 'Offline' : 'Online';
-            syncDriverAvailabilityLocks();
-            saveDB(`Status driver ${drv.name} diubah menjadi ${drv.status}.`);
-            renderDashboardContent(currentSubTab, false);
+            const targetStatus = drv.status === 'Online' ? 'Offline' : 'Online';
+            setDriverOnlineStatusExplicit(targetStatus, false);
+        }
+
+        function openPostCompleteDriverChoiceModal(orderId) {
+            const order = (db.orders || []).find(o => o.id === orderId);
+            const card = document.getElementById('post-complete-driver-card');
+            const modal = document.getElementById('modal-post-complete-driver');
+            if (!card || !modal) return;
+            pushAppNavigationState('post-complete');
+            card.innerHTML = `
+                <div class="flex justify-between items-center border-b-2 border-[#F3F3F3] pb-2">
+                    <span class="bg-[#FF7900] text-[#171717] text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase"><i class="fa-solid fa-circle-check mr-1"></i> ORDER SELESAI</span>
+                    <button onclick="document.getElementById('modal-post-complete-driver').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
+                </div>
+                <div class="space-y-1.5 text-xs bg-[#F3F3F3] p-3 rounded-2xl border border-[#D4D4D4]">
+                    <p class="font-black text-sm text-[#171717]">Pesanan ${order ? order.id : ''} Telah Selesai</p>
+                    <p class="text-[#262626]">Status pesanan sudah tervalidasi <b>SELESAI</b> dan tersinkron ke pelanggan serta Admin. Pilih kesiapan Anda berikutnya:</p>
+                </div>
+                <div class="space-y-2 pt-1">
+                    <button type="button" onclick="setDriverOnlineStatusExplicit('Online', true)" class="w-full py-3 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] font-black rounded-2xl border-2 border-[#171717] text-xs cursor-pointer">
+                        KEMBALI ONLINE — Siap Menerima Order Baru
+                    </button>
+                    <button type="button" onclick="setDriverOnlineStatusExplicit('Offline', true)" class="w-full py-3 bg-[#171717] hover:bg-[#262626] text-white font-black rounded-2xl border border-[#FF7900] text-xs cursor-pointer">
+                        TETAP OFFLINE — Tidak Menerima Order Baru
+                    </button>
+                </div>
+            `;
+            modal.classList.remove('hidden');
         }
 
         function getAvailableOnlineDriversSorted(fromLat, fromLng, maxRadiusKm = null) {
@@ -2305,9 +2649,12 @@
             const d = (db.drivers || []).find(x => Number(x.id) === Number(driverId));
             if (!d) return;
             syncDriverAvailabilityLocks();
-            const isBusy = d.status !== 'Online' || (d.availability && d.availability !== 'available') || Boolean(d.activeOrderId);
+            if (d.status !== 'Online') {
+                return showToast(`Driver ${d.name} sedang OFFLINE & tidak dapat dipilih.`, 'error');
+            }
+            const isBusy = (d.availability && d.availability !== 'available') || Boolean(d.activeOrderId);
             if (isBusy) {
-                showToast(`Notif Aktivitas: ${d.name} sedang sibuk (${d.activitySummary || 'melaksanakan order aktif'}). Pilih driver yang Siap Order atau tunggu selesai.`, 'info');
+                showToast(`Notif Aktivitas: ${d.name} sedang mengerjakan orderan (${d.activitySummary || 'order aktif'}). Pilih driver yang Siap Order.`, 'info');
             }
             if (Number(draftSelectedDriverId) === Number(driverId)) {
                 draftSelectedDriverId = null;
@@ -2328,10 +2675,10 @@
             const d = (db.drivers || []).find(x => Number(x.id) === Number(draftSelectedDriverId));
             if (!d || d.status !== 'Online') {
                 draftSelectedDriverId = null;
-                return showToast('Driver pilihan sedang offline. Silakan pilih driver online lain.', 'error');
+                return showToast('Driver pilihan sedang OFFLINE. Silakan pilih driver ONLINE yang tersedia.', 'error');
             }
             if (d.availability && d.availability !== 'available') {
-                return showToast(`Notif Aktivitas: ${d.name} sedang sibuk (${d.activitySummary || 'melaksanakan order'}). Pilih driver yang Siap Order.`, 'error');
+                return showToast(`Notif Aktivitas: ${d.name} sedang mengerjakan orderan. Pilih driver yang Siap Order.`, 'error');
             }
             confirmedOrderDriverId = Number(d.id);
             selectedDriverId = Number(d.id);
@@ -2363,7 +2710,7 @@
                     const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
                     if (activeRole === 'driver' && currentUser) {
                         const drv = db.drivers.find(x => x.name === currentUser.name || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
-                        if (drv && (Math.abs(drv.lat - lat) > 0.0002 || Math.abs(drv.lng - lng) > 0.0002)) {
+                        if (drv && drv.status === 'Online' && (Math.abs(drv.lat - lat) > 0.0002 || Math.abs(drv.lng - lng) > 0.0002)) {
                             drv.lat = lat;
                             drv.lng = lng;
                             localStorage.setItem('oleng_go_db', JSON.stringify(db));
@@ -2380,6 +2727,7 @@
         document.addEventListener("DOMContentLoaded", async function() {
             try {
                 getSyncedMainBanner();
+                ensureDevicePushToken();
                 toggleRegisterRoleFields();
                 requestBackgroundNotificationPermission();
                 startLiveHighAccuracyGPSWatcher();
@@ -2390,6 +2738,7 @@
                     const parsedSession = JSON.parse(savedSession);
                     if (parsedSession && parsedSession.phone) {
                         currentUser = parsedSession;
+                        ensureDevicePushToken(currentUser);
                         adminViewMode = localStorage.getItem('oleng_admin_view_mode') || null;
                         currentSubTab = localStorage.getItem('oleng_last_tab') || 'home';
                         tabNavigationHistory = [currentSubTab];
@@ -2398,7 +2747,10 @@
                         enterDashboard(true);
                     }
                 }
-                pullInitialFromSupabase(false).then(() => syncAllToSupabase()).catch(() => {});
+                pullInitialFromSupabase(false).then(() => {
+                    flushPendingSyncQueue();
+                    syncAllToSupabase();
+                }).catch(() => {});
             } catch (e) {
                 console.warn('Init error:', e);
             } finally {
@@ -2591,7 +2943,7 @@
                 return;
             }
 
-            currentUser = { ...foundUser };
+            currentUser = { ...foundUser, pushToken: ensureDevicePushToken(foundUser) };
             adminViewMode = foundUser.role === 'admin' ? 'admin' : null;
             currentSubTab = foundUser.role === 'admin' ? 'admin-dash' : foundUser.role === 'merchant' ? 'merchant-manage' : foundUser.role === 'driver' ? 'driver-orders' : 'home';
             tabNavigationHistory = [currentSubTab];
@@ -2676,6 +3028,7 @@
             }
 
             const autoAccountId = generateAutoAccountIdFromPhone(phone, role);
+            const pushToken = ensureDevicePushToken();
 
             const newUser = {
                 id: Date.now(),
@@ -2687,6 +3040,7 @@
                 address: merchantData.address || 'Kecamatan Lengkong, Sukabumi',
                 balance: (role !== 'customer' ? 50000 : undefined),
                 password: password,
+                pushToken,
                 photo: 'https://placehold.co/150x150/171717/FF7900?text=' + encodeURIComponent(name.charAt(0).toUpperCase()),
                 ...driverData,
                 ...merchantData
@@ -2820,6 +3174,7 @@
         }
 
         async function confirmLogoutExecute() {
+            stopOrderAlarmLoop();
             document.getElementById('modal-confirm-logout')?.classList.add('hidden');
             const departingUser = currentUser ? { ...currentUser } : null;
             currentUser = null; adminViewMode = null;
@@ -2992,16 +3347,18 @@
             processDriverResponseTimeouts();
             if (!currentUser) return;
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            if (activeRole !== 'driver' && activeRole !== 'merchant' && activeRole !== 'admin') return;
+            if (activeRole !== 'driver' && activeRole !== 'merchant') return;
 
             const candidate = db.orders.find(o => {
                 const st = normalizeOrderStatusCode(o.status);
                 if (st === 'completed' || st === 'cancelled') return false;
                 if (!forceShowLatest && shownPopupOrderIds.includes(o.id)) return false;
+                if (activeRole === 'driver' && !shouldDriverReceiveOfferAlarm(o)) return false;
                 return isOrderTargetedToCurrentUser(o);
             });
 
             if (candidate) {
+                if (activeRole === 'driver') startOrderAlarmLoopForOrder(candidate.id);
                 openIncomingOrderModal(candidate.id, false);
             }
         }
@@ -3016,29 +3373,34 @@
                 localStorage.setItem('oleng_shown_popup_orders', JSON.stringify(shownPopupOrderIds));
             }
 
-            playAlarmRingtone();
+            const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+            if (activeRole === 'driver' && shouldDriverReceiveOfferAlarm(order)) {
+                startOrderAlarmLoopForOrder(order.id);
+            } else {
+                playAlarmRingtone();
+            }
+
             pushAppNavigationState('incoming-order');
             const card = document.getElementById('incoming-order-card');
             const st = normalizeOrderStatusCode(order.status);
             const statusText = getOrderStatusLabel(st);
-            const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
 
             if (!showFullDetail) {
                 card.innerHTML = `
                     <div class="flex justify-between items-center border-b-2 border-[#F3F3F3] pb-2">
                         <span class="bg-[#FF7900] text-[#171717] text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase"><i class="fa-solid fa-bell-ring mr-1"></i> POP-UP ORDER (${order.id})</span>
-                        <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
+                        <button onclick="stopOrderAlarmLoop();document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
                     </div>
                     <div class="space-y-1.5 text-xs">
                         <h3 class="font-black text-sm text-[#171717]">Ada Order Baru untuk Anda!</h3>
                         <p class="text-[#262626] font-semibold">Kode Order: <b>${order.id}</b> • Status: <span class="text-[#D96400] font-bold">${statusText} (${st})</span></p>
-                        <p class="text-[11px] text-[#404040]">Ketuk <b>Cek</b> untuk melihat detail isi order, jemput/tujuan, lalu proses sesuai peran.</p>
+                        <p class="text-[11px] text-[#404040]">Ketuk <b>Lihat Detail</b> untuk melihat detail isi order, jemput/tujuan, lalu proses sesuai peran.</p>
                     </div>
                     <div class="grid grid-cols-2 gap-2 pt-2">
                         <button onclick="openIncomingOrderModal('${order.id}', true)" class="py-3 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] border border-[#171717] rounded-xl text-xs font-black cursor-pointer">
-                            <i class="fa-solid fa-magnifying-glass mr-1"></i> Cek Order
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i> Lihat Detail
                         </button>
-                        <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="py-3 bg-[#F3F3F3] hover:bg-[#E5E5E5] text-[#171717] border border-[#D4D4D4] rounded-xl text-xs font-black cursor-pointer">
+                        <button onclick="stopOrderAlarmLoop();document.getElementById('modal-incoming-order').classList.add('hidden')" class="py-3 bg-[#F3F3F3] hover:bg-[#E5E5E5] text-[#171717] border border-[#D4D4D4] rounded-xl text-xs font-black cursor-pointer">
                             Tutup
                         </button>
                     </div>
@@ -3059,7 +3421,7 @@
                             roleActionButtons += `
                                 <div class="grid grid-cols-2 gap-2 pt-1">
                                     <button onclick="handleIncomingOrderAction('${order.id}', 'accept')" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black cursor-pointer">TERIMA PESANAN</button>
-                                    <button onclick="handleIncomingOrderAction('${order.id}', 'reject')" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer">TOLAK PESANAN</button>
+                                    <button onclick="handleIncomingOrderAction('${order.id}', 'reject')" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer">TOLAK</button>
                                 </div>
                             `;
                         }
@@ -3072,8 +3434,8 @@
                         if (st === 'picked_up') {
                             roleActionButtons += `<button onclick="advanceOrderStage('${order.id}', 'delivering')" class="w-full py-2.5 bg-[#171717] text-[#FFD400] border border-[#FF7900] rounded-xl text-xs font-black cursor-pointer mt-1">Mulai Antar (delivering)</button>`;
                         }
-                        if (st === 'delivering') {
-                            roleActionButtons += `<button onclick="handleIncomingOrderAction('${order.id}', 'complete')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black cursor-pointer mt-1">Konfirmasi Order Selesai (completed)</button>`;
+                        if (st === 'delivering' || (isOjekOrder && ['driver_assigned', 'driver_arriving', 'picked_up', 'delivering'].includes(st))) {
+                            roleActionButtons += `<button onclick="handleIncomingOrderAction('${order.id}', 'complete')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black cursor-pointer mt-1">SELESAIKAN PESANAN</button>`;
                         }
                         if (['driver_assigned', 'merchant_confirmation', 'merchant_accepted', 'preparing', 'driver_arriving'].includes(st)) {
                             roleActionButtons += `<button onclick="driverCancelAssignedOrder('${order.id}')" class="w-full py-2 bg-rose-100 text-rose-900 border border-rose-300 rounded-xl text-[11px] font-black cursor-pointer mt-1">Batalkan Tugas Driver (Cari Pengganti)</button>`;
@@ -3084,7 +3446,7 @@
                             roleActionButtons += `
                                 <div class="grid grid-cols-2 gap-2 pt-1">
                                     <button onclick="merchantRespondOrder('${order.id}', true)" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black cursor-pointer">TERIMA PESANAN</button>
-                                    <button onclick="merchantRespondOrder('${order.id}', false)" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer">TOLAK PESANAN</button>
+                                    <button onclick="merchantRespondOrder('${order.id}', false)" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-black cursor-pointer">TOLAK</button>
                                 </div>
                             `;
                         }
@@ -3097,7 +3459,7 @@
                 card.innerHTML = `
                     <div class="flex justify-between items-center border-b-2 border-[#F3F3F3] pb-2">
                         <span class="bg-[#FF7900] text-[#171717] text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">DETAIL ORDER (${order.id})</span>
-                        <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
+                        <button onclick="stopOrderAlarmLoop();document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
                     </div>
                     <div class="space-y-1 text-xs bg-[#F3F3F3] p-3 rounded-2xl border border-[#D4D4D4]">
                         <p class="font-black text-[#171717] text-sm">${order.merchant}</p>
@@ -3133,6 +3495,7 @@
         function merchantRespondOrder(orderId, accepted) {
             const order = db.orders.find(o => o.id === orderId);
             if (!order) return;
+            stopOrderAlarmLoop();
             const st = normalizeOrderStatusCode(order.status);
             if (!order.driver || !['driver_assigned', 'merchant_confirmation'].includes(st)) {
                 return showToast('Toko hanya memproses pesanan setelah driver menerima tugas.', 'error');
@@ -3188,6 +3551,7 @@
         function driverCancelAssignedOrder(orderId) {
             const order = db.orders.find(o => o.id === orderId);
             if (!order) return;
+            stopOrderAlarmLoop();
             const st = normalizeOrderStatusCode(order.status);
             if (['picked_up', 'delivering', 'completed', 'cancelled'].includes(st)) {
                 return showToast('Pesanan yang sudah diambil tidak dapat dibatalkan driver melalui tombol biasa.', 'error');
@@ -3219,6 +3583,7 @@
         function customerCancelOrderWithReason(orderId) {
             const order = db.orders.find(o => o.id === orderId);
             if (!order) return;
+            if (activeOrderAlarmTargetId === order.id) stopOrderAlarmLoop();
             const st = normalizeOrderStatusCode(order.status);
             if (st === 'completed') {
                 return showToast('Pesanan yang sudah selesai tidak dapat dibatalkan.', 'error');
@@ -3263,6 +3628,7 @@
             }
 
             if (action === 'accept') {
+                stopOrderAlarmLoop();
                 const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
                 const assignedName = activeRole === 'driver' ? currentUser.name : (order.driver || currentUser.name);
                 const assignedPhone = activeRole === 'driver' ? normalizePhone(currentUser.phone) : normalizePhone(order.assignedDriverPhone);
@@ -3285,6 +3651,7 @@
                 openIncomingOrderModal(order.id, true);
                 return;
             } else if (action === 'reject') {
+                stopOrderAlarmLoop();
                 const prevDriver = order.driver || currentUser?.name || '-';
                 order.driver = null;
                 order.assignedDriverPhone = null;
@@ -3295,16 +3662,41 @@
                 addAccountNotification(`Driver Menolak (${order.id})`, `Driver ${prevDriver} menolak tugas. Silakan pilih driver aktif lain tanpa checkout ulang.`, order.customer, `${order.id}-d-rej-cust-${prevDriver}`);
                 saveDB(`Tugas ${order.id} ditolak & dilepas. Pelanggan dapat memilih driver lain.`);
             } else if (action === 'complete') {
-                const ok = appendOrderStatusHistory(order, 'completed', 'driver', order.driver || 'Driver', 'Pesanan diterima pelanggan');
+                stopOrderAlarmLoop();
+                const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+                const me = String(currentUser?.name || '').trim().toLowerCase();
+                const myPhone = normalizePhone(currentUser?.phone);
+                const drvMatch = (db.drivers || []).find(d =>
+                    (myPhone && normalizePhone(d.phone) === myPhone) ||
+                    (me && String(d.name || '').trim().toLowerCase() === me)
+                );
+                const assignedDrvName = String(order.driver || '').trim().toLowerCase();
+                const assignedDrvPhone = normalizePhone(order.assignedDriverPhone);
+                const isAuthorizedDriver = activeRole === 'admin' || (
+                    activeRole === 'driver' && drvMatch && (
+                        assignedDrvName === me ||
+                        assignedDrvName === String(drvMatch.name || '').trim().toLowerCase() ||
+                        (assignedDrvPhone && assignedDrvPhone === myPhone)
+                    )
+                );
+                if (!isAuthorizedDriver) {
+                    return showToast('Validasi gagal: hanya driver yang ditugaskan pada order ini yang dapat menyelesaikan pesanan.', 'error');
+                }
+
+                order.status = 'delivering';
+                const ok = appendOrderStatusHistory(order, 'completed', 'driver', order.driver || currentUser?.name || 'Driver', 'Pesanan tervalidasi selesai');
                 if (!ok) {
                     return showToast('Transisi ke completed tidak valid pada tahap ini.', 'error');
                 }
+                order.completedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                order.driverResponseDeadline = null;
+                order.driverSearchDeadline = null;
+
                 if (!order.settled) {
                     const pct = Number(db.pricing?.commissionPercent || 10);
                     const commissionFee = Math.round((order.total * pct) / 100);
                     const netEarnings = Math.max(0, order.total - commissionFee);
 
-                    const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
                     if (activeRole === 'merchant' || activeRole === 'admin') {
                         const m = db.merchants.find(x => x.name === order.merchant || normalizePhone(x.whatsapp) === normalizePhone(currentUser.phone));
                         const ownerLabel = m ? m.name : order.merchant;
@@ -3356,6 +3748,13 @@
                 } else {
                     saveDB(`Status order ${order.id} tersinkron.`);
                 }
+
+                document.getElementById('modal-incoming-order')?.classList.add('hidden');
+                renderDashboardContent(currentSubTab, false);
+                if (activeRole === 'driver') {
+                    openPostCompleteDriverChoiceModal(order.id);
+                }
+                return;
             }
 
             document.getElementById('modal-incoming-order')?.classList.add('hidden');
@@ -3470,8 +3869,11 @@
                                 Alarm: ${alarmEnabled ? 'ON' : 'OFF'}
                             </button>
                             ${currentDrvObj ? `
-                                <button onclick="toggleCurrentDriverOnlineStatus()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${isDriverOnline ? 'bg-emerald-600 text-white' : 'bg-[#171717] text-[#FFD400] border border-[#FF7900]'}">
-                                    Ojek: ${currentDrvObj.status}
+                                <button onclick="setDriverOnlineStatusExplicit('Online', false)" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${isDriverOnline ? 'bg-emerald-600 text-white' : 'bg-[#FF7900] text-[#171717] border border-[#171717]'}">
+                                    ONLINE
+                                </button>
+                                <button onclick="setDriverOnlineStatusExplicit('Offline', false)" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${!isDriverOnline ? 'bg-[#171717] text-[#FFD400] border border-[#FF7900]' : 'bg-[#F3F3F3] text-[#171717] border border-[#D4D4D4]'}">
+                                    OFFLINE
                                 </button>
                             ` : ''}
                             <button onclick="openMainAdminWhatsApp()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-[#171717] text-white border border-[#FF7900]">
@@ -4095,7 +4497,7 @@
             addAccountNotification(`Order Makanan Baru (${newOrder.id})`, `Pemesan ${currentUser.name} • ${newOrder.items} • Tujuan: ${newOrder.dest}${notesVal ? ` • Catatan: ${notesVal}` : ''}.`, merchant.name, `${newOrder.id}-instant-mrc-${merchant.name}`);
             addAccountNotification(`Tawaran Pesanan Baru (${newOrder.id})`, `Toko ${merchant.name} • Jemput: ${newOrder.pickup} → ${newOrder.dest} (${distKm} km, Total Rp ${finalTotal.toLocaleString()}).`, newOrder.driver, `${newOrder.id}-offer-drv-${driver.name}`);
             playAlarmRingtone();
-            triggerSystemBackgroundNotification(`Order Baru ${newOrder.id}`, `${newOrder.merchant} • ${newOrder.items}`);
+            triggerSystemBackgroundNotification(`Order Baru ${newOrder.id}`, `${newOrder.merchant} • ${newOrder.items}`, { type: 'order', orderId: newOrder.id, tag: 'order-' + newOrder.id });
             showToast(`Berhasil! Pesanan ${newOrder.id} terkirim & notif instan masuk ke ${merchant.name} dan ${driver.name}.`, 'success');
             closeCartModal();
             closeMerchantDetail();
@@ -4173,7 +4575,7 @@
 
             addAccountNotification(`Tawaran Ojek Baru (${newOrder.id})`, `Jemput ${currentUser.name} (${from} → ${to}, ${distKm} km, Tarif Rp ${finalFare.toLocaleString()})${notesVal ? ` • Catatan: ${notesVal}` : ''}.`, newOrder.driver, `${newOrder.id}-offer-drv-${driver.name}`);
             playAlarmRingtone();
-            triggerSystemBackgroundNotification(`Order Ojek Baru ${newOrder.id}`, `Jemput ${newOrder.customer} (${newOrder.pickup} → ${newOrder.dest})`);
+            triggerSystemBackgroundNotification(`Order Ojek Baru ${newOrder.id}`, `Jemput ${newOrder.customer} (${newOrder.pickup} → ${newOrder.dest})`, { type: 'order', orderId: newOrder.id, tag: 'order-' + newOrder.id });
             showToast(`Berhasil! Order ojek ${newOrder.id} terkirim & notif instan masuk ke driver ${driver.name}.`, 'success');
             renderDashboardContent('history', false);
             syncAllToSupabase();
@@ -4633,6 +5035,9 @@
             hasPendingMediaSelection = false;
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             const balanceVal = getProfileSyncedBalance();
+            const myDrv = activeRole === 'driver'
+                ? (db.drivers || []).find(d => String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase() || (currentUser.phone && normalizePhone(d.phone) === normalizePhone(currentUser.phone)))
+                : null;
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24 bg-[#F3F3F3] min-h-full">
@@ -4641,6 +5046,13 @@
                         <h2 class="font-black text-base text-white">${currentUser.name}</h2>
                         <p class="text-xs font-black text-[#FF7900]">No. HP Login: ${currentUser.phone || '-'}</p>
                         <span class="text-[10px] bg-[#FFD400] text-[#171717] font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span>
+                        ${myDrv ? `
+                            <div class="pt-1 flex justify-center gap-2">
+                                <button type="button" onclick="setDriverOnlineStatusExplicit('Online', false)" class="px-3 py-1.5 rounded-xl text-[10px] font-black cursor-pointer ${myDrv.status === 'Online' ? 'bg-emerald-600 text-white' : 'bg-[#FF7900] text-[#171717] border border-[#171717]'}">ONLINE</button>
+                                <button type="button" onclick="setDriverOnlineStatusExplicit('Offline', false)" class="px-3 py-1.5 rounded-xl text-[10px] font-black cursor-pointer ${myDrv.status !== 'Online' ? 'bg-[#FFD400] text-[#171717]' : 'bg-[#262626] text-white border border-[#D4D4D4]'}">OFFLINE</button>
+                            </div>
+                            <p class="text-[10px] text-[#F3F3F3]">Status Driver: <b>${myDrv.status}</b></p>
+                        ` : ''}
                         <div class="pt-2 space-y-2">
                             <p class="text-sm text-[#FFD400] font-black">Saldo Akun: Rp ${Number(balanceVal || 0).toLocaleString()}</p>
                             ${(activeRole === 'driver' || activeRole === 'merchant') ? `
@@ -5354,7 +5766,7 @@
                     const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
                     if (activeRole === 'driver' && currentUser) {
                         const drv = db.drivers.find(x => x.name === currentUser.name || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
-                        if (drv) {
+                        if (drv && drv.status === 'Online') {
                             drv.lat = userCurrentLatLng[0];
                             drv.lng = userCurrentLatLng[1];
                             saveDB();
@@ -5435,7 +5847,13 @@
             renderPersonalChatMessages();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
             showToast('Terkirim!', 'success');
-            syncAllToSupabase();
+            if (!navigator.onLine) {
+                queueOfflineSyncOperation('CHAT_SEND', newMsg);
+            } else {
+                syncAllToSupabase().then(res => {
+                    if (!res || !res.ok) queueOfflineSyncOperation('CHAT_SEND', newMsg);
+                });
+            }
         }
         function selectChatPartner(partnerName) {
             activeChatTarget = partnerName;
