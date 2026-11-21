@@ -11,9 +11,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="OLENG GO">
-    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
-    <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./olengorane1">
+    <link rel="apple-touch-icon" sizes="192x192" href="./olengorane1">
+    <link rel="apple-touch-icon" sizes="512x512" href="./olengorane1">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -72,23 +72,23 @@
             from { opacity: 0; transform: translateX(-18px); }
             to { opacity: 1; transform: translateX(0); }
         }
+        @keyframes splashLogoPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
         .auth-panel-slide-right { animation: panelSlideIn 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
         .auth-panel-slide-left { animation: panelSlideBack 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
+        .splash-logo-anim { animation: splashLogoPulse 1.4s ease-in-out infinite; }
     </style>
 </head>
 <body class="h-full flex flex-col items-center justify-center">
 
     <!-- SPLASH SCREEN 2 DETIK (SELALU TERTUTUP MAKSIMAL 2 DETIK) -->
-    <div id="oleng-splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#171717] text-white transition-opacity duration-500 border-t-4 border-[#FF7900]">
-        <div class="flex flex-col items-center space-y-4 px-6 text-center">
-            <div class="w-28 h-28 rounded-3xl bg-white p-2 shadow-lg border-4 border-[#FF7900] flex items-center justify-center overflow-hidden">
-                <img src="./icon-512.png" onerror="this.src='./icon-192.png'" alt="Logo OLENG GO" class="w-full h-full object-cover rounded-2xl">
+    <div id="oleng-splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white text-[#171717] transition-opacity duration-500 border-t-4 border-[#FF7900]">
+        <div class="flex flex-col items-center justify-center px-6 text-center">
+            <div class="w-32 h-32 rounded-3xl bg-white p-2.5 shadow-lg border-4 border-[#FF7900] flex items-center justify-center overflow-hidden splash-logo-anim">
+                <img src="./olengorane1" onerror="this.onerror=null;this.src='./olengorane1.png';" alt="Logo OLENG GO" class="w-full h-full object-contain rounded-2xl">
             </div>
-            <div>
-                <h1 class="text-3xl font-black italic tracking-wider text-[#FF7900]">OLENG GO</h1>
-                <p class="text-xs font-bold text-[#F3F3F3] mt-1">Powered by SIMADU • <span class="text-[#FFD400]">Lengkong, Sukabumi</span></p>
-            </div>
-            <div class="w-8 h-8 border-4 border-[#FF7900] border-t-transparent rounded-full animate-spin mt-2"></div>
         </div>
     </div>
 
@@ -119,15 +119,17 @@
             <div class="my-auto text-center space-y-5">
                 <div class="flex items-center justify-between px-2 bg-[#262626] p-3.5 rounded-3xl border border-[#FF7900]">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-12 h-12 bg-[#FF7900] rounded-2xl flex items-center justify-center text-[#171717] font-black text-2xl border-2 border-[#FFD400]">
-                            <i class="fa-solid fa-motorcycle"></i>
+                        <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-1 border-2 border-[#FF7900] overflow-hidden shrink-0">
+                            <img src="./olengorane1" onerror="this.onerror=null;this.src='./olengorane1.png';" alt="Icon OLENG GO" class="w-full h-full object-contain rounded-xl">
                         </div>
                         <div class="text-left">
                             <h1 class="text-2xl font-black italic tracking-wider text-[#FF7900]">OLENG GO</h1>
                             <p class="text-[10px] text-[#F3F3F3] font-bold"><i class="fa-solid fa-location-dot text-[#FFD400]"></i> Lengkong, Sukabumi</p>
                         </div>
                     </div>
-                    <div class="w-12 h-12 bg-[#FFD400] text-[#171717] rounded-full border-2 border-[#FF7900] flex items-center justify-center text-xl font-black">🐝</div>
+                    <div class="w-11 h-11 bg-white rounded-full border-2 border-[#FF7900] flex items-center justify-center p-1 overflow-hidden shrink-0">
+                        <img src="./olengorane1" onerror="this.onerror=null;this.src='./olengorane1.png';" alt="Mascot OLENG GO" class="w-full h-full object-contain rounded-full">
+                    </div>
                 </div>
 
                 <div class="flex justify-center gap-2">
@@ -744,6 +746,12 @@
                 .join(', ');
         }
 
+        function formatUnreadBadgeText(countVal) {
+            const n = Math.max(0, Number(countVal || 0));
+            if (n <= 0) return '';
+            return n > 99 ? '99+' : String(n);
+        }
+
         function ensureDevicePushToken(accountObj = null) {
             if (!devicePushToken) {
                 const randPart = Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 10);
@@ -796,21 +804,21 @@
                         if (reg && typeof reg.showNotification === 'function') {
                             reg.showNotification(title, {
                                 body: body,
-                                icon: './icon-192.png',
-                                badge: './icon-192.png',
+                                icon: './olengorane1',
+                                badge: './olengorane1',
                                 tag: extraData.tag || ('oleng-' + Date.now()),
                                 renotify: Boolean(extraData.renotify),
                                 vibrate: [400, 150, 400, 150, 500],
                                 data: extraData
                             });
                         } else {
-                            new Notification(title, { body, icon: './icon-192.png' });
+                            new Notification(title, { body, icon: './olengorane1' });
                         }
                     }).catch(() => {
-                        new Notification(title, { body, icon: './icon-192.png' });
+                        new Notification(title, { body, icon: './olengorane1' });
                     });
                 } else {
-                    new Notification(title, { body, icon: './icon-192.png' });
+                    new Notification(title, { body, icon: './olengorane1' });
                 }
             } catch (e) {}
         }
@@ -916,7 +924,7 @@
             const displayPhone = normalizePhone(matchedUser?.phone || matchedStore?.whatsapp || matchedDriver?.phone) || (targetLow === 'admin simadu' ? '085624736602' : 'Belum tercatat');
             const displayAddress = matchedUser?.address || matchedStore?.address || matchedDriver?.location || 'Kecamatan Lengkong, Sukabumi';
             const displayShop = matchedStore?.name || matchedUser?.shopName || '-';
-            const displayPhoto = matchedUser?.photo || matchedStore?.image || 'https://placehold.co/150x150/171717/FF7900?text=USR';
+            const displayPhoto = matchedUser?.photo || matchedStore?.image || './olengorane1';
 
             const card = document.getElementById('chat-partner-info-card');
             if (!card) return;
@@ -927,7 +935,7 @@
                     <button onclick="document.getElementById('modal-chat-partner-info').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
                 </div>
                 <div class="flex items-center gap-3">
-                    <img src="${displayPhoto}" class="w-14 h-14 rounded-2xl object-cover border-2 border-[#FF7900] shrink-0" alt="Foto Profil">
+                    <img src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-14 h-14 rounded-2xl object-cover border-2 border-[#FF7900] shrink-0" alt="Foto Profil">
                     <div class="min-w-0">
                         <h4 class="font-black text-sm text-[#171717] truncate">${displayName}</h4>
                         <span class="text-[10px] bg-[#171717] text-[#FFD400] font-black px-2 py-0.5 rounded uppercase inline-block mt-0.5">${displayRole}</span>
@@ -1132,11 +1140,15 @@
                                     from: row.sender_name,
                                     to: row.receiver_name,
                                     text: row.message_text,
-                                    time: row.sent_time || ''
+                                    time: row.sent_time || '',
+                                    readStatus: row.read_status || 'UNREAD',
+                                    readAt: row.read_at || null
                                 };
                                 if (isMessageForCurrentUser(chatObj)) {
                                     const isChatOpenNow = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden') && String(activeChatTarget || '').trim().toLowerCase() === String(chatObj.from || '').trim().toLowerCase();
-                                    if (!isChatOpenNow) {
+                                    if (isChatOpenNow) {
+                                        markMessagesFromPartnerAsRead(chatObj.from);
+                                    } else {
                                         notifyBackgroundOnce('chat-' + row.id, `Chat Masuk dari ${row.sender_name}`, String(row.message_text || '').startsWith('data:image') ? '📷 Mengirim foto' : row.message_text, { type: 'chat', sender: row.sender_name, tag: 'chat-' + chatObj.from });
                                         checkAndTriggerIncomingChatPopup(chatObj);
                                     }
@@ -1218,7 +1230,7 @@
         let regMerchantLatLng = [-7.1240, 106.8460];
         let isRegMerchantLocationLocked = false;
 
-        const DEFAULT_MAIN_BANNER = 'https://placehold.co/600x300/171717/FF7900?text=OLENG+GO+OJEK+ONLINE+LENGKONG';
+        const DEFAULT_MAIN_BANNER = './olengorane1';
 
         const defaultPricing = {
             minFare: 8000,
@@ -1239,7 +1251,7 @@
             address: 'Kantor Pusat Lengkong',
             balance: 1200000,
             password: '123',
-            photo: 'https://placehold.co/150x150/171717/FF7900?text=Admin'
+            photo: './olengorane1'
         };
 
         const DEFAULT_ADMIN_STORE = {
@@ -1251,8 +1263,8 @@
             subtitle: 'Toko Resmi Admin SIMADU Lengkong',
             category: 'Kuliner & Oleh-Oleh',
             status: 'Buka',
-            banner: 'https://placehold.co/600x300/171717/FF7900?text=TOKO+SIMADU+LENGKONG',
-            image: 'https://placehold.co/150x150/171717/FFD400?text=ADM',
+            banner: './olengorane1',
+            image: './olengorane1',
             rating: 5.0,
             ratingCount: 1,
             lat: -7.1238,
@@ -1272,9 +1284,9 @@
             driverChangeLogs: [],
             reviews: [],
             users: [
-                { id: 1, accountId: 'CUST01', name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: 'https://placehold.co/150x150/171717/FF7900?text=Budi' },
-                { id: 2, accountId: 'DRIV01', name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: 'https://placehold.co/150x150/171717/FF7900?text=Asep' },
-                { id: 3, accountId: 'MRCH01', name: 'MADU TOKO', ownerName: 'H. Madu', ktp: '3202110202880002', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12, Sukabumi', lat: -7.1240, lng: 106.8460, balance: 350000, password: '123', shopName: 'MADU TOKO', photo: 'https://placehold.co/150x150/171717/FFD400?text=WNS' },
+                { id: 1, accountId: 'CUST01', name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: './olengorane1' },
+                { id: 2, accountId: 'DRIV01', name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: './olengorane1' },
+                { id: 3, accountId: 'MRCH01', name: 'MADU TOKO', ownerName: 'H. Madu', ktp: '3202110202880002', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12, Sukabumi', lat: -7.1240, lng: 106.8460, balance: 350000, password: '123', shopName: 'MADU TOKO', photo: './olengorane1' },
                 { ...DEFAULT_ADMIN_ACCOUNT }
             ],
             merchants: [
@@ -1288,8 +1300,8 @@
                     subtitle: 'Warung Nasi Sunda Lengkong',
                     category: 'Makanan Berat', 
                     status: 'Buka', 
-                    banner: 'https://placehold.co/600x300/171717/FF7900?text=Warung+Nasi+Sunda+Lengkong', 
-                    image: 'https://placehold.co/150x150/171717/FFD400?text=WNS', 
+                    banner: './olengorane1', 
+                    image: './olengorane1', 
                     rating: 4.9, 
                     ratingCount: 1,
                     lat: -7.1240, 
@@ -1301,13 +1313,13 @@
                 }
             ],
             foods: [
-                { id: 9011, merchantId: 901, name: 'Nasi Kuning SIMADU Spesial', price: 18000, desc: 'Nasi kuning harum, telur balado, ayam suwir & sambal kacang.', stock: 25, image: 'https://placehold.co/200x200/171717/FFD400?text=Nasi+Kuning' },
-                { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap Komplit', price: 25000, desc: 'Nasi liwet hangat, ikan asin jambal, tahu tempe, lalapan...', stock: 15, image: 'https://placehold.co/200x200/171717/FF7900?text=Nasi+Liwet' },
-                { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung asli bumbu rempah bakar madu manis...', stock: 12, image: 'https://placehold.co/200x200/171717/FF7900?text=Ayam+Bakar' }
+                { id: 9011, merchantId: 901, name: 'Nasi Kuning SIMADU Spesial', price: 18000, desc: 'Nasi kuning harum, telur balado, ayam suwir & sambal kacang.', stock: 25, image: './olengorane1' },
+                { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap Komplit', price: 25000, desc: 'Nasi liwet hangat, ikan asin jambal, tahu tempe, lalapan...', stock: 15, image: './olengorane1' },
+                { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung asli bumbu rempah bakar madu manis...', stock: 12, image: './olengorane1' }
             ],
             drivers: [
-                { id: 1, accountId: 'DRIV01', name: 'Asep Supriatna', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, ratingCount: 1, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '6285624736602', balance: 150000, photo: 'https://placehold.co/150x150/171717/FF7900?text=Asep' },
-                { id: 2, accountId: 'DRIV02', name: 'Ujang Hendra', ktp: '3202110404910004', plate: 'F 8891 ZY', bikeType: 'Yamaha Mio', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, ratingCount: 1, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '6285624736602', balance: 120000, photo: 'https://placehold.co/150x150/171717/FFD400?text=Ujang' }
+                { id: 1, accountId: 'DRIV01', name: 'Asep Supriatna', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, ratingCount: 1, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '6285624736602', balance: 150000, photo: './olengorane1' },
+                { id: 2, accountId: 'DRIV02', name: 'Ujang Hendra', ktp: '3202110404910004', plate: 'F 8891 ZY', bikeType: 'Yamaha Mio', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, ratingCount: 1, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '6285624736602', balance: 120000, photo: './olengorane1' }
             ],
             orders: [],
             notifications: [],
@@ -1476,7 +1488,7 @@
                     price: 18000,
                     desc: 'Nasi kuning harum, telur balado, ayam suwir & sambal kacang.',
                     stock: 25,
-                    image: 'https://placehold.co/200x200/171717/FFD400?text=Nasi+Kuning'
+                    image: './olengorane1'
                 });
             }
             return store;
@@ -1507,8 +1519,8 @@
                             subtitle: u.ownerName ? `Pemilik: ${u.ownerName}` : '',
                             category: 'Kuliner',
                             status: 'Buka',
-                            banner: 'https://placehold.co/600x300/171717/FF7900?text=Banner+Toko',
-                            image: u.photo || 'https://placehold.co/150x150/171717/FFD400?text=TOKO',
+                            banner: './olengorane1',
+                            image: u.photo || './olengorane1',
                             rating: 5.0,
                             ratingCount: 0,
                             lat: typeof u.lat === 'number' ? u.lat : (-7.1240 - idx * 0.0005),
@@ -1555,7 +1567,7 @@
                             lng: typeof u.lng === 'number' ? u.lng : (106.8458 + idx * 0.0004),
                             phone: cleanPhone || ADMIN_MAIN_WA,
                             balance: Number(u.balance || 0),
-                            photo: u.photo || 'https://placehold.co/150x150/171717/FF7900?text=' + encodeURIComponent((u.name || 'D').charAt(0).toUpperCase())
+                            photo: u.photo || './olengorane1'
                         };
                         db.drivers.push(d);
                     } else {
@@ -1622,6 +1634,10 @@
                     if (prev && prev.operationalHours && (!item.operationalHours || String(item.operationalHours).trim() === '')) {
                         merged.operationalHours = prev.operationalHours;
                     }
+                    if (prev && (prev.readStatus === 'READ' || prev.readAt) && item.readStatus !== 'READ' && !item.readAt) {
+                        merged.readStatus = prev.readStatus;
+                        merged.readAt = prev.readAt;
+                    }
                     map.set(k, merged);
                 }
             });
@@ -1683,7 +1699,7 @@
                         status: u.status || 'Aktif',
                         address: u.address || 'Kecamatan Lengkong, Sukabumi',
                         password_hash: String(u.password || '123').trim(),
-                        photo_url: u.photo || 'https://placehold.co/150x150/171717/FF7900?text=USR',
+                        photo_url: u.photo || './olengorane1',
                         balance: Number(u.balance || 0),
                         ktp: u.ktp || null,
                         plate: u.plate || null,
@@ -1707,7 +1723,7 @@
                     category: m.category || 'Kuliner',
                     status: m.status || 'Buka',
                     banner_url: m.banner || DEFAULT_MAIN_BANNER,
-                    image_url: m.image || 'https://placehold.co/150x150/171717/FFD400?text=TOKO',
+                    image_url: m.image || './olengorane1',
                     rating: Number(m.rating || 5.0),
                     rating_count: Number(m.ratingCount || 0),
                     lat: Number(m.lat || -7.1240),
@@ -1776,7 +1792,7 @@
                     price: Number(f.price || 15000),
                     description: f.desc || '',
                     stock: Number(f.stock ?? 20),
-                    image_url: f.image || 'https://placehold.co/200x200/171717/FF7900?text=Menu'
+                    image_url: f.image || './olengorane1'
                 }));
 
                 if (foodRows.length > 0) {
@@ -1792,7 +1808,17 @@
                 }));
 
                 if (chatRows.length > 0) {
-                    await supabaseClient.from('chats').upsert(chatRows, { onConflict: 'id' });
+                    const cRes = await supabaseClient.from('chats').upsert(chatRows, { onConflict: 'id' });
+                    if (cRes.error) {
+                        const cFallback = await supabaseClient.from('chats').upsert(chatRows.map(r => ({
+                            id: r.id,
+                            sender_name: r.sender_name,
+                            receiver_name: r.receiver_name,
+                            message_text: r.message_text,
+                            sent_time: r.sent_time
+                        })), { onConflict: 'id' });
+                        if (cFallback.error && !firstError) firstError = cFallback.error.message;
+                    }
                 }
 
                 return { ok: !firstError, error: firstError };
@@ -1949,27 +1975,96 @@
             }, 3200);
         }
 
+        function isChatMessageUnreadForCurrentUser(msg) {
+            if (!isMessageForCurrentUser(msg)) return false;
+            if (msg.readStatus === 'READ' || msg.readAt) return false;
+            if (readChatIds.includes(String(msg.id))) return false;
+            return true;
+        }
+
         function getUnreadChatCount() {
             if (!currentUser) return 0;
-            return (db.chats || []).filter(c => isMessageForCurrentUser(c) && !readChatIds.includes(String(c.id))).length;
+            return (db.chats || []).filter(c => isChatMessageUnreadForCurrentUser(c)).length;
         }
 
         function getUnreadNotifCount() {
             if (!currentUser) return 0;
-            return getAccountNotifs().filter(n => !readNotifIds.includes(String(n.id))).length;
+            const unreadNotifs = getAccountNotifs().filter(n => !readNotifIds.includes(String(n.id))).length;
+            return getUnreadChatCount() + unreadNotifs;
+        }
+
+        function markMessagesFromPartnerAsRead(partnerName) {
+            if (!currentUser || !partnerName) return;
+            const me = String(currentUser?.name || '').trim().toLowerCase();
+            const myPhone = normalizePhone(currentUser?.phone);
+            const myShop = String(currentUser?.shopName || '').trim().toLowerCase();
+            const pLow = String(partnerName || '').trim().toLowerCase();
+            const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+            const readTimestamp = new Date().toISOString();
+            let changed = false;
+
+            (db.chats || []).forEach(c => {
+                const f = String(c.from || '').trim().toLowerCase();
+                const t = String(c.to || '').trim().toLowerCase();
+                const isToMe = activeRole === 'admin'
+                    ? (t === 'admin simadu' || t === 'admin' || normalizePhone(t) === '085624736602')
+                    : (t === me || (myPhone && normalizePhone(t) === myPhone) || (myShop && t === myShop));
+                if (f === pLow && isToMe) {
+                    if (!readChatIds.includes(String(c.id))) {
+                        readChatIds.push(String(c.id));
+                        changed = true;
+                    }
+                    if (c.readStatus !== 'READ') {
+                        c.readStatus = 'READ';
+                        c.readAt = readTimestamp;
+                        changed = true;
+                    }
+                }
+            });
+
+            if (changed) {
+                localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+                localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                updateHomeHeaderBadgesOnly();
+                if (navigator.onLine) {
+                    syncAllToSupabase().catch(() => {});
+                } else {
+                    queueOfflineSyncOperation('CHAT_READ_RECEIPT', { partner: partnerName, readAt: readTimestamp });
+                }
+            }
         }
 
         function markAllChatsAsRead() {
-            const unreadIds = (db.chats || []).filter(c => isMessageForCurrentUser(c)).map(c => String(c.id));
-            readChatIds = Array.from(new Set([...readChatIds, ...unreadIds]));
-            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+            const readTimestamp = new Date().toISOString();
+            let changed = false;
+            (db.chats || []).forEach(c => {
+                if (isMessageForCurrentUser(c)) {
+                    const idStr = String(c.id);
+                    if (!readChatIds.includes(idStr)) {
+                        readChatIds.push(idStr);
+                        changed = true;
+                    }
+                    if (c.readStatus !== 'READ') {
+                        c.readStatus = 'READ';
+                        c.readAt = readTimestamp;
+                        changed = true;
+                    }
+                }
+            });
+            if (changed) {
+                localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+                localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            }
             updateHomeHeaderBadgesOnly();
         }
 
         function markAllNotifsAsRead() {
             const notifIds = getAccountNotifs().map(n => String(n.id));
+            const beforeLen = readNotifIds.length;
             readNotifIds = Array.from(new Set([...readNotifIds, ...notifIds]));
-            localStorage.setItem('oleng_read_notif_ids', JSON.stringify(readNotifIds));
+            if (readNotifIds.length !== beforeLen) {
+                localStorage.setItem('oleng_read_notif_ids', JSON.stringify(readNotifIds));
+            }
             updateHomeHeaderBadgesOnly();
         }
 
@@ -1980,22 +2075,24 @@
             const cCount = getUnreadChatCount();
 
             if (notifBadge) {
-                notifBadge.textContent = String(nCount);
+                const label = formatUnreadBadgeText(nCount);
+                notifBadge.textContent = label;
                 notifBadge.classList.toggle('hidden', nCount <= 0);
             }
             if (chatBadge) {
-                chatBadge.textContent = String(cCount);
+                const cLabel = formatUnreadBadgeText(cCount);
+                chatBadge.textContent = cLabel;
                 chatBadge.classList.toggle('hidden', cCount <= 0);
             }
         }
 
         function checkAndTriggerIncomingChatPopup(msg) {
             if (!currentUser || !msg) return;
-            if (!isMessageForCurrentUser(msg)) return;
+            if (!isChatMessageUnreadForCurrentUser(msg)) return;
             const isChatOpenNow = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden') && String(activeChatTarget || '').trim().toLowerCase() === String(msg.from || '').trim().toLowerCase();
             if (isChatOpenNow) return;
             const msgKey = String(msg.id);
-            if (shownPopupChatIds.includes(msgKey) || readChatIds.includes(msgKey)) return;
+            if (shownPopupChatIds.includes(msgKey)) return;
 
             shownPopupChatIds.push(msgKey);
             localStorage.setItem('oleng_shown_popup_chats', JSON.stringify(shownPopupChatIds));
@@ -2035,14 +2132,16 @@
         function closeIncomingChatModal() {
             activeIncomingChatId = null;
             document.getElementById('modal-incoming-chat')?.classList.add('hidden');
+            updateHomeHeaderBadgesOnly();
         }
 
         function openChatFromPopup(msgId, senderName) {
-            readChatIds = Array.from(new Set([...readChatIds, String(msgId)]));
-            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
             closeIncomingChatModal();
             activeChatTarget = senderName;
             switchView('chat');
+            markMessagesFromPartnerAsRead(senderName);
+            renderChatContacts();
+            renderPersonalChatMessages();
         }
 
         function processDriverResponseTimeouts() {
@@ -2156,7 +2255,7 @@
                             : (localMatch?.password || '123');
                         const resolvedPhoto = (r.photo_url && String(r.photo_url).trim())
                             ? String(r.photo_url).trim()
-                            : (localMatch?.photo || 'https://placehold.co/150x150/171717/FF7900?text=USR');
+                            : (localMatch?.photo || './olengorane1');
                         return {
                             id: r.id || (idx + 1),
                             accountId: accUpper,
@@ -2211,7 +2310,7 @@
                         category: r.category || 'Kuliner',
                         status: r.status || 'Buka',
                         banner: r.banner_url || DEFAULT_MAIN_BANNER,
-                        image: r.image_url || 'https://placehold.co/150x150/171717/FFD400?text=TOKO',
+                        image: r.image_url || './olengorane1',
                         rating: Number(r.rating || 5.0),
                         ratingCount: Number(r.rating_count || 0),
                         lat: Number(r.lat || -7.1240),
@@ -2245,7 +2344,7 @@
                         rating: Number(r.rating || 5.0),
                         ratingCount: Number(r.ratingCount || 0),
                         balance: Number(r.balance || 0),
-                        photo: 'https://placehold.co/150x150/171717/FF7900?text=' + encodeURIComponent((r.name || 'D').charAt(0).toUpperCase())
+                        photo: './olengorane1'
                     }));
                     db.drivers = mergeByKey(db.drivers, mappedDrivers, d => normalizePhone(d.phone) || String(d.accountId || d.name).toUpperCase());
                     hasChanges = true;
@@ -2285,7 +2384,7 @@
                         price: Number(r.price || 15000),
                         desc: r.description || '',
                         stock: Number(r.stock ?? 20),
-                        image: r.image_url || 'https://placehold.co/200x200/171717/FF7900?text=Menu'
+                        image: r.image_url || './olengorane1'
                     }));
                     db.foods = mergeByKey(db.foods, mappedFoods, f => String(f.id));
                     hasChanges = true;
@@ -2298,19 +2397,33 @@
                         from: r.sender_name,
                         to: r.receiver_name,
                         text: r.message_text,
-                        time: r.sent_time || ''
+                        time: r.sent_time || '',
+                        readStatus: r.read_status || 'UNREAD',
+                        readAt: r.read_at || null
                     }));
                     db.chats = mergeByKey(db.chats, mappedChats, c => String(c.id));
                     hasChanges = true;
                 }
 
+                (db.chats || []).forEach(c => {
+                    if (c.readStatus === 'READ' && !readChatIds.includes(String(c.id))) {
+                        readChatIds.push(String(c.id));
+                    }
+                });
+                localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+
                 syncDriverAvailabilityLocks();
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-                const newlyArrivedChats = (db.chats || []).filter(c => !prevChatIds.has(String(c.id)) && isMessageForCurrentUser(c));
+                const chatViewVisibleNow = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden');
+                if (chatViewVisibleNow && activeChatTarget) {
+                    markMessagesFromPartnerAsRead(activeChatTarget);
+                }
+
+                const newlyArrivedChats = (db.chats || []).filter(c => !prevChatIds.has(String(c.id)) && isChatMessageUnreadForCurrentUser(c));
                 if (newlyArrivedChats.length > 0) {
                     const latestC = newlyArrivedChats[newlyArrivedChats.length - 1];
-                    const isChatOpenNow = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden') && String(activeChatTarget || '').trim().toLowerCase() === String(latestC.from || '').trim().toLowerCase();
+                    const isChatOpenNow = chatViewVisibleNow && String(activeChatTarget || '').trim().toLowerCase() === String(latestC.from || '').trim().toLowerCase();
                     if (!isChatOpenNow) {
                         notifyBackgroundOnce('chat-' + latestC.id, `Chat Masuk dari ${latestC.from}`, String(latestC.text || '').startsWith('data:image') ? '📷 Mengirim foto' : latestC.text, { type: 'chat', sender: latestC.from, tag: 'chat-' + latestC.from });
                         playAlarmRingtone();
@@ -2335,13 +2448,12 @@
                     return;
                 }
 
-                const chatViewVisible = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden');
-                if (chatViewVisible) {
+                if (chatViewVisibleNow) {
                     renderChatContacts();
                     renderPersonalChatMessages();
                 }
 
-                if ((hasChanges || forceRefreshUI) && !chatViewVisible && currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
+                if ((hasChanges || forceRefreshUI) && !chatViewVisibleNow && currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
                     if (currentSubTab !== 'home' || forceRefreshUI) {
                         renderDashboardContent(currentSubTab, false);
                     }
@@ -2403,6 +2515,7 @@
                 desc: desc
             });
             saveDB();
+            updateHomeHeaderBadgesOnly();
             if (currentUser && (owner === 'ALL' || String(owner).toLowerCase() === String(currentUser.name || '').toLowerCase())) {
                 playAlarmRingtone();
                 notifyBackgroundOnce('notif-' + notifId + '-' + owner, title, desc, { type: 'notif', tag: 'notif-' + notifId });
@@ -3041,7 +3154,7 @@
                 balance: (role !== 'customer' ? 50000 : undefined),
                 password: password,
                 pushToken,
-                photo: 'https://placehold.co/150x150/171717/FF7900?text=' + encodeURIComponent(name.charAt(0).toUpperCase()),
+                photo: './olengorane1',
                 ...driverData,
                 ...merchantData
             };
@@ -3058,8 +3171,8 @@
                     subtitle: `Pemilik: ${merchantData.ownerName}`,
                     category: 'Kuliner',
                     status: 'Buka',
-                    banner: 'https://placehold.co/600x300/171717/FF7900?text=' + encodeURIComponent(merchantData.shopName),
-                    image: newUser.photo,
+                    banner: './olengorane1',
+                    image: './olengorane1',
                     rating: 5.0,
                     ratingCount: 0,
                     lat: merchantData.lat,
@@ -3088,7 +3201,7 @@
                     lng: userCurrentLatLng[1],
                     phone,
                     balance: 50000,
-                    photo: newUser.photo
+                    photo: './olengorane1'
                 });
             }
 
@@ -3119,7 +3232,7 @@
             document.getElementById('view-auth').classList.add('hidden');
             document.getElementById('view-dashboard').classList.remove('hidden');
             if (!currentUser) {
-                currentUser = { id: 0, accountId: 'TAMU01', name: `Pemohon (${refVal})`, phone: ADMIN_MAIN_WA, role: 'customer', photo: 'https://placehold.co/150x150/171717/FF7900?text=HP' };
+                currentUser = { id: 0, accountId: 'TAMU01', name: `Pemohon (${refVal})`, phone: ADMIN_MAIN_WA, role: 'customer', photo: './olengorane1' };
             }
             activeChatTarget = 'Admin SIMADU';
             switchView('chat');
@@ -3841,7 +3954,7 @@
                     
                     <div class="bg-[#171717] text-white p-4 rounded-3xl shadow-md flex items-center justify-between border-2 border-[#FF7900]">
                         <div class="flex items-center space-x-3">
-                            <img src="${currentUser.photo}" class="w-12 h-12 rounded-2xl object-cover border-2 border-[#FF7900]">
+                            <img src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-12 h-12 rounded-2xl object-cover border-2 border-[#FF7900] bg-white">
                             <div>
                                 <span class="text-xs text-[#F3F3F3] font-extrabold block">Halo, ${currentUser.name}</span>
                                 <h3 class="text-xs font-black text-[#FF7900] tracking-tight">${currentUser.phone || 'WARGA LENGKONG'}</h3>
@@ -3850,11 +3963,11 @@
                         <div class="flex items-center space-x-2">
                             <button onclick="openNotificationModal()" class="relative p-2.5 bg-[#262626] hover:bg-[#FF7900] hover:text-[#171717] rounded-2xl text-white transition cursor-pointer border border-[#FF7900]">
                                 <i class="fa-solid fa-bell text-sm"></i>
-                                <span id="home-notif-badge" class="absolute -top-1 -right-1 bg-[#FFD400] text-[#171717] text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ${unreadNotifs > 0 ? '' : 'hidden'}">${unreadNotifs}</span>
+                                <span id="home-notif-badge" class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[9px] font-black min-w-[17px] h-[17px] px-1 rounded-full flex items-center justify-center border border-white ${unreadNotifs > 0 ? '' : 'hidden'}">${formatUnreadBadgeText(unreadNotifs)}</span>
                             </button>
                             <button onclick="switchView('chat')" class="relative p-2.5 bg-[#262626] hover:bg-[#FF7900] hover:text-[#171717] rounded-2xl text-white transition cursor-pointer border border-[#FF7900]">
                                 <i class="fa-solid fa-comments text-sm"></i>
-                                <span id="home-chat-badge" class="absolute -top-1 -right-1 bg-rose-600 text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ${unreadChats > 0 ? '' : 'hidden'}">${unreadChats}</span>
+                                <span id="home-chat-badge" class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[9px] font-black min-w-[17px] h-[17px] px-1 rounded-full flex items-center justify-center border border-white ${unreadChats > 0 ? '' : 'hidden'}">${formatUnreadBadgeText(unreadChats)}</span>
                             </button>
                             <button onclick="handleLogout()" class="p-2.5 bg-rose-600 hover:bg-rose-700 rounded-2xl text-white transition cursor-pointer" title="Keluar">
                                 <i class="fa-solid fa-power-off text-sm"></i>
@@ -3886,7 +3999,7 @@
                     </div>
 
                     <div class="rounded-3xl shadow-sm overflow-hidden border-2 border-[#FF7900] bg-white">
-                        <img src="${activeBanner}" class="w-full h-36 object-cover" alt="Banner Oleng Go">
+                        <img src="${activeBanner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-full h-36 object-cover" alt="Banner Oleng Go">
                     </div>
 
                     <div class="grid grid-cols-4 gap-2">
@@ -3968,7 +4081,7 @@
                 const isOpen = m.status === 'Buka';
                 return `
                     <div onclick="openMerchantDetail(${m.id})" class="bg-white p-4 rounded-3xl border border-[#D4D4D4] cursor-pointer hover:border-[#FF7900] transition flex items-center space-x-3.5">
-                        <img src="${m.image}" class="w-16 h-16 rounded-2xl object-cover border border-[#FF7900]">
+                        <img src="${m.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover border border-[#FF7900]">
                         <div class="flex-1">
                             <div class="flex justify-between items-start">
                                 <h4 class="font-bold text-sm text-[#171717]">${m.name}</h4>
@@ -4055,7 +4168,7 @@
 
             detailView.innerHTML = `
                 <div class="relative bg-[#171717] text-white border-b-2 border-[#FF7900]">
-                    <img src="${merchant.banner}" class="w-full h-48 object-cover opacity-80" alt="Banner Sampul Toko">
+                    <img src="${merchant.banner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-full h-48 object-cover opacity-80" alt="Banner Sampul Toko">
                     <div class="absolute inset-0 bg-gradient-to-t from-[#171717] via-black/30 to-black/20 flex items-center justify-center">
                         <h3 class="text-white font-black text-base px-3 py-1 bg-[#171717]/80 rounded-xl border border-[#FF7900]">${merchant.subtitle || merchant.name}</h3>
                     </div>
@@ -4066,7 +4179,7 @@
                         <i class="fa-solid fa-cart-shopping"></i> <span id="detail-cart-count">${db.cart.length}</span>
                     </button>
                     <div class="absolute -bottom-8 left-4">
-                        <img src="${merchant.image}" class="w-20 h-20 rounded-2xl object-cover border-4 border-[#FF7900] bg-white" alt="Profil Toko">
+                        <img src="${merchant.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-20 h-20 rounded-2xl object-cover border-4 border-[#FF7900] bg-white" alt="Profil Toko">
                     </div>
                 </div>
 
@@ -4105,7 +4218,7 @@
                                 const isSoldOut = stokNow <= 0;
                                 return `
                                 <div class="bg-white p-3.5 rounded-3xl border border-[#D4D4D4] flex items-center space-x-3.5 ${isSoldOut ? 'opacity-65' : ''}">
-                                    <img src="${f.image}" class="w-20 h-20 rounded-2xl object-cover bg-[#171717] border border-[#FF7900]" alt="Menu">
+                                    <img src="${f.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-20 h-20 rounded-2xl object-cover bg-white border border-[#FF7900]" alt="Menu">
                                     <div class="flex-1 space-y-1">
                                         <h4 class="font-bold text-xs text-[#171717]">${f.name}</h4>
                                         <p class="text-[11px] text-[#404040] line-clamp-2">${f.desc}</p>
@@ -4173,11 +4286,11 @@
             listEl.innerHTML = filteredDrivers.length > 0 ? filteredDrivers.map((d, index) => {
                 const isDraft = Number(draftSelectedDriverId) === Number(d.id);
                 const isConfirmed = Number(confirmedOrderDriverId) === Number(d.id);
-                const avatarSrc = d.photo || ('https://placehold.co/150x150/171717/FF7900?text=' + encodeURIComponent((d.name || 'D').charAt(0).toUpperCase()));
+                const avatarSrc = d.photo || './olengorane1';
                 return `
                     <div class="bg-white p-3.5 rounded-2xl border-2 transition flex items-center justify-between gap-2 ${isDraft || isConfirmed ? 'border-[#FF7900] bg-[#FFF4EA]' : 'border-[#D4D4D4]'}">
                         <div class="flex items-center space-x-3 min-w-0 flex-1">
-                            <img src="${avatarSrc}" class="w-12 h-12 rounded-2xl object-cover border border-[#FF7900] shrink-0" alt="Driver">
+                            <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-12 h-12 rounded-2xl object-cover border border-[#FF7900] shrink-0" alt="Driver">
                             <div class="min-w-0">
                                 <div class="flex items-center gap-1.5 flex-wrap">
                                     <h4 class="font-bold text-xs text-[#171717] truncate">${d.name}</h4>
@@ -4346,11 +4459,11 @@
             driverListEl.innerHTML = onlineDrivers.length > 0 ? onlineDrivers.map((d, idx) => {
                 const isDraft = Number(draftSelectedDriverId) === Number(d.id);
                 const isConf = Number(confirmedOrderDriverId) === Number(d.id);
-                const avatarSrc = d.photo || ('https://placehold.co/150x150/171717/FF7900?text=' + encodeURIComponent((d.name || 'D').charAt(0).toUpperCase()));
+                const avatarSrc = d.photo || './olengorane1';
                 return `
                     <div class="p-2 rounded-xl border flex justify-between items-center gap-2 ${isDraft || isConf ? 'border-[#FF7900] bg-[#FFF4EA]' : 'border-[#D4D4D4] bg-white'}">
                         <div class="flex items-center gap-2 min-w-0">
-                            <img src="${avatarSrc}" class="w-9 h-9 rounded-xl object-cover border border-[#FF7900] shrink-0" alt="Driver">
+                            <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-9 h-9 rounded-xl object-cover border border-[#FF7900] shrink-0" alt="Driver">
                             <div class="min-w-0">
                                 <span class="font-bold text-xs text-[#171717] block truncate">${d.name} ${idx === 0 && !d.isBusy ? '<span class="text-[9px] bg-[#FFD400] text-[#171717] px-1.5 rounded font-black">TERDEKAT</span>' : ''}</span>
                                 <span class="block text-[10px] text-[#404040] font-bold truncate">${d.vehicle} • ${d.distance} km • ${d.activityBadgeText}</span>
@@ -4701,8 +4814,8 @@
                     subtitle: '',
                     category: 'Kuliner',
                     status: 'Buka',
-                    banner: 'https://placehold.co/600x300/171717/FF7900?text=Banner+Toko',
-                    image: currentUser.photo || 'https://placehold.co/150x150/171717/FFD400?text=TOKO',
+                    banner: './olengorane1',
+                    image: currentUser.photo || './olengorane1',
                     rating: 5.0,
                     ratingCount: 0,
                     lat: typeof currentUser.lat === 'number' ? currentUser.lat : -7.1240,
@@ -4724,10 +4837,10 @@
             container.innerHTML = `
                 <div class="p-4 space-y-5 pb-24 bg-[#F3F3F3] min-h-full">
                     <div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden border-2 border-[#FF7900]">
-                        <img src="${merchant.banner}" class="w-full h-36 object-cover opacity-80" alt="Banner Sampul Toko">
+                        <img src="${merchant.banner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-full h-36 object-cover opacity-80" alt="Banner Sampul Toko">
                         <div class="p-4 pt-10 bg-[#171717] relative flex items-end justify-between">
                             <div class="flex items-center space-x-3">
-                                <img src="${merchant.image}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Profil Toko">
+                                <img src="${merchant.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Profil Toko">
                                 <div>
                                     <span class="text-[10px] text-[#FF7900] font-extrabold uppercase block">PROFIL & SAMPUL TOKO (${merchant.whatsapp || currentUser.phone})</span>
                                     <h2 class="text-base font-black text-white">${merchant.name || 'Nama Toko Belum Diisi'}</h2>
@@ -4762,12 +4875,12 @@
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase block mb-1">Foto Profil Toko</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px] text-[#171717]" onchange="previewGalleryImage(event, 'preview-m-photo', 'photo')">
-                                <img id="preview-m-photo" src="${displayPhoto}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                                <img id="preview-m-photo" src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                             </div>
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase block mb-1">Banner Sampul Toko</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px] text-[#171717]" onchange="previewGalleryImage(event, 'preview-m-banner', 'banner')">
-                                <img id="preview-m-banner" src="${displayBanner}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                                <img id="preview-m-banner" src="${displayBanner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                             </div>
                         </div>
 
@@ -4785,7 +4898,7 @@
                             ${foods.length > 0 ? foods.map(f => `
                                 <div class="flex items-center justify-between p-2.5 bg-[#F3F3F3] rounded-2xl border border-[#D4D4D4]">
                                     <div class="flex items-center space-x-3">
-                                        <img src="${f.image}" class="w-12 h-12 rounded-xl object-cover bg-[#171717] border border-[#FF7900]">
+                                        <img src="${f.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-12 h-12 rounded-xl object-cover bg-white border border-[#FF7900]">
                                         <div>
                                             <h4 class="font-bold text-xs text-[#171717]">${f.name}</h4>
                                             <span class="text-xs font-black text-[#D96400]">Rp ${f.price.toLocaleString()}</span>
@@ -4810,10 +4923,10 @@
             container.innerHTML = `
                 <div class="p-4 space-y-5 pb-24 bg-[#F3F3F3] min-h-full">
                     <div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden border-2 border-[#FF7900]">
-                        <img src="${adminStore.banner}" class="w-full h-36 object-cover opacity-80" alt="Banner Toko Admin">
+                        <img src="${adminStore.banner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-full h-36 object-cover opacity-80" alt="Banner Toko Admin">
                         <div class="p-4 pt-10 bg-[#171717] relative flex items-end justify-between">
                             <div class="flex items-center space-x-3">
-                                <img src="${adminStore.image}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Foto Toko Admin">
+                                <img src="${adminStore.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Foto Toko Admin">
                                 <div>
                                     <span class="text-[10px] text-[#FF7900] font-extrabold uppercase block">TOKO MILIK ADMIN (PERMANEN)</span>
                                     <h2 class="text-base font-black text-white">${adminStore.name}</h2>
@@ -4844,12 +4957,12 @@
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase block mb-1">Foto Profil Toko Admin</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-adm-photo', 'photo')">
-                                <img id="preview-adm-photo" src="${displayPhoto}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                                <img id="preview-adm-photo" src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                             </div>
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase block mb-1">Banner Toko Admin</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-adm-banner', 'banner')">
-                                <img id="preview-adm-banner" src="${displayBanner}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                                <img id="preview-adm-banner" src="${displayBanner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                             </div>
                         </div>
                         <button onclick="saveAdminOwnStoreSettings(${adminStore.id})" class="w-full py-3.5 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] font-black rounded-2xl border-2 border-[#171717] text-xs cursor-pointer mt-2">
@@ -4866,7 +4979,7 @@
                             ${foods.map(f => `
                                 <div class="flex items-center justify-between p-2.5 bg-[#F3F3F3] rounded-2xl border border-[#D4D4D4]">
                                     <div class="flex items-center space-x-3">
-                                        <img src="${f.image}" class="w-12 h-12 rounded-xl object-cover bg-[#171717] border border-[#FF7900]">
+                                        <img src="${f.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-12 h-12 rounded-xl object-cover bg-white border border-[#FF7900]">
                                         <div>
                                             <h4 class="font-bold text-xs text-[#171717]">${f.name}</h4>
                                             <span class="text-xs font-black text-[#D96400]">Rp ${f.price.toLocaleString()}</span>
@@ -4998,7 +5111,7 @@
                 price: price,
                 desc: desc,
                 stock: 20,
-                image: tempNewFoodPhoto || ('https://placehold.co/200x200/171717/FF7900?text=' + encodeURIComponent(name))
+                image: tempNewFoodPhoto || './olengorane1'
             });
             tempNewFoodPhoto = null;
             hasPendingMediaSelection = false;
@@ -5042,7 +5155,7 @@
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24 bg-[#F3F3F3] min-h-full">
                     <div class="bg-[#171717] text-white p-5 rounded-3xl text-center space-y-2 border-2 border-[#FF7900]">
-                        <img id="profile-header-avatar" src="${currentUser.photo}" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-[#FF7900] bg-white">
+                        <img id="profile-header-avatar" src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-[#FF7900] bg-white">
                         <h2 class="font-black text-base text-white">${currentUser.name}</h2>
                         <p class="text-xs font-black text-[#FF7900]">No. HP Login: ${currentUser.phone || '-'}</p>
                         <span class="text-[10px] bg-[#FFD400] text-[#171717] font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span>
@@ -5081,7 +5194,7 @@
                         <div>
                             <label class="text-[10px] font-extrabold text-[#171717] uppercase">Upload Foto Profil (Dari Galeri)</label>
                             <input type="file" accept="image/*" class="w-full mt-1 p-2 border-2 border-[#D4D4D4] bg-[#F3F3F3] rounded-2xl text-xs" onchange="previewGalleryImage(event, 'user-prof-preview', 'user')">
-                            <img id="user-prof-preview" src="${currentUser.photo}" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                            <img id="user-prof-preview" src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                         </div>
                         <div>
                             <label class="text-[10px] font-extrabold text-[#171717] uppercase">Buat Password Baru</label>
@@ -5391,7 +5504,7 @@
                 address: 'Kecamatan Lengkong, Sukabumi',
                 balance: role !== 'customer' ? 50000 : undefined,
                 password,
-                photo: 'https://placehold.co/150x150/171717/FF7900?text=' + encodeURIComponent(name.charAt(0).toUpperCase())
+                photo: './olengorane1'
             };
 
             db.users.unshift(newAcc);
@@ -5582,7 +5695,7 @@
                     <div class="bg-white p-4 rounded-3xl border border-[#D4D4D4] space-y-3">
                         <label class="text-[11px] font-extrabold text-[#171717] uppercase">UPLOAD BANNER PANJANG (DARI GALERI)</label>
                         <input type="file" accept="image/*" class="w-full p-2 border-2 border-[#D4D4D4] bg-[#F3F3F3] rounded-2xl text-xs" onchange="previewNewBanner(event)">
-                        <img id="banner-preview" src="${previewSrc}" class="w-full h-32 object-cover rounded-2xl border border-[#FF7900]">
+                        <img id="banner-preview" src="${previewSrc}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-full h-32 object-cover rounded-2xl border border-[#FF7900]">
                         <button onclick="saveGlobalBanner()" class="w-full py-3.5 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] font-black rounded-2xl border-2 border-[#171717] text-xs cursor-pointer">Simpan Permanen ke Semua User</button>
                     </div>
                 </div>
@@ -5792,26 +5905,31 @@
             if (listEl) {
                 listEl.innerHTML = myNotifs.map(n => `<div class="p-3 bg-[#F3F3F3] rounded-2xl text-xs border border-[#D4D4D4]"><b class="text-[#171717]">${n.title}</b> <span class="text-[10px] text-[#525252] float-right">${n.time}</span><p class="text-[#262626] mt-0.5">${n.desc}</p></div>`).join('') || '<p class="text-xs text-[#404040] text-center py-4">Belum ada notifikasi.</p>';
             }
+            updateHomeHeaderBadgesOnly();
         }
         function closeNotificationModal() { document.getElementById('modal-notif')?.classList.add('hidden'); }
 
         async function switchView(view) {
             if(view === 'chat') {
-                markAllChatsAsRead();
                 pushAppNavigationState('chat');
                 document.getElementById('view-chat')?.classList.remove('hidden');
                 document.getElementById('chat-sticker-panel')?.classList.add('hidden');
                 const chatAlarmState = document.getElementById('chat-alarm-state');
                 if (chatAlarmState) chatAlarmState.textContent = alarmEnabled ? 'ON' : 'OFF';
-                markAllChatsAsRead();
                 renderChatContacts();
+                if (activeChatTarget) {
+                    markMessagesFromPartnerAsRead(activeChatTarget);
+                }
                 renderPersonalChatMessages();
+                updateHomeHeaderBadgesOnly();
                 pullInitialFromSupabase(false);
             }
         }
         function startPersonalChat(target) { activeChatTarget = target; switchView('chat'); }
         function closeChat() {
-            markAllChatsAsRead();
+            if (activeChatTarget) {
+                markMessagesFromPartnerAsRead(activeChatTarget);
+            }
             document.getElementById('view-chat')?.classList.add('hidden');
             updateHomeHeaderBadgesOnly();
         }
@@ -5838,13 +5956,21 @@
         function pushChatPayload(payloadText) {
             if (!payloadText) return;
             const timeNow = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            const newMsg = { id: Date.now(), from: currentUser.name, to: activeChatTarget, text: payloadText };
-            newMsg.time = timeNow;
+            const newMsg = {
+                id: Date.now(),
+                from: currentUser.name,
+                to: activeChatTarget,
+                text: payloadText,
+                time: timeNow,
+                readStatus: 'READ',
+                readAt: new Date().toISOString()
+            };
             db.chats.push(newMsg);
             readChatIds = Array.from(new Set([...readChatIds, String(newMsg.id)]));
             localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
             renderChatContacts();
             renderPersonalChatMessages();
+            updateHomeHeaderBadgesOnly();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
             showToast('Terkirim!', 'success');
             if (!navigator.onLine) {
@@ -5857,16 +5983,7 @@
         }
         function selectChatPartner(partnerName) {
             activeChatTarget = partnerName;
-            const me = String(currentUser?.name || '').trim().toLowerCase();
-            const pLow = String(partnerName || '').trim().toLowerCase();
-            (db.chats || []).forEach(c => {
-                const f = String(c.from || '').trim().toLowerCase();
-                const t = String(c.to || '').trim().toLowerCase();
-                if (f === pLow && (t === me || (me === 'admin simadu' && (t === 'admin' || t === 'admin simadu')))) {
-                    if (!readChatIds.includes(String(c.id))) readChatIds.push(String(c.id));
-                }
-            });
-            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+            markMessagesFromPartnerAsRead(partnerName);
             updateHomeHeaderBadgesOnly();
             renderChatContacts();
             renderPersonalChatMessages();
@@ -5899,7 +6016,7 @@
                     return (matchSelf && t === pLow) || (f === pLow && matchTarget);
                 });
                 const lastMsg = related.length > 0 ? related[related.length - 1] : null;
-                const unreadFromPartner = related.filter(c => String(c.from || '').trim().toLowerCase() === pLow && !readChatIds.includes(String(c.id))).length;
+                const unreadFromPartner = related.filter(c => String(c.from || '').trim().toLowerCase() === pLow && isChatMessageUnreadForCurrentUser(c)).length;
                 return { partner, lastMsg, unreadFromPartner, sortScore: lastMsg ? Number(lastMsg.id) : 0 };
             }).sort((a, b) => b.sortScore - a.sortScore);
 
@@ -5911,6 +6028,7 @@
                 const rawPrev = item.lastMsg ? (String(item.lastMsg.text || '').startsWith('data:image') ? '📷 Foto' : item.lastMsg.text) : '';
                 const previewText = item.lastMsg ? `${item.lastMsg.from}: ${rawPrev}` : 'Ketuk untuk mulai chat privat';
                 const timeText = item.lastMsg?.time || '';
+                const unreadBadgeLabel = formatUnreadBadgeText(item.unreadFromPartner);
                 return `
                     <div class="w-full px-3.5 py-2.5 flex items-center justify-between gap-2 transition ${isSelected ? 'bg-[#FFF4EA] border-l-4 border-[#FF7900]' : 'bg-white hover:bg-[#F3F3F3]'}">
                         <button type="button" onclick="selectChatPartner('${safePartner}')" class="min-w-0 flex-1 text-left cursor-pointer">
@@ -5923,7 +6041,7 @@
                         <button type="button" onclick="openChatPartnerProfileModal('${safePartner}')" class="px-2 py-1 bg-[#F3F3F3] text-[#171717] border border-[#D4D4D4] rounded-lg text-[10px] font-bold cursor-pointer shrink-0" title="Lihat Profil">
                             Profil
                         </button>
-                        ${item.unreadFromPartner > 0 ? `<span class="bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">${item.unreadFromPartner}</span>` : ''}
+                        ${item.unreadFromPartner > 0 ? `<span class="bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">${unreadBadgeLabel}</span>` : ''}
                     </div>
                 `;
             }).join('');
@@ -5931,6 +6049,9 @@
         function renderPersonalChatMessages() {
             const titleEl = document.getElementById('chat-title');
             if (titleEl) titleEl.innerText = `Chat Privat: ${activeChatTarget}`;
+            if (activeChatTarget) {
+                markMessagesFromPartnerAsRead(activeChatTarget);
+            }
             const me = String(currentUser?.name || '').trim().toLowerCase();
             const target = String(activeChatTarget || '').trim().toLowerCase();
             const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
@@ -5953,9 +6074,11 @@
                 const bodyHtml = String(c.text || '').startsWith('data:image')
                     ? `<img src="${c.text}" class="w-44 max-h-48 object-cover rounded-xl mt-1 border border-[#FF7900]" alt="Foto Chat">`
                     : `<p class="mt-0.5 break-words">${c.text}</p>`;
-                return `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${isMine ? 'bg-[#171717] text-white border border-[#FF7900] ml-auto' : 'bg-white border border-[#D4D4D4] text-[#171717] mr-auto'}"><b class="${isMine ? 'text-[#FF7900]' : 'text-[#171717]'}">${c.from}</b>${bodyHtml}<span class="text-[9px] opacity-75 block mt-1">${c.time}</span></div>`;
+                const readIndicator = !isMine && (c.readStatus === 'READ' || c.readAt) ? ' • Dibaca' : '';
+                return `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${isMine ? 'bg-[#171717] text-white border border-[#FF7900] ml-auto' : 'bg-white border border-[#D4D4D4] text-[#171717] mr-auto'}"><b class="${isMine ? 'text-[#FF7900]' : 'text-[#171717]'}">${c.from}</b>${bodyHtml}<span class="text-[9px] opacity-75 block mt-1">${c.time}${readIndicator}</span></div>`;
             }).join('') || '<p class="text-xs text-[#404040] text-center py-6">Mulai obrolan privat dengan '+activeChatTarget+'...</p>';
             container.scrollTop = container.scrollHeight;
+            updateHomeHeaderBadgesOnly();
         }
         async function sendPersonalChatMessage() {
             const input = document.getElementById('chat-input');
