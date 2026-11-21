@@ -87,7 +87,7 @@
     <div id="oleng-splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white text-[#171717] transition-opacity duration-500 border-t-4 border-[#FF7900]">
         <div class="flex flex-col items-center justify-center px-6 text-center">
             <div class="w-32 h-32 rounded-3xl bg-white p-2.5 shadow-lg border-4 border-[#FF7900] flex items-center justify-center overflow-hidden splash-logo-anim">
-                <img src="./olengorange1" onerror="this.onerror=null;this.src='./olengorange1.png';" alt="Splash Screen OLENG GO" class="w-full h-full object-contain rounded-2xl">
+                <img src="./olengorange2.png" onerror="this.onerror=null;this.src='./olengorange2';" alt="Splash Screen OLENG GO" class="w-full h-full object-contain rounded-2xl">
             </div>
         </div>
     </div>
@@ -213,15 +213,15 @@
                             <span class="text-[10px] font-black text-[#171717] uppercase block"><i class="fa-solid fa-store text-[#FF7900] mr-1"></i> Data Wajib Mitra Toko</span>
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase">Nama Pemilik Toko *</label>
-                                <input type="text" id="reg-merchant-owner" class="w-full mt-1 px-3 py-2 border border-[#D4D4D4] rounded-xl text-xs font-semibold bg-white text-[#171717]" placeholder="Nama Pemilik Toko">
+                                <input type="text" id="reg-merchant-owner" class="w-full mt-1 px-3 py-2 border border-[#D4D4D4] rounded-xl text-xs font-semibold bg-white text-[#171717]" placeholder="">
                             </div>
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase">Nama Toko *</label>
-                                <input type="text" id="reg-merchant-shop" class="w-full mt-1 px-3 py-2 border border-[#D4D4D4] rounded-xl text-xs font-bold bg-white text-[#171717]" placeholder="Contoh: Warung Berkah Lengkong">
+                                <input type="text" id="reg-merchant-shop" class="w-full mt-1 px-3 py-2 border border-[#D4D4D4] rounded-xl text-xs font-bold bg-white text-[#171717]" placeholder="">
                             </div>
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase">Nomor KTP *</label>
-                                <input type="text" id="reg-merchant-ktp" class="w-full mt-1 px-3 py-2 border border-[#D4D4D4] rounded-xl text-xs font-semibold bg-white text-[#171717]" placeholder="3202xxxxxxxxxxxx">
+                                <input type="text" id="reg-merchant-ktp" class="w-full mt-1 px-3 py-2 border border-[#D4D4D4] rounded-xl text-xs font-semibold bg-white text-[#171717]" placeholder="">
                             </div>
                             <div class="space-y-1.5">
                                 <div class="flex justify-between items-center flex-wrap gap-1">
@@ -242,7 +242,7 @@
                                         <i class="fa-solid fa-lock text-[#FF7900]"></i> Kunci Lokasi
                                     </button>
                                 </div>
-                                <input type="text" id="reg-merchant-address" class="w-full px-3 py-2 border border-[#D4D4D4] rounded-xl text-xs bg-white text-[#171717]" placeholder="Detail alamat toko (otomatis/bisa diedit)">
+                                <input type="text" id="reg-merchant-address" class="w-full px-3 py-2 border border-[#D4D4D4] rounded-xl text-xs bg-white text-[#171717]" placeholder="">
                             </div>
                         </div>
 
@@ -752,6 +752,49 @@
             return n > 99 ? '99+' : String(n);
         }
 
+        function resolveDriverPhoto(driverOrName) {
+            const fallback = './olengorange2.png';
+            if (!driverOrName) return fallback;
+
+            if (typeof driverOrName === 'object') {
+                if (driverOrName.photo && String(driverOrName.photo).trim()) {
+                    return String(driverOrName.photo).trim();
+                }
+                const targetPhone = normalizePhone(driverOrName.phone);
+                const targetName = String(driverOrName.name || '').trim().toLowerCase();
+                const matchedUser = (db.users || []).find(u =>
+                    u.role === 'driver' &&
+                    ((targetPhone && normalizePhone(u.phone) === targetPhone) ||
+                    (targetName && String(u.name || '').trim().toLowerCase() === targetName))
+                );
+                if (matchedUser && matchedUser.photo && String(matchedUser.photo).trim()) {
+                    return String(matchedUser.photo).trim();
+                }
+                if (currentUser && currentUser.role === 'driver' &&
+                    ((targetPhone && normalizePhone(currentUser.phone) === targetPhone) ||
+                    (targetName && String(currentUser.name || '').trim().toLowerCase() === targetName)) &&
+                    currentUser.photo) {
+                    return String(currentUser.photo).trim();
+                }
+                return fallback;
+            }
+
+            const lowName = String(driverOrName).trim().toLowerCase();
+            if (!lowName) return fallback;
+            const drv = (db.drivers || []).find(d => String(d.name || '').trim().toLowerCase() === lowName);
+            if (drv && drv.photo && String(drv.photo).trim()) {
+                return String(drv.photo).trim();
+            }
+            const usr = (db.users || []).find(u => u.role === 'driver' && String(u.name || '').trim().toLowerCase() === lowName);
+            if (usr && usr.photo && String(usr.photo).trim()) {
+                return String(usr.photo).trim();
+            }
+            if (currentUser && currentUser.role === 'driver' && String(currentUser.name || '').trim().toLowerCase() === lowName && currentUser.photo) {
+                return String(currentUser.photo).trim();
+            }
+            return fallback;
+        }
+
         function ensureDevicePushToken(accountObj = null) {
             if (!devicePushToken) {
                 const randPart = Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 10);
@@ -924,7 +967,9 @@
             const displayPhone = normalizePhone(matchedUser?.phone || matchedStore?.whatsapp || matchedDriver?.phone) || (targetLow === 'admin simadu' ? '085624736602' : 'Belum tercatat');
             const displayAddress = matchedUser?.address || matchedStore?.address || matchedDriver?.location || 'Kecamatan Lengkong, Sukabumi';
             const displayShop = matchedStore?.name || matchedUser?.shopName || '-';
-            const displayPhoto = matchedUser?.photo || matchedStore?.image || './olengorange2.png';
+            const displayPhoto = displayRole === 'driver'
+                ? resolveDriverPhoto(matchedDriver || matchedUser || displayName)
+                : (matchedUser?.photo || matchedStore?.image || './olengorange2.png');
 
             const card = document.getElementById('chat-partner-info-card');
             if (!card) return;
@@ -935,7 +980,7 @@
                     <button onclick="document.getElementById('modal-chat-partner-info').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
                 </div>
                 <div class="flex items-center gap-3">
-                    <img src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-14 h-14 rounded-2xl object-cover border-2 border-[#FF7900] shrink-0" alt="Foto Profil">
+                    <img src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-14 h-14 rounded-full object-cover border-2 border-[#FF7900] shrink-0 bg-white" alt="Foto Profil">
                     <div class="min-w-0">
                         <h4 class="font-black text-sm text-[#171717] truncate">${displayName}</h4>
                         <span class="text-[10px] bg-[#171717] text-[#FFD400] font-black px-2 py-0.5 rounded uppercase inline-block mt-0.5">${displayRole}</span>
@@ -1230,7 +1275,7 @@
         let regMerchantLatLng = [-7.1240, 106.8460];
         let isRegMerchantLocationLocked = false;
 
-        const DEFAULT_MAIN_BANNER = './olengorange1';
+        const DEFAULT_MAIN_BANNER = './olengorange2.png';
 
         const defaultPricing = {
             minFare: 8000,
@@ -1263,7 +1308,7 @@
             subtitle: 'Toko Resmi Admin SIMADU Lengkong',
             category: 'Kuliner & Oleh-Oleh',
             status: 'Buka',
-            banner: './olengorange1',
+            banner: './olengorange2.png',
             image: './olengorange2.png',
             rating: 5.0,
             ratingCount: 1,
@@ -1300,7 +1345,7 @@
                     subtitle: 'Warung Nasi Sunda Lengkong',
                     category: 'Makanan Berat', 
                     status: 'Buka', 
-                    banner: './olengorange1', 
+                    banner: './olengorange2.png', 
                     image: './olengorange2.png', 
                     rating: 4.9, 
                     ratingCount: 1,
@@ -1519,7 +1564,7 @@
                             subtitle: u.ownerName ? `Pemilik: ${u.ownerName}` : '',
                             category: 'Kuliner',
                             status: 'Buka',
-                            banner: './olengorange1',
+                            banner: './olengorange2.png',
                             image: u.photo || './olengorange2.png',
                             rating: 5.0,
                             ratingCount: 0,
@@ -1548,6 +1593,7 @@
                         (cleanPhone && normalizePhone(item.phone) === cleanPhone) ||
                         (String(item.name || '').trim().toLowerCase() === String(u.name || '').trim().toLowerCase())
                     );
+                    const resolvedDrvPhoto = (u.photo && String(u.photo).trim()) ? String(u.photo).trim() : (d?.photo || './olengorange2.png');
                     if (!d) {
                         d = {
                             id: u.id || (Date.now() + idx + 21),
@@ -1567,13 +1613,14 @@
                             lng: typeof u.lng === 'number' ? u.lng : (106.8458 + idx * 0.0004),
                             phone: cleanPhone || ADMIN_MAIN_WA,
                             balance: Number(u.balance || 0),
-                            photo: u.photo || './olengorange2.png'
+                            photo: resolvedDrvPhoto
                         };
                         db.drivers.push(d);
                     } else {
                         d.accountId = accId;
                         d.phone = cleanPhone || d.phone;
-                        if (!d.photo && u.photo) d.photo = u.photo;
+                        if (resolvedDrvPhoto) d.photo = resolvedDrvPhoto;
+                        if (u.photo && String(u.photo).trim()) u.photo = String(u.photo).trim();
                         if (!d.availability) d.availability = 'available';
                         if (typeof u.balance === 'number') {
                             d.balance = Math.max(Number(d.balance || 0), Number(u.balance || 0));
@@ -1621,6 +1668,12 @@
                     }
                     if (!merged.password) {
                         merged.password = '123';
+                    }
+                    if (prev && prev.photo && (!item.photo || String(item.photo).trim() === '')) {
+                        merged.photo = prev.photo;
+                    }
+                    if (typeof merged.photo !== 'string' || !merged.photo.trim()) {
+                        merged.photo = './olengorange2.png';
                     }
                     if (prev && typeof prev.balance === 'number') {
                         merged.balance = Math.max(Number(prev.balance || 0), Number(item.balance || 0));
@@ -2326,26 +2379,36 @@
 
                 const { data: driverRows } = await supabaseClient.from('drivers').select('*');
                 if (Array.isArray(driverRows) && driverRows.length > 0) {
-                    const mappedDrivers = driverRows.map((r, idx) => ({
-                        id: r.id || (idx + 1),
-                        accountId: String(r.account_id || '').toUpperCase(),
-                        name: r.name,
-                        ktp: r.ktp || '',
-                        plate: r.plate || '',
-                        bikeType: r.bike_type || '',
-                        vehicle: r.vehicle || 'Motor Mitra Lengkong',
-                        status: r.status || 'Online',
-                        availability: r.availability_status || 'available',
-                        activeOrderId: r.active_order_code || null,
-                        location: r.location || 'Lengkong, Sukabumi',
-                        lat: Number(r.lat || -7.1235),
-                        lng: Number(r.lng || 106.8458),
-                        phone: normalizePhone(r.phone) || ADMIN_MAIN_WA,
-                        rating: Number(r.rating || 5.0),
-                        ratingCount: Number(r.ratingCount || 0),
-                        balance: Number(r.balance || 0),
-                        photo: './olengorange2.png'
-                    }));
+                    const mappedDrivers = driverRows.map((r, idx) => {
+                        const accUpper = String(r.account_id || '').toUpperCase();
+                        const cleanPhone = normalizePhone(r.phone) || ADMIN_MAIN_WA;
+                        const matchedAcc = (db.users || []).find(u =>
+                            u.role === 'driver' &&
+                            ((accUpper && String(u.accountId || '').toUpperCase() === accUpper) ||
+                            (cleanPhone && normalizePhone(u.phone) === cleanPhone) ||
+                            (r.name && String(u.name || '').trim().toLowerCase() === String(r.name || '').trim().toLowerCase()))
+                        );
+                        return {
+                            id: r.id || (idx + 1),
+                            accountId: accUpper,
+                            name: r.name,
+                            ktp: r.ktp || '',
+                            plate: r.plate || '',
+                            bikeType: r.bike_type || '',
+                            vehicle: r.vehicle || 'Motor Mitra Lengkong',
+                            status: r.status || 'Online',
+                            availability: r.availability_status || 'available',
+                            activeOrderId: r.active_order_code || null,
+                            location: r.location || 'Lengkong, Sukabumi',
+                            lat: Number(r.lat || -7.1235),
+                            lng: Number(r.lng || 106.8458),
+                            phone: cleanPhone,
+                            rating: Number(r.rating || 5.0),
+                            ratingCount: Number(r.ratingCount || 0),
+                            balance: Number(r.balance || 0),
+                            photo: (matchedAcc && matchedAcc.photo) ? matchedAcc.photo : './olengorange2.png'
+                        };
+                    });
                     db.drivers = mergeByKey(db.drivers, mappedDrivers, d => normalizePhone(d.phone) || String(d.accountId || d.name).toUpperCase());
                     hasChanges = true;
                 }
@@ -2915,6 +2978,23 @@
             }
         }
 
+        function resetMerchantRegistrationFormInputs() {
+            isRegMerchantLocationLocked = false;
+            const ownerEl = document.getElementById('reg-merchant-owner');
+            const shopEl = document.getElementById('reg-merchant-shop');
+            const ktpEl = document.getElementById('reg-merchant-ktp');
+            const addrEl = document.getElementById('reg-merchant-address');
+            const lockBtn = document.getElementById('btn-lock-merchant-pin');
+            if (ownerEl) ownerEl.value = '';
+            if (shopEl) shopEl.value = '';
+            if (ktpEl) ktpEl.value = '';
+            if (addrEl) addrEl.value = '';
+            if (lockBtn) {
+                lockBtn.className = 'px-2.5 py-1 bg-[#171717] text-white rounded-lg font-extrabold cursor-pointer shrink-0';
+                lockBtn.innerHTML = '<i class="fa-solid fa-lock text-[#FF7900]"></i> Kunci Lokasi';
+            }
+        }
+
         function toggleRegisterRoleFields() {
             const roleEl = document.getElementById('reg-role');
             if (!roleEl) return;
@@ -2926,7 +3006,7 @@
             if (merchantBox) merchantBox.classList.toggle('hidden', role !== 'merchant');
 
             if (role === 'merchant') {
-                isRegMerchantLocationLocked = false;
+                resetMerchantRegistrationFormInputs();
                 setTimeout(initRegisterMerchantMap, 200);
             }
         }
@@ -3171,7 +3251,7 @@
                     subtitle: `Pemilik: ${merchantData.ownerName}`,
                     category: 'Kuliner',
                     status: 'Buka',
-                    banner: './olengorange1',
+                    banner: './olengorange2.png',
                     image: './olengorange2.png',
                     rating: 5.0,
                     ratingCount: 0,
@@ -3213,7 +3293,7 @@
             document.getElementById('login-password').value = '';
             document.getElementById('login-role').value = role;
             document.getElementById('form-register').reset();
-            isRegMerchantLocationLocked = false;
+            resetMerchantRegistrationFormInputs();
             await recordAccountAuthEventToSupabase('REGISTER', newUser);
             showToast(`Pendaftaran berhasil! Nomor HP ${phone} & sandi tersimpan, silakan masuk.`, 'success');
         }
@@ -3497,6 +3577,7 @@
             const card = document.getElementById('incoming-order-card');
             const st = normalizeOrderStatusCode(order.status);
             const statusText = getOrderStatusLabel(st);
+            const driverAvatarSrc = resolveDriverPhoto(order.driver);
 
             if (!showFullDetail) {
                 card.innerHTML = `
@@ -3574,7 +3655,7 @@
                         <span class="bg-[#FF7900] text-[#171717] text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">DETAIL ORDER (${order.id})</span>
                         <button onclick="stopOrderAlarmLoop();document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
                     </div>
-                    <div class="space-y-1 text-xs bg-[#F3F3F3] p-3 rounded-2xl border border-[#D4D4D4]">
+                    <div class="space-y-1.5 text-xs bg-[#F3F3F3] p-3 rounded-2xl border border-[#D4D4D4]">
                         <p class="font-black text-[#171717] text-sm">${order.merchant}</p>
                         <p class="text-[#171717] font-bold">Pemesan: ${order.customer}</p>
                         <p class="text-[#262626] font-semibold">Isi Order: ${order.items}</p>
@@ -3582,7 +3663,10 @@
                         <p class="text-[11px] text-[#262626]">Jemput: <b>${order.pickup || 'Lokasi Awal'}</b></p>
                         ${pickupCoordsHtml}
                         <p class="text-[11px] text-[#262626]">Tujuan: <b>${order.dest || 'Wilayah Lengkong'}</b></p>
-                        <p class="text-[11px] text-[#262626]">Driver: <b>${order.driver || 'Mencari driver pengganti / aktif'}</b></p>
+                        <div class="flex items-center gap-2 pt-1 text-[11px] text-[#262626]">
+                            <img src="${driverAvatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-8 h-8 rounded-full object-cover border border-[#FF7900] shrink-0 bg-white" alt="Foto Driver">
+                            <span>Driver: <b>${order.driver || 'Mencari driver pengganti / aktif'}</b></span>
+                        </div>
                         <p class="text-[11px] font-bold text-[#D96400] pt-1">Status: ${statusText} (${st})</p>
                         ${order.storeRejectionReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Toko Tolak: ${order.storeRejectionReason}</p>` : ''}
                         ${order.cancellationReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Batal: ${order.cancellationReason}</p>` : ''}
@@ -3948,13 +4032,16 @@
                 ? (db.drivers || []).find(d => String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase() || (currentUser.phone && normalizePhone(d.phone) === normalizePhone(currentUser.phone)))
                 : null;
             const isDriverOnline = currentDrvObj ? currentDrvObj.status === 'Online' : true;
+            const headerAvatarSrc = activeRole === 'driver'
+                ? resolveDriverPhoto(currentDrvObj || currentUser)
+                : (currentUser.photo || './olengorange2.png');
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 bg-[#F3F3F3] min-h-full pb-20">
                     
                     <div class="bg-[#171717] text-white p-4 rounded-3xl shadow-md flex items-center justify-between border-2 border-[#FF7900]">
                         <div class="flex items-center space-x-3">
-                            <img src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 rounded-2xl object-cover border-2 border-[#FF7900] bg-white">
+                            <img src="${headerAvatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 ${activeRole === 'driver' ? 'rounded-full' : 'rounded-2xl'} object-cover border-2 border-[#FF7900] bg-white">
                             <div>
                                 <span class="text-xs text-[#F3F3F3] font-extrabold block">Halo, ${currentUser.name}</span>
                                 <h3 class="text-xs font-black text-[#FF7900] tracking-tight">${currentUser.phone || 'WARGA LENGKONG'}</h3>
@@ -3999,7 +4086,7 @@
                     </div>
 
                     <div class="rounded-3xl shadow-sm overflow-hidden border-2 border-[#FF7900] bg-white">
-                        <img src="${activeBanner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-full h-36 object-cover" alt="Banner Oleng Go">
+                        <img src="${activeBanner}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-full h-36 object-cover" alt="Banner Oleng Go">
                     </div>
 
                     <div class="grid grid-cols-4 gap-2">
@@ -4168,7 +4255,7 @@
 
             detailView.innerHTML = `
                 <div class="relative bg-[#171717] text-white border-b-2 border-[#FF7900]">
-                    <img src="${merchant.banner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-full h-48 object-cover opacity-80" alt="Banner Sampul Toko">
+                    <img src="${merchant.banner}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-full h-48 object-cover opacity-80" alt="Banner Sampul Toko">
                     <div class="absolute inset-0 bg-gradient-to-t from-[#171717] via-black/30 to-black/20 flex items-center justify-center">
                         <h3 class="text-white font-black text-base px-3 py-1 bg-[#171717]/80 rounded-xl border border-[#FF7900]">${merchant.subtitle || merchant.name}</h3>
                     </div>
@@ -4286,11 +4373,11 @@
             listEl.innerHTML = filteredDrivers.length > 0 ? filteredDrivers.map((d, index) => {
                 const isDraft = Number(draftSelectedDriverId) === Number(d.id);
                 const isConfirmed = Number(confirmedOrderDriverId) === Number(d.id);
-                const avatarSrc = d.photo || './olengorange2.png';
+                const avatarSrc = resolveDriverPhoto(d);
                 return `
                     <div class="bg-white p-3.5 rounded-2xl border-2 transition flex items-center justify-between gap-2 ${isDraft || isConfirmed ? 'border-[#FF7900] bg-[#FFF4EA]' : 'border-[#D4D4D4]'}">
                         <div class="flex items-center space-x-3 min-w-0 flex-1">
-                            <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 rounded-2xl object-cover border border-[#FF7900] shrink-0" alt="Driver">
+                            <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 rounded-full object-cover border-2 border-[#FF7900] shrink-0 bg-white" alt="Driver">
                             <div class="min-w-0">
                                 <div class="flex items-center gap-1.5 flex-wrap">
                                     <h4 class="font-bold text-xs text-[#171717] truncate">${d.name}</h4>
@@ -4459,11 +4546,11 @@
             driverListEl.innerHTML = onlineDrivers.length > 0 ? onlineDrivers.map((d, idx) => {
                 const isDraft = Number(draftSelectedDriverId) === Number(d.id);
                 const isConf = Number(confirmedOrderDriverId) === Number(d.id);
-                const avatarSrc = d.photo || './olengorange2.png';
+                const avatarSrc = resolveDriverPhoto(d);
                 return `
                     <div class="p-2 rounded-xl border flex justify-between items-center gap-2 ${isDraft || isConf ? 'border-[#FF7900] bg-[#FFF4EA]' : 'border-[#D4D4D4] bg-white'}">
                         <div class="flex items-center gap-2 min-w-0">
-                            <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-9 h-9 rounded-xl object-cover border border-[#FF7900] shrink-0" alt="Driver">
+                            <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-9 h-9 rounded-full object-cover border border-[#FF7900] shrink-0 bg-white" alt="Driver">
                             <div class="min-w-0">
                                 <span class="font-bold text-xs text-[#171717] block truncate">${d.name} ${idx === 0 && !d.isBusy ? '<span class="text-[9px] bg-[#FFD400] text-[#171717] px-1.5 rounded font-black">TERDEKAT</span>' : ''}</span>
                                 <span class="block text-[10px] text-[#404040] font-bold truncate">${d.vehicle} • ${d.distance} km • ${d.activityBadgeText}</span>
@@ -4564,6 +4651,7 @@
                 customer: currentUser.name,
                 merchant: merchant.name,
                 driver: driver.name,
+                driverPhoto: resolveDriverPhoto(driver),
                 assignedDriverPhone: normalizePhone(driver.phone),
                 driverConfirmed: true,
                 driverResponseDeadline: Date.now() + respTimeoutMs,
@@ -4645,6 +4733,7 @@
                 customer: currentUser.name,
                 merchant: 'Layanan Ojek Online',
                 driver: driver.name,
+                driverPhoto: resolveDriverPhoto(driver),
                 assignedDriverPhone: normalizePhone(driver.phone),
                 driverConfirmed: true,
                 driverResponseDeadline: Date.now() + respTimeoutMs,
@@ -4718,6 +4807,7 @@
                             const st = normalizeOrderStatusCode(o.status);
                             const stLabel = getOrderStatusLabel(st);
                             const canCustomerCancel = activeRole === 'customer' && !['picked_up', 'delivering', 'completed', 'cancelled'].includes(st);
+                            const drvPhoto = o.driver ? (o.driverPhoto || resolveDriverPhoto(o.driver)) : './olengorange2.png';
                             return `
                             <div class="bg-white p-4 rounded-3xl border border-[#D4D4D4] space-y-2">
                                 <div class="flex justify-between items-center gap-2">
@@ -4728,7 +4818,10 @@
                                 <p class="text-[11px] text-[#262626] font-semibold">${o.items}</p>
                                 ${o.notes ? `<p class="text-[10px] text-[#171717] bg-[#F3F3F3] px-2.5 py-1 rounded-lg font-semibold">Catatan: ${o.notes}</p>` : ''}
                                 ${o.promoCode ? `<p class="text-[10px] text-emerald-700 font-bold">Promo ${o.promoCode}: -Rp ${Number(o.discount || 0).toLocaleString()}</p>` : ''}
-                                <p class="text-[10px] text-[#404040]"><i class="fa-solid fa-motorcycle text-[#FF7900]"></i> Driver: <b>${o.driver || 'Mencari driver aktif'}</b></p>
+                                <div class="flex items-center gap-2 pt-0.5 text-[10px] text-[#404040]">
+                                    <img src="${drvPhoto}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-7 h-7 rounded-full object-cover border border-[#FF7900] shrink-0 bg-white" alt="Foto Driver">
+                                    <span><i class="fa-solid fa-motorcycle text-[#FF7900]"></i> Driver: <b>${o.driver || 'Mencari driver aktif'}</b></span>
+                                </div>
                                 ${o.storeRejectionReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Toko Tolak: ${o.storeRejectionReason}</p>` : ''}
                                 ${o.cancellationReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Batal: ${o.cancellationReason}</p>` : ''}
                                 ${o.refundStatus && o.refundStatus !== 'none' ? `<p class="text-[10px] text-emerald-700 font-bold">Refund: ${o.refundStatus} (Rp ${Number(o.refundAmount || 0).toLocaleString()})</p>` : ''}
@@ -4814,7 +4907,7 @@
                     subtitle: '',
                     category: 'Kuliner',
                     status: 'Buka',
-                    banner: './olengorange1',
+                    banner: './olengorange2.png',
                     image: currentUser.photo || './olengorange2.png',
                     rating: 5.0,
                     ratingCount: 0,
@@ -4837,7 +4930,7 @@
             container.innerHTML = `
                 <div class="p-4 space-y-5 pb-24 bg-[#F3F3F3] min-h-full">
                     <div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden border-2 border-[#FF7900]">
-                        <img src="${merchant.banner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-full h-36 object-cover opacity-80" alt="Banner Sampul Toko">
+                        <img src="${merchant.banner}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-full h-36 object-cover opacity-80" alt="Banner Sampul Toko">
                         <div class="p-4 pt-10 bg-[#171717] relative flex items-end justify-between">
                             <div class="flex items-center space-x-3">
                                 <img src="${merchant.image}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Profil Toko">
@@ -4880,7 +4973,7 @@
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase block mb-1">Banner Sampul Toko</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px] text-[#171717]" onchange="previewGalleryImage(event, 'preview-m-banner', 'banner')">
-                                <img id="preview-m-banner" src="${displayBanner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                                <img id="preview-m-banner" src="${displayBanner}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                             </div>
                         </div>
 
@@ -4923,7 +5016,7 @@
             container.innerHTML = `
                 <div class="p-4 space-y-5 pb-24 bg-[#F3F3F3] min-h-full">
                     <div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden border-2 border-[#FF7900]">
-                        <img src="${adminStore.banner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-full h-36 object-cover opacity-80" alt="Banner Toko Admin">
+                        <img src="${adminStore.banner}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-full h-36 object-cover opacity-80" alt="Banner Toko Admin">
                         <div class="p-4 pt-10 bg-[#171717] relative flex items-end justify-between">
                             <div class="flex items-center space-x-3">
                                 <img src="${adminStore.image}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Foto Toko Admin">
@@ -4962,7 +5055,7 @@
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase block mb-1">Banner Toko Admin</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-adm-banner', 'banner')">
-                                <img id="preview-adm-banner" src="${displayBanner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                                <img id="preview-adm-banner" src="${displayBanner}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                             </div>
                         </div>
                         <button onclick="saveAdminOwnStoreSettings(${adminStore.id})" class="w-full py-3.5 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] font-black rounded-2xl border-2 border-[#171717] text-xs cursor-pointer mt-2">
@@ -5151,11 +5244,14 @@
             const myDrv = activeRole === 'driver'
                 ? (db.drivers || []).find(d => String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase() || (currentUser.phone && normalizePhone(d.phone) === normalizePhone(currentUser.phone)))
                 : null;
+            const avatarSrc = activeRole === 'driver'
+                ? resolveDriverPhoto(myDrv || currentUser)
+                : (currentUser.photo || './olengorange2.png');
 
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24 bg-[#F3F3F3] min-h-full">
                     <div class="bg-[#171717] text-white p-5 rounded-3xl text-center space-y-2 border-2 border-[#FF7900]">
-                        <img id="profile-header-avatar" src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-[#FF7900] bg-white">
+                        <img id="profile-header-avatar" src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-24 h-24 ${activeRole === 'driver' ? 'rounded-full' : 'rounded-3xl'} object-cover mx-auto border-4 border-[#FF7900] bg-white">
                         <h2 class="font-black text-base text-white">${currentUser.name}</h2>
                         <p class="text-xs font-black text-[#FF7900]">No. HP Login: ${currentUser.phone || '-'}</p>
                         <span class="text-[10px] bg-[#FFD400] text-[#171717] font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span>
@@ -5194,7 +5290,7 @@
                         <div>
                             <label class="text-[10px] font-extrabold text-[#171717] uppercase">Upload Foto Profil (Dari Galeri)</label>
                             <input type="file" accept="image/*" class="w-full mt-1 p-2 border-2 border-[#D4D4D4] bg-[#F3F3F3] rounded-2xl text-xs" onchange="previewGalleryImage(event, 'user-prof-preview', 'user')">
-                            <img id="user-prof-preview" src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                            <img id="user-prof-preview" src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 ${activeRole === 'driver' ? 'rounded-full' : 'rounded-2xl'} object-cover mt-2 border-2 border-[#FF7900] bg-white">
                         </div>
                         <div>
                             <label class="text-[10px] font-extrabold text-[#171717] uppercase">Buat Password Baru</label>
@@ -5238,6 +5334,19 @@
 
             const userIdx = db.users.findIndex(u => u.id === currentUser.id);
             if(userIdx !== -1) db.users[userIdx] = { ...currentUser };
+
+            if (currentUser.role === 'driver') {
+                const drvMatch = (db.drivers || []).find(d =>
+                    (currentUser.accountId && String(d.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) ||
+                    (newPhone && normalizePhone(d.phone) === newPhone) ||
+                    (String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase())
+                );
+                if (drvMatch) {
+                    drvMatch.name = currentUser.name;
+                    drvMatch.phone = newPhone;
+                    drvMatch.photo = currentUser.photo || './olengorange2.png';
+                }
+            }
 
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
@@ -5438,16 +5547,20 @@
                     <div class="space-y-3">
                         ${db.users.map(u => {
                             const balNow = getUserCurrentBalanceDisplay(u);
+                            const rowAvatarSrc = u.role === 'driver' ? resolveDriverPhoto(u) : (u.photo || './olengorange2.png');
                             return `
                             <div class="bg-white p-4 rounded-3xl border border-[#D4D4D4] space-y-2">
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <span class="text-[10px] bg-[#171717] text-[#FF7900] font-black px-2 py-0.5 rounded-md inline-block mb-1">HP: ${u.phone || '-'}</span>
-                                        <h4 class="font-bold text-xs text-[#171717]">${u.name} (<span class="text-[#D96400] uppercase">${u.role}</span>)</h4>
-                                        <p class="text-[10px] text-[#404040]">${u.address || 'Lengkong'}</p>
-                                        ${u.role !== 'customer' ? `<p class="text-xs font-black text-emerald-700 mt-0.5">Saldo: Rp ${balNow.toLocaleString()}</p>` : ''}
-                                        ${u.plate ? `<p class="text-[10px] text-[#262626] font-semibold">Motor: ${u.bikeType || ''} (${u.plate}) • KTP: ${u.ktp || '-'}</p>` : ''}
-                                        ${u.ownerName ? `<p class="text-[10px] text-[#262626] font-semibold">Pemilik: ${u.ownerName} • KTP: ${u.ktp || '-'}</p>` : ''}
+                                <div class="flex justify-between items-start gap-2">
+                                    <div class="flex items-start gap-2.5">
+                                        <img src="${rowAvatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-11 h-11 ${u.role === 'driver' ? 'rounded-full' : 'rounded-2xl'} object-cover border border-[#FF7900] shrink-0 bg-white" alt="Foto User">
+                                        <div>
+                                            <span class="text-[10px] bg-[#171717] text-[#FF7900] font-black px-2 py-0.5 rounded-md inline-block mb-1">HP: ${u.phone || '-'}</span>
+                                            <h4 class="font-bold text-xs text-[#171717]">${u.name} (<span class="text-[#D96400] uppercase">${u.role}</span>)</h4>
+                                            <p class="text-[10px] text-[#404040]">${u.address || 'Lengkong'}</p>
+                                            ${u.role !== 'customer' ? `<p class="text-xs font-black text-emerald-700 mt-0.5">Saldo: Rp ${balNow.toLocaleString()}</p>` : ''}
+                                            ${u.plate ? `<p class="text-[10px] text-[#262626] font-semibold">Motor: ${u.bikeType || ''} (${u.plate}) • KTP: ${u.ktp || '-'}</p>` : ''}
+                                            ${u.ownerName ? `<p class="text-[10px] text-[#262626] font-semibold">Pemilik: ${u.ownerName} • KTP: ${u.ktp || '-'}</p>` : ''}
+                                        </div>
                                     </div>
                                     <button onclick="adminToggleUserStatus(${u.id})" class="text-[10px] px-2.5 py-0.5 rounded font-extrabold cursor-pointer ${u.status === 'Aktif' ? 'bg-emerald-100 text-emerald-950 border border-emerald-600' : 'bg-[#FFD400] text-[#171717] border border-[#171717]'}">${u.status || 'Aktif'}</button>
                                 </div>
@@ -5665,16 +5778,22 @@
                             const uid = matchedUser ? matchedUser.id : 2;
                             const drvBal = Math.max(Number(d.balance || 0), Number(matchedUser?.balance || 0));
                             const actMeta = getDriverActivityBadgeMeta(d);
+                            const drvPhotoSrc = resolveDriverPhoto(d);
                             return `
                                 <div class="bg-white p-4 rounded-3xl border border-[#D4D4D4] space-y-2">
-                                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                                        <span class="text-[10px] bg-[#171717] text-[#FF7900] font-black px-2 py-0.5 rounded-md">HP: ${d.phone || '-'}</span>
-                                        <span class="text-[10px] px-2 py-0.5 rounded-md font-black ${actMeta.badgeClass}">${actMeta.badgeText}</span>
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="flex items-start gap-2.5 min-w-0">
+                                            <img src="${drvPhotoSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 rounded-full object-cover border-2 border-[#FF7900] shrink-0 bg-white" alt="Foto Driver">
+                                            <div class="min-w-0">
+                                                <span class="text-[10px] bg-[#171717] text-[#FF7900] font-black px-2 py-0.5 rounded-md">HP: ${d.phone || '-'}</span>
+                                                <h4 class="font-bold text-xs text-[#171717] mt-1">${d.name} (${d.status}) • <i class="fa-solid fa-star text-[#FFD400]"></i> ${d.rating || 5.0}</h4>
+                                                <p class="text-[10px] font-bold ${actMeta.isBusy ? 'text-[#D96400]' : 'text-[#262626]'}">${actMeta.notifText}</p>
+                                                <p class="text-[10px] text-[#404040]">${d.vehicle} • KTP: ${d.ktp || '-'} • ${d.location || 'Lengkong'}</p>
+                                                <p class="text-xs font-black text-emerald-700 mt-0.5">Saldo Driver: Rp ${drvBal.toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-[10px] px-2 py-0.5 rounded-md font-black shrink-0 ${actMeta.badgeClass}">${actMeta.badgeText}</span>
                                     </div>
-                                    <h4 class="font-bold text-xs text-[#171717]">${d.name} (${d.status}) • <i class="fa-solid fa-star text-[#FFD400]"></i> ${d.rating || 5.0}</h4>
-                                    <p class="text-[10px] font-bold ${actMeta.isBusy ? 'text-[#D96400]' : 'text-[#262626]'}">${actMeta.notifText}</p>
-                                    <p class="text-[10px] text-[#404040]">${d.vehicle} • KTP: ${d.ktp || '-'} • ${d.location || 'Lengkong'}</p>
-                                    <p class="text-xs font-black text-emerald-700">Saldo Driver: Rp ${drvBal.toLocaleString()}</p>
                                     <button onclick="adminAddBalance(${uid})" class="px-3 py-1.5 bg-[#FF7900] text-[#171717] border border-[#171717] rounded-xl text-[10px] font-black cursor-pointer">Tambah Saldo</button>
                                 </div>
                             `;
@@ -5695,7 +5814,7 @@
                     <div class="bg-white p-4 rounded-3xl border border-[#D4D4D4] space-y-3">
                         <label class="text-[11px] font-extrabold text-[#171717] uppercase">UPLOAD BANNER PANJANG (DARI GALERI)</label>
                         <input type="file" accept="image/*" class="w-full p-2 border-2 border-[#D4D4D4] bg-[#F3F3F3] rounded-2xl text-xs" onchange="previewNewBanner(event)">
-                        <img id="banner-preview" src="${previewSrc}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-full h-32 object-cover rounded-2xl border border-[#FF7900]">
+                        <img id="banner-preview" src="${previewSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-full h-32 object-cover rounded-2xl border border-[#FF7900]">
                         <button onclick="saveGlobalBanner()" class="w-full py-3.5 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] font-black rounded-2xl border-2 border-[#171717] text-xs cursor-pointer">Simpan Permanen ke Semua User</button>
                     </div>
                 </div>
@@ -6029,14 +6148,19 @@
                 const previewText = item.lastMsg ? `${item.lastMsg.from}: ${rawPrev}` : 'Ketuk untuk mulai chat privat';
                 const timeText = item.lastMsg?.time || '';
                 const unreadBadgeLabel = formatUnreadBadgeText(item.unreadFromPartner);
+                const isPartnerDriver = (db.drivers || []).some(d => String(d.name || '').trim().toLowerCase() === item.partner.toLowerCase());
+                const contactAvatar = isPartnerDriver ? resolveDriverPhoto(item.partner) : './olengorange2.png';
                 return `
                     <div class="w-full px-3.5 py-2.5 flex items-center justify-between gap-2 transition ${isSelected ? 'bg-[#FFF4EA] border-l-4 border-[#FF7900]' : 'bg-white hover:bg-[#F3F3F3]'}">
-                        <button type="button" onclick="selectChatPartner('${safePartner}')" class="min-w-0 flex-1 text-left cursor-pointer">
-                            <div class="flex items-center justify-between gap-2">
-                                <span class="text-xs font-extrabold text-[#171717] truncate">${item.partner}</span>
-                                <span class="text-[9px] text-[#525252] font-semibold shrink-0">${timeText}</span>
+                        <button type="button" onclick="selectChatPartner('${safePartner}')" class="min-w-0 flex-1 text-left flex items-center gap-2.5 cursor-pointer">
+                            <img src="${contactAvatar}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-9 h-9 ${isPartnerDriver ? 'rounded-full' : 'rounded-xl'} object-cover border border-[#FF7900] shrink-0 bg-white" alt="Kontak">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs font-extrabold text-[#171717] truncate">${item.partner}</span>
+                                    <span class="text-[9px] text-[#525252] font-semibold shrink-0">${timeText}</span>
+                                </div>
+                                <p class="text-[11px] text-[#404040] truncate mt-0.5">${previewText}</p>
                             </div>
-                            <p class="text-[11px] text-[#404040] truncate mt-0.5">${previewText}</p>
                         </button>
                         <button type="button" onclick="openChatPartnerProfileModal('${safePartner}')" class="px-2 py-1 bg-[#F3F3F3] text-[#171717] border border-[#D4D4D4] rounded-lg text-[10px] font-bold cursor-pointer shrink-0" title="Lihat Profil">
                             Profil
@@ -6071,11 +6195,13 @@
             if (!container) return;
             container.innerHTML = msgs.map(c => {
                 const isMine = String(c.from).trim().toLowerCase() === me || (activeRole === 'admin' && (String(c.from).trim().toLowerCase() === 'admin simadu' || String(c.from).trim().toLowerCase() === 'admin'));
+                const isSenderDriver = (db.drivers || []).some(d => String(d.name || '').trim().toLowerCase() === String(c.from || '').trim().toLowerCase());
+                const senderAvatar = isSenderDriver ? resolveDriverPhoto(c.from) : './olengorange2.png';
                 const bodyHtml = String(c.text || '').startsWith('data:image')
                     ? `<img src="${c.text}" class="w-44 max-h-48 object-cover rounded-xl mt-1 border border-[#FF7900]" alt="Foto Chat">`
                     : `<p class="mt-0.5 break-words">${c.text}</p>`;
                 const readIndicator = !isMine && (c.readStatus === 'READ' || c.readAt) ? ' • Dibaca' : '';
-                return `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${isMine ? 'bg-[#171717] text-white border border-[#FF7900] ml-auto' : 'bg-white border border-[#D4D4D4] text-[#171717] mr-auto'}"><b class="${isMine ? 'text-[#FF7900]' : 'text-[#171717]'}">${c.from}</b>${bodyHtml}<span class="text-[9px] opacity-75 block mt-1">${c.time}${readIndicator}</span></div>`;
+                return `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${isMine ? 'bg-[#171717] text-white border border-[#FF7900] ml-auto' : 'bg-white border border-[#D4D4D4] text-[#171717] mr-auto'}"><div class="flex items-center gap-1.5"><img src="${senderAvatar}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-5 h-5 ${isSenderDriver ? 'rounded-full' : 'rounded-md'} object-cover border border-[#FF7900] shrink-0 bg-white" alt="Avatar"><b class="${isMine ? 'text-[#FF7900]' : 'text-[#171717]'}">${c.from}</b></div>${bodyHtml}<span class="text-[9px] opacity-75 block mt-1">${c.time}${readIndicator}</span></div>`;
             }).join('') || '<p class="text-xs text-[#404040] text-center py-6">Mulai obrolan privat dengan '+activeChatTarget+'...</p>';
             container.scrollTop = container.scrollHeight;
             updateHomeHeaderBadgesOnly();
