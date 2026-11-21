@@ -3066,7 +3066,7 @@
                 return showToast('AKSES DITOLAK: Login Admin wajib menggunakan Nomor HP 085624736602!', 'error', 'none');
             }
 
-            try { await withSupabaseTimeout(pullInitialFromSupabase(false), 3500); } catch (e) {}
+            try { await withSupabaseTimeout(pullInitialFromSupabase(false), 4500); } catch (e) {}
 
             let foundUser = db.users.find(u => normalizePhone(u.phone) === phone && u.role === role);
             if (!foundUser) foundUser = db.users.find(u => normalizePhone(u.phone) === phone);
@@ -3090,7 +3090,7 @@
             const passwordMatched = (storedPass === password || storedPass === String(rawPass || '') || isAdminDefaultMatch);
 
             if (!passwordMatched) {
-                recordTechnicalDiagLog('LOGIN', `Password mismatch untuk ${phone} (${foundUser.role})`);
+                recordTechnicalDiagLog('LOGIN', `Password tidak sesuai untuk ${phone} (${foundUser.role})`);
                 return showToast('Kata sandi salah! Periksa kembali kata sandi Anda.', 'error', 'none');
             }
 
@@ -5370,6 +5370,29 @@
             u.phone = cleanPhone;
             const normalizedNextPass = String(nextPassword || '123456').trim();
             const updatedAtMs = Date.now();
+
+            if (typeof window.OLENG_ADMIN_RESET_ENDPOINT === 'string' && window.OLENG_ADMIN_RESET_ENDPOINT.trim()) {
+                try {
+                    const resp = await withSupabaseTimeout(
+                        fetch(window.OLENG_ADMIN_RESET_ENDPOINT.trim(), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ accountId: accCode, phone: cleanPhone, role: u.role, newPassword: normalizedNextPass })
+                        }),
+                        6000
+                    );
+                    if (!resp.ok) {
+                        const errText = await resp.text();
+                        recordTechnicalDiagLog('RESET_PW_API', `${accCode}: ${errText || resp.status}`);
+                        showToast(`Gagal reset password dari backend: ${errText || resp.status}`, 'error', 'none');
+                        return false;
+                    }
+                } catch (apiErr) {
+                    recordTechnicalDiagLog('RESET_PW_API', `${accCode}: ${apiErr?.message || apiErr}`);
+                    showToast(`Gagal menghubungi backend reset password: ${apiErr?.message || apiErr}`, 'error', 'none');
+                    return false;
+                }
+            }
 
             if (supabaseClient && navigator.onLine) {
                 try {
