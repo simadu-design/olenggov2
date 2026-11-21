@@ -11,9 +11,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="OLENG GO">
-    <link rel="icon" type="image/png" sizes="192x192" href="./olengorane1">
-    <link rel="apple-touch-icon" sizes="192x192" href="./olengorane1">
-    <link rel="apple-touch-icon" sizes="512x512" href="./olengorane1">
+    <link rel="icon" type="image/png" sizes="192x192" href="./olengorange2.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="./olengorange2.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="./olengorange2.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -87,7 +87,7 @@
     <div id="oleng-splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white text-[#171717] transition-opacity duration-500 border-t-4 border-[#FF7900]">
         <div class="flex flex-col items-center justify-center px-6 text-center">
             <div class="w-32 h-32 rounded-3xl bg-white p-2.5 shadow-lg border-4 border-[#FF7900] flex items-center justify-center overflow-hidden splash-logo-anim">
-                <img src="./olengorane1" onerror="this.onerror=null;this.src='./olengorane1.png';" alt="Logo OLENG GO" class="w-full h-full object-contain rounded-2xl">
+                <img src="./olengorange1" onerror="this.onerror=null;this.src='./olengorange1.png';" alt="Splash Screen OLENG GO" class="w-full h-full object-contain rounded-2xl">
             </div>
         </div>
     </div>
@@ -120,7 +120,7 @@
                 <div class="flex items-center justify-between px-2 bg-[#262626] p-3.5 rounded-3xl border border-[#FF7900]">
                     <div class="flex items-center gap-2.5">
                         <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center p-1 border-2 border-[#FF7900] overflow-hidden shrink-0">
-                            <img src="./olengorane1" onerror="this.onerror=null;this.src='./olengorane1.png';" alt="Icon OLENG GO" class="w-full h-full object-contain rounded-xl">
+                            <img src="./olengorange2.png" onerror="this.onerror=null;this.src='./olengorange2';" alt="Icon OLENG GO" class="w-full h-full object-contain rounded-xl">
                         </div>
                         <div class="text-left">
                             <h1 class="text-2xl font-black italic tracking-wider text-[#FF7900]">OLENG GO</h1>
@@ -128,7 +128,7 @@
                         </div>
                     </div>
                     <div class="w-11 h-11 bg-white rounded-full border-2 border-[#FF7900] flex items-center justify-center p-1 overflow-hidden shrink-0">
-                        <img src="./olengorane1" onerror="this.onerror=null;this.src='./olengorane1.png';" alt="Mascot OLENG GO" class="w-full h-full object-contain rounded-full">
+                        <img src="./olengorange2.png" onerror="this.onerror=null;this.src='./olengorange2';" alt="Mascot OLENG GO" class="w-full h-full object-contain rounded-full">
                     </div>
                 </div>
 
@@ -804,21 +804,21 @@
                         if (reg && typeof reg.showNotification === 'function') {
                             reg.showNotification(title, {
                                 body: body,
-                                icon: './olengorane1',
-                                badge: './olengorane1',
+                                icon: './olengorange2.png',
+                                badge: './olengorange2.png',
                                 tag: extraData.tag || ('oleng-' + Date.now()),
                                 renotify: Boolean(extraData.renotify),
                                 vibrate: [400, 150, 400, 150, 500],
                                 data: extraData
                             });
                         } else {
-                            new Notification(title, { body, icon: './olengorane1' });
+                            new Notification(title, { body, icon: './olengorange2.png' });
                         }
                     }).catch(() => {
-                        new Notification(title, { body, icon: './olengorane1' });
+                        new Notification(title, { body, icon: './olengorange2.png' });
                     });
                 } else {
-                    new Notification(title, { body, icon: './olengorane1' });
+                    new Notification(title, { body, icon: './olengorange2.png' });
                 }
             } catch (e) {}
         }
@@ -924,7 +924,7 @@
             const displayPhone = normalizePhone(matchedUser?.phone || matchedStore?.whatsapp || matchedDriver?.phone) || (targetLow === 'admin simadu' ? '085624736602' : 'Belum tercatat');
             const displayAddress = matchedUser?.address || matchedStore?.address || matchedDriver?.location || 'Kecamatan Lengkong, Sukabumi';
             const displayShop = matchedStore?.name || matchedUser?.shopName || '-';
-            const displayPhoto = matchedUser?.photo || matchedStore?.image || './olengorane1';
+            const displayPhoto = matchedUser?.photo || matchedStore?.image || './olengorange2.png';
 
             const card = document.getElementById('chat-partner-info-card');
             if (!card) return;
@@ -935,7 +935,7 @@
                     <button onclick="document.getElementById('modal-chat-partner-info').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
                 </div>
                 <div class="flex items-center gap-3">
-                    <img src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-14 h-14 rounded-2xl object-cover border-2 border-[#FF7900] shrink-0" alt="Foto Profil">
+                    <img src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-14 h-14 rounded-2xl object-cover border-2 border-[#FF7900] shrink-0" alt="Foto Profil">
                     <div class="min-w-0">
                         <h4 class="font-black text-sm text-[#171717] truncate">${displayName}</h4>
                         <span class="text-[10px] bg-[#171717] text-[#FFD400] font-black px-2 py-0.5 rounded uppercase inline-block mt-0.5">${displayRole}</span>
@@ -1230,7 +1230,7 @@
         let regMerchantLatLng = [-7.1240, 106.8460];
         let isRegMerchantLocationLocked = false;
 
-        const DEFAULT_MAIN_BANNER = './olengorane1';
+        const DEFAULT_MAIN_BANNER = './olengorange1';
 
         const defaultPricing = {
             minFare: 8000,
@@ -1251,7 +1251,7 @@
             address: 'Kantor Pusat Lengkong',
             balance: 1200000,
             password: '123',
-            photo: './olengorane1'
+            photo: './olengorange2.png'
         };
 
         const DEFAULT_ADMIN_STORE = {
@@ -1263,8 +1263,8 @@
             subtitle: 'Toko Resmi Admin SIMADU Lengkong',
             category: 'Kuliner & Oleh-Oleh',
             status: 'Buka',
-            banner: './olengorane1',
-            image: './olengorane1',
+            banner: './olengorange1',
+            image: './olengorange2.png',
             rating: 5.0,
             ratingCount: 1,
             lat: -7.1238,
@@ -1284,9 +1284,9 @@
             driverChangeLogs: [],
             reviews: [],
             users: [
-                { id: 1, accountId: 'CUST01', name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: './olengorane1' },
-                { id: 2, accountId: 'DRIV01', name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: './olengorane1' },
-                { id: 3, accountId: 'MRCH01', name: 'MADU TOKO', ownerName: 'H. Madu', ktp: '3202110202880002', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12, Sukabumi', lat: -7.1240, lng: 106.8460, balance: 350000, password: '123', shopName: 'MADU TOKO', photo: './olengorane1' },
+                { id: 1, accountId: 'CUST01', name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: './olengorange2.png' },
+                { id: 2, accountId: 'DRIV01', name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: './olengorange2.png' },
+                { id: 3, accountId: 'MRCH01', name: 'MADU TOKO', ownerName: 'H. Madu', ktp: '3202110202880002', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12, Sukabumi', lat: -7.1240, lng: 106.8460, balance: 350000, password: '123', shopName: 'MADU TOKO', photo: './olengorange2.png' },
                 { ...DEFAULT_ADMIN_ACCOUNT }
             ],
             merchants: [
@@ -1300,8 +1300,8 @@
                     subtitle: 'Warung Nasi Sunda Lengkong',
                     category: 'Makanan Berat', 
                     status: 'Buka', 
-                    banner: './olengorane1', 
-                    image: './olengorane1', 
+                    banner: './olengorange1', 
+                    image: './olengorange2.png', 
                     rating: 4.9, 
                     ratingCount: 1,
                     lat: -7.1240, 
@@ -1313,13 +1313,13 @@
                 }
             ],
             foods: [
-                { id: 9011, merchantId: 901, name: 'Nasi Kuning SIMADU Spesial', price: 18000, desc: 'Nasi kuning harum, telur balado, ayam suwir & sambal kacang.', stock: 25, image: './olengorane1' },
-                { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap Komplit', price: 25000, desc: 'Nasi liwet hangat, ikan asin jambal, tahu tempe, lalapan...', stock: 15, image: './olengorane1' },
-                { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung asli bumbu rempah bakar madu manis...', stock: 12, image: './olengorane1' }
+                { id: 9011, merchantId: 901, name: 'Nasi Kuning SIMADU Spesial', price: 18000, desc: 'Nasi kuning harum, telur balado, ayam suwir & sambal kacang.', stock: 25, image: './olengorange2.png' },
+                { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap Komplit', price: 25000, desc: 'Nasi liwet hangat, ikan asin jambal, tahu tempe, lalapan...', stock: 15, image: './olengorange2.png' },
+                { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung asli bumbu rempah bakar madu manis...', stock: 12, image: './olengorange2.png' }
             ],
             drivers: [
-                { id: 1, accountId: 'DRIV01', name: 'Asep Supriatna', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, ratingCount: 1, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '6285624736602', balance: 150000, photo: './olengorane1' },
-                { id: 2, accountId: 'DRIV02', name: 'Ujang Hendra', ktp: '3202110404910004', plate: 'F 8891 ZY', bikeType: 'Yamaha Mio', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, ratingCount: 1, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '6285624736602', balance: 120000, photo: './olengorane1' }
+                { id: 1, accountId: 'DRIV01', name: 'Asep Supriatna', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, ratingCount: 1, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '6285624736602', balance: 150000, photo: './olengorange2.png' },
+                { id: 2, accountId: 'DRIV02', name: 'Ujang Hendra', ktp: '3202110404910004', plate: 'F 8891 ZY', bikeType: 'Yamaha Mio', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, ratingCount: 1, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '6285624736602', balance: 120000, photo: './olengorange2.png' }
             ],
             orders: [],
             notifications: [],
@@ -1488,7 +1488,7 @@
                     price: 18000,
                     desc: 'Nasi kuning harum, telur balado, ayam suwir & sambal kacang.',
                     stock: 25,
-                    image: './olengorane1'
+                    image: './olengorange2.png'
                 });
             }
             return store;
@@ -1519,8 +1519,8 @@
                             subtitle: u.ownerName ? `Pemilik: ${u.ownerName}` : '',
                             category: 'Kuliner',
                             status: 'Buka',
-                            banner: './olengorane1',
-                            image: u.photo || './olengorane1',
+                            banner: './olengorange1',
+                            image: u.photo || './olengorange2.png',
                             rating: 5.0,
                             ratingCount: 0,
                             lat: typeof u.lat === 'number' ? u.lat : (-7.1240 - idx * 0.0005),
@@ -1567,7 +1567,7 @@
                             lng: typeof u.lng === 'number' ? u.lng : (106.8458 + idx * 0.0004),
                             phone: cleanPhone || ADMIN_MAIN_WA,
                             balance: Number(u.balance || 0),
-                            photo: u.photo || './olengorane1'
+                            photo: u.photo || './olengorange2.png'
                         };
                         db.drivers.push(d);
                     } else {
@@ -1699,7 +1699,7 @@
                         status: u.status || 'Aktif',
                         address: u.address || 'Kecamatan Lengkong, Sukabumi',
                         password_hash: String(u.password || '123').trim(),
-                        photo_url: u.photo || './olengorane1',
+                        photo_url: u.photo || './olengorange2.png',
                         balance: Number(u.balance || 0),
                         ktp: u.ktp || null,
                         plate: u.plate || null,
@@ -1723,7 +1723,7 @@
                     category: m.category || 'Kuliner',
                     status: m.status || 'Buka',
                     banner_url: m.banner || DEFAULT_MAIN_BANNER,
-                    image_url: m.image || './olengorane1',
+                    image_url: m.image || './olengorange2.png',
                     rating: Number(m.rating || 5.0),
                     rating_count: Number(m.ratingCount || 0),
                     lat: Number(m.lat || -7.1240),
@@ -1792,7 +1792,7 @@
                     price: Number(f.price || 15000),
                     description: f.desc || '',
                     stock: Number(f.stock ?? 20),
-                    image_url: f.image || './olengorane1'
+                    image_url: f.image || './olengorange2.png'
                 }));
 
                 if (foodRows.length > 0) {
@@ -2255,7 +2255,7 @@
                             : (localMatch?.password || '123');
                         const resolvedPhoto = (r.photo_url && String(r.photo_url).trim())
                             ? String(r.photo_url).trim()
-                            : (localMatch?.photo || './olengorane1');
+                            : (localMatch?.photo || './olengorange2.png');
                         return {
                             id: r.id || (idx + 1),
                             accountId: accUpper,
@@ -2310,7 +2310,7 @@
                         category: r.category || 'Kuliner',
                         status: r.status || 'Buka',
                         banner: r.banner_url || DEFAULT_MAIN_BANNER,
-                        image: r.image_url || './olengorane1',
+                        image: r.image_url || './olengorange2.png',
                         rating: Number(r.rating || 5.0),
                         ratingCount: Number(r.rating_count || 0),
                         lat: Number(r.lat || -7.1240),
@@ -2344,7 +2344,7 @@
                         rating: Number(r.rating || 5.0),
                         ratingCount: Number(r.ratingCount || 0),
                         balance: Number(r.balance || 0),
-                        photo: './olengorane1'
+                        photo: './olengorange2.png'
                     }));
                     db.drivers = mergeByKey(db.drivers, mappedDrivers, d => normalizePhone(d.phone) || String(d.accountId || d.name).toUpperCase());
                     hasChanges = true;
@@ -2384,7 +2384,7 @@
                         price: Number(r.price || 15000),
                         desc: r.description || '',
                         stock: Number(r.stock ?? 20),
-                        image: r.image_url || './olengorane1'
+                        image: r.image_url || './olengorange2.png'
                     }));
                     db.foods = mergeByKey(db.foods, mappedFoods, f => String(f.id));
                     hasChanges = true;
@@ -3154,7 +3154,7 @@
                 balance: (role !== 'customer' ? 50000 : undefined),
                 password: password,
                 pushToken,
-                photo: './olengorane1',
+                photo: './olengorange2.png',
                 ...driverData,
                 ...merchantData
             };
@@ -3171,8 +3171,8 @@
                     subtitle: `Pemilik: ${merchantData.ownerName}`,
                     category: 'Kuliner',
                     status: 'Buka',
-                    banner: './olengorane1',
-                    image: './olengorane1',
+                    banner: './olengorange1',
+                    image: './olengorange2.png',
                     rating: 5.0,
                     ratingCount: 0,
                     lat: merchantData.lat,
@@ -3201,7 +3201,7 @@
                     lng: userCurrentLatLng[1],
                     phone,
                     balance: 50000,
-                    photo: './olengorane1'
+                    photo: './olengorange2.png'
                 });
             }
 
@@ -3232,7 +3232,7 @@
             document.getElementById('view-auth').classList.add('hidden');
             document.getElementById('view-dashboard').classList.remove('hidden');
             if (!currentUser) {
-                currentUser = { id: 0, accountId: 'TAMU01', name: `Pemohon (${refVal})`, phone: ADMIN_MAIN_WA, role: 'customer', photo: './olengorane1' };
+                currentUser = { id: 0, accountId: 'TAMU01', name: `Pemohon (${refVal})`, phone: ADMIN_MAIN_WA, role: 'customer', photo: './olengorange2.png' };
             }
             activeChatTarget = 'Admin SIMADU';
             switchView('chat');
@@ -3954,7 +3954,7 @@
                     
                     <div class="bg-[#171717] text-white p-4 rounded-3xl shadow-md flex items-center justify-between border-2 border-[#FF7900]">
                         <div class="flex items-center space-x-3">
-                            <img src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-12 h-12 rounded-2xl object-cover border-2 border-[#FF7900] bg-white">
+                            <img src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 rounded-2xl object-cover border-2 border-[#FF7900] bg-white">
                             <div>
                                 <span class="text-xs text-[#F3F3F3] font-extrabold block">Halo, ${currentUser.name}</span>
                                 <h3 class="text-xs font-black text-[#FF7900] tracking-tight">${currentUser.phone || 'WARGA LENGKONG'}</h3>
@@ -3999,7 +3999,7 @@
                     </div>
 
                     <div class="rounded-3xl shadow-sm overflow-hidden border-2 border-[#FF7900] bg-white">
-                        <img src="${activeBanner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-full h-36 object-cover" alt="Banner Oleng Go">
+                        <img src="${activeBanner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-full h-36 object-cover" alt="Banner Oleng Go">
                     </div>
 
                     <div class="grid grid-cols-4 gap-2">
@@ -4081,7 +4081,7 @@
                 const isOpen = m.status === 'Buka';
                 return `
                     <div onclick="openMerchantDetail(${m.id})" class="bg-white p-4 rounded-3xl border border-[#D4D4D4] cursor-pointer hover:border-[#FF7900] transition flex items-center space-x-3.5">
-                        <img src="${m.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover border border-[#FF7900]">
+                        <img src="${m.image}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover border border-[#FF7900]">
                         <div class="flex-1">
                             <div class="flex justify-between items-start">
                                 <h4 class="font-bold text-sm text-[#171717]">${m.name}</h4>
@@ -4168,7 +4168,7 @@
 
             detailView.innerHTML = `
                 <div class="relative bg-[#171717] text-white border-b-2 border-[#FF7900]">
-                    <img src="${merchant.banner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-full h-48 object-cover opacity-80" alt="Banner Sampul Toko">
+                    <img src="${merchant.banner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-full h-48 object-cover opacity-80" alt="Banner Sampul Toko">
                     <div class="absolute inset-0 bg-gradient-to-t from-[#171717] via-black/30 to-black/20 flex items-center justify-center">
                         <h3 class="text-white font-black text-base px-3 py-1 bg-[#171717]/80 rounded-xl border border-[#FF7900]">${merchant.subtitle || merchant.name}</h3>
                     </div>
@@ -4179,7 +4179,7 @@
                         <i class="fa-solid fa-cart-shopping"></i> <span id="detail-cart-count">${db.cart.length}</span>
                     </button>
                     <div class="absolute -bottom-8 left-4">
-                        <img src="${merchant.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-20 h-20 rounded-2xl object-cover border-4 border-[#FF7900] bg-white" alt="Profil Toko">
+                        <img src="${merchant.image}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-20 h-20 rounded-2xl object-cover border-4 border-[#FF7900] bg-white" alt="Profil Toko">
                     </div>
                 </div>
 
@@ -4218,7 +4218,7 @@
                                 const isSoldOut = stokNow <= 0;
                                 return `
                                 <div class="bg-white p-3.5 rounded-3xl border border-[#D4D4D4] flex items-center space-x-3.5 ${isSoldOut ? 'opacity-65' : ''}">
-                                    <img src="${f.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-20 h-20 rounded-2xl object-cover bg-white border border-[#FF7900]" alt="Menu">
+                                    <img src="${f.image}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-20 h-20 rounded-2xl object-cover bg-white border border-[#FF7900]" alt="Menu">
                                     <div class="flex-1 space-y-1">
                                         <h4 class="font-bold text-xs text-[#171717]">${f.name}</h4>
                                         <p class="text-[11px] text-[#404040] line-clamp-2">${f.desc}</p>
@@ -4286,11 +4286,11 @@
             listEl.innerHTML = filteredDrivers.length > 0 ? filteredDrivers.map((d, index) => {
                 const isDraft = Number(draftSelectedDriverId) === Number(d.id);
                 const isConfirmed = Number(confirmedOrderDriverId) === Number(d.id);
-                const avatarSrc = d.photo || './olengorane1';
+                const avatarSrc = d.photo || './olengorange2.png';
                 return `
                     <div class="bg-white p-3.5 rounded-2xl border-2 transition flex items-center justify-between gap-2 ${isDraft || isConfirmed ? 'border-[#FF7900] bg-[#FFF4EA]' : 'border-[#D4D4D4]'}">
                         <div class="flex items-center space-x-3 min-w-0 flex-1">
-                            <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-12 h-12 rounded-2xl object-cover border border-[#FF7900] shrink-0" alt="Driver">
+                            <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 rounded-2xl object-cover border border-[#FF7900] shrink-0" alt="Driver">
                             <div class="min-w-0">
                                 <div class="flex items-center gap-1.5 flex-wrap">
                                     <h4 class="font-bold text-xs text-[#171717] truncate">${d.name}</h4>
@@ -4459,11 +4459,11 @@
             driverListEl.innerHTML = onlineDrivers.length > 0 ? onlineDrivers.map((d, idx) => {
                 const isDraft = Number(draftSelectedDriverId) === Number(d.id);
                 const isConf = Number(confirmedOrderDriverId) === Number(d.id);
-                const avatarSrc = d.photo || './olengorane1';
+                const avatarSrc = d.photo || './olengorange2.png';
                 return `
                     <div class="p-2 rounded-xl border flex justify-between items-center gap-2 ${isDraft || isConf ? 'border-[#FF7900] bg-[#FFF4EA]' : 'border-[#D4D4D4] bg-white'}">
                         <div class="flex items-center gap-2 min-w-0">
-                            <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-9 h-9 rounded-xl object-cover border border-[#FF7900] shrink-0" alt="Driver">
+                            <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-9 h-9 rounded-xl object-cover border border-[#FF7900] shrink-0" alt="Driver">
                             <div class="min-w-0">
                                 <span class="font-bold text-xs text-[#171717] block truncate">${d.name} ${idx === 0 && !d.isBusy ? '<span class="text-[9px] bg-[#FFD400] text-[#171717] px-1.5 rounded font-black">TERDEKAT</span>' : ''}</span>
                                 <span class="block text-[10px] text-[#404040] font-bold truncate">${d.vehicle} • ${d.distance} km • ${d.activityBadgeText}</span>
@@ -4814,8 +4814,8 @@
                     subtitle: '',
                     category: 'Kuliner',
                     status: 'Buka',
-                    banner: './olengorane1',
-                    image: currentUser.photo || './olengorane1',
+                    banner: './olengorange1',
+                    image: currentUser.photo || './olengorange2.png',
                     rating: 5.0,
                     ratingCount: 0,
                     lat: typeof currentUser.lat === 'number' ? currentUser.lat : -7.1240,
@@ -4837,10 +4837,10 @@
             container.innerHTML = `
                 <div class="p-4 space-y-5 pb-24 bg-[#F3F3F3] min-h-full">
                     <div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden border-2 border-[#FF7900]">
-                        <img src="${merchant.banner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-full h-36 object-cover opacity-80" alt="Banner Sampul Toko">
+                        <img src="${merchant.banner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-full h-36 object-cover opacity-80" alt="Banner Sampul Toko">
                         <div class="p-4 pt-10 bg-[#171717] relative flex items-end justify-between">
                             <div class="flex items-center space-x-3">
-                                <img src="${merchant.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Profil Toko">
+                                <img src="${merchant.image}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Profil Toko">
                                 <div>
                                     <span class="text-[10px] text-[#FF7900] font-extrabold uppercase block">PROFIL & SAMPUL TOKO (${merchant.whatsapp || currentUser.phone})</span>
                                     <h2 class="text-base font-black text-white">${merchant.name || 'Nama Toko Belum Diisi'}</h2>
@@ -4875,12 +4875,12 @@
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase block mb-1">Foto Profil Toko</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px] text-[#171717]" onchange="previewGalleryImage(event, 'preview-m-photo', 'photo')">
-                                <img id="preview-m-photo" src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                                <img id="preview-m-photo" src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                             </div>
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase block mb-1">Banner Sampul Toko</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px] text-[#171717]" onchange="previewGalleryImage(event, 'preview-m-banner', 'banner')">
-                                <img id="preview-m-banner" src="${displayBanner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                                <img id="preview-m-banner" src="${displayBanner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                             </div>
                         </div>
 
@@ -4898,7 +4898,7 @@
                             ${foods.length > 0 ? foods.map(f => `
                                 <div class="flex items-center justify-between p-2.5 bg-[#F3F3F3] rounded-2xl border border-[#D4D4D4]">
                                     <div class="flex items-center space-x-3">
-                                        <img src="${f.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-12 h-12 rounded-xl object-cover bg-white border border-[#FF7900]">
+                                        <img src="${f.image}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 rounded-xl object-cover bg-white border border-[#FF7900]">
                                         <div>
                                             <h4 class="font-bold text-xs text-[#171717]">${f.name}</h4>
                                             <span class="text-xs font-black text-[#D96400]">Rp ${f.price.toLocaleString()}</span>
@@ -4923,10 +4923,10 @@
             container.innerHTML = `
                 <div class="p-4 space-y-5 pb-24 bg-[#F3F3F3] min-h-full">
                     <div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden border-2 border-[#FF7900]">
-                        <img src="${adminStore.banner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-full h-36 object-cover opacity-80" alt="Banner Toko Admin">
+                        <img src="${adminStore.banner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-full h-36 object-cover opacity-80" alt="Banner Toko Admin">
                         <div class="p-4 pt-10 bg-[#171717] relative flex items-end justify-between">
                             <div class="flex items-center space-x-3">
-                                <img src="${adminStore.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Foto Toko Admin">
+                                <img src="${adminStore.image}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Foto Toko Admin">
                                 <div>
                                     <span class="text-[10px] text-[#FF7900] font-extrabold uppercase block">TOKO MILIK ADMIN (PERMANEN)</span>
                                     <h2 class="text-base font-black text-white">${adminStore.name}</h2>
@@ -4957,12 +4957,12 @@
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase block mb-1">Foto Profil Toko Admin</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-adm-photo', 'photo')">
-                                <img id="preview-adm-photo" src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                                <img id="preview-adm-photo" src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                             </div>
                             <div>
                                 <label class="text-[10px] font-extrabold text-[#171717] uppercase block mb-1">Banner Toko Admin</label>
                                 <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-adm-banner', 'banner')">
-                                <img id="preview-adm-banner" src="${displayBanner}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                                <img id="preview-adm-banner" src="${displayBanner}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                             </div>
                         </div>
                         <button onclick="saveAdminOwnStoreSettings(${adminStore.id})" class="w-full py-3.5 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] font-black rounded-2xl border-2 border-[#171717] text-xs cursor-pointer mt-2">
@@ -4979,7 +4979,7 @@
                             ${foods.map(f => `
                                 <div class="flex items-center justify-between p-2.5 bg-[#F3F3F3] rounded-2xl border border-[#D4D4D4]">
                                     <div class="flex items-center space-x-3">
-                                        <img src="${f.image}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-12 h-12 rounded-xl object-cover bg-white border border-[#FF7900]">
+                                        <img src="${f.image}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 rounded-xl object-cover bg-white border border-[#FF7900]">
                                         <div>
                                             <h4 class="font-bold text-xs text-[#171717]">${f.name}</h4>
                                             <span class="text-xs font-black text-[#D96400]">Rp ${f.price.toLocaleString()}</span>
@@ -5111,7 +5111,7 @@
                 price: price,
                 desc: desc,
                 stock: 20,
-                image: tempNewFoodPhoto || './olengorane1'
+                image: tempNewFoodPhoto || './olengorange2.png'
             });
             tempNewFoodPhoto = null;
             hasPendingMediaSelection = false;
@@ -5155,7 +5155,7 @@
             container.innerHTML = `
                 <div class="p-4 space-y-4 pb-24 bg-[#F3F3F3] min-h-full">
                     <div class="bg-[#171717] text-white p-5 rounded-3xl text-center space-y-2 border-2 border-[#FF7900]">
-                        <img id="profile-header-avatar" src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-[#FF7900] bg-white">
+                        <img id="profile-header-avatar" src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-[#FF7900] bg-white">
                         <h2 class="font-black text-base text-white">${currentUser.name}</h2>
                         <p class="text-xs font-black text-[#FF7900]">No. HP Login: ${currentUser.phone || '-'}</p>
                         <span class="text-[10px] bg-[#FFD400] text-[#171717] font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span>
@@ -5194,7 +5194,7 @@
                         <div>
                             <label class="text-[10px] font-extrabold text-[#171717] uppercase">Upload Foto Profil (Dari Galeri)</label>
                             <input type="file" accept="image/*" class="w-full mt-1 p-2 border-2 border-[#D4D4D4] bg-[#F3F3F3] rounded-2xl text-xs" onchange="previewGalleryImage(event, 'user-prof-preview', 'user')">
-                            <img id="user-prof-preview" src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
+                            <img id="user-prof-preview" src="${currentUser.photo}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover mt-2 border-2 border-[#FF7900]">
                         </div>
                         <div>
                             <label class="text-[10px] font-extrabold text-[#171717] uppercase">Buat Password Baru</label>
@@ -5504,7 +5504,7 @@
                 address: 'Kecamatan Lengkong, Sukabumi',
                 balance: role !== 'customer' ? 50000 : undefined,
                 password,
-                photo: './olengorane1'
+                photo: './olengorange2.png'
             };
 
             db.users.unshift(newAcc);
@@ -5695,7 +5695,7 @@
                     <div class="bg-white p-4 rounded-3xl border border-[#D4D4D4] space-y-3">
                         <label class="text-[11px] font-extrabold text-[#171717] uppercase">UPLOAD BANNER PANJANG (DARI GALERI)</label>
                         <input type="file" accept="image/*" class="w-full p-2 border-2 border-[#D4D4D4] bg-[#F3F3F3] rounded-2xl text-xs" onchange="previewNewBanner(event)">
-                        <img id="banner-preview" src="${previewSrc}" onerror="this.onerror=null;this.src='./olengorane1';" class="w-full h-32 object-cover rounded-2xl border border-[#FF7900]">
+                        <img id="banner-preview" src="${previewSrc}" onerror="this.onerror=null;this.src='./olengorange1.png';" class="w-full h-32 object-cover rounded-2xl border border-[#FF7900]">
                         <button onclick="saveGlobalBanner()" class="w-full py-3.5 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] font-black rounded-2xl border-2 border-[#171717] text-xs cursor-pointer">Simpan Permanen ke Semua User</button>
                     </div>
                 </div>
