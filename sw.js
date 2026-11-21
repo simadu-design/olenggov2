@@ -1,8 +1,8 @@
-const CACHE_NAME = 'oleng-go-pwa-v3';
+const CACHE_NAME = 'oleng-go-pwa-v5';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json',
+  './manifest.json', './olengorange2.png',
   './icon-192.png',
   './icon-512.png'
 ];
