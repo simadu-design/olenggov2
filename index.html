@@ -554,6 +554,26 @@
         let playedOrderAlertIds = JSON.parse(localStorage.getItem('oleng_played_order_alerts') || '[]');
         let devicePushToken = localStorage.getItem('oleng_device_push_token') || '';
 
+        function cleanupAllMapsAndModals() {
+            if (mapInstance) {
+                try { currentMapZoom = mapInstance.getZoom(); currentMapCenter = mapInstance.getCenter(); } catch (e) {}
+                try { mapInstance.remove(); } catch (e) {}
+                mapInstance = null;
+            }
+            if (ojekMapInstance) {
+                try { ojekMapInstance.remove(); } catch (e) {}
+                ojekMapInstance = null;
+            }
+            if (checkoutMapInstance) {
+                try { checkoutMapInstance.remove(); } catch (e) {}
+                checkoutMapInstance = null;
+            }
+            if (regMerchantMapInstance) {
+                try { regMerchantMapInstance.remove(); } catch (e) {}
+                regMerchantMapInstance = null;
+            }
+        }
+
         function pushAppNavigationState(label = 'nav') {
             if (isHandlingHardwareBack) return;
             const now = Date.now();
@@ -980,7 +1000,7 @@
                     <button onclick="document.getElementById('modal-chat-partner-info').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
                 </div>
                 <div class="flex items-center gap-3">
-                    <img src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-14 h-14 rounded-full object-cover border-2 border-[#FF7900] shrink-0 bg-white" alt="Foto Profil">
+                    <img src="${displayPhoto}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-14 h-14 ${displayRole === 'driver' ? 'rounded-full' : 'rounded-2xl'} object-cover border-2 border-[#FF7900] shrink-0 bg-white" alt="Foto Profil">
                     <div class="min-w-0">
                         <h4 class="font-black text-sm text-[#171717] truncate">${displayName}</h4>
                         <span class="text-[10px] bg-[#171717] text-[#FFD400] font-black px-2 py-0.5 rounded uppercase inline-block mt-0.5">${displayRole}</span>
@@ -3015,7 +3035,7 @@
             const mapEl = document.getElementById('reg-merchant-map');
             if (!mapEl) return;
             if (regMerchantMapInstance) {
-                regMerchantMapInstance.remove();
+                try { regMerchantMapInstance.remove(); } catch (e) {}
                 regMerchantMapInstance = null;
             }
             regMerchantMapInstance = L.map('reg-merchant-map', { zoomControl: true }).setView(regMerchantLatLng, 16);
@@ -3368,6 +3388,7 @@
 
         async function confirmLogoutExecute() {
             stopOrderAlarmLoop();
+            cleanupAllMapsAndModals();
             document.getElementById('modal-confirm-logout')?.classList.add('hidden');
             const departingUser = currentUser ? { ...currentUser } : null;
             currentUser = null; adminViewMode = null;
@@ -3393,6 +3414,10 @@
                 switcherBar?.classList.remove('hidden');
                 if (!preserveSavedTab || !adminViewMode) adminViewMode = 'admin';
                 localStorage.setItem('oleng_admin_view_mode', adminViewMode);
+                ['customer', 'driver', 'merchant', 'admin'].forEach(m => {
+                    const btn = document.getElementById(`mode-btn-${m}`);
+                    if(btn) btn.className = m === adminViewMode ? "px-2.5 py-1 bg-[#FF7900] text-[#171717] rounded-lg text-[10px] font-black cursor-pointer" : "px-2.5 py-1 bg-[#262626] hover:bg-[#FF7900] hover:text-[#171717] text-white rounded-lg text-[10px] font-extrabold cursor-pointer";
+                });
             } else {
                 switcherBar?.classList.add('hidden');
                 adminViewMode = null;
@@ -3462,13 +3487,7 @@
         }
 
         function renderDashboardContent(tab, recordHistory = true) {
-            if (mapInstance) {
-                try { currentMapZoom = mapInstance.getZoom(); currentMapCenter = mapInstance.getCenter(); } catch (e) {}
-                mapInstance.remove();
-                mapInstance = null;
-            }
-            if (ojekMapInstance) { ojekMapInstance.remove(); ojekMapInstance = null; }
-            if (checkoutMapInstance) { checkoutMapInstance.remove(); checkoutMapInstance = null; }
+            cleanupAllMapsAndModals();
 
             ensureRoleListsSyncedFromUsers();
             if (recordHistory && currentSubTab !== tab) {
@@ -3831,6 +3850,7 @@
                 const assignedPhone = activeRole === 'driver' ? normalizePhone(currentUser.phone) : normalizePhone(order.assignedDriverPhone);
                 const prevDriver = order.driver;
                 order.driver = assignedName;
+                order.driverPhoto = resolveDriverPhoto(assignedName);
                 order.assignedDriverPhone = assignedPhone;
                 order.driverResponseDeadline = null;
                 order.replacementSearchActive = false;
@@ -4521,7 +4541,7 @@
         }
 
         function closeCartModal() {
-            if(checkoutMapInstance) { checkoutMapInstance.remove(); checkoutMapInstance = null; }
+            if(checkoutMapInstance) { try { checkoutMapInstance.remove(); } catch (e) {} checkoutMapInstance = null; }
             document.getElementById('modal-cart')?.classList.add('hidden');
         }
 
@@ -5892,7 +5912,7 @@
         function initHomeMap() {
             const mapEl = document.getElementById('map');
             if(!mapEl) return;
-            if(mapInstance) mapInstance.remove();
+            if(mapInstance) { try { mapInstance.remove(); } catch (e) {} }
             const startCenter = currentMapCenter || userCurrentLatLng;
             mapInstance = L.map('map', { zoomControl: true }).setView(startCenter, currentMapZoom);
             getBaseTileLayerForMode().addTo(mapInstance);
