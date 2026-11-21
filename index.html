@@ -79,6 +79,86 @@
         .auth-panel-slide-right { animation: panelSlideIn 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
         .auth-panel-slide-left { animation: panelSlideBack 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
         .splash-logo-anim { animation: splashLogoPulse 1.4s ease-in-out infinite; }
+
+        /* Komponen Global Footer SIMADU */
+        .oleng-global-footer {
+            width: 100%;
+            margin-top: 24px;
+            padding: 18px 16px 24px;
+            text-align: center;
+            border-top: 1px solid rgba(115, 115, 115, 0.2);
+            box-sizing: border-box;
+        }
+        .oleng-global-footer--light {
+            background: transparent;
+            color: #171717;
+        }
+        .oleng-global-footer--dark {
+            background: transparent;
+            color: #FFFFFF;
+        }
+        .oleng-global-footer__inner {
+            max-width: 420px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
+        .oleng-global-footer__brand {
+            font-size: 12.5px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            line-height: 1.35;
+            text-transform: uppercase;
+        }
+        .oleng-global-footer--light .oleng-global-footer__brand {
+            color: #171717;
+        }
+        .oleng-global-footer--dark .oleng-global-footer__brand {
+            color: #FFFFFF;
+        }
+        .oleng-global-footer__subbrand {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            line-height: 1.35;
+            text-transform: uppercase;
+        }
+        .oleng-global-footer--light .oleng-global-footer__subbrand {
+            color: #B47B2B;
+        }
+        .oleng-global-footer--dark .oleng-global-footer__subbrand {
+            color: #E7C37A;
+        }
+        .oleng-global-footer__tagline {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.09em;
+            line-height: 1.35;
+            text-transform: uppercase;
+        }
+        .oleng-global-footer--light .oleng-global-footer__tagline {
+            color: #737373;
+        }
+        .oleng-global-footer--dark .oleng-global-footer__tagline {
+            color: #9E9E9E;
+        }
+        .oleng-global-footer__copy {
+            font-size: 9px;
+            font-weight: 500;
+            letter-spacing: 0.06em;
+            line-height: 1.35;
+            margin-top: 1px;
+            text-transform: uppercase;
+        }
+        .oleng-global-footer--light .oleng-global-footer__copy {
+            color: #9CA3AF;
+        }
+        .oleng-global-footer--dark .oleng-global-footer__copy {
+            color: #7A7A7A;
+        }
     </style>
 </head>
 <body class="h-full flex flex-col items-center justify-center">
@@ -254,7 +334,7 @@
                     </form>
                 </div>
             </div>
-            <div class="text-center text-[10px] text-[#F3F3F3] mt-2 font-black uppercase tracking-widest">POWERED BY <span class="text-[#FFD400]">SIMADU</span></div>
+            <div data-oleng-footer-host="auth" class="mt-6 w-full"></div>
         </div>
 
         <!-- ================= MAIN APP SHELL ================= -->
@@ -537,6 +617,58 @@
             completed: [],
             cancelled: []
         };
+
+        function createGlobalSimaduFooterElement(themeVariant = 'light', contextName = 'page') {
+            const isDark = themeVariant === 'dark';
+            const footerEl = document.createElement('footer');
+            footerEl.className = `oleng-global-footer ${isDark ? 'oleng-global-footer--dark' : 'oleng-global-footer--light'}`;
+            footerEl.setAttribute('data-oleng-global-footer', 'true');
+            footerEl.setAttribute('data-footer-context', contextName);
+            footerEl.innerHTML = `
+                <div class="oleng-global-footer__inner">
+                    <div class="oleng-global-footer__brand">POWERED BY SIMADU</div>
+                    <div class="oleng-global-footer__subbrand">MARTABAK MANIS</div>
+                    <div class="oleng-global-footer__tagline">TECHNOLOGY &amp; INNOVATION</div>
+                    <div class="oleng-global-footer__copy">OLENGGO &copy; 2026</div>
+                </div>
+            `;
+            return footerEl;
+        }
+
+        function attachGlobalFooterToContainer(container, themeVariant = 'light', contextName = 'page') {
+            if (!container) return;
+            container.querySelectorAll('[data-oleng-global-footer="true"]').forEach(existing => existing.remove());
+            const footerNode = createGlobalSimaduFooterElement(themeVariant, contextName);
+            const firstChild = container.firstElementChild;
+            if (firstChild) {
+                firstChild.appendChild(footerNode);
+            } else {
+                container.appendChild(footerNode);
+            }
+        }
+
+        function mountGlobalFootersAcrossApp() {
+            const authView = document.getElementById('view-auth');
+            if (authView) {
+                const authHost = authView.querySelector('[data-oleng-footer-host="auth"]');
+                if (authHost) {
+                    authHost.innerHTML = '';
+                    authHost.appendChild(createGlobalSimaduFooterElement('dark', 'auth'));
+                } else {
+                    attachGlobalFooterToContainer(authView, 'dark', 'auth');
+                }
+            }
+
+            const mainContent = document.getElementById('main-content');
+            if (mainContent && mainContent.children.length > 0) {
+                attachGlobalFooterToContainer(mainContent, 'light', currentSubTab || 'page');
+            }
+
+            const merchantDetail = document.getElementById('view-merchant-detail');
+            if (merchantDetail && !merchantDetail.classList.contains('hidden')) {
+                attachGlobalFooterToContainer(merchantDetail, 'light', 'merchant-detail');
+            }
+        }
 
         let tabNavigationHistory = ['home'];
         let isHandlingHardwareBack = false;
@@ -2922,6 +3054,7 @@
 
         document.addEventListener("DOMContentLoaded", async function() {
             try {
+                mountGlobalFootersAcrossApp();
                 getSyncedMainBanner();
                 ensureDevicePushToken();
                 toggleRegisterRoleFields();
@@ -2950,6 +3083,7 @@
             } catch (e) {
                 console.warn('Init error:', e);
             } finally {
+                mountGlobalFootersAcrossApp();
                 const splash = document.getElementById('oleng-splash-screen');
                 if (splash) {
                     splash.classList.add('opacity-0');
@@ -2996,6 +3130,7 @@
                 cardPanel.classList.add('scale-[1.01]');
                 setTimeout(() => cardPanel.classList.remove('scale-[1.01]'), 180);
             }
+            mountGlobalFootersAcrossApp();
         }
 
         function resetMerchantRegistrationFormInputs() {
@@ -3398,6 +3533,7 @@
             document.getElementById('view-dashboard')?.classList.add('hidden');
             document.getElementById('view-auth')?.classList.remove('hidden');
             switchAuthTab('login');
+            mountGlobalFootersAcrossApp();
             if (departingUser) {
                 await recordAccountAuthEventToSupabase('LOGOUT', departingUser);
             }
@@ -3517,6 +3653,8 @@
             else if(tab === 'admin-orders') renderOrderHistory(container);
             else if(tab === 'admin-banner') renderAdminBanner(container);
             else renderCustomerHome(container);
+
+            mountGlobalFootersAcrossApp();
         }
 
         function getAccountNotifs() {
@@ -4359,6 +4497,7 @@
                     ` : ''}
                 </div>
             `;
+            mountGlobalFootersAcrossApp();
         }
 
         function closeMerchantDetail() {
