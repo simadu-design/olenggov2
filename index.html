@@ -2766,6 +2766,27 @@
 
                 updateHomeHeaderBadgesOnly();
 
+                const activeRoleNow = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+                if (activeRoleNow === 'driver' || activeRoleNow === 'merchant') {
+                    const pendingPopupOrder = (db.orders || []).find(o => {
+                        if (!o || !o.id) return false;
+                        if (shownPopupOrderIds.includes(String(o.id))) return false;
+                        return shouldShowOrderPopupNow(o);
+                    });
+                    if (pendingPopupOrder) {
+                        forceTriggerOrderPopupForNewOrder(pendingPopupOrder);
+                    }
+                }
+
+                const pendingPopupChat = (db.chats || []).find(c => {
+                    if (!c || !c.id) return false;
+                    if (shownPopupChatIds.includes(String(c.id))) return false;
+                    return isChatMessageUnreadForCurrentUser(c);
+                });
+                if (pendingPopupChat) {
+                    checkAndTriggerIncomingChatPopup(pendingPopupChat);
+                }
+
                 if (isUserCurrentlyTypingOrEditing()) return;
 
                 if (chatViewVisibleNow) {
