@@ -111,7 +111,6 @@
         .auth-panel-slide-left { animation: panelSlideBack 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
         .splash-logo-anim { animation: splashLogoPulse 1.4s ease-in-out infinite; }
 
-        /* Komponen Global Footer SIMADU */
         .oleng-global-footer {
             width: 100%;
             margin-top: 24px;
@@ -172,7 +171,7 @@
 </head>
 <body class="h-full flex flex-col items-center justify-center">
 
-    <!-- SPLASH SCREEN 2 DETIK (SELALU TERTUTUP MAKSIMAL 2 DETIK) -->
+    <!-- SPLASH SCREEN -->
     <div id="oleng-splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white text-[#171717] transition-opacity duration-500 border-t-4 border-[#FF7900]">
         <div class="flex flex-col items-center justify-center px-6 text-center">
             <div class="w-32 h-32 rounded-3xl bg-white p-2.5 shadow-lg border-4 border-[#FF7900] flex items-center justify-center overflow-hidden splash-logo-anim">
@@ -203,7 +202,7 @@
     <!-- MAIN APP CONTAINER -->
     <div id="app" class="flex-1 flex flex-col h-full max-w-md mx-auto w-full bg-white shadow-2xl relative overflow-hidden border-x border-[#262626]">
         
-        <!-- ================= AUTH VIEW ================= -->
+        <!-- ================= AUTH VIEW (KHUSUS NOMOR HP) ================= -->
         <div id="view-auth" class="flex-1 flex flex-col justify-between p-6 bg-[#171717] text-white overflow-y-auto z-30">
             <div class="my-auto text-center space-y-5">
                 <div class="flex items-center justify-between px-2 bg-[#262626] p-3.5 rounded-3xl border border-[#FF7900]">
@@ -213,7 +212,7 @@
                         </div>
                         <div class="text-left">
                             <h1 class="text-2xl font-black italic tracking-wider text-[#FF7900]">OLENG GO</h1>
-                            <p class="text-[10px] text-[#F3F3F3] font-bold"><i class="fa-solid fa-location-dot text-[#FFD400]"></i> Lengkong, Sukabumi</p>
+                            <p class="text-[10px] text-[#F3F3F3] font-bold"><i class="fa-solid fa-location-dot text-[#FFD400]"></i> Lengkong, Sukabumi • Khusus No. HP</p>
                         </div>
                     </div>
                     <div class="w-11 h-11 bg-white rounded-full border-2 border-[#FF7900] flex items-center justify-center p-1 overflow-hidden shrink-0">
@@ -582,6 +581,7 @@
     
     <script>
         const ADMIN_MAIN_WA = '6285624736602';
+        const ADMIN_MAIN_PHONE = '085624736602';
         const ADMIN_OWN_STORE_ID = 'TOKOADM01';
         const MAX_REALTIME_RECONNECT_ATTEMPTS = 8;
 
@@ -872,7 +872,7 @@
         function openGoogleMapsNavigation(orderObj = null, storeName = '', fallbackLat = null, fallbackLng = null, destText = '') {
             const isNonStoreOrder = orderObj && (orderObj.type === 'ojek' || String(orderObj.merchant || '').toLowerCase().includes('ojek'));
             const matchedStore = !isNonStoreOrder
-                ? (db.merchants || []).find(m => String(m.name || '').trim().toLowerCase() === String(storeName || orderObj?.merchant || '').trim().toLowerCase())
+                ? (db.merchants || []).find(m => String(m.name || '').trim().toLowerCase() === String(storeName || orderObj?.merchant || '').trim().toLowerCase() || (orderObj?.merchantPhone && normalizePhone(m.whatsapp) === normalizePhone(orderObj.merchantPhone)))
                 : null;
             const targetLat = matchedStore && typeof matchedStore.lat === 'number' ? matchedStore.lat : (typeof orderObj?.destLat === 'number' ? orderObj.destLat : (typeof fallbackLat === 'number' ? fallbackLat : DESTINATION_LOCATION.lat));
             const targetLng = matchedStore && typeof matchedStore.lng === 'number' ? matchedStore.lng : (typeof orderObj?.destLng === 'number' ? orderObj.destLng : (typeof fallbackLng === 'number' ? fallbackLng : DESTINATION_LOCATION.lng));
@@ -886,6 +886,9 @@
             window.open(url, '_blank');
         }
 
+        // =========================================================================
+        // NORMALISASI NOMOR HP SEBAGAI IDENTITAS UTAMA
+        // =========================================================================
         function normalizePhone(rawPhone) {
             let digits = String(rawPhone || '').replace(/\D/g, '');
             if (!digits) return '';
@@ -894,10 +897,53 @@
             return digits;
         }
 
-        function generateAutoAccountIdFromPhone(normPhone, role = 'customer') {
-            const prefix = role === 'admin' ? 'ADM' : role === 'merchant' ? 'MRC' : role === 'driver' ? 'DRV' : 'USR';
-            const clean = normalizePhone(normPhone) || String(Date.now());
-            return (prefix + clean).toUpperCase().slice(0, 20);
+        function phoneKey(rawPhone, role = '') {
+            const p = normalizePhone(rawPhone) || String(rawPhone || '').trim();
+            return role ? `${p}__${role}` : p;
+        }
+
+        function getUserPhoneByNameOrShop(labelName) {
+            const clean = String(labelName || '').trim();
+            if (!clean) return '';
+            const asPhone = normalizePhone(clean);
+            if (asPhone.length >= 9) return asPhone;
+
+            const low = clean.toLowerCase();
+            if (low === 'admin simadu' || low === 'admin') return ADMIN_MAIN_PHONE;
+
+            const u = (db.users || []).find(item =>
+                String(item.name || '').trim().toLowerCase() === low ||
+                (item.shopName && String(item.shopName || '').trim().toLowerCase() === low)
+            );
+            if (u && u.phone) return normalizePhone(u.phone);
+
+            const m = (db.merchants || []).find(item => String(item.name || '').trim().toLowerCase() === low);
+            if (m && m.whatsapp) return normalizePhone(m.whatsapp);
+
+            const d = (db.drivers || []).find(item => String(item.name || '').trim().toLowerCase() === low);
+            if (d && d.phone) return normalizePhone(d.phone);
+
+            return '';
+        }
+
+        function enrichChatAndOrderWithPhones() {
+            (db.chats || []).forEach(c => {
+                const sp = normalizePhone(c.senderPhone) || getUserPhoneByNameOrShop(c.from);
+                const rp = normalizePhone(c.receiverPhone) || getUserPhoneByNameOrShop(c.to);
+                if (sp) c.senderPhone = sp;
+                if (rp) c.receiverPhone = rp;
+            });
+            (db.orders || []).forEach(o => {
+                const cp = normalizePhone(o.customerPhone) || getUserPhoneByNameOrShop(o.customer);
+                const mp = normalizePhone(o.merchantPhone) || getUserPhoneByNameOrShop(o.merchant);
+                const dp = normalizePhone(o.driverPhone || o.assignedDriverPhone) || getUserPhoneByNameOrShop(o.driver);
+                if (cp) o.customerPhone = cp;
+                if (mp) o.merchantPhone = mp;
+                if (dp) {
+                    o.driverPhone = dp;
+                    o.assignedDriverPhone = dp;
+                }
+            });
         }
 
         function formatCompactOrderItems(itemsArr) {
@@ -932,13 +978,10 @@
             }
             const lowName = String(driverOrName).trim().toLowerCase();
             if (!lowName) return fallback;
-            const drv = (db.drivers || []).find(d => String(d.name || '').trim().toLowerCase() === lowName);
+            const drv = (db.drivers || []).find(d => String(d.name || '').trim().toLowerCase() === lowName || normalizePhone(d.phone) === normalizePhone(driverOrName));
             if (drv && drv.photo && String(drv.photo).trim()) return String(drv.photo).trim();
-            const usr = (db.users || []).find(u => u.role === 'driver' && String(u.name || '').trim().toLowerCase() === lowName);
+            const usr = (db.users || []).find(u => u.role === 'driver' && (String(u.name || '').trim().toLowerCase() === lowName || normalizePhone(u.phone) === normalizePhone(driverOrName)));
             if (usr && usr.photo && String(usr.photo).trim()) return String(usr.photo).trim();
-            if (currentUser && currentUser.role === 'driver' && String(currentUser.name || '').trim().toLowerCase() === lowName && currentUser.photo) {
-                return String(currentUser.photo).trim();
-            }
             return fallback;
         }
 
@@ -950,7 +993,7 @@
             }
             const targetAcc = accountObj || currentUser;
             if (targetAcc && Array.isArray(db.users)) {
-                const u = db.users.find(x => (targetAcc.id && x.id === targetAcc.id) || (targetAcc.phone && normalizePhone(x.phone) === normalizePhone(targetAcc.phone)));
+                const u = db.users.find(x => (targetAcc.phone && normalizePhone(x.phone) === normalizePhone(targetAcc.phone) && x.role === targetAcc.role));
                 if (u) {
                     u.pushToken = devicePushToken;
                     u.pushTokenUpdatedAt = new Date().toISOString();
@@ -1049,7 +1092,9 @@
                 openIncomingChatModal({
                     id: 'TEST-CHAT-' + Date.now(),
                     from: 'Pelanggan Uji',
+                    senderPhone: '085611112222',
                     to: currentUser?.name || 'Admin SIMADU',
+                    receiverPhone: normalizePhone(currentUser?.phone) || ADMIN_MAIN_PHONE,
                     text: 'Uji coba pop-up & alarm chat masuk OLENG GO.',
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 });
@@ -1061,8 +1106,10 @@
                     id: 'TEST-ORD-' + Math.floor(100 + Math.random() * 900),
                     type: 'ojek',
                     customer: 'Pelanggan Uji',
+                    customerPhone: '085611112222',
                     merchant: 'Layanan Ojek Online',
                     driver: currentUser?.name || 'Driver Uji',
+                    driverPhone: normalizePhone(currentUser?.phone) || ADMIN_MAIN_PHONE,
                     items: 'Uji Coba Order Masuk & Alarm',
                     pickup: 'Titik Jemput Uji',
                     dest: 'Titik Tujuan Uji',
@@ -1167,7 +1214,6 @@
                 const evt = {
                     id: 'AUTH-' + Date.now() + '-' + Math.floor(Math.random() * 900 + 100),
                     action: actionType,
-                    accountId: accountObj?.accountId || '',
                     name: accountObj?.name || '',
                     phone: normalizePhone(accountObj?.phone || ''),
                     role: accountObj?.role || '',
@@ -1187,14 +1233,28 @@
 
         function openChatPartnerProfileModal(partnerName) {
             const targetLow = String(partnerName || '').trim().toLowerCase();
-            if (!targetLow) return;
-            let matchedUser = (db.users || []).find(u => String(u.name || '').trim().toLowerCase() === targetLow || String(u.shopName || '').trim().toLowerCase() === targetLow);
-            let matchedStore = (db.merchants || []).find(m => String(m.name || '').trim().toLowerCase() === targetLow || (matchedUser && normalizePhone(m.whatsapp) === normalizePhone(matchedUser.phone) && String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID));
-            let matchedDriver = (db.drivers || []).find(d => String(d.name || '').trim().toLowerCase() === targetLow || (matchedUser && normalizePhone(d.phone) === normalizePhone(matchedUser.phone)));
+            const targetPhoneNorm = normalizePhone(partnerName);
+            if (!targetLow && !targetPhoneNorm) return;
+
+            let matchedUser = (db.users || []).find(u =>
+                (targetPhoneNorm && normalizePhone(u.phone) === targetPhoneNorm) ||
+                String(u.name || '').trim().toLowerCase() === targetLow ||
+                String(u.shopName || '').trim().toLowerCase() === targetLow
+            );
+            let matchedStore = (db.merchants || []).find(m =>
+                String(m.name || '').trim().toLowerCase() === targetLow ||
+                (targetPhoneNorm && normalizePhone(m.whatsapp) === targetPhoneNorm) ||
+                (matchedUser && normalizePhone(m.whatsapp) === normalizePhone(matchedUser.phone) && String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID)
+            );
+            let matchedDriver = (db.drivers || []).find(d =>
+                String(d.name || '').trim().toLowerCase() === targetLow ||
+                (targetPhoneNorm && normalizePhone(d.phone) === targetPhoneNorm) ||
+                (matchedUser && normalizePhone(d.phone) === normalizePhone(matchedUser.phone))
+            );
 
             const displayName = matchedUser?.name || matchedStore?.name || matchedDriver?.name || partnerName;
             const displayRole = matchedUser?.role || (matchedStore ? 'merchant' : matchedDriver ? 'driver' : 'customer');
-            const displayPhone = normalizePhone(matchedUser?.phone || matchedStore?.whatsapp || matchedDriver?.phone) || (targetLow === 'admin simadu' ? '085624736602' : 'Belum tercatat');
+            const displayPhone = normalizePhone(matchedUser?.phone || matchedStore?.whatsapp || matchedDriver?.phone || targetPhoneNorm) || ((targetLow === 'admin simadu' || targetLow === 'admin') ? ADMIN_MAIN_PHONE : 'Belum tercatat');
             const displayAddress = matchedUser?.address || matchedStore?.address || matchedDriver?.location || 'Kecamatan Lengkong, Sukabumi';
             const displayShop = matchedStore?.name || matchedUser?.shopName || '-';
             const displayPhoto = displayRole === 'driver' ? resolveDriverPhoto(matchedDriver || matchedUser || displayName) : (matchedUser?.photo || matchedStore?.image || './olengorange2.png');
@@ -1291,7 +1351,7 @@
         }
 
         function openMainAdminWhatsApp(customMessage = '') {
-            const msg = customMessage || `Halo Admin OLENG GO (${ADMIN_MAIN_WA}), saya ${currentUser?.name || 'Pengguna'} (${currentUser?.phone || '-'}) menghubungi terkait layanan/peta.`;
+            const msg = customMessage || `Halo Admin OLENG GO (${ADMIN_MAIN_PHONE}), saya ${currentUser?.name || 'Pengguna'} (No. HP: ${currentUser?.phone || '-'}) menghubungi terkait layanan/peta.`;
             window.open(`https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
@@ -1313,7 +1373,7 @@
             try {
                 let res = await withSupabaseTimeout(supabaseClient.from('app_config').select('id').eq('id', 1).maybeSingle(), 5000);
                 if (res && res.error) {
-                    const fallbackRes = await withSupabaseTimeout(supabaseClient.from('accounts').select('account_id').limit(1), 5000);
+                    const fallbackRes = await withSupabaseTimeout(supabaseClient.from('accounts').select('phone').limit(1), 5000);
                     if (fallbackRes && !fallbackRes.error) res = { data: fallbackRes.data, error: null };
                 }
                 if (res && res.error) {
@@ -1361,9 +1421,11 @@
 
         async function manualForceSync(showNotify = true) {
             ensureRoleListsSyncedFromUsers();
+            enrichChatAndOrderWithPhones();
             await updateSupabaseBadgeUI(false);
             try { await withSupabaseTimeout(pullInitialFromSupabase(true), 6000); } catch (e) { recordTechnicalDiagLog('SYNC_PULL', e?.message || 'Timeout pull Supabase'); }
             ensureRoleListsSyncedFromUsers();
+            enrichChatAndOrderWithPhones();
             try { await withSupabaseTimeout(syncAllToSupabase(), 6000); } catch (e) { recordTechnicalDiagLog('SYNC_PUSH', e?.message || 'Timeout push Supabase'); }
             await updateSupabaseBadgeUI(showNotify);
         }
@@ -1426,14 +1488,8 @@
             clearExistingRealtimeChannels(false);
             try {
                 const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
-                const myShopName = String(currentUser?.shopName || '').trim();
-                const ordersFilter = (activeRole === 'merchant' && myShopName && activeRole !== 'admin')
-                    ? `merchant_name=eq.${myShopName}`
-                    : undefined;
-                const ordersSubConfig = { event: '*', schema: 'public', table: 'orders' };
-                if (ordersFilter) ordersSubConfig.filter = ordersFilter;
-
-                const channelName = 'oleng-go-rt-' + (activeRole || 'guest') + '-' + (normalizePhone(currentUser?.phone) || 'anon');
+                const myPhone = normalizePhone(currentUser?.phone) || 'anon';
+                const channelName = 'oleng-go-rt-phone-' + (activeRole || 'guest') + '-' + myPhone;
                 activeRealtimeChannelName = channelName;
                 realtimeChannelState = 'SUBSCRIBING';
 
@@ -1446,18 +1502,23 @@
                                 const chatObj = {
                                     id: row.id,
                                     from: row.sender_name,
+                                    senderPhone: normalizePhone(row.sender_phone) || getUserPhoneByNameOrShop(row.sender_name),
                                     to: row.receiver_name,
+                                    receiverPhone: normalizePhone(row.receiver_phone) || getUserPhoneByNameOrShop(row.receiver_name),
                                     text: row.message_text,
                                     time: row.sent_time || '',
                                     readStatus: row.read_status || 'UNREAD',
                                     readAt: row.read_at || null
                                 };
                                 if (isMessageForCurrentUser(chatObj)) {
-                                    const isChatOpenNow = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden') && String(activeChatTarget || '').trim().toLowerCase() === String(chatObj.from || '').trim().toLowerCase();
+                                    const isChatOpenNow = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden') && (
+                                        (normalizePhone(activeChatTarget) && normalizePhone(activeChatTarget) === normalizePhone(chatObj.senderPhone)) ||
+                                        String(activeChatTarget || '').trim().toLowerCase() === String(chatObj.from || '').trim().toLowerCase()
+                                    );
                                     if (isChatOpenNow) {
                                         markMessagesFromPartnerAsRead(chatObj.from);
                                     } else {
-                                        notifyBackgroundOnce('chat-' + row.id, `Chat Masuk dari ${row.sender_name}`, String(row.message_text || '').startsWith('data:image') ? '📷 Mengirim foto' : row.message_text, { type: 'chat', sender: row.sender_name, tag: 'chat-' + chatObj.from, renotify: true });
+                                        notifyBackgroundOnce('chat-' + row.id, `Chat Masuk dari ${chatObj.from} (${chatObj.senderPhone || '-'})`, String(chatObj.text || '').startsWith('data:image') ? '📷 Mengirim foto' : chatObj.text, { type: 'chat', sender: chatObj.from, tag: 'chat-' + (chatObj.senderPhone || chatObj.from), renotify: true });
                                         playChatIncomingAlarm();
                                         checkAndTriggerIncomingChatPopup(chatObj);
                                     }
@@ -1465,7 +1526,7 @@
                             }
                         });
                     })
-                    .on('postgres_changes', ordersSubConfig, (payload) => {
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
                         pullInitialFromSupabase(false).then(() => {
                             if ((payload?.eventType === 'INSERT' || payload?.eventType === 'UPDATE') && payload?.new) {
                                 const r = payload.new;
@@ -1473,9 +1534,12 @@
                                     id: r.order_code,
                                     type: r.order_type || 'ojek',
                                     customer: r.customer_name,
+                                    customerPhone: normalizePhone(r.customer_phone) || getUserPhoneByNameOrShop(r.customer_name),
                                     merchant: r.merchant_name,
+                                    merchantPhone: normalizePhone(r.merchant_phone) || getUserPhoneByNameOrShop(r.merchant_name),
                                     driver: r.driver_name,
-                                    assignedDriverPhone: r.claimed_by_phone || null,
+                                    driverPhone: normalizePhone(r.driver_phone || r.claimed_by_phone) || getUserPhoneByNameOrShop(r.driver_name),
+                                    assignedDriverPhone: normalizePhone(r.driver_phone || r.claimed_by_phone) || null,
                                     items: r.items_summary,
                                     total: Number(r.total_amount || 0),
                                     status: r.status || 'searching_driver'
@@ -1490,11 +1554,11 @@
                         });
                     })
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, (payload) => {
-                        if (payload?.eventType === 'DELETE' && payload?.old?.account_id) {
-                            const deletedCode = String(payload.old.account_id).toUpperCase();
-                            db.users = (db.users || []).filter(u => String(u.accountId || '').toUpperCase() !== deletedCode);
-                            db.merchants = (db.merchants || []).filter(m => String(m.accountId || '').toUpperCase() !== deletedCode);
-                            db.drivers = (db.drivers || []).filter(d => String(d.accountId || '').toUpperCase() !== deletedCode);
+                        if (payload?.eventType === 'DELETE' && payload?.old?.phone) {
+                            const deletedPhone = normalizePhone(payload.old.phone);
+                            db.users = (db.users || []).filter(u => normalizePhone(u.phone) !== deletedPhone);
+                            db.merchants = (db.merchants || []).filter(m => normalizePhone(m.whatsapp) !== deletedPhone);
+                            db.drivers = (db.drivers || []).filter(d => normalizePhone(d.phone) !== deletedPhone);
                             localStorage.setItem('oleng_go_db', JSON.stringify(db));
                         }
                         pullInitialFromSupabase(false);
@@ -1563,7 +1627,6 @@
 
         const DEFAULT_ADMIN_ACCOUNT = {
             id: 4,
-            accountId: 'ADM01',
             name: 'Admin SIMADU',
             phone: '085624736602',
             role: 'admin',
@@ -1576,7 +1639,6 @@
 
         const DEFAULT_ADMIN_STORE = {
             id: 901,
-            accountId: ADMIN_OWN_STORE_ID,
             name: 'Toko SIMADU Lengkong',
             ownerName: 'Admin SIMADU',
             ktp: '3202247366020001',
@@ -1591,7 +1653,7 @@
             lng: 106.8459,
             address: 'Jl. Raya Lengkong No. 01, Sukabumi',
             operationalHours: '07:00 - 22:00 WIB',
-            whatsapp: ADMIN_MAIN_WA,
+            whatsapp: '085624736602',
             balance: 0
         };
 
@@ -1604,16 +1666,15 @@
             driverChangeLogs: [],
             reviews: [],
             users: [
-                { id: 1, accountId: 'CUST01', name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: './olengorange2.png' },
-                { id: 2, accountId: 'DRIV01', name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: './olengorange2.png' },
-                { id: 3, accountId: 'MRCH01', name: 'MADU TOKO', ownerName: 'H. Madu', ktp: '3202110202880002', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12, Sukabumi', lat: -7.1240, lng: 106.8460, balance: 350000, password: '123', shopName: 'MADU TOKO', photo: './olengorange2.png' },
+                { id: 1, name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123', photo: './olengorange2.png' },
+                { id: 2, name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', balance: 150000, password: '123', vehicle: 'Honda Beat - F 4321 ABC', photo: './olengorange2.png' },
+                { id: 3, name: 'MADU TOKO', ownerName: 'H. Madu', ktp: '3202110202880002', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12, Sukabumi', lat: -7.1240, lng: 106.8460, balance: 350000, password: '123', shopName: 'MADU TOKO', photo: './olengorange2.png' },
                 { ...DEFAULT_ADMIN_ACCOUNT }
             ],
             merchants: [
                 { ...DEFAULT_ADMIN_STORE },
                 { 
                     id: 1, 
-                    accountId: 'MRCH01',
                     name: 'MADU TOKO', 
                     ownerName: 'H. Madu',
                     ktp: '3202110202880002',
@@ -1628,7 +1689,7 @@
                     lng: 106.8460, 
                     address: 'Jl. Raya Lengkong No. 12, Sukabumi', 
                     operationalHours: '08:00 - 21:00 WIB', 
-                    whatsapp: '6285624736602', 
+                    whatsapp: '085633334444', 
                     balance: 350000 
                 }
             ],
@@ -1638,8 +1699,8 @@
                 { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung asli bumbu rempah bakar madu manis...', stock: 12, image: './olengorange2.png' }
             ],
             drivers: [
-                { id: 1, accountId: 'DRIV01', name: 'Asep Supriatna', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, ratingCount: 1, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '6285624736602', balance: 150000, photo: './olengorange2.png' },
-                { id: 2, accountId: 'DRIV02', name: 'Ujang Hendra', ktp: '3202110404910004', plate: 'F 8891 ZY', bikeType: 'Yamaha Mio', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, ratingCount: 1, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '6285624736602', balance: 120000, photo: './olengorange2.png' }
+                { id: 1, name: 'Asep Supriatna', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, ratingCount: 1, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '085622223333', balance: 150000, photo: './olengorange2.png' },
+                { id: 2, name: 'Ujang Hendra', ktp: '3202110404910004', plate: 'F 8891 ZY', bikeType: 'Yamaha Mio', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, ratingCount: 1, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '085655556666', balance: 120000, photo: './olengorange2.png' }
             ],
             orders: [],
             notifications: [],
@@ -1664,12 +1725,11 @@
         if (!Array.isArray(db.orders)) db.orders = [];
         if (!Array.isArray(db.notifications)) db.notifications = [];
         if (!Array.isArray(db.chats)) db.chats = [];
-        db.users.forEach((u, idx) => {
+        db.users.forEach((u) => {
             u.phone = normalizePhone(u.phone) || u.phone;
-            if (!u.accountId) u.accountId = generateAutoAccountIdFromPhone(u.phone || ('0800' + idx), u.role);
             if (!u.password) u.password = '123';
         });
-        if (!db.users.some(u => normalizePhone(u.phone) === '085624736602' && u.role === 'admin')) {
+        if (!db.users.some(u => normalizePhone(u.phone) === ADMIN_MAIN_PHONE && u.role === 'admin')) {
             db.users.push({ ...DEFAULT_ADMIN_ACCOUNT });
         }
 
@@ -1741,11 +1801,13 @@
                     d.activitySummary = 'Offline • Tidak menerima order baru';
                     return;
                 }
+                const dPhone = normalizePhone(d.phone);
                 const busyOrder = (db.orders || []).find(o => {
                     const st = normalizeOrderStatusCode(o.status);
                     if (!activeStatuses.includes(st)) return false;
-                    return String(o.driver || '').trim().toLowerCase() === String(d.name || '').trim().toLowerCase() ||
-                        (o.assignedDriverPhone && normalizePhone(o.assignedDriverPhone) === normalizePhone(d.phone));
+                    const oDrvPhone = normalizePhone(o.driverPhone || o.assignedDriverPhone);
+                    return (dPhone && oDrvPhone && dPhone === oDrvPhone) ||
+                        String(o.driver || '').trim().toLowerCase() === String(d.name || '').trim().toLowerCase();
                 });
                 if (busyOrder) {
                     const st = normalizeOrderStatusCode(busyOrder.status);
@@ -1784,7 +1846,7 @@
         }
 
         function getAdminOwnStore() {
-            let store = (db.merchants || []).find(m => String(m.accountId || '').toUpperCase() === ADMIN_OWN_STORE_ID);
+            let store = (db.merchants || []).find(m => normalizePhone(m.whatsapp) === ADMIN_MAIN_PHONE && String(m.name || '').toLowerCase().includes('simadu'));
             if (!store) {
                 store = { ...DEFAULT_ADMIN_STORE };
                 db.merchants.unshift(store);
@@ -1799,21 +1861,17 @@
             getAdminOwnStore();
             (db.users || []).forEach((u, idx) => {
                 const cleanPhone = normalizePhone(u.phone) || String(u.phone || '');
-                const accId = String(u.accountId || generateAutoAccountIdFromPhone(cleanPhone, u.role)).toUpperCase();
-                u.accountId = accId;
                 u.phone = cleanPhone;
 
                 if (u.role === 'merchant') {
                     const shopTitle = u.shopName || '';
                     let m = (db.merchants || []).find(item =>
-                        String(item.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID &&
-                        ((accId && String(item.accountId || '').toUpperCase() === accId) ||
-                        (cleanPhone && normalizePhone(item.whatsapp) === cleanPhone))
+                        normalizePhone(item.whatsapp) !== ADMIN_MAIN_PHONE &&
+                        cleanPhone && normalizePhone(item.whatsapp) === cleanPhone
                     );
                     if (!m) {
                         m = {
                             id: u.id || (Date.now() + idx + 11),
-                            accountId: accId,
                             name: shopTitle,
                             ownerName: u.ownerName || u.name,
                             ktp: u.ktp || '',
@@ -1828,12 +1886,11 @@
                             lng: typeof u.lng === 'number' ? u.lng : (106.8460 + idx * 0.0005),
                             address: u.address && u.address !== 'Kecamatan Lengkong, Sukabumi' ? u.address : '',
                             operationalHours: '',
-                            whatsapp: cleanPhone || ADMIN_MAIN_WA,
+                            whatsapp: cleanPhone || ADMIN_MAIN_PHONE,
                             balance: Number(u.balance || 0)
                         };
                         db.merchants.push(m);
                     } else {
-                        m.accountId = accId;
                         m.whatsapp = cleanPhone || m.whatsapp;
                         if (shopTitle && !String(m.name || '').trim()) m.name = shopTitle;
                         if (typeof u.balance === 'number') {
@@ -1843,7 +1900,6 @@
                     }
                 } else if (u.role === 'driver') {
                     let d = (db.drivers || []).find(item =>
-                        (accId && String(item.accountId || '').toUpperCase() === accId) ||
                         (cleanPhone && normalizePhone(item.phone) === cleanPhone) ||
                         (String(item.name || '').trim().toLowerCase() === String(u.name || '').trim().toLowerCase())
                     );
@@ -1851,7 +1907,6 @@
                     if (!d) {
                         d = {
                             id: u.id || (Date.now() + idx + 21),
-                            accountId: accId,
                             name: u.name,
                             ktp: u.ktp || '',
                             plate: u.plate || '',
@@ -1865,13 +1920,12 @@
                             location: u.address || 'Lengkong, Sukabumi',
                             lat: typeof u.lat === 'number' ? u.lat : (-7.1235 - idx * 0.0004),
                             lng: typeof u.lng === 'number' ? u.lng : (106.8458 + idx * 0.0004),
-                            phone: cleanPhone || ADMIN_MAIN_WA,
+                            phone: cleanPhone || ADMIN_MAIN_PHONE,
                             balance: Number(u.balance || 0),
                             photo: resolvedDrvPhoto
                         };
                         db.drivers.push(d);
                     } else {
-                        d.accountId = accId;
                         d.phone = cleanPhone || d.phone;
                         if (resolvedDrvPhoto) d.photo = resolvedDrvPhoto;
                         if (u.photo && String(u.photo).trim()) u.photo = String(u.photo).trim();
@@ -1883,6 +1937,7 @@
                     }
                 }
             });
+            enrichChatAndOrderWithPhones();
             syncDriverAvailabilityLocks();
         }
 
@@ -1944,6 +1999,7 @@
         async function syncAllToSupabase() {
             if (!supabaseClient || isSyncingNow) return { ok: false, error: 'Supabase belum siap atau sedang sinkron' };
             ensureRoleListsSyncedFromUsers();
+            enrichChatAndOrderWithPhones();
             isSyncingNow = true;
             try {
                 let firstError = null;
@@ -1968,7 +2024,7 @@
                     ojek_per_km: Number(db.pricing?.ojekPerKm || 2500),
                     food_per_km: Number(db.pricing?.foodPerKm || 2000),
                     commission_percent: Number(db.pricing?.commissionPercent || 10),
-                    admin_whatsapp: ADMIN_MAIN_WA,
+                    admin_whatsapp: ADMIN_MAIN_PHONE,
                     state_json: extraState
                 }, { onConflict: 'id' });
 
@@ -1980,20 +2036,18 @@
                         ojek_per_km: Number(db.pricing?.ojekPerKm || 2500),
                         food_per_km: Number(db.pricing?.foodPerKm || 2000),
                         commission_percent: Number(db.pricing?.commissionPercent || 10),
-                        admin_whatsapp: ADMIN_MAIN_WA
+                        admin_whatsapp: ADMIN_MAIN_PHONE
                     }, { onConflict: 'id' });
                     if (cfgFallback.error && !firstError) firstError = cfgFallback.error.message;
                 } else if (cfgRes.error && !firstError) {
                     firstError = cfgRes.error.message;
                 }
 
-                const accountRows = (db.users || []).map(u => {
-                    const cleanPhone = normalizePhone(u.phone) || String(u.phone || '');
-                    const autoId = String(u.accountId || generateAutoAccountIdFromPhone(cleanPhone, u.role)).toUpperCase();
+                const accountRows = (db.users || []).map((u, idx) => {
+                    const cleanPhone = normalizePhone(u.phone) || ('0800000' + idx);
                     return {
-                        account_id: autoId,
-                        name: u.name,
                         phone: cleanPhone,
+                        name: u.name,
                         role: u.role,
                         status: u.status || 'Aktif',
                         address: u.address || 'Kecamatan Lengkong, Sukabumi',
@@ -2006,15 +2060,15 @@
                         owner_name: u.ownerName || null,
                         shop_name: u.shopName || null
                     };
-                }).filter(r => r.account_id);
+                }).filter(r => r.phone);
 
                 if (accountRows.length > 0) {
-                    const accRes = await supabaseClient.from('accounts').upsert(accountRows, { onConflict: 'account_id' });
+                    const accRes = await supabaseClient.from('accounts').upsert(accountRows, { onConflict: 'phone' });
                     if (accRes.error && !firstError) firstError = accRes.error.message;
                 }
 
                 const merchantRows = (db.merchants || []).map((m, i) => ({
-                    account_id: String(m.accountId || generateAutoAccountIdFromPhone(m.whatsapp || ('0810' + i), 'merchant')).toUpperCase(),
+                    whatsapp: normalizePhone(m.whatsapp) || (ADMIN_MAIN_PHONE + '_' + i),
                     name: m.name || '',
                     owner_name: m.ownerName || m.name || 'Mitra Toko',
                     ktp: m.ktp || '3202000000000000',
@@ -2029,23 +2083,17 @@
                     lng: Number(m.lng || 106.8460),
                     address: m.address || '',
                     operational_hours: m.operationalHours || '',
-                    whatsapp: normalizePhone(m.whatsapp) || ADMIN_MAIN_WA,
                     balance: Number(m.balance || 0),
                     server_updated_at: serverNowIso
                 }));
 
                 if (merchantRows.length > 0) {
-                    const mRes = await supabaseClient.from('merchants').upsert(merchantRows, { onConflict: 'account_id' });
-                    if (mRes.error && String(mRes.error.message || '').includes('server_updated_at')) {
-                        const mFallback = await supabaseClient.from('merchants').upsert(merchantRows.map(({ server_updated_at, ...rest }) => rest), { onConflict: 'account_id' });
-                        if (mFallback.error && !firstError) firstError = mFallback.error.message;
-                    } else if (mRes.error && !firstError) {
-                        firstError = mRes.error.message;
-                    }
+                    const mRes = await supabaseClient.from('merchants').upsert(merchantRows, { onConflict: 'whatsapp' });
+                    if (mRes.error && !firstError) firstError = mRes.error.message;
                 }
 
                 const driverRows = (db.drivers || []).map((d, i) => ({
-                    account_id: String(d.accountId || generateAutoAccountIdFromPhone(d.phone || ('0820' + i), 'driver')).toUpperCase(),
+                    phone: normalizePhone(d.phone) || ('0820000' + i),
                     name: d.name,
                     ktp: d.ktp || '3202000000000000',
                     plate: d.plate || 'F 0000 XX',
@@ -2057,7 +2105,6 @@
                     location: d.location || 'Lengkong, Sukabumi',
                     lat: Number(d.lat || -7.1235),
                     lng: Number(d.lng || 106.8458),
-                    phone: normalizePhone(d.phone) || ADMIN_MAIN_WA,
                     rating: Number(d.rating || 5.0),
                     rating_count: Number(d.ratingCount || 0),
                     balance: Number(d.balance || 0),
@@ -2065,22 +2112,20 @@
                 }));
 
                 if (driverRows.length > 0) {
-                    const dRes = await supabaseClient.from('drivers').upsert(driverRows, { onConflict: 'account_id' });
-                    if (dRes.error && String(dRes.error.message || '').includes('server_updated_at')) {
-                        const dFallback = await supabaseClient.from('drivers').upsert(driverRows.map(({ server_updated_at, ...rest }) => rest), { onConflict: 'account_id' });
-                        if (dFallback.error && !firstError) firstError = dFallback.error.message;
-                    } else if (dRes.error && !firstError) {
-                        firstError = dRes.error.message;
-                    }
+                    const dRes = await supabaseClient.from('drivers').upsert(driverRows, { onConflict: 'phone' });
+                    if (dRes.error && !firstError) firstError = dRes.error.message;
                 }
 
                 const orderRows = (db.orders || []).map(o => ({
                     order_code: o.id,
                     order_type: o.type || 'ojek',
                     customer_name: o.customer,
+                    customer_phone: normalizePhone(o.customerPhone) || getUserPhoneByNameOrShop(o.customer) || null,
                     merchant_name: o.merchant,
+                    merchant_phone: normalizePhone(o.merchantPhone) || getUserPhoneByNameOrShop(o.merchant) || null,
                     driver_name: o.driver,
-                    claimed_by_phone: o.assignedDriverPhone || null,
+                    driver_phone: normalizePhone(o.driverPhone || o.assignedDriverPhone) || getUserPhoneByNameOrShop(o.driver) || null,
+                    claimed_by_phone: normalizePhone(o.assignedDriverPhone || o.driverPhone) || null,
                     claimed_at: o.claimedAt || null,
                     items_summary: o.items,
                     pickup_label: o.pickup || '',
@@ -2102,7 +2147,7 @@
                 if (orderRows.length > 0) {
                     const oRes = await supabaseClient.from('orders').upsert(orderRows, { onConflict: 'order_code' });
                     if (oRes.error) {
-                        await supabaseClient.from('orders').upsert(orderRows.map(({ server_updated_at, claimed_by_phone, claimed_at, pickup_lat, pickup_lng, dest_lat, dest_lng, ...rest }) => rest), { onConflict: 'order_code' });
+                        await supabaseClient.from('orders').upsert(orderRows.map(({ customer_phone, merchant_phone, driver_phone, server_updated_at, claimed_by_phone, claimed_at, pickup_lat, pickup_lng, dest_lat, dest_lng, ...rest }) => rest), { onConflict: 'order_code' });
                     }
                 }
 
@@ -2123,7 +2168,9 @@
                 const chatRows = (db.chats || []).map(c => ({
                     id: Number(c.id),
                     sender_name: c.from,
+                    sender_phone: normalizePhone(c.senderPhone) || getUserPhoneByNameOrShop(c.from) || null,
                     receiver_name: c.to,
+                    receiver_phone: normalizePhone(c.receiverPhone) || getUserPhoneByNameOrShop(c.to) || null,
                     message_text: c.text,
                     sent_time: c.time || '',
                     server_updated_at: serverNowIso
@@ -2165,16 +2212,15 @@
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             const myPhone = normalizePhone(currentUser.phone);
             if (role === 'admin') {
-                const adm = db.users.find(u => u.role === 'admin' || normalizePhone(u.phone) === '085624736602');
+                const adm = db.users.find(u => u.role === 'admin' || normalizePhone(u.phone) === ADMIN_MAIN_PHONE);
                 return Number(adm?.balance ?? currentUser.balance ?? 0);
             }
             if (role === 'merchant') {
                 const m = db.merchants.find(x =>
-                    String(x.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID &&
-                    ((myPhone && normalizePhone(x.whatsapp) === myPhone) ||
-                    (currentUser.shopName && String(x.name || '').toLowerCase() === String(currentUser.shopName).toLowerCase()))
+                    normalizePhone(x.whatsapp) !== ADMIN_MAIN_PHONE &&
+                    myPhone && normalizePhone(x.whatsapp) === myPhone
                 );
-                const u = db.users.find(x => x.id === currentUser.id || (myPhone && normalizePhone(x.phone) === myPhone && x.role === 'merchant'));
+                const u = db.users.find(x => myPhone && normalizePhone(x.phone) === myPhone && x.role === 'merchant');
                 const bal = Math.max(Number(m?.balance || 0), Number(u?.balance || 0), Number(currentUser.balance || 0));
                 if (m) m.balance = bal;
                 if (u) u.balance = bal;
@@ -2185,13 +2231,13 @@
                     (myPhone && normalizePhone(x.phone) === myPhone) ||
                     (currentUser.name && String(x.name || '').toLowerCase() === String(currentUser.name).toLowerCase())
                 );
-                const u = db.users.find(x => x.id === currentUser.id || (myPhone && normalizePhone(x.phone) === myPhone && x.role === 'driver'));
+                const u = db.users.find(x => myPhone && normalizePhone(x.phone) === myPhone && x.role === 'driver');
                 const bal = Math.max(Number(d?.balance || 0), Number(u?.balance || 0), Number(currentUser.balance || 0));
                 if (d) d.balance = bal;
                 if (u) u.balance = bal;
                 return bal;
             }
-            const u = db.users.find(x => x.id === currentUser.id || (myPhone && normalizePhone(x.phone) === myPhone));
+            const u = db.users.find(x => myPhone && normalizePhone(x.phone) === myPhone);
             return Number(u?.balance ?? currentUser.balance ?? 0);
         }
 
@@ -2200,15 +2246,22 @@
             const me = String(currentUser.name || '').trim().toLowerCase();
             const myPhone = normalizePhone(currentUser.phone);
             const myShop = String(currentUser.shopName || '').trim().toLowerCase();
-            const from = String(msg.from || '').trim().toLowerCase();
-            const to = String(msg.to || '').trim().toLowerCase();
-            if (!from || from === me || (myPhone && normalizePhone(from) === myPhone)) return false;
+
+            const fromName = String(msg.from || '').trim().toLowerCase();
+            const fromPhone = normalizePhone(msg.senderPhone) || getUserPhoneByNameOrShop(msg.from);
+            const toName = String(msg.to || '').trim().toLowerCase();
+            const toPhone = normalizePhone(msg.receiverPhone) || getUserPhoneByNameOrShop(msg.to);
+
+            if ((fromPhone && myPhone && fromPhone === myPhone) || (!fromPhone && fromName && me && fromName === me)) {
+                return false;
+            }
 
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             if (activeRole === 'admin') {
-                return to === 'admin simadu' || to === 'admin' || normalizePhone(to) === '085624736602';
+                return toPhone === ADMIN_MAIN_PHONE || toName === 'admin simadu' || toName === 'admin';
             }
-            return to === me || (myPhone && normalizePhone(to) === myPhone) || (myShop && to === myShop);
+            if (myPhone && toPhone) return toPhone === myPhone;
+            return toName === me || (myShop && toName === myShop);
         }
 
         function isOrderTargetedToCurrentUser(order) {
@@ -2219,6 +2272,10 @@
             const myShop = String(currentUser.shopName || '').trim().toLowerCase();
             const st = normalizeOrderStatusCode(order.status);
 
+            const ordCustPhone = normalizePhone(order.customerPhone) || getUserPhoneByNameOrShop(order.customer);
+            const ordMercPhone = normalizePhone(order.merchantPhone) || getUserPhoneByNameOrShop(order.merchant);
+            const ordDrvPhone = normalizePhone(order.driverPhone || order.assignedDriverPhone) || getUserPhoneByNameOrShop(order.driver);
+
             if (role === 'admin') {
                 const adminStore = getAdminOwnStore();
                 const ownStoreName = String(adminStore?.name || '').trim().toLowerCase();
@@ -2226,34 +2283,38 @@
                 const ordCustomer = String(order.customer || '').trim().toLowerCase();
                 const ordDriver = String(order.driver || '').trim().toLowerCase();
                 return (
+                    (myPhone && (ordCustPhone === myPhone || ordDrvPhone === myPhone || ordMercPhone === myPhone)) ||
                     ordCustomer === me ||
                     ordDriver === me ||
-                    (ownStoreName && ordMerchant === ownStoreName) ||
-                    (myPhone && normalizePhone(order.assignedDriverPhone) === myPhone)
+                    (ownStoreName && ordMerchant === ownStoreName)
                 );
             }
 
-            if (role === 'customer') return String(order.customer || '').trim().toLowerCase() === me;
+            if (role === 'customer') {
+                if (myPhone && ordCustPhone) return ordCustPhone === myPhone;
+                return String(order.customer || '').trim().toLowerCase() === me;
+            }
 
             if (role === 'driver') {
                 const drvObj = db.drivers.find(d => (myPhone && normalizePhone(d.phone) === myPhone) || (me && String(d.name || '').trim().toLowerCase() === me));
                 if (!drvObj || drvObj.status !== 'Online') return false;
+                const drvPhoneNorm = normalizePhone(drvObj.phone) || myPhone;
                 const allowedDrivers = [me, String(drvObj.name || '').trim().toLowerCase()].filter(Boolean);
                 const ordDrv = String(order.driver || '').trim().toLowerCase();
-                const ordPhone = normalizePhone(order.assignedDriverPhone);
                 const isFoodOrder = order.type === 'food' && String(order.merchant || '').toLowerCase() !== 'layanan ojek online';
                 if (isFoodOrder && st === 'merchant_confirmation') return false;
-                return allowedDrivers.includes(ordDrv) || (myPhone && ordPhone === myPhone);
+                return (drvPhoneNorm && ordDrvPhone && drvPhoneNorm === ordDrvPhone) || allowedDrivers.includes(ordDrv);
             }
 
             if (role === 'merchant') {
                 const mrcObj = db.merchants.find(m =>
-                    String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID &&
+                    normalizePhone(m.whatsapp) !== ADMIN_MAIN_PHONE &&
                     ((myPhone && normalizePhone(m.whatsapp) === myPhone) ||
                     (myShop && String(m.name || '').trim().toLowerCase() === myShop))
                 );
+                const mrcPhoneNorm = normalizePhone(mrcObj?.whatsapp) || myPhone;
                 const allowedMerchants = [myShop, mrcObj ? String(mrcObj.name || '').trim().toLowerCase() : ''].filter(Boolean);
-                const isStoreTarget = allowedMerchants.includes(String(order.merchant || '').trim().toLowerCase());
+                const isStoreTarget = (mrcPhoneNorm && ordMercPhone && mrcPhoneNorm === ordMercPhone) || allowedMerchants.includes(String(order.merchant || '').trim().toLowerCase());
                 if (!isStoreTarget) return false;
                 return ['searching_driver', 'driver_assigned', 'merchant_confirmation', 'merchant_accepted', 'preparing', 'driver_arriving', 'picked_up', 'delivering', 'completed', 'cancelled'].includes(st);
             }
@@ -2273,9 +2334,10 @@
             const myPhone = normalizePhone(currentUser.phone);
             const drvObj = (db.drivers || []).find(d => (myPhone && normalizePhone(d.phone) === myPhone) || (me && String(d.name || '').trim().toLowerCase() === me));
             if (!drvObj || drvObj.status !== 'Online') return false;
+            const drvPhoneNorm = normalizePhone(drvObj.phone) || myPhone;
+            const ordDrvPhone = normalizePhone(order.driverPhone || order.assignedDriverPhone) || getUserPhoneByNameOrShop(order.driver);
             const ordDrv = String(order.driver || '').trim().toLowerCase();
-            const ordPhone = normalizePhone(order.assignedDriverPhone);
-            return ordDrv === me || (drvObj.name && ordDrv === String(drvObj.name).trim().toLowerCase()) || (myPhone && ordPhone === myPhone);
+            return (drvPhoneNorm && ordDrvPhone && drvPhoneNorm === ordDrvPhone) || ordDrv === me || (drvObj.name && ordDrv === String(drvObj.name).trim().toLowerCase());
         }
 
         function shouldShowOrderPopupNow(order) {
@@ -2317,7 +2379,7 @@
                 if (activeOrderAlarmTargetId === orderId) stopOrderAlarmLoop();
                 return;
             }
-            const alertKey = String(order.id) + '::' + String(currentUser?.phone || currentUser?.name || '');
+            const alertKey = String(order.id) + '::' + String(normalizePhone(currentUser?.phone) || currentUser?.name || '');
             if (playedOrderAlertIds.includes(alertKey)) return;
             playedOrderAlertIds.push(alertKey);
             playedOrderAlertIds = playedOrderAlertIds.slice(-200);
@@ -2360,17 +2422,23 @@
             const myPhone = normalizePhone(currentUser?.phone);
             const myShop = String(currentUser?.shopName || '').trim().toLowerCase();
             const pLow = String(partnerName || '').trim().toLowerCase();
+            const pPhone = normalizePhone(partnerName) || getUserPhoneByNameOrShop(partnerName);
             const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
             const readTimestamp = new Date().toISOString();
             let changed = false;
 
             (db.chats || []).forEach(c => {
                 const f = String(c.from || '').trim().toLowerCase();
+                const fPhone = normalizePhone(c.senderPhone) || getUserPhoneByNameOrShop(c.from);
                 const t = String(c.to || '').trim().toLowerCase();
+                const tPhone = normalizePhone(c.receiverPhone) || getUserPhoneByNameOrShop(c.to);
+
+                const isFromPartner = (pPhone && fPhone && fPhone === pPhone) || f === pLow;
                 const isToMe = activeRole === 'admin'
-                    ? (t === 'admin simadu' || t === 'admin' || normalizePhone(t) === '085624736602')
-                    : (t === me || (myPhone && normalizePhone(t) === myPhone) || (myShop && t === myShop));
-                if (f === pLow && isToMe) {
+                    ? (tPhone === ADMIN_MAIN_PHONE || t === 'admin simadu' || t === 'admin')
+                    : ((myPhone && tPhone && tPhone === myPhone) || t === me || (myShop && t === myShop));
+
+                if (isFromPartner && isToMe) {
                     if (!readChatIds.includes(String(c.id))) { readChatIds.push(String(c.id)); changed = true; }
                     if (c.readStatus !== 'READ') { c.readStatus = 'READ'; c.readAt = readTimestamp; changed = true; }
                 }
@@ -2428,7 +2496,12 @@
 
         function checkAndTriggerIncomingChatPopup(msg) {
             if (!currentUser || !msg || !isChatMessageUnreadForCurrentUser(msg)) return;
-            const isChatOpenNow = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden') && String(activeChatTarget || '').trim().toLowerCase() === String(msg.from || '').trim().toLowerCase();
+            const msgSenderPhone = normalizePhone(msg.senderPhone) || getUserPhoneByNameOrShop(msg.from);
+            const curTargetPhone = normalizePhone(activeChatTarget) || getUserPhoneByNameOrShop(activeChatTarget);
+            const isChatOpenNow = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden') && (
+                (msgSenderPhone && curTargetPhone && msgSenderPhone === curTargetPhone) ||
+                String(activeChatTarget || '').trim().toLowerCase() === String(msg.from || '').trim().toLowerCase()
+            );
             if (isChatOpenNow) return;
             const msgKey = String(msg.id);
             if (shownPopupChatIds.includes(msgKey)) return;
@@ -2446,7 +2519,8 @@
             playChatIncomingAlarm();
             const card = document.getElementById('incoming-chat-card');
             if (!card) return;
-            const safeFrom = String(msg.from || 'Pengguna').replace(/'/g, "\\'");
+            const senderPhoneLabel = normalizePhone(msg.senderPhone) || getUserPhoneByNameOrShop(msg.from) || '';
+            const safeFrom = String(msg.from || senderPhoneLabel || 'Pengguna').replace(/'/g, "\\'");
             const previewMsg = String(msg.text || '').startsWith('data:image')
                 ? `<img src="${msg.text}" class="w-full max-h-40 object-cover rounded-xl border" alt="Foto Masuk">`
                 : `<p class="text-[#171717] font-semibold bg-[#F3F3F3] p-3 rounded-2xl border border-[#D4D4D4]">"${msg.text}"</p>`;
@@ -2457,7 +2531,7 @@
                     <button onclick="closeIncomingChatModal()" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
                 </div>
                 <div class="space-y-1.5 text-xs">
-                    <p class="text-[11px] font-extrabold text-[#171717]">Dari: ${msg.from} <span class="text-[10px] text-[#525252] font-semibold">(${msg.time || 'Baru saja'})</span></p>
+                    <p class="text-[11px] font-extrabold text-[#171717]">Dari: ${msg.from} ${senderPhoneLabel ? `(${senderPhoneLabel})` : ''} <span class="text-[10px] text-[#525252] font-semibold">(${msg.time || 'Baru saja'})</span></p>
                     ${previewMsg}
                 </div>
                 <div class="grid grid-cols-2 gap-2 pt-2">
@@ -2497,6 +2571,7 @@
                     const prevDrv = o.driver || '-';
                     if (activeOrderAlarmTargetId === o.id) stopOrderAlarmLoop();
                     o.driver = null;
+                    o.driverPhone = null;
                     o.assignedDriverPhone = null;
                     o.claimedByPhone = null;
                     o.driverResponseDeadline = null;
@@ -2572,13 +2647,11 @@
                     const localUsersBackup = [...(db.users || [])];
                     const mappedRemoteUsers = accRows.map((r, idx) => {
                         const cleanPhone = normalizePhone(r.phone) || String(r.phone || '');
-                        const accUpper = String(r.account_id || generateAutoAccountIdFromPhone(cleanPhone, r.role)).toUpperCase();
-                        const localMatch = localUsersBackup.find(lu => (cleanPhone && normalizePhone(lu.phone) === cleanPhone && lu.role === r.role) || String(lu.accountId || '').toUpperCase() === accUpper);
+                        const localMatch = localUsersBackup.find(lu => cleanPhone && normalizePhone(lu.phone) === cleanPhone && lu.role === r.role);
                         const resolvedPass = (r.password_hash && String(r.password_hash).trim()) ? String(r.password_hash).trim() : (localMatch?.password || '123');
                         const resolvedPhoto = (r.photo_url && String(r.photo_url).trim()) ? String(r.photo_url).trim() : (localMatch?.photo || './olengorange2.png');
                         return {
                             id: r.id || (idx + 1),
-                            accountId: accUpper,
                             name: r.name || localMatch?.name || 'Pengguna',
                             phone: cleanPhone,
                             role: r.role || localMatch?.role || 'customer',
@@ -2596,8 +2669,8 @@
                         };
                     });
 
-                    const mergedUsers = mergeByKey(localUsersBackup, mappedRemoteUsers, u => `${normalizePhone(u.phone)}_${u.role}`);
-                    if (!mergedUsers.some(u => normalizePhone(u.phone) === '085624736602' && u.role === 'admin')) {
+                    const mergedUsers = mergeByKey(localUsersBackup, mappedRemoteUsers, u => phoneKey(u.phone, u.role));
+                    if (!mergedUsers.some(u => normalizePhone(u.phone) === ADMIN_MAIN_PHONE && u.role === 'admin')) {
                         mergedUsers.push({ ...DEFAULT_ADMIN_ACCOUNT });
                     }
                     if (mergedUsers.length !== db.users.length) hasChanges = true;
@@ -2623,7 +2696,6 @@
                 if (Array.isArray(merchantRows) && merchantRows.length > 0) {
                     const mappedMerchants = merchantRows.map((r, idx) => ({
                         id: r.id || (idx + 1),
-                        accountId: String(r.account_id || '').toUpperCase(),
                         name: r.name,
                         ownerName: r.owner_name || r.name,
                         ktp: r.ktp || '',
@@ -2638,28 +2710,25 @@
                         lng: Number(r.lng || 106.8460),
                         address: r.address || '',
                         operationalHours: r.operational_hours || '',
-                        whatsapp: normalizePhone(r.whatsapp) || ADMIN_MAIN_WA,
+                        whatsapp: normalizePhone(r.whatsapp) || ADMIN_MAIN_PHONE,
                         balance: Number(r.balance || 0),
                         serverUpdatedAt: r.server_updated_at || null
                     }));
-                    db.merchants = mergeByKey(db.merchants, mappedMerchants, m => String(m.accountId || '').toUpperCase() === ADMIN_OWN_STORE_ID ? ADMIN_OWN_STORE_ID : (normalizePhone(m.whatsapp) || String(m.accountId || m.name).toUpperCase()));
+                    db.merchants = mergeByKey(db.merchants, mappedMerchants, m => normalizePhone(m.whatsapp) || String(m.name));
                     hasChanges = true;
                 }
 
                 const { data: driverRows } = await supabaseClient.from('drivers').select('*');
                 if (Array.isArray(driverRows) && driverRows.length > 0) {
                     const mappedDrivers = driverRows.map((r, idx) => {
-                        const accUpper = String(r.account_id || '').toUpperCase();
-                        const cleanPhone = normalizePhone(r.phone) || ADMIN_MAIN_WA;
+                        const cleanPhone = normalizePhone(r.phone) || ADMIN_MAIN_PHONE;
                         const matchedAcc = (db.users || []).find(u =>
                             u.role === 'driver' &&
-                            ((accUpper && String(u.accountId || '').toUpperCase() === accUpper) ||
-                            (cleanPhone && normalizePhone(u.phone) === cleanPhone) ||
+                            ((cleanPhone && normalizePhone(u.phone) === cleanPhone) ||
                             (r.name && String(u.name || '').trim().toLowerCase() === String(r.name || '').trim().toLowerCase()))
                         );
                         return {
                             id: r.id || (idx + 1),
-                            accountId: accUpper,
                             name: r.name,
                             ktp: r.ktp || '',
                             plate: r.plate || '',
@@ -2679,7 +2748,7 @@
                             photo: (matchedAcc && matchedAcc.photo) ? matchedAcc.photo : './olengorange2.png'
                         };
                     });
-                    db.drivers = mergeByKey(db.drivers, mappedDrivers, d => normalizePhone(d.phone) || String(d.accountId || d.name).toUpperCase());
+                    db.drivers = mergeByKey(db.drivers, mappedDrivers, d => normalizePhone(d.phone) || String(d.name));
                     hasChanges = true;
                 }
 
@@ -2691,9 +2760,12 @@
                         id: r.order_code,
                         type: r.order_type || 'ojek',
                         customer: r.customer_name,
+                        customerPhone: normalizePhone(r.customer_phone) || getUserPhoneByNameOrShop(r.customer_name) || '',
                         merchant: r.merchant_name,
+                        merchantPhone: normalizePhone(r.merchant_phone) || getUserPhoneByNameOrShop(r.merchant_name) || '',
                         driver: r.driver_name,
-                        assignedDriverPhone: r.claimed_by_phone ? normalizePhone(r.claimed_by_phone) : null,
+                        driverPhone: normalizePhone(r.driver_phone || r.claimed_by_phone) || getUserPhoneByNameOrShop(r.driver_name) || '',
+                        assignedDriverPhone: normalizePhone(r.driver_phone || r.claimed_by_phone) || null,
                         claimedAt: r.claimed_at || null,
                         items: r.items_summary,
                         pickup: r.pickup_label || '',
@@ -2735,7 +2807,9 @@
                     const mappedChats = chatRows.map(r => ({
                         id: r.id,
                         from: r.sender_name,
+                        senderPhone: normalizePhone(r.sender_phone) || getUserPhoneByNameOrShop(r.sender_name) || '',
                         to: r.receiver_name,
+                        receiverPhone: normalizePhone(r.receiver_phone) || getUserPhoneByNameOrShop(r.receiver_name) || '',
                         text: r.message_text,
                         time: r.sent_time || '',
                         readStatus: r.read_status || (readChatIds.includes(String(r.id)) ? 'READ' : 'UNREAD'),
@@ -2744,6 +2818,8 @@
                     db.chats = mergeByKey(db.chats, mappedChats, c => String(c.id));
                     hasChanges = true;
                 }
+
+                enrichChatAndOrderWithPhones();
 
                 (db.chats || []).forEach(c => {
                     if (c.readStatus === 'READ' && !readChatIds.includes(String(c.id))) readChatIds.push(String(c.id));
@@ -2761,7 +2837,7 @@
                     const latestC = newlyArrivedChats[newlyArrivedChats.length - 1];
                     const isChatOpenNow = chatViewVisibleNow && String(activeChatTarget || '').trim().toLowerCase() === String(latestC.from || '').trim().toLowerCase();
                     if (!isChatOpenNow) {
-                        notifyBackgroundOnce('chat-' + latestC.id, `Chat Masuk dari ${latestC.from}`, String(latestC.text || '').startsWith('data:image') ? '📷 Mengirim foto' : latestC.text, { type: 'chat', sender: latestC.from, tag: 'chat-' + latestC.from, renotify: true });
+                        notifyBackgroundOnce('chat-' + latestC.id, `Chat Masuk dari ${latestC.from}`, String(latestC.text || '').startsWith('data:image') ? '📷 Mengirim foto' : latestC.text, { type: 'chat', sender: latestC.from, tag: 'chat-' + (latestC.senderPhone || latestC.from), renotify: true });
                         playChatIncomingAlarm();
                         checkAndTriggerIncomingChatPopup(latestC);
                     }
@@ -2817,6 +2893,7 @@
 
         function saveDB(successMessage = null, shouldSyncRemote = true, soundKind = 'none') {
             ensureRoleListsSyncedFromUsers();
+            enrichChatAndOrderWithPhones();
             db.mainBanner = customMainBanner || db.mainBanner || DEFAULT_MAIN_BANNER;
             localStorage.setItem('oleng_global_banner', db.mainBanner);
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
@@ -2848,9 +2925,10 @@
         }
 
         function addAccountNotification(title, desc, targetUser = null, dedupKey = null, soundKind = 'none') {
-            const owner = targetUser || (currentUser ? currentUser.name : 'ALL');
+            const owner = targetUser || (currentUser ? (normalizePhone(currentUser.phone) || currentUser.name) : 'ALL');
+            const ownerPhone = normalizePhone(owner) || getUserPhoneByNameOrShop(owner);
             if (dedupKey) {
-                const fullKey = `${String(dedupKey)}::${String(owner).toLowerCase()}`;
+                const fullKey = `${String(dedupKey)}::${String(ownerPhone || owner).toLowerCase()}`;
                 if (sentNotifDedupeKeys.includes(fullKey)) return;
                 sentNotifDedupeKeys.push(fullKey);
                 sentNotifDedupeKeys = sentNotifDedupeKeys.slice(-300);
@@ -2860,16 +2938,21 @@
             db.notifications.unshift({
                 id: notifId,
                 targetUser: owner,
+                targetPhone: ownerPhone || '',
                 title: title,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 desc: desc
             });
             saveDB(null, true, 'none');
             updateHomeHeaderBadgesOnly();
-            if (currentUser && (owner === 'ALL' || String(owner).toLowerCase() === String(currentUser.name || '').toLowerCase())) {
-                if (soundKind === 'order') playOrderIncomingAlarm();
-                else if (soundKind === 'chat') playChatIncomingAlarm();
-                notifyBackgroundOnce('notif-' + notifId + '-' + owner, title, desc, { type: 'notif', tag: 'notif-' + notifId, renotify: soundKind === 'order' || soundKind === 'chat' });
+            if (currentUser) {
+                const myPhone = normalizePhone(currentUser.phone);
+                const matchesMe = owner === 'ALL' || (myPhone && ownerPhone && myPhone === ownerPhone) || String(owner).toLowerCase() === String(currentUser.name || '').toLowerCase();
+                if (matchesMe) {
+                    if (soundKind === 'order') playOrderIncomingAlarm();
+                    else if (soundKind === 'chat') playChatIncomingAlarm();
+                    notifyBackgroundOnce('notif-' + notifId + '-' + (myPhone || owner), title, desc, { type: 'notif', tag: 'notif-' + notifId, renotify: soundKind === 'order' || soundKind === 'chat' });
+                }
             }
         }
 
@@ -2978,9 +3061,9 @@
             const summary = [
                 `STRUK OLENG GO (SIMADU LENGKONG)`,
                 `Kode: ${order.id}`,
-                `Pemesan: ${order.customer}`,
+                `Pemesan: ${order.customer} (${order.customerPhone || '-'})`,
                 `Mitra: ${order.merchant}`,
-                `Driver: ${order.driver || 'Menunggu Driver'}`,
+                `Driver: ${order.driver || 'Menunggu Driver'} (${order.driverPhone || '-'})`,
                 `Item: ${order.items}`,
                 order.notes ? `Catatan: ${order.notes}` : '',
                 `Jemput: ${order.pickup || '-'}`,
@@ -2993,7 +3076,8 @@
 
         function setDriverOnlineStatusExplicit(nextStatus, fromPostComplete = false) {
             if (!currentUser) return false;
-            const drv = (db.drivers || []).find(d => String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase() || (currentUser.phone && normalizePhone(d.phone) === normalizePhone(currentUser.phone)));
+            const myPhone = normalizePhone(currentUser.phone);
+            const drv = (db.drivers || []).find(d => (myPhone && normalizePhone(d.phone) === myPhone) || String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase());
             if (!drv) {
                 showToast('Data mitra driver tidak ditemukan.', 'error', 'none');
                 return false;
@@ -3004,8 +3088,8 @@
                 const stillRunningOrder = (db.orders || []).find(o => {
                     const st = normalizeOrderStatusCode(o.status);
                     if (!activeStatuses.includes(st)) return false;
-                    return String(o.driver || '').trim().toLowerCase() === String(drv.name || '').trim().toLowerCase() ||
-                        (o.assignedDriverPhone && normalizePhone(o.assignedDriverPhone) === normalizePhone(drv.phone));
+                    return (myPhone && normalizePhone(o.driverPhone || o.assignedDriverPhone) === myPhone) ||
+                        String(o.driver || '').trim().toLowerCase() === String(drv.name || '').trim().toLowerCase();
                 });
                 if (stillRunningOrder) {
                     showToast(`Masih ada pesanan aktif (${stillRunningOrder.id}). Selesaikan terlebih dahulu sebelum ONLINE.`, 'error', 'none');
@@ -3026,8 +3110,8 @@
                         saveDB(null, true, 'none');
                     }, () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
                 }
-                addAccountNotification('Driver Kembali ONLINE', `Driver ${drv.name} (${drv.phone || '-'}) kini ONLINE dan siap menerima order baru.`, 'ALL', 'drv-online-' + drv.name + '-' + Date.now(), 'none');
-                saveDB(`Status driver ${drv.name} tersimpan ONLINE & siap menerima order baru.`, true, 'none');
+                addAccountNotification('Driver Kembali ONLINE', `Driver ${drv.name} (${drv.phone || '-'}) kini ONLINE dan siap menerima order baru.`, 'ALL', 'drv-online-' + (drv.phone || drv.name) + '-' + Date.now(), 'none');
+                saveDB(`Status driver ${drv.name} (${drv.phone}) tersimpan ONLINE & siap menerima order baru.`, true, 'none');
             } else {
                 stopOrderAlarmLoop();
                 drv.status = 'Offline';
@@ -3035,8 +3119,8 @@
                 drv.activeOrderId = null;
                 drv.activitySummary = 'Offline • Tidak menerima order baru';
                 drv.serverUpdatedAt = new Date().toISOString();
-                addAccountNotification('Driver OFFLINE', `Driver ${drv.name} (${drv.phone || '-'}) kini OFFLINE & tidak menerima order baru.`, 'ALL', 'drv-offline-' + drv.name + '-' + Date.now(), 'none');
-                saveDB(`Status driver ${drv.name} tersimpan OFFLINE.`, true, 'none');
+                addAccountNotification('Driver OFFLINE', `Driver ${drv.name} (${drv.phone || '-'}) kini OFFLINE & tidak menerima order baru.`, 'ALL', 'drv-offline-' + (drv.phone || drv.name) + '-' + Date.now(), 'none');
+                saveDB(`Status driver ${drv.name} (${drv.phone}) tersimpan OFFLINE.`, true, 'none');
             }
             if (fromPostComplete) document.getElementById('modal-post-complete-driver')?.classList.add('hidden');
             if (currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) renderDashboardContent(currentSubTab, false);
@@ -3045,7 +3129,8 @@
 
         function toggleCurrentDriverOnlineStatus() {
             if (!currentUser) return;
-            const drv = (db.drivers || []).find(d => String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase() || (currentUser.phone && normalizePhone(d.phone) === normalizePhone(currentUser.phone)));
+            const myPhone = normalizePhone(currentUser.phone);
+            const drv = (db.drivers || []).find(d => (myPhone && normalizePhone(d.phone) === myPhone) || String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase());
             if (!drv) return showToast('Data mitra driver tidak ditemukan.', 'error', 'none');
             setDriverOnlineStatusExplicit(drv.status === 'Online' ? 'Offline' : 'Online', false);
         }
@@ -3109,7 +3194,7 @@
                 showToast(`Pilihan sementara untuk ${d.name} dibatalkan. Silakan pilih driver lain.`, 'info', 'none');
             } else {
                 draftSelectedDriverId = Number(driverId);
-                showToast(`Driver ${d.name} ditandai sebagai pilihan sementara. Tekan KONFIRMASI DRIVER untuk mengirim permintaan.`, 'info', 'none');
+                showToast(`Driver ${d.name} (${d.phone}) ditandai sebagai pilihan sementara. Tekan KONFIRMASI DRIVER.`, 'info', 'none');
             }
             if (context === 'ojek' && currentSubTab === 'ojek') renderOjekDriversListOnly();
             else if (context === 'cart') updateCartUI();
@@ -3123,7 +3208,7 @@
             if (d.availability && d.availability !== 'available') return showToast(`Notif Aktivitas: ${d.name} sedang mengerjakan orderan. Pilih driver yang Siap Order.`, 'error', 'none');
             confirmedOrderDriverId = Number(d.id);
             selectedDriverId = Number(d.id);
-            showToast(`Driver ${d.name} dikonfirmasi! Permintaan pengantaran siap dikirim.`, 'success', 'none');
+            showToast(`Driver ${d.name} (${d.phone}) dikonfirmasi! Permintaan pengantaran siap dikirim.`, 'success', 'none');
             if (context === 'ojek' && currentSubTab === 'ojek') renderOjekDriversListOnly();
             else if (context === 'cart') updateCartUI();
         }
@@ -3147,7 +3232,8 @@
                     }
                     const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
                     if (activeRole === 'driver' && currentUser) {
-                        const drv = db.drivers.find(x => x.name === currentUser.name || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
+                        const myPhone = normalizePhone(currentUser.phone);
+                        const drv = db.drivers.find(x => (myPhone && normalizePhone(x.phone) === myPhone) || x.name === currentUser.name);
                         if (drv && drv.status === 'Online' && (Math.abs(drv.lat - lat) > 0.0002 || Math.abs(drv.lng - lng) > 0.0002)) {
                             drv.lat = lat; drv.lng = lng; drv.serverUpdatedAt = new Date().toISOString();
                             localStorage.setItem('oleng_go_db', JSON.stringify(db));
@@ -3170,8 +3256,8 @@
                 const savedSession = localStorage.getItem('oleng_user_session');
                 if (savedSession) {
                     const parsedSession = JSON.parse(savedSession);
-                    if (parsedSession && parsedSession.phone) {
-                        currentUser = parsedSession;
+                    if (parsedSession && normalizePhone(parsedSession.phone)) {
+                        currentUser = { ...parsedSession, phone: normalizePhone(parsedSession.phone) };
                         ensureDevicePushToken(currentUser);
                         adminViewMode = localStorage.getItem('oleng_admin_view_mode') || null;
                         currentSubTab = localStorage.getItem('oleng_last_tab') || 'home';
@@ -3193,6 +3279,7 @@
             setInterval(() => {
                 processDriverResponseTimeouts();
                 if (!isUserCurrentlyTypingOrEditing()) pullInitialFromSupabase(false);
+                else updateHomeHeaderBadgesOnly();
             }, 4000);
         });
 
@@ -3313,16 +3400,17 @@
             const role = document.getElementById('login-role').value;
 
             if (phone.length < 9) return showToast('Masukkan nomor HP yang valid (minimal 9 digit angka)!', 'error', 'none');
-            if (role === 'admin' && phone !== '085624736602') {
+            if (!password) return showToast('Kata sandi wajib diisi!', 'error', 'none');
+            if (role === 'admin' && phone !== ADMIN_MAIN_PHONE) {
                 recordTechnicalDiagLog('LOGIN', `Akses admin ditolak untuk nomor ${phone}`);
-                return showToast('AKSES DITOLAK: Login Admin wajib menggunakan Nomor HP 085624736602!', 'error', 'none');
+                return showToast(`AKSES DITOLAK: Login Admin wajib menggunakan Nomor HP ${ADMIN_MAIN_PHONE}!`, 'error', 'none');
             }
 
             try { await withSupabaseTimeout(pullInitialFromSupabase(false), 4500); } catch (e) {}
 
             let foundUser = db.users.find(u => normalizePhone(u.phone) === phone && u.role === role);
             if (!foundUser) foundUser = db.users.find(u => normalizePhone(u.phone) === phone);
-            if (!foundUser && phone === '085624736602' && role === 'admin') {
+            if (!foundUser && phone === ADMIN_MAIN_PHONE && role === 'admin') {
                 foundUser = { ...DEFAULT_ADMIN_ACCOUNT };
                 db.users.push(foundUser);
                 await syncAllToSupabase();
@@ -3338,15 +3426,14 @@
             }
 
             const storedPass = String(foundUser.password || '').trim();
-            const isAdminDefaultMatch = (phone === '085624736602' && foundUser.role === 'admin' && (password === '123' || password === '123456') && (!storedPass || storedPass === '123' || storedPass === '123456'));
-            const passwordMatched = (storedPass === password || storedPass === String(rawPass || '') || isAdminDefaultMatch);
+            const passwordMatched = (storedPass === password || storedPass === String(rawPass || ''));
 
             if (!passwordMatched) {
                 recordTechnicalDiagLog('LOGIN', `Password tidak sesuai untuk ${phone} (${foundUser.role})`);
                 return showToast('Kata sandi salah! Periksa kembali kata sandi Anda.', 'error', 'none');
             }
 
-            currentUser = { ...foundUser, pushToken: ensureDevicePushToken(foundUser) };
+            currentUser = { ...foundUser, phone, pushToken: ensureDevicePushToken(foundUser) };
             adminViewMode = foundUser.role === 'admin' ? 'admin' : null;
             currentSubTab = foundUser.role === 'admin' ? 'admin-dash' : foundUser.role === 'merchant' ? 'merchant-manage' : foundUser.role === 'driver' ? 'driver-orders' : 'home';
             tabNavigationHistory = [currentSubTab];
@@ -3381,8 +3468,8 @@
                 return;
             }
 
-            if (role === 'admin' && phone !== '085624736602') {
-                return showToast('Pendaftaran Admin Master wajib menggunakan nomor 085624736602!', 'error', 'none');
+            if (role === 'admin' && phone !== ADMIN_MAIN_PHONE) {
+                return showToast(`Pendaftaran Admin Master wajib menggunakan nomor ${ADMIN_MAIN_PHONE}!`, 'error', 'none');
             }
 
             let driverData = {};
@@ -3405,12 +3492,10 @@
                 merchantData = { ownerName, shopName, ktp, address: address || `Lokasi Toko (${regMerchantLatLng[0]}, ${regMerchantLatLng[1]})`, lat: regMerchantLatLng[0], lng: regMerchantLatLng[1] };
             }
 
-            const autoAccountId = generateAutoAccountIdFromPhone(phone, role);
             const pushToken = ensureDevicePushToken();
 
             const newUser = {
                 id: Date.now(),
-                accountId: autoAccountId,
                 name,
                 phone,
                 role,
@@ -3428,13 +3513,13 @@
             db.users.unshift(newUser);
             if (role === 'merchant') {
                 db.merchants.push({
-                    id: Date.now() + 1, accountId: autoAccountId, name: merchantData.shopName, ownerName: merchantData.ownerName, ktp: merchantData.ktp,
+                    id: Date.now() + 1, name: merchantData.shopName, ownerName: merchantData.ownerName, ktp: merchantData.ktp,
                     subtitle: `Pemilik: ${merchantData.ownerName}`, category: 'Kuliner', status: 'Buka', banner: './olengorange2.png', image: './olengorange2.png',
                     rating: 5.0, ratingCount: 0, lat: merchantData.lat, lng: merchantData.lng, address: merchantData.address, operationalHours: '', whatsapp: phone, balance: 50000
                 });
             } else if (role === 'driver') {
                 db.drivers.push({
-                    id: Date.now() + 1, accountId: autoAccountId, name, ktp: driverData.ktp, plate: driverData.plate, bikeType: driverData.bikeType,
+                    id: Date.now() + 1, name, ktp: driverData.ktp, plate: driverData.plate, bikeType: driverData.bikeType,
                     status: 'Online', availability: 'available', activeOrderId: null, vehicle: driverData.vehicle, rating: 5.0, ratingCount: 0,
                     location: 'Lengkong, Sukabumi', lat: GPS_LOCATION.lat ?? -7.1235, lng: GPS_LOCATION.lng ?? 106.8458, phone, balance: 50000, photo: './olengorange2.png'
                 });
@@ -3462,11 +3547,11 @@
         }
 
         function redirectForgotPasswordToAdminChat() {
-            const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'No. HP Belum Diisi';
+            const refVal = normalizePhone(document.getElementById('forgot-account-ref')?.value || '') || 'No. HP Belum Diisi';
             document.getElementById('modal-forgot').classList.add('hidden');
             document.getElementById('view-auth').classList.add('hidden');
             document.getElementById('view-dashboard').classList.remove('hidden');
-            if (!currentUser) currentUser = { id: 0, accountId: 'TAMU01', name: `Pemohon (${refVal})`, phone: ADMIN_MAIN_WA, role: 'customer', photo: './olengorange2.png' };
+            if (!currentUser) currentUser = { id: 0, name: `Pemohon (${refVal})`, phone: refVal !== 'No. HP Belum Diisi' ? refVal : ADMIN_MAIN_PHONE, role: 'customer', photo: './olengorange2.png' };
             activeChatTarget = 'Admin SIMADU';
             switchView('chat');
             const chatInput = document.getElementById('chat-input');
@@ -3478,7 +3563,7 @@
         }
 
         function redirectForgotPasswordToAdminWA() {
-            const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'No. HP Belum Diisi';
+            const refVal = normalizePhone(document.getElementById('forgot-account-ref')?.value || '') || 'No. HP Belum Diisi';
             const text = encodeURIComponent(`Halo Admin SIMADU, saya lupa kata sandi untuk Nomor HP: ${refVal}. Mohon bantuan reset password.`);
             showToast('Berhasil! Membuka WhatsApp Admin SIMADU.', 'success', 'none');
             window.open(`https://wa.me/${ADMIN_MAIN_WA}?text=${text}`, '_blank');
@@ -3498,7 +3583,7 @@
                     <div class="w-12 h-12 bg-rose-100 text-rose-700 rounded-2xl flex items-center justify-center text-xl mx-auto"><i class="fa-solid fa-right-from-bracket"></i></div>
                     <div class="space-y-1">
                         <h3 class="font-black text-sm text-[#171717]">Konfirmasi Keluar Akun</h3>
-                        <p class="text-xs text-[#262626]">Apakah Anda yakin ingin keluar dari akun <b>${currentUser?.name || 'OLENG GO'}</b>?</p>
+                        <p class="text-xs text-[#262626]">Apakah Anda yakin ingin keluar dari akun <b>${currentUser?.name || 'OLENG GO'}</b> (${currentUser?.phone || '-'})?</p>
                     </div>
                     <div class="grid grid-cols-2 gap-2.5 pt-1">
                         <button type="button" onclick="confirmLogoutExecute()" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-2xl text-xs cursor-pointer">Keluar</button>
@@ -3650,6 +3735,7 @@
             if (!currentUser) return [];
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             const me = String(currentUser.name || '').trim().toLowerCase();
+            const myPhone = normalizePhone(currentUser.phone);
             const myShop = String(currentUser.shopName || '').trim().toLowerCase();
 
             if (role === 'admin') {
@@ -3657,13 +3743,15 @@
                 const ownStoreName = String(adminStore?.name || '').trim().toLowerCase();
                 return (db.notifications || []).filter(n => {
                     const target = String(n.targetUser || '').trim().toLowerCase();
-                    return target === 'all' || target === me || target === 'admin simadu' || (ownStoreName && target === ownStoreName);
+                    const tPhone = normalizePhone(n.targetPhone) || getUserPhoneByNameOrShop(n.targetUser);
+                    return target === 'all' || (myPhone && tPhone && tPhone === myPhone) || target === me || target === 'admin simadu' || (ownStoreName && target === ownStoreName);
                 });
             }
 
             return (db.notifications || []).filter(n => {
                 const target = String(n.targetUser || '').trim().toLowerCase();
-                return target === 'all' || (me && target === me) || (myShop && target === myShop);
+                const tPhone = normalizePhone(n.targetPhone) || getUserPhoneByNameOrShop(n.targetUser);
+                return target === 'all' || (myPhone && tPhone && tPhone === myPhone) || (me && target === me) || (myShop && target === myShop);
             });
         }
 
@@ -3672,7 +3760,8 @@
         function getAccountMutations() {
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             if (role === 'admin') return db.walletMutations || [];
-            const myMerchant = db.merchants.find(m => String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID && (normalizePhone(m.whatsapp) === normalizePhone(currentUser.phone) || m.name === currentUser.shopName));
+            const myPhone = normalizePhone(currentUser.phone);
+            const myMerchant = db.merchants.find(m => normalizePhone(m.whatsapp) !== ADMIN_MAIN_PHONE && ((myPhone && normalizePhone(m.whatsapp) === myPhone) || m.name === currentUser.shopName));
             const names = [currentUser.name];
             if (myMerchant && myMerchant.name) names.push(myMerchant.name);
             return (db.walletMutations || []).filter(mut => names.includes(mut.ownerName));
@@ -3715,7 +3804,9 @@
             const card = document.getElementById('incoming-order-card');
             const st = normalizeOrderStatusCode(order.status);
             const statusText = getOrderStatusLabel(st);
-            const driverAvatarSrc = resolveDriverPhoto(order.driver);
+            const driverAvatarSrc = resolveDriverPhoto(order.driver || order.driverPhone);
+            const custPhoneText = normalizePhone(order.customerPhone) || getUserPhoneByNameOrShop(order.customer) || '-';
+            const drvPhoneText = normalizePhone(order.driverPhone || order.assignedDriverPhone) || getUserPhoneByNameOrShop(order.driver) || '-';
 
             if (!showFullDetail) {
                 card.innerHTML = `
@@ -3771,7 +3862,7 @@
                     </div>
                     <div class="space-y-1.5 text-xs bg-[#F3F3F3] p-3 rounded-2xl border border-[#D4D4D4]">
                         <p class="font-black text-[#171717] text-sm">${order.merchant}</p>
-                        <p class="text-[#171717] font-bold">Pemesan: ${order.customer}</p>
+                        <p class="text-[#171717] font-bold">Pemesan: ${order.customer} (${custPhoneText})</p>
                         <p class="text-[#262626] font-semibold">Isi Order: ${order.items}</p>
                         ${order.notes ? `<p class="text-[10px] text-[#171717] font-bold">Catatan: ${order.notes}</p>` : ''}
                         <p class="text-[11px] text-[#262626]">Jemput: <b>${order.pickup || 'Titik Jemput'}</b></p>
@@ -3779,7 +3870,7 @@
                         <p class="text-[11px] text-[#262626]">Tujuan: <b>${order.dest || 'Titik Tujuan'}</b></p>
                         <div class="flex items-center gap-2 pt-1 text-[11px] text-[#262626]">
                             <img src="${driverAvatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-8 h-8 rounded-full object-cover border border-[#FF7900] shrink-0 bg-white" alt="Foto Driver">
-                            <span>Driver: <b>${order.driver || 'Mencari driver pengganti / aktif'}</b></span>
+                            <span>Driver: <b>${order.driver || 'Mencari driver pengganti / aktif'}</b> (${drvPhoneText})</span>
                         </div>
                         <p class="text-[11px] font-bold text-[#D96400] pt-1">Status: ${statusText} (${st})</p>
                         ${order.storeRejectionReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Toko Tolak: ${order.storeRejectionReason}</p>` : ''}
@@ -3802,7 +3893,7 @@
             if (['completed', 'cancelled', 'picked_up', 'delivering'].includes(st)) {
                 return { ok: false, reason: 'Pesanan sudah diproses atau selesai.' };
             }
-            const existingClaimPhone = normalizePhone(order.assignedDriverPhone || order.claimedByPhone);
+            const existingClaimPhone = normalizePhone(order.assignedDriverPhone || order.claimedByPhone || order.driverPhone);
             const existingDriverName = String(order.driver || '').trim().toLowerCase();
             const myPhone = normalizePhone(driverPhone);
             const myName = String(driverName || '').trim().toLowerCase();
@@ -3816,7 +3907,8 @@
             }
 
             order.driver = driverName;
-            order.driverPhoto = resolveDriverPhoto(driverName);
+            order.driverPhoto = resolveDriverPhoto(myPhone || driverName);
+            order.driverPhone = myPhone;
             order.assignedDriverPhone = myPhone;
             order.claimedByPhone = myPhone;
             order.claimedAt = new Date().toISOString();
@@ -3835,21 +3927,26 @@
                 .from('orders')
                 .update({
                     driver_name: driverName,
+                    driver_phone: cleanPhone,
                     claimed_by_phone: cleanPhone,
                     claimed_at: nowIso,
                     status: order.status,
                     server_updated_at: nowIso
                 })
                 .eq('order_code', order.id)
-                .or(`claimed_by_phone.is.null,claimed_by_phone.eq.${cleanPhone}`)
-                .select('order_code,driver_name,claimed_by_phone,status');
+                .select('order_code,driver_name,driver_phone,claimed_by_phone,status');
 
             if (error) {
                 recordTechnicalDiagLog('ORDER', `Gagal klaim atomik ${order.id}: ${error.message}`);
                 return { ok: false, reason: error.message };
             }
             if (!Array.isArray(data) || data.length === 0) {
-                return { ok: false, reason: `Order ${order.id} sudah lebih dulu diterima mitra lain.` };
+                return { ok: false, reason: `Order ${order.id} tidak ditemukan di server.` };
+            }
+            const row = data[0];
+            const claimedPhoneOnServer = normalizePhone(row.claimed_by_phone || row.driver_phone);
+            if (claimedPhoneOnServer && cleanPhone && claimedPhoneOnServer !== cleanPhone) {
+                return { ok: false, reason: `Order ${order.id} sudah lebih dulu diterima mitra lain (${claimedPhoneOnServer}).` };
             }
             return { ok: true };
         }
@@ -3865,9 +3962,9 @@
             if (accepted) {
                 appendOrderStatusHistory(order, 'merchant_accepted', 'merchant', order.merchant, 'Toko menyetujui pesanan');
                 appendOrderStatusHistory(order, 'preparing', 'merchant', order.merchant, 'Toko mulai menyiapkan barang');
-                addAccountNotification(`Toko Menyetujui (${order.id})`, `Toko ${order.merchant} menyetujui & sedang menyiapkan pesanan ${order.items}.`, order.customer, `${order.id}-m-acc-${order.id}`, 'none');
-                if (order.driver) {
-                    addAccountNotification(`Pesanan Siap Diantar (${order.id})`, `Pesanan di ${order.merchant} disetujui & sedang disiapkan. Silakan menuju toko.`, order.driver, `${order.id}-m-acc-drv-${order.driver}`, 'order');
+                addAccountNotification(`Toko Menyetujui (${order.id})`, `Toko ${order.merchant} menyetujui & sedang menyiapkan pesanan ${order.items}.`, order.customerPhone || order.customer, `${order.id}-m-acc-cust`, 'none');
+                if (order.driverPhone || order.driver) {
+                    addAccountNotification(`Pesanan Siap Diantar (${order.id})`, `Pesanan di ${order.merchant} disetujui & sedang disiapkan. Silakan menuju toko.`, order.driverPhone || order.driver, `${order.id}-m-acc-drv-${order.driverPhone || order.driver}`, 'order');
                 }
                 saveDB(`Toko menyetujui & menyiapkan pesanan ${order.id} (preparing).`, true, 'none');
                 openIncomingOrderModal(order.id, true);
@@ -3875,16 +3972,18 @@
                 const reason = (prompt('Wajib pilih/isi alasan penolakan (contoh: Stok habis / Toko tutup / Tidak dapat memproses pesanan):') || '').trim();
                 if (!reason) return showToast('Alasan penolakan toko wajib diisi!', 'error', 'none');
                 const prevDriver = order.driver;
+                const prevDriverPhone = order.driverPhone || order.assignedDriverPhone;
                 order.storeRejectionReason = reason;
                 order.driver = null;
+                order.driverPhone = null;
                 order.assignedDriverPhone = null;
                 order.claimedByPhone = null;
                 order.refundStatus = 'refund_processed';
                 order.refundAmount = Number(order.total || 0);
                 appendOrderStatusHistory(order, 'cancelled', 'merchant', order.merchant, `Ditolak toko: ${reason}`);
-                if (prevDriver) recordDriverChangeLog(order, prevDriver, null, `Toko menolak: ${reason}`, 'STORE_REJECT');
-                addAccountNotification(`Pesanan Ditolak Toko (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Refund diproses.`, order.customer, `${order.id}-m-rej-cust`, 'none');
-                if (prevDriver) addAccountNotification(`Tugas Dibatalkan (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Tugas Anda dibatalkan.`, prevDriver, `${order.id}-m-rej-drv-${prevDriver}`, 'none');
+                if (prevDriver || prevDriverPhone) recordDriverChangeLog(order, prevDriver || prevDriverPhone, null, `Toko menolak: ${reason}`, 'STORE_REJECT');
+                addAccountNotification(`Pesanan Ditolak Toko (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Refund diproses.`, order.customerPhone || order.customer, `${order.id}-m-rej-cust`, 'none');
+                if (prevDriver || prevDriverPhone) addAccountNotification(`Tugas Dibatalkan (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Tugas Anda dibatalkan.`, prevDriverPhone || prevDriver, `${order.id}-m-rej-drv-${prevDriverPhone || prevDriver}`, 'none');
                 saveDB(`Pesanan ${order.id} ditolak toko & status menjadi cancelled.`, true, 'none');
                 hideModalOverlay('modal-incoming-order');
                 renderDashboardContent(currentSubTab, false);
@@ -3901,8 +4000,8 @@
             }
             const ok = appendOrderStatusHistory(order, nextStage, 'driver', order.driver || 'Driver', `Tahap ${nextStage}`);
             if (!ok) return showToast(`Transisi status dari ${curStage} ke ${nextStage} tidak valid.`, 'error', 'none');
-            addAccountNotification(`Update Status (${order.id})`, `Status pesanan: ${getOrderStatusLabel(nextStage)} (${nextStage}).`, order.customer, `${order.id}-st-${nextStage}-cust`, 'none');
-            if (isStoreOrder) addAccountNotification(`Update Driver (${order.id})`, `Driver ${order.driver}: ${getOrderStatusLabel(nextStage)}.`, order.merchant, `${order.id}-st-${nextStage}-mrc`, 'none');
+            addAccountNotification(`Update Status (${order.id})`, `Status pesanan: ${getOrderStatusLabel(nextStage)} (${nextStage}).`, order.customerPhone || order.customer, `${order.id}-st-${nextStage}-cust`, 'none');
+            if (isStoreOrder) addAccountNotification(`Update Driver (${order.id})`, `Driver ${order.driver}: ${getOrderStatusLabel(nextStage)}.`, order.merchantPhone || order.merchant, `${order.id}-st-${nextStage}-mrc`, 'none');
             saveDB(`Status pesanan ${order.id} diperbarui ke ${nextStage}.`, true, 'none');
             openIncomingOrderModal(order.id, true);
         }
@@ -3918,7 +4017,9 @@
             const reason = (prompt('Masukkan alasan driver membatalkan pekerjaan:') || '').trim();
             if (!reason) return showToast('Alasan pembatalan driver wajib diisi!', 'error', 'none');
             const prevDriver = order.driver;
+            const prevDriverPhone = order.driverPhone || order.assignedDriverPhone;
             order.driver = null;
+            order.driverPhone = null;
             order.assignedDriverPhone = null;
             order.claimedByPhone = null;
             order.driverConfirmed = false;
@@ -3928,9 +4029,9 @@
             order.cancellationReason = reason;
             order.cancelledBy = 'driver';
             appendOrderStatusHistory(order, 'searching_driver', 'driver', prevDriver || 'Driver', `Driver batal (${reason}), mencari driver pengganti`);
-            recordDriverChangeLog(order, prevDriver, null, reason, 'DRIVER_CANCEL');
-            addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan (${reason}). Sistem mencari driver pengganti tanpa checkout ulang.`, order.customer, `${order.id}-dcancel-cust-${prevDriver}`, 'none');
-            if (order.type === 'food') addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan tugas. Sistem sedang mencari driver pengganti.`, order.merchant, `${order.id}-dcancel-mrc-${prevDriver}`, 'none');
+            recordDriverChangeLog(order, prevDriver || prevDriverPhone, null, reason, 'DRIVER_CANCEL');
+            addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan (${reason}). Sistem mencari driver pengganti tanpa checkout ulang.`, order.customerPhone || order.customer, `${order.id}-dcancel-cust-${prevDriverPhone || prevDriver}`, 'none');
+            if (order.type === 'food') addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan tugas. Sistem sedang mencari driver pengganti.`, order.merchantPhone || order.merchant, `${order.id}-dcancel-mrc-${prevDriverPhone || prevDriver}`, 'none');
             saveDB(`Penugasan ${prevDriver} dilepas. Pesanan ${order.id} kembali mencari driver pengganti.`, true, 'none');
             hideModalOverlay('modal-incoming-order');
             renderDashboardContent(currentSubTab, false);
@@ -3947,7 +4048,9 @@
             const reason = (prompt('Masukkan alasan pembatalan pesanan:') || '').trim();
             if (!reason) return showToast('Alasan pembatalan wajib diisi!', 'error', 'none');
             const prevDriver = order.driver;
+            const prevDriverPhone = order.driverPhone || order.assignedDriverPhone;
             order.driver = null;
+            order.driverPhone = null;
             order.assignedDriverPhone = null;
             order.claimedByPhone = null;
             order.cancellationReason = reason;
@@ -3956,11 +4059,11 @@
             order.refundStatus = 'refund_processed';
             order.refundAmount = Number(order.total || 0);
             appendOrderStatusHistory(order, 'cancelled', 'customer', order.customer, `Dibatalkan pelanggan: ${reason}`);
-            if (prevDriver) {
-                recordDriverChangeLog(order, prevDriver, null, `Pelanggan membatalkan: ${reason}`, 'CUSTOMER_CANCEL');
-                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, prevDriver, `${order.id}-ccancel-drv-${prevDriver}`, 'none');
+            if (prevDriver || prevDriverPhone) {
+                recordDriverChangeLog(order, prevDriver || prevDriverPhone, null, `Pelanggan membatalkan: ${reason}`, 'CUSTOMER_CANCEL');
+                addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, prevDriverPhone || prevDriver, `${order.id}-ccancel-drv-${prevDriverPhone || prevDriver}`, 'none');
             }
-            if (order.type === 'food') addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, order.merchant, `${order.id}-ccancel-mrc`, 'none');
+            if (order.type === 'food') addAccountNotification(`Order Dibatalkan (${order.id})`, `Pelanggan membatalkan pesanan (${reason}).`, order.merchantPhone || order.merchant, `${order.id}-ccancel-mrc`, 'none');
             saveDB(`Pesanan ${order.id} dibatalkan (cancelled) & refund dicatat.`, true, 'none');
             renderDashboardContent(currentSubTab, false);
         }
@@ -3978,6 +4081,7 @@
                 const assignedName = currentUser.name;
                 const assignedPhone = normalizePhone(currentUser.phone);
                 const prevDriver = order.driver;
+                const prevDriverPhone = order.driverPhone || order.assignedDriverPhone;
                 const claimRes = claimOrderByDriverAtomic(order, assignedName, assignedPhone);
                 if (!claimRes.ok) {
                     showToast(claimRes.reason, 'error', 'none');
@@ -3987,34 +4091,37 @@
                 const remoteClaim = await persistOrderClaimToSupabase(order, assignedName, assignedPhone);
                 if (!remoteClaim.ok) {
                     order.driver = prevDriver || null;
-                    order.assignedDriverPhone = null;
-                    order.claimedByPhone = null;
+                    order.driverPhone = prevDriverPhone || null;
+                    order.assignedDriverPhone = prevDriverPhone || null;
+                    order.claimedByPhone = prevDriverPhone || null;
                     showToast(remoteClaim.reason || 'Order sudah diambil mitra lain.', 'error', 'none');
                     await pullInitialFromSupabase(false);
                     return;
                 }
                 appendOrderStatusHistory(order, 'driver_assigned', 'driver', assignedName, 'Driver menerima tawaran pengantaran');
-                if (prevDriver !== assignedName) recordDriverChangeLog(order, prevDriver, assignedName, 'Driver menerima tugas', 'ACCEPT');
+                if (prevDriver !== assignedName) recordDriverChangeLog(order, prevDriver || prevDriverPhone, assignedName, 'Driver menerima tugas', 'ACCEPT');
                 const isStoreOrder = order.type === 'food' && String(order.merchant || '').toLowerCase() !== 'layanan ojek online';
                 if (isStoreOrder) {
                     appendOrderStatusHistory(order, 'merchant_confirmation', 'system', 'Sistem', 'Driver tersedia, menunggu persetujuan toko');
-                    addAccountNotification(`Driver Tersedia (${order.id})`, `Driver ${assignedName} sudah tersedia untuk pesanan ${order.items} (${order.customer}). Silakan Terima/Tolak.`, order.merchant, `${order.id}-m-req-${assignedName}`, 'order');
+                    addAccountNotification(`Driver Tersedia (${order.id})`, `Driver ${assignedName} (${assignedPhone}) sudah tersedia untuk pesanan ${order.items} (${order.customer}). Silakan Terima/Tolak.`, order.merchantPhone || order.merchant, `${order.id}-m-req-${assignedPhone}`, 'order');
                 }
-                addAccountNotification(`Driver Ditemukan (${order.id})`, `Driver ${assignedName} menerima tugas.`, order.customer, `${order.id}-d-acc-cust-${assignedName}`, 'none');
-                saveDB(`Order ${order.id} diterima oleh ${assignedName}.`, true, 'none');
+                addAccountNotification(`Driver Ditemukan (${order.id})`, `Driver ${assignedName} (${assignedPhone}) menerima tugas.`, order.customerPhone || order.customer, `${order.id}-d-acc-cust-${assignedPhone}`, 'none');
+                saveDB(`Order ${order.id} diterima oleh ${assignedName} (${assignedPhone}).`, true, 'none');
                 openIncomingOrderModal(order.id, true);
                 return;
             } else if (action === 'reject') {
                 stopOrderAlarmLoop();
                 const prevDriver = order.driver || currentUser?.name || '-';
+                const prevDriverPhone = normalizePhone(order.driverPhone || order.assignedDriverPhone || currentUser?.phone);
                 order.driver = null;
+                order.driverPhone = null;
                 order.assignedDriverPhone = null;
                 order.claimedByPhone = null;
                 order.driverConfirmed = false;
                 order.driverResponseDeadline = null;
                 appendOrderStatusHistory(order, 'searching_driver', 'driver', prevDriver, 'Driver menolak tugas, mencari driver lain');
-                recordDriverChangeLog(order, prevDriver, null, 'Driver menolak tugas', 'REJECT');
-                addAccountNotification(`Driver Menolak (${order.id})`, `Driver ${prevDriver} menolak tugas. Silakan pilih driver aktif lain tanpa checkout ulang.`, order.customer, `${order.id}-d-rej-cust-${prevDriver}`, 'none');
+                recordDriverChangeLog(order, prevDriver || prevDriverPhone, null, 'Driver menolak tugas', 'REJECT');
+                addAccountNotification(`Driver Menolak (${order.id})`, `Driver ${prevDriver} menolak tugas. Silakan pilih driver aktif lain tanpa checkout ulang.`, order.customerPhone || order.customer, `${order.id}-d-rej-cust-${prevDriverPhone || prevDriver}`, 'none');
                 saveDB(`Tugas ${order.id} ditolak & dilepas.`, true, 'none');
             } else if (action === 'complete') {
                 stopOrderAlarmLoop();
@@ -4023,8 +4130,8 @@
                 const myPhone = normalizePhone(currentUser?.phone);
                 const drvMatch = (db.drivers || []).find(d => (myPhone && normalizePhone(d.phone) === myPhone) || (me && String(d.name || '').trim().toLowerCase() === me));
                 const assignedDrvName = String(order.driver || '').trim().toLowerCase();
-                const assignedDrvPhone = normalizePhone(order.assignedDriverPhone);
-                const isAuthorizedDriver = (activeRole === 'driver' && drvMatch && (assignedDrvName === me || assignedDrvName === String(drvMatch.name || '').trim().toLowerCase() || (assignedDrvPhone && assignedDrvPhone === myPhone)));
+                const assignedDrvPhone = normalizePhone(order.driverPhone || order.assignedDriverPhone);
+                const isAuthorizedDriver = (activeRole === 'driver' && drvMatch && ((myPhone && assignedDrvPhone && myPhone === assignedDrvPhone) || assignedDrvName === me || assignedDrvName === String(drvMatch.name || '').trim().toLowerCase()));
                 if (!isAuthorizedDriver) return showToast('Validasi gagal: hanya driver yang ditugaskan pada order ini yang dapat menyelesaikan pesanan.', 'error', 'none');
 
                 order.status = 'delivering';
@@ -4038,14 +4145,14 @@
                     const pct = Number(db.pricing?.commissionPercent || 10);
                     const commissionFee = Math.round((order.total * pct) / 100);
                     const netEarnings = Math.max(0, order.total - commissionFee);
-                    const d = db.drivers.find(x => x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
+                    const d = db.drivers.find(x => (myPhone && normalizePhone(x.phone) === myPhone) || x.name === order.driver);
                     const driverLabel = d ? d.name : order.driver;
                     if (d) d.balance = Number(d.balance || 0) + netEarnings;
-                    const u = db.users.find(x => x.role === 'driver' && (x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
+                    const u = db.users.find(x => x.role === 'driver' && ((myPhone && normalizePhone(x.phone) === myPhone) || x.name === order.driver));
                     if (u) u.balance = Number(u.balance || 0) + netEarnings;
                     recordWalletMutation({ ownerName: driverLabel, role: 'driver', type: 'ORDER_COMPLETE', label: `Order ${order.id} Selesai (Bersih +Komisi ${pct}%)`, amount: order.total, commission: commissionFee, netAmount: netEarnings });
 
-                    const adminUser = db.users.find(x => x.role === 'admin');
+                    const adminUser = db.users.find(x => x.role === 'admin' || normalizePhone(x.phone) === ADMIN_MAIN_PHONE);
                     if (adminUser) adminUser.balance = Number(adminUser.balance || 0) + commissionFee;
 
                     db.commissionLogs.unshift({ id: 'KOM-' + Date.now(), orderId: order.id, amount: commissionFee, netAmount: netEarnings, pct: pct, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
@@ -4053,7 +4160,7 @@
                     order.commissionFee = commissionFee;
                     order.netEarnings = netEarnings;
                     saveDB(`Order ${order.id} dikonfirmasi selesai (completed)! Saldo bersih +Rp ${netEarnings.toLocaleString()} masuk.`, true, 'none');
-                    addAccountNotification(`Order ${order.id} Selesai`, `Pesanan ${order.items} sudah selesai. Silakan beri rating & ulasan!`, order.customer, `${order.id}-comp-cust`, 'none');
+                    addAccountNotification(`Order ${order.id} Selesai`, `Pesanan ${order.items} sudah selesai. Silakan beri rating & ulasan!`, order.customerPhone || order.customer, `${order.id}-comp-cust`, 'none');
                 } else {
                     saveDB(`Status order ${order.id} tersinkron.`, true, 'none');
                 }
@@ -4097,21 +4204,23 @@
             order.rating = selectedRatingStar;
             order.reviewText = comment;
 
-            const drv = db.drivers.find(d => d.name === order.driver);
+            const drvPhone = normalizePhone(order.driverPhone || order.assignedDriverPhone);
+            const drv = db.drivers.find(d => (drvPhone && normalizePhone(d.phone) === drvPhone) || d.name === order.driver);
             if (drv) {
                 const count = Number(drv.ratingCount || 0) + 1;
                 const prevTotal = Number(drv.rating || 5) * Number(drv.ratingCount || 0);
                 drv.rating = Math.round(((prevTotal + selectedRatingStar) / count) * 10) / 10;
                 drv.ratingCount = count;
             }
-            const mrc = db.merchants.find(m => m.name === order.merchant);
+            const mrcPhone = normalizePhone(order.merchantPhone);
+            const mrc = db.merchants.find(m => (mrcPhone && normalizePhone(m.whatsapp) === mrcPhone) || m.name === order.merchant);
             if (mrc) {
                 const count = Number(mrc.ratingCount || 0) + 1;
                 const prevTotal = Number(mrc.rating || 5) * Number(mrc.ratingCount || 0);
                 mrc.rating = Math.round(((prevTotal + selectedRatingStar) / count) * 10) / 10;
                 mrc.ratingCount = count;
             }
-            db.reviews.unshift({ id: 'REV-' + Date.now(), orderId: order.id, customer: order.customer, driver: order.driver, merchant: order.merchant, stars: selectedRatingStar, comment, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+            db.reviews.unshift({ id: 'REV-' + Date.now(), orderId: order.id, customer: order.customer, customerPhone: order.customerPhone || '', driver: order.driver, driverPhone: drvPhone || '', merchant: order.merchant, merchantPhone: mrcPhone || '', stars: selectedRatingStar, comment, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
 
             saveDB(`Rating ${selectedRatingStar} bintang & ulasan tersimpan.`, true, 'none');
             closeRatingModal();
@@ -4124,7 +4233,8 @@
             const activeBanner = getSyncedMainBanner();
             const layerBtnLabel = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            const currentDrvObj = activeRole === 'driver' ? (db.drivers || []).find(d => String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase() || (currentUser.phone && normalizePhone(d.phone) === normalizePhone(currentUser.phone))) : null;
+            const myPhone = normalizePhone(currentUser.phone);
+            const currentDrvObj = activeRole === 'driver' ? (db.drivers || []).find(d => (myPhone && normalizePhone(d.phone) === myPhone) || String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase()) : null;
             const isDriverOnline = currentDrvObj ? currentDrvObj.status === 'Online' : true;
             const headerAvatarSrc = activeRole === 'driver' ? resolveDriverPhoto(currentDrvObj || currentUser) : (currentUser.photo || './olengorange2.png');
 
@@ -4135,7 +4245,7 @@
                             <img src="${headerAvatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-11 h-11 ${activeRole === 'driver' ? 'rounded-full' : 'rounded-2xl'} object-cover border-2 border-[#FF7900] bg-white">
                             <div>
                                 <span class="text-xs text-[#F3F3F3] font-extrabold block">Halo, ${currentUser.name}</span>
-                                <h3 class="text-xs font-black text-[#FF7900] tracking-tight">${currentUser.phone || 'WARGA LENGKONG'}</h3>
+                                <h3 class="text-xs font-black text-[#FF7900] tracking-tight">${myPhone || 'WARGA LENGKONG'}</h3>
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -4319,7 +4429,7 @@
             if (!merchant) return;
             db.activeMerchant = merchant;
             const merchantFoods = db.foods.filter(f => Number(f.merchantId) === Number(merchantId));
-            const merchantReviews = (db.reviews || []).filter(r => r.merchant === merchant.name);
+            const merchantReviews = (db.reviews || []).filter(r => r.merchant === merchant.name || (merchant.whatsapp && normalizePhone(r.merchantPhone) === normalizePhone(merchant.whatsapp)));
             const refCoords = getMapDefaultCenterCoords();
             const dist = calculateDistance(refCoords[0], refCoords[1], merchant.lat, merchant.lng);
             const isOpen = merchant.status === 'Buka';
@@ -4358,8 +4468,8 @@
                             </div>
                         </div>
                         <div class="flex gap-2.5">
-                            <a href="https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin OLENG GO (' + ADMIN_MAIN_WA + '), saya ingin memesan di toko ' + merchant.name + '...')}" target="_blank" class="flex-1 py-3 bg-[#171717] text-white border border-[#FF7900] font-extrabold rounded-2xl flex items-center justify-center gap-2 text-xs transition"><i class="fa-brands fa-whatsapp text-[#FFD400] text-base"></i> WA Utama</a>
-                            <button type="button" onclick="startPersonalChat('${merchant.name}')" class="flex-1 py-3 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] border border-[#171717] font-black rounded-2xl flex items-center justify-center gap-1.5 text-xs transition cursor-pointer"><i class="fa-solid fa-comments"></i> Live Chat</button>
+                            <a href="https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin OLENG GO (' + ADMIN_MAIN_PHONE + '), saya ingin memesan di toko ' + merchant.name + '...')}" target="_blank" class="flex-1 py-3 bg-[#171717] text-white border border-[#FF7900] font-extrabold rounded-2xl flex items-center justify-center gap-2 text-xs transition"><i class="fa-brands fa-whatsapp text-[#FFD400] text-base"></i> WA Utama</a>
+                            <button type="button" onclick="startPersonalChat('${merchant.whatsapp || merchant.name}')" class="flex-1 py-3 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] border border-[#171717] font-black rounded-2xl flex items-center justify-center gap-1.5 text-xs transition cursor-pointer"><i class="fa-solid fa-comments"></i> Live Chat</button>
                         </div>
                     </div>
 
@@ -4430,7 +4540,7 @@
             const refLat = typeof PICKUP_LOCATION.lat === 'number' ? PICKUP_LOCATION.lat : GPS_LOCATION.lat;
             const refLng = typeof PICKUP_LOCATION.lng === 'number' ? PICKUP_LOCATION.lng : GPS_LOCATION.lng;
             const onlineDrivers = getOnlineDriversWithActivitySorted(refLat, refLng);
-            const filteredDrivers = onlineDrivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.vehicle.toLowerCase().includes(searchQuery.toLowerCase()));
+            const filteredDrivers = onlineDrivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.vehicle.toLowerCase().includes(searchQuery.toLowerCase()) || normalizePhone(d.phone).includes(normalizePhone(searchQuery)));
 
             listEl.innerHTML = filteredDrivers.length > 0 ? filteredDrivers.map((d, index) => {
                 const isDraft = Number(draftSelectedDriverId) === Number(d.id);
@@ -4443,7 +4553,7 @@
                             <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 rounded-full object-cover border-2 border-[#FF7900] shrink-0 bg-white" alt="Driver">
                             <div class="min-w-0">
                                 <div class="flex items-center gap-1.5 flex-wrap">
-                                    <h4 class="font-bold text-xs text-[#171717] truncate">${d.name}</h4>
+                                    <h4 class="font-bold text-xs text-[#171717] truncate">${d.name} (${d.phone || '-'})</h4>
                                     <span class="text-[9px] px-1.5 py-0.5 rounded font-black ${d.activityBadgeClass}">${d.activityBadgeText}</span>
                                 </div>
                                 ${isDraft ? '<span class="bg-[#171717] text-[#FF7900] px-2 py-0.5 rounded text-[9px] font-black inline-block my-0.5">DRIVER DIPILIH (SEMENTARA)</span>' : ''}
@@ -4456,8 +4566,8 @@
                         </div>
                         <div class="flex flex-col gap-1 shrink-0">
                             <button type="button" onclick="toggleDraftDriverSelection(${d.id}, 'ojek')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black cursor-pointer ${isDraft ? 'bg-rose-600 text-white' : (d.isBusy ? 'bg-[#F3F3F3] text-[#171717] border border-[#FF7900]' : 'bg-[#FF7900] text-[#171717] border border-[#171717]')}">${isDraft ? 'BATAL PILIH' : (d.isBusy ? 'CEK / PILIH' : 'PILIH')}</button>
-                            <a href="https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin OLENG GO (' + ADMIN_MAIN_WA + '), saya pesan ojek bersama ' + d.name + '.')}" target="_blank" class="px-2.5 py-1 bg-[#171717] text-white border border-[#FF7900] rounded-xl text-[10px] font-bold text-center"><i class="fa-brands fa-whatsapp text-[#FFD400]"></i> WA Utama</a>
-                            <button type="button" onclick="startPersonalChat('${d.name}')" class="px-2.5 py-1 bg-[#F3F3F3] text-[#171717] border border-[#D4D4D4] rounded-xl text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments text-[#FF7900]"></i> Chat</button>
+                            <a href="https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin OLENG GO (' + ADMIN_MAIN_PHONE + '), saya pesan ojek bersama ' + d.name + ' (' + (d.phone || '-') + ').')}" target="_blank" class="px-2.5 py-1 bg-[#171717] text-white border border-[#FF7900] rounded-xl text-[10px] font-bold text-center"><i class="fa-brands fa-whatsapp text-[#FFD400]"></i> WA Utama</a>
+                            <button type="button" onclick="startPersonalChat('${d.phone || d.name}')" class="px-2.5 py-1 bg-[#F3F3F3] text-[#171717] border border-[#D4D4D4] rounded-xl text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments text-[#FF7900]"></i> Chat</button>
                         </div>
                     </div>
                 `;
@@ -4567,7 +4677,7 @@
                     
                     <div class="bg-white p-3 rounded-2xl border-2 border-[#D4D4D4] flex items-center gap-2">
                         <i class="fa-solid fa-search text-[#FF7900] pl-2"></i>
-                        <input type="text" id="search-driver-input" value="${searchQuery}" oninput="handleOjekSearchInput(this)" placeholder="Cari nama ojek / driver..." class="w-full text-xs font-semibold text-[#171717] focus:outline-none bg-transparent">
+                        <input type="text" id="search-driver-input" value="${searchQuery}" oninput="handleOjekSearchInput(this)" placeholder="Cari nama / no. HP ojek..." class="w-full text-xs font-semibold text-[#171717] focus:outline-none bg-transparent">
                         <button type="button" id="clear-ojek-search-btn" onclick="clearOjekSearchInput()" class="text-xs text-rose-700 font-black pr-2 cursor-pointer ${searchQuery ? '' : 'hidden'}">&times;</button>
                     </div>
 
@@ -4650,7 +4760,7 @@
                         </div>
 
                         <div class="bg-[#FFF4EA] p-2.5 rounded-2xl border border-[#FF7900] text-[11px] font-bold text-[#171717] flex items-center justify-between gap-2">
-                            <span>Driver Terkonfirmasi: <b>${confirmedDrv ? confirmedDrv.name : 'Belum dikonfirmasi'}</b></span>
+                            <span>Driver Terkonfirmasi: <b>${confirmedDrv ? `${confirmedDrv.name} (${confirmedDrv.phone})` : 'Belum dikonfirmasi'}</b></span>
                             <button type="button" onclick="confirmDraftDriverSelection('ojek')" class="px-3 py-1.5 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] border border-[#171717] rounded-xl text-[10px] font-black cursor-pointer shrink-0">KONFIRMASI DRIVER</button>
                         </div>
 
@@ -4728,7 +4838,7 @@
                         <div class="flex items-center gap-2 min-w-0">
                             <img src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-9 h-9 rounded-full object-cover border border-[#FF7900] shrink-0 bg-white" alt="Driver">
                             <div class="min-w-0">
-                                <span class="font-bold text-xs text-[#171717] block truncate">${d.name} ${idx === 0 && !d.isBusy ? '<span class="text-[9px] bg-[#FFD400] text-[#171717] px-1.5 rounded font-black">TERDEKAT</span>' : ''}</span>
+                                <span class="font-bold text-xs text-[#171717] block truncate">${d.name} (${d.phone || '-'}) ${idx === 0 && !d.isBusy ? '<span class="text-[9px] bg-[#FFD400] text-[#171717] px-1.5 rounded font-black">TERDEKAT</span>' : ''}</span>
                                 <span class="block text-[10px] text-[#404040] font-bold truncate">${d.vehicle} • ${d.distance} km • ${d.activityBadgeText}</span>
                                 <span class="block text-[9px] font-semibold ${d.isBusy ? 'text-[#D96400]' : 'text-[#262626]'} truncate">${d.activityNotifText}</span>
                                 ${isDraft ? '<span class="text-[9px] font-black text-[#171717]">DRIVER DIPILIH</span>' : ''}
@@ -4815,15 +4925,21 @@
             const respTimeoutMs = Number(db.pricing?.driverResponseTimeoutSec || 45) * 1000;
             const searchTimeoutMs = Number(db.pricing?.driverSearchTimeoutSec || 60) * 1000;
             const destLabelVal = DESTINATION_LOCATION.label || `Lokasi (${DESTINATION_LOCATION.lat}, ${DESTINATION_LOCATION.lng})`;
+            const custPhoneNorm = normalizePhone(currentUser.phone);
+            const mercPhoneNorm = normalizePhone(merchant.whatsapp) || getUserPhoneByNameOrShop(merchant.name);
+            const drvPhoneNorm = normalizePhone(driver.phone);
 
             const newOrder = {
                 id: orderCode,
                 type: 'food',
                 customer: currentUser.name,
+                customerPhone: custPhoneNorm,
                 merchant: merchant.name,
+                merchantPhone: mercPhoneNorm,
                 driver: driver.name,
+                driverPhone: drvPhoneNorm,
                 driverPhoto: resolveDriverPhoto(driver),
-                assignedDriverPhone: normalizePhone(driver.phone),
+                assignedDriverPhone: drvPhoneNorm,
                 driverConfirmed: true,
                 driverResponseDeadline: Date.now() + respTimeoutMs,
                 driverSearchDeadline: Date.now() + searchTimeoutMs,
@@ -4854,7 +4970,7 @@
                 }],
                 driverChangeHistory: []
             };
-            recordDriverChangeLog(newOrder, null, driver.name, 'Konfirmasi driver pengantaran', 'CONFIRM');
+            recordDriverChangeLog(newOrder, null, `${driver.name} (${drvPhoneNorm})`, 'Konfirmasi driver pengantaran', 'CONFIRM');
 
             db.orders.unshift(newOrder);
             db.cart = [];
@@ -4866,8 +4982,8 @@
             syncDriverAvailabilityLocks();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-            addAccountNotification(`Pesanan Dibuat (${newOrder.id})`, `Pesanan ${newOrder.items} dikirim ke toko ${merchant.name}.`, currentUser.name, `${newOrder.id}-created-cust`, 'none');
-            addAccountNotification(`Order Makanan Baru (${newOrder.id})`, `Pemesan ${currentUser.name} • ${newOrder.items} • Tujuan: ${newOrder.dest}${notesVal ? ` • Catatan: ${notesVal}` : ''}.`, merchant.name, `${newOrder.id}-instant-mrc-${merchant.name}`, 'order');
+            addAccountNotification(`Pesanan Dibuat (${newOrder.id})`, `Pesanan ${newOrder.items} dikirim ke toko ${merchant.name}.`, custPhoneNorm || currentUser.name, `${newOrder.id}-created-cust`, 'none');
+            addAccountNotification(`Order Makanan Baru (${newOrder.id})`, `Pemesan ${currentUser.name} (${custPhoneNorm}) • ${newOrder.items} • Tujuan: ${newOrder.dest}${notesVal ? ` • Catatan: ${notesVal}` : ''}.`, mercPhoneNorm || merchant.name, `${newOrder.id}-instant-mrc-${mercPhoneNorm || merchant.name}`, 'order');
             triggerSystemBackgroundNotification(`Order Baru ${newOrder.id}`, `${newOrder.merchant} • ${newOrder.items}`, { type: 'order', orderId: newOrder.id, tag: 'order-' + newOrder.id, renotify: true });
             showToast(`Berhasil! Pesanan ${newOrder.id} terkirim & notif instan masuk ke toko ${merchant.name}.`, 'success', 'none');
             closeCartModal();
@@ -4913,15 +5029,20 @@
             const orderCode = 'OJK-' + Math.floor(1000 + Math.random() * 9000);
             const respTimeoutMs = Number(db.pricing?.driverResponseTimeoutSec || 45) * 1000;
             const searchTimeoutMs = Number(db.pricing?.driverSearchTimeoutSec || 60) * 1000;
+            const custPhoneNorm = normalizePhone(currentUser.phone);
+            const drvPhoneNorm = normalizePhone(driver.phone);
 
             const newOrder = {
                 id: orderCode,
                 type: 'ojek',
                 customer: currentUser.name,
+                customerPhone: custPhoneNorm,
                 merchant: 'Layanan Ojek Online',
+                merchantPhone: '',
                 driver: driver.name,
+                driverPhone: drvPhoneNorm,
                 driverPhoto: resolveDriverPhoto(driver),
-                assignedDriverPhone: normalizePhone(driver.phone),
+                assignedDriverPhone: drvPhoneNorm,
                 driverConfirmed: true,
                 driverResponseDeadline: Date.now() + respTimeoutMs,
                 driverSearchDeadline: Date.now() + searchTimeoutMs,
@@ -4947,12 +5068,12 @@
                     label: ORDER_STATUS_LABELS.searching_driver,
                     actorRole: 'customer',
                     actorName: currentUser.name,
-                    note: `Konfirmasi driver ${driver.name}`,
+                    note: `Konfirmasi driver ${driver.name} (${drvPhoneNorm})`,
                     at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 }],
                 driverChangeHistory: []
             };
-            recordDriverChangeLog(newOrder, null, driver.name, 'Konfirmasi driver ojek oleh pelanggan', 'CONFIRM');
+            recordDriverChangeLog(newOrder, null, `${driver.name} (${drvPhoneNorm})`, 'Konfirmasi driver ojek oleh pelanggan', 'CONFIRM');
 
             db.orders.unshift(newOrder);
             draftSelectedDriverId = null;
@@ -4963,7 +5084,7 @@
             syncDriverAvailabilityLocks();
             localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-            addAccountNotification(`Tawaran Ojek Baru (${newOrder.id})`, `Jemput ${currentUser.name} (${from} → ${to}, ${distKm} km, Tarif Rp ${finalFare.toLocaleString()})${notesVal ? ` • Catatan: ${notesVal}` : ''}.`, newOrder.driver, `${newOrder.id}-offer-drv-${driver.name}`, 'order');
+            addAccountNotification(`Tawaran Ojek Baru (${newOrder.id})`, `Jemput ${currentUser.name} (${custPhoneNorm}) (${from} → ${to}, ${distKm} km, Tarif Rp ${finalFare.toLocaleString()})${notesVal ? ` • Catatan: ${notesVal}` : ''}.`, drvPhoneNorm || newOrder.driver, `${newOrder.id}-offer-drv-${drvPhoneNorm || driver.name}`, 'order');
             triggerSystemBackgroundNotification(`Order Ojek Baru ${newOrder.id}`, `Jemput ${newOrder.customer} (${newOrder.pickup} → ${newOrder.dest})`, { type: 'order', orderId: newOrder.id, tag: 'order-' + newOrder.id, renotify: true });
             showToast(`Berhasil! Order ojek ${newOrder.id} terkirim & notif instan masuk ke driver ${driver.name}.`, 'success', 'none');
             renderDashboardContent('history', false);
@@ -4981,7 +5102,7 @@
             container.innerHTML = `
                 <div class="p-4 space-y-5 pb-24 bg-[#F3F3F3] min-h-full">
                     <div class="flex justify-between items-center bg-[#171717] text-white p-3.5 rounded-3xl border-2 border-[#FF7900]">
-                        <h2 class="font-extrabold text-sm text-[#FF7900]">Riwayat & Mutasi (${currentUser.name})</h2>
+                        <h2 class="font-extrabold text-sm text-[#FF7900]">Riwayat & Mutasi (${currentUser.phone || currentUser.name})</h2>
                         <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${alarmEnabled ? 'bg-[#FF7900] text-[#171717]' : 'bg-[#262626] text-white border border-[#D4D4D4]'}">Alarm: ${alarmEnabled ? 'ON' : 'OFF'}</button>
                     </div>
 
@@ -4992,20 +5113,22 @@
                             const st = normalizeOrderStatusCode(o.status);
                             const stLabel = getOrderStatusLabel(st);
                             const canCustomerCancel = activeRole === 'customer' && !['picked_up', 'delivering', 'completed', 'cancelled'].includes(st);
-                            const drvPhoto = o.driver ? (o.driverPhoto || resolveDriverPhoto(o.driver)) : './olengorange2.png';
+                            const drvPhoto = (o.driver || o.driverPhone) ? (o.driverPhoto || resolveDriverPhoto(o.driverPhone || o.driver)) : './olengorange2.png';
+                            const custPhoneText = normalizePhone(o.customerPhone) || getUserPhoneByNameOrShop(o.customer) || '-';
+                            const drvPhoneText = normalizePhone(o.driverPhone || o.assignedDriverPhone) || getUserPhoneByNameOrShop(o.driver) || '-';
                             return `
                             <div class="bg-white p-4 rounded-3xl border border-[#D4D4D4] space-y-2">
                                 <div class="flex justify-between items-center gap-2">
                                     <span class="text-[10px] bg-[#171717] text-[#FF7900] font-extrabold px-2.5 py-0.5 rounded-md uppercase">${o.id}</span>
                                     <span class="text-[10px] bg-[#FFD400] text-[#171717] font-extrabold px-2.5 py-0.5 rounded-md">${stLabel} (${st})</span>
                                 </div>
-                                <h4 class="font-bold text-xs text-[#171717]">${o.merchant} • Pemesan: ${o.customer}</h4>
+                                <h4 class="font-bold text-xs text-[#171717]">${o.merchant} • Pemesan: ${o.customer} (${custPhoneText})</h4>
                                 <p class="text-[11px] text-[#262626] font-semibold">${o.items}</p>
                                 ${o.notes ? `<p class="text-[10px] text-[#171717] bg-[#F3F3F3] px-2.5 py-1 rounded-lg font-semibold">Catatan: ${o.notes}</p>` : ''}
                                 ${o.promoCode ? `<p class="text-[10px] text-emerald-700 font-bold">Promo ${o.promoCode}: -Rp ${Number(o.discount || 0).toLocaleString()}</p>` : ''}
                                 <div class="flex items-center gap-2 pt-0.5 text-[10px] text-[#404040]">
                                     <img src="${drvPhoto}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-7 h-7 rounded-full object-cover border border-[#FF7900] shrink-0 bg-white" alt="Foto Driver">
-                                    <span><i class="fa-solid fa-motorcycle text-[#FF7900]"></i> Driver: <b>${o.driver || 'Mencari driver aktif'}</b></span>
+                                    <span><i class="fa-solid fa-motorcycle text-[#FF7900]"></i> Driver: <b>${o.driver || 'Mencari driver aktif'}</b> (${drvPhoneText})</span>
                                 </div>
                                 ${o.storeRejectionReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Toko Tolak: ${o.storeRejectionReason}</p>` : ''}
                                 ${o.cancellationReason ? `<p class="text-[10px] text-rose-700 font-bold">Alasan Batal: ${o.cancellationReason}</p>` : ''}
@@ -5027,7 +5150,7 @@
                                 </div>
                             </div>
                         `;
-                        }).join('') : `<p class="text-xs text-[#262626] bg-white p-4 rounded-2xl border border-[#D4D4D4] text-center">Belum ada riwayat pesanan untuk akun ${currentUser.name}.</p>`}
+                        }).join('') : `<p class="text-xs text-[#262626] bg-white p-4 rounded-2xl border border-[#D4D4D4] text-center">Belum ada riwayat pesanan untuk nomor HP ${currentUser.phone || currentUser.name}.</p>`}
                     </div>
 
                     ${myMutations.length > 0 ? `
@@ -5075,16 +5198,14 @@
 
         function renderMerchantManage(container) {
             const myPhone = normalizePhone(currentUser.phone);
-            const myAccId = String(currentUser.accountId || '').toUpperCase();
             let merchant = db.merchants.find(m =>
-                String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID &&
-                ((myAccId && String(m.accountId || '').toUpperCase() === myAccId) ||
-                (myPhone && normalizePhone(m.whatsapp) === myPhone))
+                normalizePhone(m.whatsapp) !== ADMIN_MAIN_PHONE &&
+                myPhone && normalizePhone(m.whatsapp) === myPhone
             );
 
             if (!merchant) {
                 merchant = {
-                    id: currentUser.id || Date.now(), accountId: myAccId || generateAutoAccountIdFromPhone(myPhone, 'merchant'), name: currentUser.shopName || '',
+                    id: currentUser.id || Date.now(), name: currentUser.shopName || '',
                     ownerName: currentUser.ownerName || currentUser.name || '', ktp: currentUser.ktp || '', subtitle: '', category: 'Kuliner', status: 'Buka',
                     banner: './olengorange2.png', image: currentUser.photo || './olengorange2.png', rating: 5.0, ratingCount: 0,
                     lat: typeof currentUser.lat === 'number' ? currentUser.lat : -7.1240, lng: typeof currentUser.lng === 'number' ? currentUser.lng : 106.8460,
@@ -5108,7 +5229,7 @@
                             <div class="flex items-center space-x-3">
                                 <img src="${merchant.image}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Profil Toko">
                                 <div>
-                                    <span class="text-[10px] text-[#FF7900] font-extrabold uppercase block">PROFIL & SAMPUL TOKO (${merchant.whatsapp || currentUser.phone})</span>
+                                    <span class="text-[10px] text-[#FF7900] font-extrabold uppercase block">PROFIL & SAMPUL TOKO (HP: ${merchant.whatsapp || currentUser.phone})</span>
                                     <h2 class="text-base font-black text-white">${merchant.name || 'Nama Toko Belum Diisi'}</h2>
                                     <p class="text-[11px] text-[#F3F3F3]"><i class="fa-solid fa-star text-[#FFD400]"></i> ${merchant.rating || 5.0} • ${merchant.operationalHours || 'Atur Jam Buka'}</p>
                                 </div>
@@ -5185,7 +5306,7 @@
                             <div class="flex items-center space-x-3">
                                 <img src="${adminStore.image}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Foto Toko Admin">
                                 <div>
-                                    <span class="text-[10px] text-[#FF7900] font-extrabold uppercase block">TOKO MILIK ADMIN (PERMANEN)</span>
+                                    <span class="text-[10px] text-[#FF7900] font-extrabold uppercase block">TOKO MILIK ADMIN (HP: ${ADMIN_MAIN_PHONE})</span>
                                     <h2 class="text-base font-black text-white">${adminStore.name}</h2>
                                     <p class="text-[11px] text-[#F3F3F3]"><i class="fa-solid fa-star text-[#FFD400]"></i> ${adminStore.rating || 5.0} • ${adminStore.operationalHours}</p>
                                 </div>
@@ -5275,7 +5396,7 @@
             if(m) {
                 m.status = m.status === 'Buka' ? 'Tutup' : 'Buka';
                 saveDB(`Status toko diubah menjadi ${m.status} & tersinkron!`, true, 'none');
-                addAccountNotification('Status Toko Diperbarui', `${m.name} sekarang berstatus ${m.status}.`, m.name, null, 'none');
+                addAccountNotification('Status Toko Diperbarui', `${m.name} sekarang berstatus ${m.status}.`, normalizePhone(m.whatsapp) || m.name, null, 'none');
                 renderMerchantManage(document.getElementById('main-content'));
             }
         }
@@ -5310,7 +5431,8 @@
 
                 if (currentUser && currentUser.role === 'merchant') {
                     currentUser.shopName = newName;
-                    const uIdx = db.users.findIndex(u => u.id === currentUser.id);
+                    const myPhone = normalizePhone(currentUser.phone);
+                    const uIdx = db.users.findIndex(u => (myPhone && normalizePhone(u.phone) === myPhone && u.role === 'merchant') || u.id === currentUser.id);
                     if (uIdx !== -1) db.users[uIdx].shopName = newName;
                     localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
                 }
@@ -5386,7 +5508,8 @@
             hasPendingMediaSelection = false;
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             const balanceVal = getProfileSyncedBalance();
-            const myDrv = activeRole === 'driver' ? (db.drivers || []).find(d => String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase() || (currentUser.phone && normalizePhone(d.phone) === normalizePhone(currentUser.phone))) : null;
+            const myPhone = normalizePhone(currentUser.phone);
+            const myDrv = activeRole === 'driver' ? (db.drivers || []).find(d => (myPhone && normalizePhone(d.phone) === myPhone) || String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase()) : null;
             const avatarSrc = activeRole === 'driver' ? resolveDriverPhoto(myDrv || currentUser) : (currentUser.photo || './olengorange2.png');
 
             container.innerHTML = `
@@ -5394,7 +5517,7 @@
                     <div class="bg-[#171717] text-white p-5 rounded-3xl text-center space-y-2 border-2 border-[#FF7900]">
                         <img id="profile-header-avatar" src="${avatarSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-24 h-24 ${activeRole === 'driver' ? 'rounded-full' : 'rounded-3xl'} object-cover mx-auto border-4 border-[#FF7900] bg-white">
                         <h2 class="font-black text-base text-white">${currentUser.name}</h2>
-                        <p class="text-xs font-black text-[#FF7900]">No. HP Login: ${currentUser.phone || '-'}</p>
+                        <p class="text-xs font-black text-[#FF7900]">No. HP Login: ${myPhone || '-'}</p>
                         <span class="text-[10px] bg-[#FFD400] text-[#171717] font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span>
                         ${myDrv ? `
                             <div class="pt-1 flex justify-center gap-2">
@@ -5413,7 +5536,7 @@
                         <h3 class="font-extrabold text-xs text-[#171717] uppercase border-b-2 border-[#F3F3F3] pb-2"><i class="fa-solid fa-user-pen text-[#FF7900] mr-1"></i> Ubah Informasi Akun, Password Baru & Foto Profil</h3>
                         <div>
                             <label class="text-[10px] font-extrabold text-[#171717] uppercase">Nomor WhatsApp / HP</label>
-                            <input type="tel" id="acc-phone" value="${currentUser.phone}" class="w-full mt-1 p-2.5 border-2 border-[#D4D4D4] focus:border-[#FF7900] focus:outline-none rounded-2xl text-xs font-bold text-[#171717] bg-[#F3F3F3]">
+                            <input type="tel" id="acc-phone" value="${myPhone}" class="w-full mt-1 p-2.5 border-2 border-[#D4D4D4] focus:border-[#FF7900] focus:outline-none rounded-2xl text-xs font-bold text-[#171717] bg-[#F3F3F3]">
                         </div>
                         <div>
                             <label class="text-[10px] font-extrabold text-[#171717] uppercase">Nama Lengkap</label>
@@ -5440,9 +5563,10 @@
         }
 
         async function saveFullAccountChanges() {
+            const oldPhone = normalizePhone(currentUser.phone);
             const newPhone = normalizePhone(document.getElementById('acc-phone')?.value || '');
             if (newPhone.length < 9) return showToast('Nomor WhatsApp / HP wajib valid minimal 9 digit!', 'error', 'none');
-            const taken = db.users.find(u => u.id !== currentUser.id && normalizePhone(u.phone) === newPhone && u.role === currentUser.role);
+            const taken = db.users.find(u => normalizePhone(u.phone) === newPhone && u.role === currentUser.role && normalizePhone(u.phone) !== oldPhone);
             if (taken) return showToast(`Nomor HP "${newPhone}" sudah dipakai akun lain pada peran ${currentUser.role.toUpperCase()}!`, 'error', 'none');
 
             currentUser.phone = newPhone;
@@ -5453,12 +5577,17 @@
             if(tempUserProfilePhoto) currentUser.photo = tempUserProfilePhoto;
             tempUserProfilePhoto = null; hasPendingMediaSelection = false;
 
-            const userIdx = db.users.findIndex(u => u.id === currentUser.id);
+            const userIdx = db.users.findIndex(u => normalizePhone(u.phone) === oldPhone && u.role === currentUser.role);
             if(userIdx !== -1) db.users[userIdx] = { ...currentUser };
 
             if (currentUser.role === 'driver') {
-                const drvMatch = (db.drivers || []).find(d => (currentUser.accountId && String(d.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) || (newPhone && normalizePhone(d.phone) === newPhone) || (String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase()));
+                const drvMatch = (db.drivers || []).find(d => (oldPhone && normalizePhone(d.phone) === oldPhone) || (newPhone && normalizePhone(d.phone) === newPhone) || (String(d.name || '').trim().toLowerCase() === String(currentUser.name || '').trim().toLowerCase()));
                 if (drvMatch) { drvMatch.name = currentUser.name; drvMatch.phone = newPhone; drvMatch.photo = currentUser.photo || './olengorange2.png'; }
+            }
+
+            if (currentUser.role === 'merchant') {
+                const mrcMatch = (db.merchants || []).find(m => normalizePhone(m.whatsapp) !== ADMIN_MAIN_PHONE && oldPhone && normalizePhone(m.whatsapp) === oldPhone);
+                if (mrcMatch) mrcMatch.whatsapp = newPhone;
             }
 
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
@@ -5471,7 +5600,7 @@
 
         function getSystemDiagnosticsSnapshot() {
             const supaConnected = Boolean(lastSupabaseStatus && lastSupabaseStatus.ok);
-            const authStatus = currentUser ? `Normal (${currentUser.role})` : 'Siap Login';
+            const authStatus = currentUser ? `Normal (${currentUser.role} • ${normalizePhone(currentUser.phone)})` : 'Siap Login';
             const dbStatus = supaConnected ? 'Normal' : (navigator.onLine ? 'Perlu Cek' : 'Offline Lokal');
             const rtStatus = realtimeChannelState === 'SUBSCRIBED' ? 'Aktif' : (realtimeChannelState === 'RECONNECTING' ? 'Rekoneksi' : 'Terputus');
 
@@ -5494,13 +5623,8 @@
             const pendingOrdersCount = (db.orders || []).filter(o => !['completed', 'cancelled'].includes(normalizeOrderStatusCode(o.status))).length;
             const pendingChatsCount = getUnreadChatCount();
             const validTokenCount = (db.users || []).filter(u => typeof u.pushToken === 'string' && u.pushToken.length > 0).length + (devicePushToken ? 1 : 0);
-
-            const orderErrCount = (technicalDiagLogs || []).filter(l => l.category === 'ORDER').length;
-            const orderStatus = orderErrCount > 0 ? 'Error' : 'Normal';
-            const fcmStatus = (typeof devicePushToken === 'string' && devicePushToken.length > 0) ? 'Terhubung' : 'Error';
             const notifPerm = ('Notification' in window) ? Notification.permission : 'unsupported';
             const notifStatus = notifPerm === 'granted' ? 'Aktif' : 'Belum diizinkan';
-            const syncStatus = (!navigator.onLine || queueCount > 0) ? `Bermasalah / Antre (${queueCount})` : `Normal (Antrean: ${queueCount})`;
 
             return {
                 supabase: supaConnected ? 'Terhubung' : 'Terputus',
@@ -5520,10 +5644,7 @@
                 pushFailCount,
                 validTokenCount,
                 lastSuccessfulSyncAt,
-                order: orderStatus,
-                fcm: fcmStatus,
-                notif: notifStatus,
-                sync: syncStatus
+                notif: notifStatus
             };
         }
 
@@ -5550,7 +5671,7 @@
                 <div class="p-4 space-y-4 pb-24 bg-[#F3F3F3] min-h-full">
                     <div class="bg-[#171717] text-white p-4 rounded-3xl flex items-center justify-between border-2 border-[#FF7900]">
                         <div>
-                            <span class="text-[10px] text-[#FF7900] font-extrabold uppercase block">PANEL ADMIN SIMADU</span>
+                            <span class="text-[10px] text-[#FF7900] font-extrabold uppercase block">PANEL ADMIN SIMADU (${ADMIN_MAIN_PHONE})</span>
                             <h2 class="font-black text-sm text-white">Master Control Lengkong</h2>
                         </div>
                         <button onclick="manualForceSync(true)" class="px-3 py-1.5 bg-[#FF7900] text-[#171717] border border-[#171717] rounded-xl text-[10px] font-black cursor-pointer"><i class="fa-solid fa-rotate mr-1"></i> Sinkron</button>
@@ -5586,7 +5707,7 @@
                         </div>
                         <div class="grid grid-cols-2 gap-1.5 text-[10px] font-bold text-[#262626]">
                             <span>Supabase: <b>${diag.supabase}</b></span>
-                            <span>Supabase Auth: <b>${diag.auth}</b></span>
+                            <span>Akun Aktif: <b>${diag.auth}</b></span>
                             <span>Database: <b>${diag.database}</b></span>
                             <span>Realtime: <b>${diag.realtime}</b></span>
                             <span>Channel Aktif: <b>${diag.activeChannelsCount}</b></span>
@@ -5692,11 +5813,11 @@
         function getUserCurrentBalanceDisplay(u) {
             const cleanPhone = normalizePhone(u.phone);
             if (u.role === 'merchant') {
-                const m = (db.merchants || []).find(item => String(item.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID && ((u.accountId && String(item.accountId || '').toUpperCase() === String(u.accountId).toUpperCase()) || (cleanPhone && normalizePhone(item.whatsapp) === cleanPhone)));
+                const m = (db.merchants || []).find(item => normalizePhone(item.whatsapp) !== ADMIN_MAIN_PHONE && cleanPhone && normalizePhone(item.whatsapp) === cleanPhone);
                 return Math.max(Number(u.balance || 0), Number(m?.balance || 0));
             }
             if (u.role === 'driver') {
-                const d = (db.drivers || []).find(item => (u.accountId && String(item.accountId || '').toUpperCase() === String(u.accountId).toUpperCase()) || (cleanPhone && normalizePhone(item.phone) === cleanPhone) || (String(item.name || '').trim().toLowerCase() === String(u.name || '').trim().toLowerCase()));
+                const d = (db.drivers || []).find(item => (cleanPhone && normalizePhone(item.phone) === cleanPhone) || (String(item.name || '').trim().toLowerCase() === String(u.name || '').trim().toLowerCase()));
                 return Math.max(Number(u.balance || 0), Number(d?.balance || 0));
             }
             return Number(u.balance || 0);
@@ -5715,7 +5836,7 @@
                     </div>
 
                     <div class="bg-white p-4 rounded-3xl border-2 border-[#FF7900] space-y-2.5">
-                        <h3 class="font-black text-xs text-[#171717] uppercase"><i class="fa-solid fa-user-plus text-[#FF7900] mr-1"></i> Tambah Akun Baru (Cukup No. HP)</h3>
+                        <h3 class="font-black text-xs text-[#171717] uppercase"><i class="fa-solid fa-user-plus text-[#FF7900] mr-1"></i> Tambah Akun Baru (Khusus No. HP)</h3>
                         <div class="grid grid-cols-2 gap-2">
                             <input type="tel" id="new-user-phone" placeholder="No. HP (08xxxxxx)" class="p-2.5 border-2 border-[#D4D4D4] focus:border-[#FF7900] focus:outline-none bg-[#F3F3F3] text-[#171717] rounded-2xl text-xs font-bold">
                             <select id="new-user-role" class="p-2.5 border-2 border-[#D4D4D4] focus:border-[#FF7900] focus:outline-none rounded-2xl text-xs font-bold bg-[#F3F3F3] text-[#171717]">
@@ -5754,7 +5875,7 @@
                                 <div class="flex gap-2 pt-2 border-t border-[#F3F3F3] flex-wrap">
                                     ${u.role !== 'customer' ? `<button onclick="adminAddBalance(${u.id})" class="px-2.5 py-1 bg-[#FF7900] text-[#171717] border border-[#171717] rounded-xl text-[10px] font-black cursor-pointer">+ Tambah Saldo</button>` : ''}
                                     <button onclick="adminResetPassword(${u.id})" class="px-2.5 py-1 bg-[#F3F3F3] text-[#171717] border border-[#D4D4D4] rounded-xl text-[10px] font-bold cursor-pointer">Reset Password (123456)</button>
-                                    ${normalizePhone(u.phone) !== '085624736602' ? `<button onclick="adminDeleteUser(${u.id})" class="px-2.5 py-1 bg-rose-100 text-rose-900 border border-rose-300 rounded-xl text-[10px] font-bold cursor-pointer">Hapus Akun</button>` : ''}
+                                    ${normalizePhone(u.phone) !== ADMIN_MAIN_PHONE ? `<button onclick="adminDeleteUser(${u.id})" class="px-2.5 py-1 bg-rose-100 text-rose-900 border border-rose-300 rounded-xl text-[10px] font-bold cursor-pointer">Hapus Akun</button>` : ''}
                                 </div>
                             </div>
                         `;
@@ -5784,8 +5905,7 @@
             if (!name) return showToast('Nama lengkap wajib diisi!', 'error', 'none');
             if (db.users.some(u => normalizePhone(u.phone) === phone && u.role === role)) return showToast(`Nomor HP "${phone}" sudah ada untuk peran ${role.toUpperCase()}!`, 'error', 'none');
 
-            const autoCode = generateAutoAccountIdFromPhone(phone, role);
-            const newAcc = { id: Date.now(), accountId: autoCode, name, phone, role, status: 'Aktif', address: 'Kecamatan Lengkong, Sukabumi', balance: role !== 'customer' ? 50000 : undefined, password, passwordUpdatedAt: Date.now(), photo: './olengorange2.png' };
+            const newAcc = { id: Date.now(), name, phone, role, status: 'Aktif', address: 'Kecamatan Lengkong, Sukabumi', balance: role !== 'customer' ? 50000 : undefined, password, passwordUpdatedAt: Date.now(), photo: './olengorange2.png' };
 
             db.users.unshift(newAcc);
             ensureRoleListsSyncedFromUsers();
@@ -5801,27 +5921,24 @@
             const nominal = parseInt(prompt(`Masukkan nominal penambahan saldo untuk ${u.name} (HP: ${u.phone || '-'}):`, '50000'));
             if(!isNaN(nominal) && nominal !== 0) {
                 const cleanPhone = normalizePhone(u.phone);
-                const accId = String(u.accountId || generateAutoAccountIdFromPhone(cleanPhone, u.role)).toUpperCase();
-                u.accountId = accId;
-
                 let currentBal = Math.max(Number(u.balance || 0), Number(getUserCurrentBalanceDisplay(u) || 0));
                 let targetLabel = u.name;
 
                 if(u.role === 'merchant') {
-                    let m = (db.merchants || []).find(x => String(x.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID && ((accId && String(x.accountId || '').toUpperCase() === accId) || (cleanPhone && normalizePhone(x.whatsapp) === cleanPhone)));
-                    if (!m) { ensureRoleListsSyncedFromUsers(); m = (db.merchants || []).find(x => (accId && String(x.accountId || '').toUpperCase() === accId) || (cleanPhone && normalizePhone(x.whatsapp) === cleanPhone)); }
+                    let m = (db.merchants || []).find(x => normalizePhone(x.whatsapp) !== ADMIN_MAIN_PHONE && cleanPhone && normalizePhone(x.whatsapp) === cleanPhone);
+                    if (!m) { ensureRoleListsSyncedFromUsers(); m = (db.merchants || []).find(x => cleanPhone && normalizePhone(x.whatsapp) === cleanPhone); }
                     currentBal = Math.max(currentBal, Number(m?.balance || 0)) + nominal;
                     u.balance = currentBal;
                     if (m) { m.balance = currentBal; targetLabel = m.name || u.name; }
                 } else if(u.role === 'driver') {
-                    let d = (db.drivers || []).find(x => (accId && String(x.accountId || '').toUpperCase() === accId) || (cleanPhone && normalizePhone(x.phone) === cleanPhone) || (String(x.name || '').trim().toLowerCase() === String(u.name || '').trim().toLowerCase()));
-                    if (!d) { ensureRoleListsSyncedFromUsers(); d = (db.drivers || []).find(x => (accId && String(x.accountId || '').toUpperCase() === accId) || (cleanPhone && normalizePhone(x.phone) === cleanPhone)); }
+                    let d = (db.drivers || []).find(x => (cleanPhone && normalizePhone(x.phone) === cleanPhone) || (String(x.name || '').trim().toLowerCase() === String(u.name || '').trim().toLowerCase()));
+                    if (!d) { ensureRoleListsSyncedFromUsers(); d = (db.drivers || []).find(x => cleanPhone && normalizePhone(x.phone) === cleanPhone); }
                     currentBal = Math.max(currentBal, Number(d?.balance || 0)) + nominal;
                     u.balance = currentBal;
                     if (d) { d.balance = currentBal; targetLabel = d.name; }
                 }
 
-                if (currentUser && ((currentUser.id === u.id) || (cleanPhone && normalizePhone(currentUser.phone) === cleanPhone && currentUser.role === u.role))) {
+                if (currentUser && (cleanPhone && normalizePhone(currentUser.phone) === cleanPhone && currentUser.role === u.role)) {
                     currentUser.balance = currentBal;
                     localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
                 }
@@ -5842,77 +5959,52 @@
                 return false;
             }
             const cleanPhone = normalizePhone(u.phone);
-            const accCode = String(u.accountId || generateAutoAccountIdFromPhone(cleanPhone, u.role)).toUpperCase();
-            u.accountId = accCode;
             u.phone = cleanPhone;
             const normalizedNextPass = String(nextPassword || '123456').trim();
             const updatedAtMs = Date.now();
-
-            if (typeof window.OLENG_ADMIN_RESET_ENDPOINT === 'string' && window.OLENG_ADMIN_RESET_ENDPOINT.trim()) {
-                try {
-                    const resp = await withSupabaseTimeout(
-                        fetch(window.OLENG_ADMIN_RESET_ENDPOINT.trim(), {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ accountId: accCode, phone: cleanPhone, role: u.role, newPassword: normalizedNextPass })
-                        }),
-                        6000
-                    );
-                    if (!resp.ok) {
-                        const errText = await resp.text();
-                        recordTechnicalDiagLog('RESET_PW_API', `${accCode}: ${errText || resp.status}`);
-                        showToast(`Gagal reset password dari backend: ${errText || resp.status}`, 'error', 'none');
-                        return false;
-                    }
-                } catch (apiErr) {
-                    recordTechnicalDiagLog('RESET_PW_API', `${accCode}: ${apiErr?.message || apiErr}`);
-                    showToast(`Gagal menghubungi backend reset password: ${apiErr?.message || apiErr}`, 'error', 'none');
-                    return false;
-                }
-            }
 
             if (supabaseClient && navigator.onLine) {
                 try {
                     const { error: upErr } = await withSupabaseTimeout(
                         supabaseClient.from('accounts').upsert({
-                            account_id: accCode, name: u.name, phone: cleanPhone, role: u.role, status: u.status || 'Aktif',
+                            phone: cleanPhone, name: u.name, role: u.role, status: u.status || 'Aktif',
                             address: u.address || 'Kecamatan Lengkong, Sukabumi', password_hash: normalizedNextPass,
                             photo_url: u.photo || './olengorange2.png', balance: Number(u.balance || 0),
                             ktp: u.ktp || null, plate: u.plate || null, bike_type: u.bikeType || null,
                             owner_name: u.ownerName || null, shop_name: u.shopName || null
-                        }, { onConflict: 'account_id' }),
+                        }, { onConflict: 'phone' }),
                         5000
                     );
                     if (upErr) {
-                        recordTechnicalDiagLog('RESET_PW', `${accCode}: ${upErr.message}`);
+                        recordTechnicalDiagLog('RESET_PW', `${cleanPhone}: ${upErr.message}`);
                         showToast(`Gagal reset password di Supabase: ${upErr.message}`, 'error', 'none');
                         return false;
                     }
                     const { data: verifyRow, error: verErr } = await withSupabaseTimeout(
-                        supabaseClient.from('accounts').select('account_id,password_hash').eq('account_id', accCode).maybeSingle(),
+                        supabaseClient.from('accounts').select('phone,password_hash').eq('phone', cleanPhone).maybeSingle(),
                         5000
                     );
                     if (verErr || !verifyRow || String(verifyRow.password_hash || '').trim() !== normalizedNextPass) {
                         const detail = verErr?.message || 'Verifikasi password di Supabase tidak cocok';
-                        recordTechnicalDiagLog('RESET_PW', `${accCode}: ${detail}`);
+                        recordTechnicalDiagLog('RESET_PW', `${cleanPhone}: ${detail}`);
                         showToast(`Gagal verifikasi reset password: ${detail}`, 'error', 'none');
                         return false;
                     }
                 } catch (err) {
                     const detail = err?.message || String(err);
-                    recordTechnicalDiagLog('RESET_PW', `${accCode}: ${detail}`);
+                    recordTechnicalDiagLog('RESET_PW', `${cleanPhone}: ${detail}`);
                     showToast(`Gagal reset password: ${detail}`, 'error', 'none');
                     return false;
                 }
             } else {
-                recordTechnicalDiagLog('RESET_PW', `${accCode}: Perangkat offline / Supabase belum siap`);
+                recordTechnicalDiagLog('RESET_PW', `${cleanPhone}: Perangkat offline / Supabase belum siap`);
                 showToast('Gagal reset password: Koneksi Supabase tidak tersedia saat ini.', 'error', 'none');
                 return false;
             }
 
             u.password = normalizedNextPass;
             u.passwordUpdatedAt = updatedAtMs;
-            if (currentUser && ((currentUser.id === u.id) || (normalizePhone(currentUser.phone) === cleanPhone && currentUser.role === u.role))) {
+            if (currentUser && (normalizePhone(currentUser.phone) === cleanPhone && currentUser.role === u.role)) {
                 currentUser.password = normalizedNextPass;
                 currentUser.passwordUpdatedAt = updatedAtMs;
                 localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
@@ -5928,22 +6020,21 @@
         async function adminDeleteUser(userId) {
             const target = db.users.find(x => x.id === userId);
             if (!target) return;
-            if (normalizePhone(target.phone) === '085624736602' && target.role === 'admin') return showToast('Akun Admin Utama 085624736602 tidak dapat dihapus!', 'error', 'none');
-            if(confirm(`Yakin ingin menghapus akun ${target.name} (HP: ${target.phone || '-'}) secara online real-time?`)) {
-                const codeUpper = String(target.accountId || '').toUpperCase();
-                const targetPhone = normalizePhone(target.phone);
+            const targetPhone = normalizePhone(target.phone);
+            if (targetPhone === ADMIN_MAIN_PHONE && target.role === 'admin') return showToast(`Akun Admin Utama ${ADMIN_MAIN_PHONE} tidak dapat dihapus!`, 'error', 'none');
+            if(confirm(`Yakin ingin menghapus akun ${target.name} (HP: ${targetPhone || '-'}) secara online real-time?`)) {
                 db.users = db.users.filter(x => x.id !== userId);
-                db.merchants = (db.merchants || []).filter(m => String(m.accountId || '').toUpperCase() !== codeUpper && normalizePhone(m.whatsapp) !== targetPhone);
-                db.drivers = (db.drivers || []).filter(d => String(d.accountId || '').toUpperCase() !== codeUpper && normalizePhone(d.phone) !== targetPhone);
+                db.merchants = (db.merchants || []).filter(m => normalizePhone(m.whatsapp) !== targetPhone);
+                db.drivers = (db.drivers || []).filter(d => normalizePhone(d.phone) !== targetPhone);
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
 
-                showToast(`Berhasil! Akun ${target.name} (${target.phone}) dihapus permanen secara online.`, 'success', 'none');
+                showToast(`Berhasil! Akun ${target.name} (${targetPhone}) dihapus permanen secara online.`, 'success', 'none');
                 renderAdminUsers(document.getElementById('main-content'));
 
-                if (supabaseClient && codeUpper) {
-                    supabaseClient.from('accounts').delete().eq('account_id', codeUpper).then(() => {});
-                    supabaseClient.from('merchants').delete().eq('account_id', codeUpper).then(() => {});
-                    supabaseClient.from('drivers').delete().eq('account_id', codeUpper).then(() => {});
+                if (supabaseClient && targetPhone) {
+                    supabaseClient.from('accounts').delete().eq('phone', targetPhone).then(() => {});
+                    supabaseClient.from('merchants').delete().eq('whatsapp', targetPhone).then(() => {});
+                    supabaseClient.from('drivers').delete().eq('phone', targetPhone).then(() => {});
                 }
             }
         }
@@ -5958,12 +6049,13 @@
                     </div>
                     <div class="space-y-3">
                         ${db.merchants.map(m => {
-                            const matchedUser = db.users.find(u => u.role === 'merchant' && ((m.accountId && String(u.accountId || '').toUpperCase() === String(m.accountId).toUpperCase()) || normalizePhone(u.phone) === normalizePhone(m.whatsapp)));
+                            const mPhone = normalizePhone(m.whatsapp);
+                            const matchedUser = db.users.find(u => u.role === 'merchant' && mPhone && normalizePhone(u.phone) === mPhone);
                             const uid = matchedUser ? matchedUser.id : 3;
                             const storeBal = Math.max(Number(m.balance || 0), Number(matchedUser?.balance || 0));
                             return `
                                 <div class="bg-white p-4 rounded-3xl border border-[#D4D4D4] space-y-2">
-                                    <span class="text-[10px] bg-[#171717] text-[#FF7900] font-black px-2 py-0.5 rounded-md">HP: ${m.whatsapp || '-'}</span>
+                                    <span class="text-[10px] bg-[#171717] text-[#FF7900] font-black px-2 py-0.5 rounded-md">HP: ${mPhone || '-'}</span>
                                     <h4 class="font-bold text-sm text-[#171717]">${m.name || 'Nama Toko Belum Diisi'} (${m.status}) • <i class="fa-solid fa-star text-[#FFD400]"></i> ${m.rating || 5.0}</h4>
                                     <p class="text-[10px] text-[#404040]">Pemilik: ${m.ownerName || '-'} • Lokasi: ${m.lat}, ${m.lng}</p>
                                     <p class="text-[10px] text-[#262626]">${m.address || ''}</p>
@@ -5988,7 +6080,8 @@
                     </div>
                     <div class="space-y-3">
                         ${db.drivers.map(d => {
-                            const matchedUser = db.users.find(u => u.role === 'driver' && ((d.accountId && String(u.accountId || '').toUpperCase() === String(d.accountId).toUpperCase()) || u.name === d.name || normalizePhone(u.phone) === normalizePhone(d.phone)));
+                            const dPhone = normalizePhone(d.phone);
+                            const matchedUser = db.users.find(u => u.role === 'driver' && ((dPhone && normalizePhone(u.phone) === dPhone) || u.name === d.name));
                             const uid = matchedUser ? matchedUser.id : 2;
                             const drvBal = Math.max(Number(d.balance || 0), Number(matchedUser?.balance || 0));
                             const actMeta = getDriverActivityBadgeMeta(d);
@@ -5999,7 +6092,7 @@
                                         <div class="flex items-start gap-2.5 min-w-0">
                                             <img src="${drvPhotoSrc}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-12 h-12 rounded-full object-cover border-2 border-[#FF7900] shrink-0 bg-white" alt="Foto Driver">
                                             <div class="min-w-0">
-                                                <span class="text-[10px] bg-[#171717] text-[#FF7900] font-black px-2 py-0.5 rounded-md">HP: ${d.phone || '-'}</span>
+                                                <span class="text-[10px] bg-[#171717] text-[#FF7900] font-black px-2 py-0.5 rounded-md">HP: ${dPhone || '-'}</span>
                                                 <h4 class="font-bold text-xs text-[#171717] mt-1">${d.name} (${d.status}) • <i class="fa-solid fa-star text-[#FFD400]"></i> ${d.rating || 5.0}</h4>
                                                 <p class="text-[10px] font-bold ${actMeta.isBusy ? 'text-[#D96400]' : 'text-[#262626]'}">${actMeta.notifText}</p>
                                                 <p class="text-[10px] text-[#404040]">${d.vehicle} • KTP: ${d.ktp || '-'} • ${d.location || 'Lengkong'}</p>
@@ -6287,7 +6380,8 @@
                     currentMapCenter = L.latLng(lat, lng);
                     const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
                     if (activeRole === 'driver' && currentUser) {
-                        const drv = db.drivers.find(x => x.name === currentUser.name || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
+                        const myPhone = normalizePhone(currentUser.phone);
+                        const drv = db.drivers.find(x => (myPhone && normalizePhone(x.phone) === myPhone) || x.name === currentUser.name);
                         if (drv && drv.status === 'Online') { drv.lat = lat; drv.lng = lng; drv.serverUpdatedAt = new Date().toISOString(); saveDB(null, true, 'none'); }
                     }
                     showToast(`Berhasil! Lokasi GPS akurat (${lat}, ${lng}) dimuat.`, 'success', 'none');
@@ -6347,7 +6441,19 @@
         function pushChatPayload(payloadText) {
             if (!payloadText) return;
             const timeNow = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            const newMsg = { id: Date.now(), from: currentUser.name, to: activeChatTarget, text: payloadText, time: timeNow, readStatus: 'READ', readAt: new Date().toISOString() };
+            const senderPhoneNorm = normalizePhone(currentUser?.phone) || '';
+            const receiverPhoneNorm = normalizePhone(activeChatTarget) || getUserPhoneByNameOrShop(activeChatTarget) || '';
+            const newMsg = {
+                id: Date.now(),
+                from: currentUser.name,
+                senderPhone: senderPhoneNorm,
+                to: activeChatTarget,
+                receiverPhone: receiverPhoneNorm,
+                text: payloadText,
+                time: timeNow,
+                readStatus: 'READ',
+                readAt: new Date().toISOString()
+            };
             db.chats.push(newMsg);
             readChatIds = Array.from(new Set([...readChatIds, String(newMsg.id)]));
             localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
@@ -6368,51 +6474,68 @@
         }
         function renderChatContacts() {
             const me = String(currentUser?.name || '').trim().toLowerCase();
+            const myPhone = normalizePhone(currentUser?.phone);
             const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
-            const userNames = (db.users || []).map(u => u.name).filter(n => n && String(n).trim().toLowerCase() !== me);
-            const chatSenders = (db.chats || []).filter(c => isMessageForCurrentUser(c)).map(c => c.from).filter(n => n && String(n).trim().toLowerCase() !== me);
 
-            const allPartners = Array.from(new Set([
-                ...(activeRole !== 'admin' ? ['Admin SIMADU'] : []),
-                ...chatSenders,
-                ...db.merchants.map(m => m.name).filter(Boolean),
-                ...db.drivers.map(d => d.name).filter(Boolean),
-                ...userNames
-            ])).filter(n => n && String(n).trim().toLowerCase() !== me);
+            const userContacts = (db.users || [])
+                .filter(u => !(myPhone && normalizePhone(u.phone) === myPhone && u.role === currentUser?.role))
+                .map(u => ({ phone: normalizePhone(u.phone), label: `${u.name} (${normalizePhone(u.phone)})`, isDriver: u.role === 'driver' }));
 
-            const sortedPartners = allPartners.map(partner => {
-                const pLow = partner.toLowerCase();
+            const chatSenders = (db.chats || [])
+                .filter(c => isMessageForCurrentUser(c))
+                .map(c => {
+                    const sp = normalizePhone(c.senderPhone) || getUserPhoneByNameOrShop(c.from);
+                    return { phone: sp, label: `${c.from} ${sp ? `(${sp})` : ''}`, isDriver: (db.drivers || []).some(d => (sp && normalizePhone(d.phone) === sp) || String(d.name || '').trim().toLowerCase() === String(c.from || '').trim().toLowerCase()) };
+                });
+
+            const mapContacts = new Map();
+            if (activeRole !== 'admin') {
+                mapContacts.set(ADMIN_MAIN_PHONE, { phone: ADMIN_MAIN_PHONE, label: `Admin SIMADU (${ADMIN_MAIN_PHONE})`, isDriver: false });
+            }
+            [...chatSenders, ...userContacts].forEach(item => {
+                const p = normalizePhone(item.phone);
+                if (!p || (myPhone && p === myPhone && activeRole !== 'admin')) return;
+                if (!mapContacts.has(p)) mapContacts.set(p, { phone: p, label: item.label, isDriver: item.isDriver });
+            });
+
+            const allPartners = Array.from(mapContacts.values());
+
+            const sortedPartners = allPartners.map(cItem => {
+                const pPhone = normalizePhone(cItem.phone);
                 const related = (db.chats || []).filter(c => {
-                    const f = String(c.from || '').trim().toLowerCase();
-                    const t = String(c.to || '').trim().toLowerCase();
+                    const fPhone = normalizePhone(c.senderPhone) || getUserPhoneByNameOrShop(c.from);
+                    const tPhone = normalizePhone(c.receiverPhone) || getUserPhoneByNameOrShop(c.to);
                     const isSelfAdmin = activeRole === 'admin';
-                    const matchSelf = isSelfAdmin ? (f === 'admin simadu' || f === 'admin' || f === me) : (f === me);
-                    const matchTarget = isSelfAdmin ? (t === 'admin simadu' || t === 'admin' || t === me) : (t === me);
-                    return (matchSelf && t === pLow) || (f === pLow && matchTarget);
+                    const matchSelf = isSelfAdmin ? (fPhone === ADMIN_MAIN_PHONE || (myPhone && fPhone === myPhone)) : (myPhone && fPhone === myPhone);
+                    const matchTarget = isSelfAdmin ? (tPhone === ADMIN_MAIN_PHONE || (myPhone && tPhone === myPhone)) : (myPhone && tPhone === myPhone);
+                    return (matchSelf && tPhone === pPhone) || (fPhone === pPhone && matchTarget);
                 });
                 const lastMsg = related.length > 0 ? related[related.length - 1] : null;
-                const unreadFromPartner = related.filter(c => String(c.from || '').trim().toLowerCase() === pLow && isChatMessageUnreadForCurrentUser(c)).length;
-                return { partner, lastMsg, unreadFromPartner, sortScore: lastMsg ? Number(lastMsg.id) : 0 };
+                const unreadFromPartner = related.filter(c => {
+                    const fPhone = normalizePhone(c.senderPhone) || getUserPhoneByNameOrShop(c.from);
+                    return fPhone === pPhone && isChatMessageUnreadForCurrentUser(c);
+                }).length;
+                return { partner: pPhone, displayLabel: cItem.label, isDriver: cItem.isDriver, lastMsg, unreadFromPartner, sortScore: lastMsg ? Number(lastMsg.id) : 0 };
             }).sort((a, b) => b.sortScore - a.sortScore);
 
             const selectorEl = document.getElementById('chat-contact-selector');
             if (!selectorEl) return;
             selectorEl.innerHTML = sortedPartners.map(item => {
-                const isSelected = String(activeChatTarget || '').toLowerCase() === item.partner.toLowerCase();
-                const safePartner = item.partner.replace(/'/g, "\\'");
+                const curTargetPhone = normalizePhone(activeChatTarget) || getUserPhoneByNameOrShop(activeChatTarget);
+                const isSelected = curTargetPhone && curTargetPhone === item.partner;
+                const safePartner = String(item.partner).replace(/'/g, "\\'");
                 const rawPrev = item.lastMsg ? (String(item.lastMsg.text || '').startsWith('data:image') ? '📷 Foto' : item.lastMsg.text) : '';
                 const previewText = item.lastMsg ? `${item.lastMsg.from}: ${rawPrev}` : 'Ketuk untuk mulai chat privat';
                 const timeText = item.lastMsg?.time || '';
                 const unreadBadgeLabel = formatUnreadBadgeText(item.unreadFromPartner);
-                const isPartnerDriver = (db.drivers || []).some(d => String(d.name || '').trim().toLowerCase() === item.partner.toLowerCase());
-                const contactAvatar = isPartnerDriver ? resolveDriverPhoto(item.partner) : './olengorange2.png';
+                const contactAvatar = item.isDriver ? resolveDriverPhoto(item.partner) : './olengorange2.png';
                 return `
                     <div class="w-full px-3.5 py-2.5 flex items-center justify-between gap-2 transition ${isSelected ? 'bg-[#FFF4EA] border-l-4 border-[#FF7900]' : 'bg-white hover:bg-[#F3F3F3]'}">
                         <button type="button" onclick="selectChatPartner('${safePartner}')" class="min-w-0 flex-1 text-left flex items-center gap-2.5 cursor-pointer">
-                            <img src="${contactAvatar}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-9 h-9 ${isPartnerDriver ? 'rounded-full' : 'rounded-xl'} object-cover border border-[#FF7900] shrink-0 bg-white" alt="Kontak">
+                            <img src="${contactAvatar}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-9 h-9 ${item.isDriver ? 'rounded-full' : 'rounded-xl'} object-cover border border-[#FF7900] shrink-0 bg-white" alt="Kontak">
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center justify-between gap-2">
-                                    <span class="text-xs font-extrabold text-[#171717] truncate">${item.partner}</span>
+                                    <span class="text-xs font-extrabold text-[#171717] truncate">${item.displayLabel}</span>
                                     <span class="text-[9px] text-[#525252] font-semibold shrink-0">${timeText}</span>
                                 </div>
                                 <p class="text-[11px] text-[#404040] truncate mt-0.5">${previewText}</p>
@@ -6425,34 +6548,36 @@
             }).join('');
         }
         function renderPersonalChatMessages() {
+            const targetPhone = normalizePhone(activeChatTarget) || getUserPhoneByNameOrShop(activeChatTarget) || activeChatTarget;
             const titleEl = document.getElementById('chat-title');
-            if (titleEl) titleEl.innerText = `Chat Privat: ${activeChatTarget}`;
+            if (titleEl) titleEl.innerText = `Chat Privat: ${targetPhone}`;
             if (activeChatTarget) markMessagesFromPartnerAsRead(activeChatTarget);
-            const me = String(currentUser?.name || '').trim().toLowerCase();
-            const target = String(activeChatTarget || '').trim().toLowerCase();
+
+            const myPhone = normalizePhone(currentUser?.phone);
             const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
 
             const msgs = (db.chats || []).filter(c => {
-                const from = String(c.from || '').trim().toLowerCase();
-                const to = String(c.to || '').trim().toLowerCase();
+                const fPhone = normalizePhone(c.senderPhone) || getUserPhoneByNameOrShop(c.from);
+                const tPhone = normalizePhone(c.receiverPhone) || getUserPhoneByNameOrShop(c.to);
                 if (activeRole === 'admin') {
-                    const fromAdmin = (from === 'admin simadu' || from === 'admin' || from === me);
-                    const toAdmin = (to === 'admin simadu' || to === 'admin' || to === me);
-                    return (fromAdmin && to === target) || (from === target && toAdmin);
+                    const fromAdmin = (fPhone === ADMIN_MAIN_PHONE || (myPhone && fPhone === myPhone));
+                    const toAdmin = (tPhone === ADMIN_MAIN_PHONE || (myPhone && tPhone === myPhone));
+                    return (fromAdmin && tPhone === targetPhone) || (fPhone === targetPhone && toAdmin);
                 }
-                return (from === me && to === target) || (from === target && to === me);
+                return (myPhone && fPhone === myPhone && tPhone === targetPhone) || (fPhone === targetPhone && myPhone && tPhone === myPhone);
             });
 
             const container = document.getElementById('chat-messages');
             if (!container) return;
             container.innerHTML = msgs.map(c => {
-                const isMine = String(c.from).trim().toLowerCase() === me || (activeRole === 'admin' && (String(c.from).trim().toLowerCase() === 'admin simadu' || String(c.from).trim().toLowerCase() === 'admin'));
-                const isSenderDriver = (db.drivers || []).some(d => String(d.name || '').trim().toLowerCase() === String(c.from || '').trim().toLowerCase());
-                const senderAvatar = isSenderDriver ? resolveDriverPhoto(c.from) : './olengorange2.png';
+                const fPhone = normalizePhone(c.senderPhone) || getUserPhoneByNameOrShop(c.from);
+                const isMine = (myPhone && fPhone && fPhone === myPhone) || (activeRole === 'admin' && fPhone === ADMIN_MAIN_PHONE);
+                const isSenderDriver = (db.drivers || []).some(d => (fPhone && normalizePhone(d.phone) === fPhone) || String(d.name || '').trim().toLowerCase() === String(c.from || '').trim().toLowerCase());
+                const senderAvatar = isSenderDriver ? resolveDriverPhoto(fPhone || c.from) : './olengorange2.png';
                 const bodyHtml = String(c.text || '').startsWith('data:image') ? `<img src="${c.text}" class="w-44 max-h-48 object-cover rounded-xl mt-1 border border-[#FF7900]" alt="Foto Chat">` : `<p class="mt-0.5 break-words">${c.text}</p>`;
                 const readIndicator = !isMine && (c.readStatus === 'READ' || c.readAt) ? ' • Dibaca' : '';
-                return `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${isMine ? 'bg-[#171717] text-white border border-[#FF7900] ml-auto' : 'bg-white border border-[#D4D4D4] text-[#171717] mr-auto'}"><div class="flex items-center gap-1.5"><img src="${senderAvatar}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-5 h-5 ${isSenderDriver ? 'rounded-full' : 'rounded-md'} object-cover border border-[#FF7900] shrink-0 bg-white" alt="Avatar"><b class="${isMine ? 'text-[#FF7900]' : 'text-[#171717]'}">${c.from}</b></div>${bodyHtml}<span class="text-[9px] opacity-75 block mt-1">${c.time}${readIndicator}</span></div>`;
-            }).join('') || '<p class="text-xs text-[#404040] text-center py-6">Mulai obrolan privat dengan '+activeChatTarget+'...</p>';
+                return `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${isMine ? 'bg-[#171717] text-white border border-[#FF7900] ml-auto' : 'bg-white border border-[#D4D4D4] text-[#171717] mr-auto'}"><div class="flex items-center gap-1.5"><img src="${senderAvatar}" onerror="this.onerror=null;this.src='./olengorange2.png';" class="w-5 h-5 ${isSenderDriver ? 'rounded-full' : 'rounded-md'} object-cover border border-[#FF7900] shrink-0 bg-white" alt="Avatar"><b class="${isMine ? 'text-[#FF7900]' : 'text-[#171717]'}">${c.from} (${fPhone || '-'})</b></div>${bodyHtml}<span class="text-[9px] opacity-75 block mt-1">${c.time}${readIndicator}</span></div>`;
+            }).join('') || '<p class="text-xs text-[#404040] text-center py-6">Mulai obrolan privat dengan '+targetPhone+'...</p>';
             container.scrollTop = container.scrollHeight;
             updateHomeHeaderBadgesOnly();
         }
