@@ -2219,7 +2219,20 @@
             const myShop = String(currentUser.shopName || '').trim().toLowerCase();
             const st = normalizeOrderStatusCode(order.status);
 
-            if (role === 'admin') return true;
+            if (role === 'admin') {
+                const adminStore = getAdminOwnStore();
+                const ownStoreName = String(adminStore?.name || '').trim().toLowerCase();
+                const ordMerchant = String(order.merchant || '').trim().toLowerCase();
+                const ordCustomer = String(order.customer || '').trim().toLowerCase();
+                const ordDriver = String(order.driver || '').trim().toLowerCase();
+                return (
+                    ordCustomer === me ||
+                    ordDriver === me ||
+                    (ownStoreName && ordMerchant === ownStoreName) ||
+                    (myPhone && normalizePhone(order.assignedDriverPhone) === myPhone)
+                );
+            }
+
             if (role === 'customer') return String(order.customer || '').trim().toLowerCase() === me;
 
             if (role === 'driver') {
@@ -2230,7 +2243,7 @@
                 const ordPhone = normalizePhone(order.assignedDriverPhone);
                 const isFoodOrder = order.type === 'food' && String(order.merchant || '').toLowerCase() !== 'layanan ojek online';
                 if (isFoodOrder && st === 'merchant_confirmation') return false;
-                return allowedDrivers.includes(ordDrv) || (myPhone && ordPhone === myPhone) || (st === 'searching_driver' && !ordDrv);
+                return allowedDrivers.includes(ordDrv) || (myPhone && ordPhone === myPhone);
             }
 
             if (role === 'merchant') {
@@ -2262,8 +2275,7 @@
             if (!drvObj || drvObj.status !== 'Online') return false;
             const ordDrv = String(order.driver || '').trim().toLowerCase();
             const ordPhone = normalizePhone(order.assignedDriverPhone);
-            const matchesMe = ordDrv === me || (drvObj.name && ordDrv === String(drvObj.name).trim().toLowerCase()) || (myPhone && ordPhone === myPhone);
-            return matchesMe || (st === 'searching_driver' && !ordDrv);
+            return ordDrv === me || (drvObj.name && ordDrv === String(drvObj.name).trim().toLowerCase()) || (myPhone && ordPhone === myPhone);
         }
 
         function shouldShowOrderPopupNow(order) {
@@ -3635,15 +3647,24 @@
         }
 
         function getAccountNotifs() {
+            if (!currentUser) return [];
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             const me = String(currentUser.name || '').trim().toLowerCase();
             const myShop = String(currentUser.shopName || '').trim().toLowerCase();
+
             if (role === 'admin') {
                 const adminStore = getAdminOwnStore();
                 const ownStoreName = String(adminStore?.name || '').trim().toLowerCase();
-                return (db.notifications || []).filter(n => n.targetUser === 'ALL' || String(n.targetUser || '').trim().toLowerCase() === me || (ownStoreName && String(n.targetUser || '').trim().toLowerCase() === ownStoreName));
+                return (db.notifications || []).filter(n => {
+                    const target = String(n.targetUser || '').trim().toLowerCase();
+                    return target === 'all' || target === me || target === 'admin simadu' || (ownStoreName && target === ownStoreName);
+                });
             }
-            return (db.notifications || []).filter(n => n.targetUser === 'ALL' || String(n.targetUser || '').trim().toLowerCase() === me || (myShop && String(n.targetUser || '').trim().toLowerCase() === myShop));
+
+            return (db.notifications || []).filter(n => {
+                const target = String(n.targetUser || '').trim().toLowerCase();
+                return target === 'all' || (me && target === me) || (myShop && target === myShop);
+            });
         }
 
         function getAccountOrders() { return (db.orders || []).filter(o => isOrderTargetedToCurrentUser(o)); }
