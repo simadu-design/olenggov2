@@ -1028,10 +1028,30 @@
             if (kind === 'chat') {
                 playChatIncomingAlarm();
                 triggerSystemBackgroundNotification('Uji Notifikasi Chat OLENG GO', 'Pesan chat masuk teruji berjalan pada perangkat ini.', { type: 'chat', tag: 'test-chat-' + Date.now(), renotify: true });
+                openIncomingChatModal({
+                    id: 'TEST-CHAT-' + Date.now(),
+                    from: 'Pelanggan Uji',
+                    to: currentUser?.name || 'Admin SIMADU',
+                    text: 'Uji coba pop-up & alarm chat masuk OLENG GO.',
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
                 showToast('Tes notifikasi chat dijalankan!', 'success', 'none');
             } else {
                 playOrderIncomingAlarm();
                 triggerSystemBackgroundNotification('Uji Notifikasi Order OLENG GO', 'Order masuk teruji berjalan pada perangkat ini.', { type: 'order', tag: 'test-order-' + Date.now(), renotify: true });
+                const sampleOrder = (db.orders || [])[0] || {
+                    id: 'TEST-ORD-' + Math.floor(100 + Math.random() * 900),
+                    type: 'ojek',
+                    customer: 'Pelanggan Uji',
+                    merchant: 'Layanan Ojek Online',
+                    driver: currentUser?.name || 'Driver Uji',
+                    items: 'Uji Coba Order Masuk & Alarm',
+                    pickup: 'Titik Jemput Uji',
+                    dest: 'Titik Tujuan Uji',
+                    total: 12000,
+                    status: 'searching_driver'
+                };
+                openIncomingOrderModal(sampleOrder.id, false);
                 showToast('Tes notifikasi order dijalankan!', 'success', 'none');
             }
         }
@@ -1108,14 +1128,10 @@
             await flushPendingSyncQueue();
             await pullInitialFromSupabase(false);
             const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
-            if (activeRole === 'driver') {
-                const pendingOffer = (db.orders || []).find(o => {
-                    const st = normalizeOrderStatusCode(o.status);
-                    return ['searching_driver', 'driver_assigned'].includes(st) && shouldDriverReceiveOfferAlarm(o);
-                });
+            if (activeRole === 'driver' || activeRole === 'merchant') {
+                const pendingOffer = (db.orders || []).find(o => shouldShowOrderPopupNow(o));
                 if (pendingOffer) {
-                    startOrderAlarmLoopForOrder(pendingOffer.id);
-                    checkAndShowIncomingOrderPopup(true);
+                    forceTriggerOrderPopupForNewOrder(pendingOffer);
                 }
             }
         }
@@ -1435,7 +1451,7 @@
                         pullInitialFromSupabase(false).then(() => {
                             if ((payload?.eventType === 'INSERT' || payload?.eventType === 'UPDATE') && payload?.new) {
                                 const r = payload.new;
-                                const ordObj = {
+                                const ordObj = (db.orders || []).find(o => String(o.id).toUpperCase() === String(r.order_code).toUpperCase()) || {
                                     id: r.order_code,
                                     type: r.order_type || 'ojek',
                                     customer: r.customer_name,
@@ -1448,12 +1464,8 @@
                                 };
                                 if (isOrderTargetedToCurrentUser(ordObj)) {
                                     notifyBackgroundOnce('order-' + ordObj.id + '-' + ordObj.status, `Update Order ${ordObj.id}`, `${ordObj.items} • ${getOrderStatusLabel(ordObj.status)}`, { type: 'order', orderId: ordObj.id, tag: 'order-' + ordObj.id, renotify: true });
-                                    const curRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
-                                    if (curRole === 'driver' && shouldDriverReceiveOfferAlarm(ordObj)) {
-                                        startOrderAlarmLoopForOrder(ordObj.id);
-                                        checkAndShowIncomingOrderPopup(true);
-                                    } else if (curRole === 'merchant' && payload?.eventType === 'INSERT') {
-                                        playOrderIncomingAlarm();
+                                    if (shouldShowOrderPopupNow(ordObj)) {
+                                        forceTriggerOrderPopupForNewOrder(ordObj);
                                     }
                                 }
                             }
@@ -2236,6 +2248,31 @@
             return matchesMe || (st === 'searching_driver' && !ordDrv);
         }
 
+        function shouldShowOrderPopupNow(order) {
+            if (!currentUser || !order) return false;
+            const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            const st = normalizeOrderStatusCode(order.status);
+            if (st === 'completed' || st === 'cancelled') return false;
+            if (!isOrderTargetedToCurrentUser(order)) return false;
+            if (activeRole === 'driver') return shouldDriverReceiveOfferAlarm(order);
+            if (activeRole === 'merchant') return ['searching_driver', 'driver_assigned', 'merchant_confirmation'].includes(st);
+            return false;
+        }
+
+        function forceTriggerOrderPopupForNewOrder(order) {
+            if (!shouldShowOrderPopupNow(order)) return false;
+            const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            if (activeRole === 'driver') startOrderAlarmLoopForOrder(order.id);
+            else playOrderIncomingAlarm();
+            openIncomingOrderModal(order.id, false);
+            triggerSystemBackgroundNotification(
+                `Order Masuk ${order.id}`,
+                `${order.merchant || 'Layanan'} • ${order.items || 'Pesanan baru'}`,
+                { type: 'order', orderId: order.id, tag: 'order-' + order.id, renotify: true }
+            );
+            return true;
+        }
+
         function stopOrderAlarmLoop() {
             if (activeOrderAlarmLoopId !== null) {
                 clearInterval(activeOrderAlarmLoopId);
@@ -2704,12 +2741,8 @@
                 if (newlyArrivedOrders.length > 0) {
                     const latestO = newlyArrivedOrders[0];
                     notifyBackgroundOnce('order-' + latestO.id, `Order Masuk ${latestO.id}`, `${latestO.items} • Tujuan: ${latestO.dest || 'Tujuan'}`, { type: 'order', orderId: latestO.id, tag: 'order-' + latestO.id, renotify: true });
-                    const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
-                    if (activeRole === 'driver' && shouldDriverReceiveOfferAlarm(latestO)) {
-                        startOrderAlarmLoopForOrder(latestO.id);
-                        checkAndShowIncomingOrderPopup(true);
-                    } else if (activeRole === 'merchant') {
-                        playOrderIncomingAlarm();
+                    if (shouldShowOrderPopupNow(latestO)) {
+                        forceTriggerOrderPopupForNewOrder(latestO);
                     }
                 }
 
@@ -3595,13 +3628,11 @@
                 const st = normalizeOrderStatusCode(o.status);
                 if (st === 'completed' || st === 'cancelled') return false;
                 if (!forceShowLatest && shownPopupOrderIds.includes(o.id)) return false;
-                if (activeRole === 'driver' && !shouldDriverReceiveOfferAlarm(o)) return false;
-                return isOrderTargetedToCurrentUser(o);
+                return shouldShowOrderPopupNow(o);
             });
 
             if (candidate) {
-                if (activeRole === 'driver') startOrderAlarmLoopForOrder(candidate.id);
-                openIncomingOrderModal(candidate.id, false);
+                forceTriggerOrderPopupForNewOrder(candidate);
             }
         }
 
