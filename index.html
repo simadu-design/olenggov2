@@ -366,7 +366,7 @@
             <div id="chat-partner-info-card" class="bg-white text-[#171717] rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-xl border-2 border-[#FF7900]"></div>
         </div>
 
-        <div id="modal-incoming-order" class="absolute inset-0 bg-black/70 z-50 hidden flex flex-col justify-center items-center p-4">
+        <div id="modal-incoming-order" class="fixed inset-0 bg-black/75 z-[9990] hidden flex flex-col justify-center items-center p-4">
             <div id="incoming-order-card" class="bg-white text-[#171717] rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-xl border-2 border-[#FF7900] max-h-[90vh] overflow-y-auto"></div>
         </div>
 
@@ -374,7 +374,7 @@
             <div id="post-complete-driver-card" class="bg-white text-[#171717] rounded-3xl p-5 w-full max-w-sm space-y-4 shadow-2xl border-2 border-[#FF7900]"></div>
         </div>
 
-        <div id="modal-incoming-chat" class="absolute inset-0 bg-black/70 z-50 hidden flex flex-col justify-center items-center p-4">
+        <div id="modal-incoming-chat" class="fixed inset-0 bg-black/75 z-[9990] hidden flex flex-col justify-center items-center p-4">
             <div id="incoming-chat-card" class="bg-white text-[#171717] rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-xl border-2 border-[#FF7900]"></div>
         </div>
 
@@ -618,6 +618,24 @@
         let isUserPanningMap = false;
         let manualMapPanTimeout = null;
         let ojekRoutePolyline = null;
+        let directPreviewOrderObj = null;
+
+        function showModalOverlay(modalId) {
+            const modalEl = document.getElementById(modalId);
+            if (!modalEl) return null;
+            if (modalEl.parentElement !== document.body) {
+                document.body.appendChild(modalEl);
+            }
+            modalEl.classList.remove('hidden', 'absolute', 'z-50');
+            modalEl.classList.add('fixed', 'inset-0', 'z-[9990]', 'flex', 'flex-col', 'justify-center', 'items-center', 'p-4', 'bg-black/75');
+            return modalEl;
+        }
+
+        function hideModalOverlay(modalId) {
+            const modalEl = document.getElementById(modalId);
+            if (!modalEl) return;
+            modalEl.classList.add('hidden');
+        }
 
         function markManualMapInteraction() {
             isUserPanningMap = true;
@@ -777,7 +795,7 @@
             const ratingModal = document.getElementById('modal-rating');
             if (ratingModal && !ratingModal.classList.contains('hidden')) { closeRatingModal(); return; }
             const incomingOrderModal = document.getElementById('modal-incoming-order');
-            if (incomingOrderModal && !incomingOrderModal.classList.contains('hidden')) { stopOrderAlarmLoop(); incomingOrderModal.classList.add('hidden'); return; }
+            if (incomingOrderModal && !incomingOrderModal.classList.contains('hidden')) { stopOrderAlarmLoop(); hideModalOverlay('modal-incoming-order'); return; }
             const incomingChatModal = document.getElementById('modal-incoming-chat');
             if (incomingChatModal && !incomingChatModal.classList.contains('hidden')) { closeIncomingChatModal(); return; }
             const cartModal = document.getElementById('modal-cart');
@@ -1039,7 +1057,7 @@
             } else {
                 playOrderIncomingAlarm();
                 triggerSystemBackgroundNotification('Uji Notifikasi Order OLENG GO', 'Order masuk teruji berjalan pada perangkat ini.', { type: 'order', tag: 'test-order-' + Date.now(), renotify: true });
-                const sampleOrder = (db.orders || [])[0] || {
+                const sampleOrder = (db.orders && db.orders[0]) || {
                     id: 'TEST-ORD-' + Math.floor(100 + Math.random() * 900),
                     type: 'ojek',
                     customer: 'Pelanggan Uji',
@@ -1051,7 +1069,7 @@
                     total: 12000,
                     status: 'searching_driver'
                 };
-                openIncomingOrderModal(sampleOrder.id, false);
+                openIncomingOrderModal(sampleOrder.id, false, sampleOrder);
                 showToast('Tes notifikasi order dijalankan!', 'success', 'none');
             }
         }
@@ -2264,7 +2282,7 @@
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             if (activeRole === 'driver') startOrderAlarmLoopForOrder(order.id);
             else playOrderIncomingAlarm();
-            openIncomingOrderModal(order.id, false);
+            openIncomingOrderModal(order.id, false, order);
             triggerSystemBackgroundNotification(
                 `Order Masuk ${order.id}`,
                 `${order.merchant || 'Layanan'} • ${order.items || 'Pesanan baru'}`,
@@ -2435,12 +2453,12 @@
                     <button onclick="closeIncomingChatModal()" class="py-2.5 bg-[#F3F3F3] hover:bg-[#E5E5E5] text-[#171717] border border-[#D4D4D4] rounded-xl text-[11px] font-black cursor-pointer">Tutup</button>
                 </div>
             `;
-            document.getElementById('modal-incoming-chat').classList.remove('hidden');
+            showModalOverlay('modal-incoming-chat');
         }
 
         function closeIncomingChatModal() {
             activeIncomingChatId = null;
-            document.getElementById('modal-incoming-chat')?.classList.add('hidden');
+            hideModalOverlay('modal-incoming-chat');
             updateHomeHeaderBadgesOnly();
         }
 
@@ -3636,9 +3654,10 @@
             }
         }
 
-        function openIncomingOrderModal(orderId, showFullDetail = false) {
+        function openIncomingOrderModal(orderId, showFullDetail = false, directOrderObj = null) {
             processDriverResponseTimeouts();
-            const order = db.orders.find(o => o.id === orderId);
+            if (directOrderObj) directPreviewOrderObj = directOrderObj;
+            const order = directOrderObj || (db.orders || []).find(o => o.id === orderId) || (directPreviewOrderObj && directPreviewOrderObj.id === orderId ? directPreviewOrderObj : null);
             if (!order) return;
 
             if (!shownPopupOrderIds.includes(order.id)) {
@@ -3660,7 +3679,7 @@
                 card.innerHTML = `
                     <div class="flex justify-between items-center border-b-2 border-[#F3F3F3] pb-2">
                         <span class="bg-[#FF7900] text-[#171717] text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase"><i class="fa-solid fa-bell-ring mr-1"></i> POP-UP ORDER (${order.id})</span>
-                        <button onclick="stopOrderAlarmLoop();document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
+                        <button onclick="stopOrderAlarmLoop();hideModalOverlay('modal-incoming-order')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
                     </div>
                     <div class="space-y-1.5 text-xs">
                         <h3 class="font-black text-sm text-[#171717]">Ada Order Baru untuk Anda!</h3>
@@ -3668,8 +3687,8 @@
                         <p class="text-[11px] text-[#404040]">Ketuk <b>Lihat Detail</b> untuk melihat detail isi order, jemput/tujuan, lalu proses sesuai peran.</p>
                     </div>
                     <div class="grid grid-cols-2 gap-2 pt-2">
-                        <button onclick="openIncomingOrderModal('${order.id}', true)" class="py-3 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] border border-[#171717] rounded-xl text-xs font-black cursor-pointer"><i class="fa-solid fa-magnifying-glass mr-1"></i> Lihat Detail</button>
-                        <button onclick="stopOrderAlarmLoop();document.getElementById('modal-incoming-order').classList.add('hidden')" class="py-3 bg-[#F3F3F3] hover:bg-[#E5E5E5] text-[#171717] border border-[#D4D4D4] rounded-xl text-xs font-black cursor-pointer">Tutup</button>
+                        <button onclick="openIncomingOrderModal('${order.id}', true, directPreviewOrderObj)" class="py-3 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] border border-[#171717] rounded-xl text-xs font-black cursor-pointer"><i class="fa-solid fa-magnifying-glass mr-1"></i> Lihat Detail</button>
+                        <button onclick="stopOrderAlarmLoop();hideModalOverlay('modal-incoming-order')" class="py-3 bg-[#F3F3F3] hover:bg-[#E5E5E5] text-[#171717] border border-[#D4D4D4] rounded-xl text-xs font-black cursor-pointer">Tutup</button>
                     </div>
                 `;
             } else {
@@ -3706,7 +3725,7 @@
                 card.innerHTML = `
                     <div class="flex justify-between items-center border-b-2 border-[#F3F3F3] pb-2">
                         <span class="bg-[#FF7900] text-[#171717] text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">DETAIL ORDER (${order.id})</span>
-                        <button onclick="stopOrderAlarmLoop();document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
+                        <button onclick="stopOrderAlarmLoop();hideModalOverlay('modal-incoming-order')" class="text-[#171717] text-xl font-bold cursor-pointer">&times;</button>
                     </div>
                     <div class="space-y-1.5 text-xs bg-[#F3F3F3] p-3 rounded-2xl border border-[#D4D4D4]">
                         <p class="font-black text-[#171717] text-sm">${order.merchant}</p>
@@ -3728,12 +3747,12 @@
                     </div>
                     ${roleActionButtons}
                     <div class="grid grid-cols-1 gap-2 pt-1">
-                        ${isOjekOrder ? `<button type="button" onclick="openPickupGoogleMapsNavigation(db.orders.find(x => x.id === '${order.id}'), ${typeof order.pickupLat === 'number' ? order.pickupLat : 'null'}, ${typeof order.pickupLng === 'number' ? order.pickupLng : 'null'}, '${String(order.pickup || 'Titik Jemput').replace(/'/g, "\\'")}')" class="w-full py-2.5 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] border border-[#171717] rounded-xl text-xs font-black cursor-pointer"><i class="fa-solid fa-location-dot mr-1"></i> Google Maps Titik Jemput</button>` : ''}
-                        <button type="button" onclick="openGoogleMapsNavigation(db.orders.find(x => x.id === '${order.id}'), '${String(order.merchant || '').replace(/'/g, "\\'")}', ${typeof order.destLat === 'number' ? order.destLat : 'null'}, ${typeof order.destLng === 'number' ? order.destLng : 'null'}, '${String(order.dest || order.items || 'Tujuan').replace(/'/g, "\\'")}')" class="w-full py-2.5 bg-[#171717] hover:bg-[#262626] text-white border border-[#FF7900] rounded-xl text-xs font-black cursor-pointer"><i class="fa-solid fa-diamond-turn-right text-[#FF7900] mr-1"></i> Navigasi Google Maps</button>
+                        ${isOjekOrder ? `<button type="button" onclick="openPickupGoogleMapsNavigation(db.orders.find(x => x.id === '${order.id}') || directPreviewOrderObj, ${typeof order.pickupLat === 'number' ? order.pickupLat : 'null'}, ${typeof order.pickupLng === 'number' ? order.pickupLng : 'null'}, '${String(order.pickup || 'Titik Jemput').replace(/'/g, "\\'")}')" class="w-full py-2.5 bg-[#FF7900] hover:bg-[#E06A00] text-[#171717] border border-[#171717] rounded-xl text-xs font-black cursor-pointer"><i class="fa-solid fa-location-dot mr-1"></i> Google Maps Titik Jemput</button>` : ''}
+                        <button type="button" onclick="openGoogleMapsNavigation(db.orders.find(x => x.id === '${order.id}') || directPreviewOrderObj, '${String(order.merchant || '').replace(/'/g, "\\'")}', ${typeof order.destLat === 'number' ? order.destLat : 'null'}, ${typeof order.destLng === 'number' ? order.destLng : 'null'}, '${String(order.dest || order.items || 'Tujuan').replace(/'/g, "\\'")}')" class="w-full py-2.5 bg-[#171717] hover:bg-[#262626] text-white border border-[#FF7900] rounded-xl text-xs font-black cursor-pointer"><i class="fa-solid fa-diamond-turn-right text-[#FF7900] mr-1"></i> Navigasi Google Maps</button>
                     </div>
                 `;
             }
-            document.getElementById('modal-incoming-order').classList.remove('hidden');
+            showModalOverlay('modal-incoming-order');
         }
 
         function claimOrderByDriverAtomic(order, driverName, driverPhone) {
@@ -3825,7 +3844,7 @@
                 addAccountNotification(`Pesanan Ditolak Toko (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Refund diproses.`, order.customer, `${order.id}-m-rej-cust`, 'none');
                 if (prevDriver) addAccountNotification(`Tugas Dibatalkan (${order.id})`, `Toko ${order.merchant} menolak pesanan (${reason}). Tugas Anda dibatalkan.`, prevDriver, `${order.id}-m-rej-drv-${prevDriver}`, 'none');
                 saveDB(`Pesanan ${order.id} ditolak toko & status menjadi cancelled.`, true, 'none');
-                document.getElementById('modal-incoming-order')?.classList.add('hidden');
+                hideModalOverlay('modal-incoming-order');
                 renderDashboardContent(currentSubTab, false);
             }
         }
@@ -3871,7 +3890,7 @@
             addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan (${reason}). Sistem mencari driver pengganti tanpa checkout ulang.`, order.customer, `${order.id}-dcancel-cust-${prevDriver}`, 'none');
             if (order.type === 'food') addAccountNotification(`Mencari Driver Pengganti (${order.id})`, `Driver ${prevDriver} membatalkan tugas. Sistem sedang mencari driver pengganti.`, order.merchant, `${order.id}-dcancel-mrc-${prevDriver}`, 'none');
             saveDB(`Penugasan ${prevDriver} dilepas. Pesanan ${order.id} kembali mencari driver pengganti.`, true, 'none');
-            document.getElementById('modal-incoming-order')?.classList.add('hidden');
+            hideModalOverlay('modal-incoming-order');
             renderDashboardContent(currentSubTab, false);
         }
 
@@ -3997,13 +4016,13 @@
                     saveDB(`Status order ${order.id} tersinkron.`, true, 'none');
                 }
 
-                document.getElementById('modal-incoming-order')?.classList.add('hidden');
+                hideModalOverlay('modal-incoming-order');
                 renderDashboardContent(currentSubTab, false);
                 if (activeRole === 'driver') openPostCompleteDriverChoiceModal(order.id);
                 return;
             }
 
-            document.getElementById('modal-incoming-order')?.classList.add('hidden');
+            hideModalOverlay('modal-incoming-order');
             renderDashboardContent(currentSubTab, false);
         }
 
