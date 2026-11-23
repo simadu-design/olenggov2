@@ -25,17 +25,27 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      - name: Accept Android SDK licenses & sync Capacitor
+      - name: Prepare Android SDK & Capacitor files
         run: |
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk --licenses >/dev/null 2>&1 || true
-          if [ -f "package.json" ]; then
-            npm install --no-audit --no-fund || true
-          fi
-          if [ -f "capacitor.config.ts" ] && [ -d "android" ]; then
-            npx cap sync android || true
-          fi
+
+          mkdir -p android/capacitor-cordova-android-plugins
+          cat << 'EOF' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
+ext {
+    cdvMinSdkVersion = 22
+    cdvCompileSdkVersion = 34
+    cdvTargetSdkVersion = 34
+}
+EOF
+
+          cat << 'EOF' > android/app/capacitor.build.gradle
+// GENERATED FILE - DO NOT EDIT
+android {
+}
+apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
+EOF
 
       - name: Build Debug APK with Gradle
         working-directory: android
