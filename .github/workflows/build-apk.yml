@@ -25,19 +25,18 @@ jobs:
           distribution: "temurin"
           java-version: "21"
 
-      - name: Configure Capacitor URL, Icon, and Android SDK
+      - name: Install Android SDK 36
         run: |
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk --licenses >/dev/null 2>&1 || true
           /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || true
 
+      - name: Configure Capacitor and web redirect
+        run: |
           rm -f capacitor.config.ts capacitor.config.js android/capacitor.config.ts android/capacitor.config.js
-
           mkdir -p www
-          cat << 'EOF' > www/index.html
-          <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>window.location.replace("https://olenggov2.vercel.app/");</script><meta http-equiv="refresh" content="0;url=https://olenggov2.vercel.app/"></head><body><a href="https://olenggov2.vercel.app/">Buka OLENG GO</a></body></html>
-          EOF
+          printf '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>window.location.replace("https://olenggov2.vercel.app/");</script><meta http-equiv="refresh" content="0;url=https://olenggov2.vercel.app/"></head><body><a href="https://olenggov2.vercel.app/">Buka OLENG GO</a></body></html>\n' > www/index.html
 
           if [ -f package.json ]; then
             npm install --no-audit --no-fund
@@ -65,10 +64,12 @@ jobs:
             cp capacitor.config.json android/capacitor.config.json
           fi
 
-          ICON_SRC=$(find . -maxdepth 8 -iname "*olengorange2*" -o -iname "*oleng*orange*" | head -n 1)
-          echo "Ditemukan file icon: ${ICON_SRC:-TIDAK ADA}"
-
+      - name: Apply Olengorange2.png icon and app name
+        run: |
+          ICON_SRC=$(find . -maxdepth 8 -iname "olengorange2.png" | head -n 1)
+          echo "Icon source: ${ICON_SRC:-NOT_FOUND}"
           if [ -n "$ICON_SRC" ] && [ -d android/app/src/main/res ]; then
+            export ICON_SRC
             if command -v convert >/dev/null 2>&1; then
               for pair in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
                 folder="${pair%%:*}"
@@ -89,38 +90,46 @@ jobs:
               done
             else
               python3 -c "import PIL" 2>/dev/null || python3 -m pip install --break-system-packages -q Pillow || true
-              ICON_SRC="$ICON_SRC" python3 - << 'PYEOF'
-import os, pathlib
-from PIL import Image
-src = pathlib.Path(os.environ["ICON_SRC"])
-res_dir = pathlib.Path("android/app/src/main/res")
-sizes = {"mipmap-mdpi": 48, "mipmap-hdpi": 72, "mipmap-xhdpi": 96, "mipmap-xxhdpi": 144, "mipmap-xxxhdpi": 192}
-with Image.open(src) as im:
-    img = im.convert("RGBA")
-    for folder, px in sizes.items():
-        d = res_dir / folder
-        d.mkdir(parents=True, exist_ok=True)
-        resized = img.resize((px, px), Image.Resampling.LANCZOS)
-        for name in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
-            resized.save(d / name, format="PNG")
-PYEOF
-            fi
+              python3 - << 'EOF'
+          import os, pathlib
+          from PIL import Image
 
+          src = pathlib.Path(os.environ["ICON_SRC"])
+          res = pathlib.Path("android/app/src/main/res")
+          sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
+
+          with Image.open(src) as im:
+              rgba = im.convert("RGBA")
+              for folder, px in sizes.items():
+                  target_dir = res / folder
+                  target_dir.mkdir(parents=True, exist_ok=True)
+                  resized = rgba.resize((px, px), Image.Resampling.LANCZOS)
+                  for fname in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
+                      resized.save(target_dir / fname, format="PNG")
+          EOF
+            fi
             find android/app/src/main/res -path "*/mipmap-anydpi*/*.xml" -delete 2>/dev/null || true
-            ls -la android/app/src/main/res/mipmap-xxxhdpi || true
           fi
 
           if [ -f android/app/src/main/res/values/strings.xml ]; then
-            python3 - << 'PYEOF'
-import pathlib, re
-p = pathlib.Path("android/app/src/main/res/values/strings.xml")
-s = p.read_text()
-s = re.sub(r'(<string\s+name="app_name"[^>]*>)[^<]*(</string>)', r'\g<1>OLENG GO\g<2>', s)
-s = re.sub(r'(<string\s+name="title_activity_main"[^>]*>)[^<]*(</string>)', r'\g<1>OLENG GO\g<2>', s)
-p.write_text(s)
-PYEOF
+            python3 - << 'EOF'
+          import pathlib, re
+          p = pathlib.Path("android/app/src/main/res/values/strings.xml")
+          txt = p.read_text()
+          txt = re.sub(r'(<string\s+name="app_name"[^>]*>)[^<]*(</string>)', r'\g<1>OLENG GO\g<2>', txt)
+          txt = re.sub(r'(<string\s+name="title_activity_main"[^>]*>)[^<]*(</string>)', r'\g<1>OLENG GO\g<2>', txt)
+          p.write_text(txt)
+          EOF
           fi
 
+      - name: Configure Gradle SDK 36 and JDK 21
+        run: |
           mkdir -p android/capacitor-cordova-android-plugins
           cat << 'EOF' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
           ext {
@@ -158,25 +167,25 @@ PYEOF
           EOF
 
           if [ -f android/variables.gradle ]; then
-            python3 - << 'PYEOF'
-import pathlib, re
-p = pathlib.Path("android/variables.gradle")
-s = p.read_text()
-s = re.sub(r'(compileSdkVersion\s*=\s*)[^\r\n]+', r'\g<1>36', s)
-s = re.sub(r'(targetSdkVersion\s*=\s*)[^\r\n]+', r'\g<1>36', s)
-p.write_text(s)
-PYEOF
+            python3 - << 'EOF'
+          import pathlib, re
+          p = pathlib.Path("android/variables.gradle")
+          txt = p.read_text()
+          txt = re.sub(r'(compileSdkVersion\s*=\s*)[^\r\n]+', r'\g<1>36', txt)
+          txt = re.sub(r'(targetSdkVersion\s*=\s*)[^\r\n]+', r'\g<1>36', txt)
+          p.write_text(txt)
+          EOF
           fi
 
           if [ -f android/app/build.gradle ]; then
-            python3 - << 'PYEOF'
-import pathlib, re
-p = pathlib.Path("android/app/build.gradle")
-s = p.read_text()
-s = re.sub(r'\bcompileSdk(Version)?\s*=?\s*[^\r\n]+', 'compileSdk 36', s)
-s = re.sub(r'\btargetSdk(Version)?\s*=?\s*[^\r\n]+', 'targetSdk 36', s)
-p.write_text(s)
-PYEOF
+            python3 - << 'EOF'
+          import pathlib, re
+          p = pathlib.Path("android/app/build.gradle")
+          txt = p.read_text()
+          txt = re.sub(r'\bcompileSdk(Version)?\s*=?\s*[^\r\n]+', 'compileSdk 36', txt)
+          txt = re.sub(r'\btargetSdk(Version)?\s*=?\s*[^\r\n]+', 'targetSdk 36', txt)
+          p.write_text(txt)
+          EOF
           fi
 
       - name: Build Debug APK with Gradle
