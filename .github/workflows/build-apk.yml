@@ -33,11 +33,23 @@ jobs:
           /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || true
 
           rm -f capacitor.config.ts capacitor.config.js
-          printf '{\n  "appId": "com.olenggo.lengkong",\n  "appName": "OLENG GO",\n  "webDir": "www",\n  "server": {\n    "url": "https://oleng-lengkong-eight.vercel.app",\n    "cleartext": true\n  }\n}\n' > capacitor.config.json
+          sh -c 'cat << '\''EOF'\'' > capacitor.config.json
+          {
+            "appId": "com.olenggo.lengkong",
+            "appName": "OLENG GO",
+            "webDir": "www",
+            "server": {
+              "url": "https://oleng-lengkong-eight.vercel.app",
+              "cleartext": true
+            }
+          }
+          EOF'
 
           mkdir -p www
           if [ ! -f www/index.html ]; then
-            printf '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=https://oleng-lengkong-eight.vercel.app"></head><body></body></html>\n' > www/index.html
+            sh -c 'cat << '\''EOF'\'' > www/index.html
+          <!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=https://oleng-lengkong-eight.vercel.app"></head><body></body></html>
+          EOF'
           fi
 
           if [ -f package.json ]; then
@@ -49,16 +61,47 @@ jobs:
           fi
 
           mkdir -p android/capacitor-cordova-android-plugins
-          printf 'ext {\n    cdvMinSdkVersion = 23\n    cdvCompileSdkVersion = 36\n    cdvTargetSdkVersion = 36\n}\n' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
-          printf 'apply plugin: '\''com.android.library'\''\napply from: '\''cordova.variables.gradle'\''\nandroid {\n    namespace "com.olenggo.lengkong.cordova.plugins"\n    compileSdk 36\n    defaultConfig {\n        minSdk 23\n        targetSdk 36\n    }\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }\n}\n' > android/capacitor-cordova-android-plugins/build.gradle
-          printf '// GENERATED FILE - DO NOT EDIT\nandroid {\n}\napply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"\n' > android/app/capacitor.build.gradle
+          sh -c 'cat << '\''EOF'\'' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
+          ext {
+              cdvMinSdkVersion = 23
+              cdvCompileSdkVersion = 36
+              cdvTargetSdkVersion = 36
+          }
+          EOF'
+
+          sh -c 'cat << '\''EOF'\'' > android/capacitor-cordova-android-plugins/build.gradle
+          apply plugin: '\''com.android.library'\''
+          apply from: '\''cordova.variables.gradle'\''
+
+          android {
+              namespace "com.olenggo.lengkong.cordova.plugins"
+              compileSdk 36
+
+              defaultConfig {
+                  minSdk 23
+                  targetSdk 36
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          EOF'
+
+          sh -c 'cat << '\''EOF'\'' > android/app/capacitor.build.gradle
+          // GENERATED FILE - DO NOT EDIT
+          android {
+          }
+          apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
+          EOF'
 
           if [ -f android/variables.gradle ]; then
-            sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 36/g; s/targetSdkVersion = [0-9]*/targetSdkVersion = 36/g' android/variables.gradle
+            python3 -c 'import pathlib,re; p=pathlib.Path("android/variables.gradle"); s=p.read_text(); s=re.sub(r"(compileSdkVersion\s*=\s*)[^\r\n]+", r"\g<1>36", s); s=re.sub(r"(targetSdkVersion\s*=\s*)[^\r\n]+", r"\g<1>36", s); p.write_text(s)'
           fi
 
           if [ -f android/app/build.gradle ]; then
-            sed -i 's/compileSdk [0-9]*/compileSdk 36/g; s/compileSdkVersion [0-9]*/compileSdkVersion 36/g; s/targetSdk [0-9]*/targetSdk 36/g; s/targetSdkVersion [0-9]*/targetSdkVersion 36/g' android/app/build.gradle
+            python3 -c 'import pathlib,re; p=pathlib.Path("android/app/build.gradle"); s=p.read_text(); s=re.sub(r"\bcompileSdk(Version)?\s*=?\s*[^\r\n]+", "compileSdk 36", s); s=re.sub(r"\btargetSdk(Version)?\s*=?\s*[^\r\n]+", "targetSdk 36", s); p.write_text(s)'
           fi
 
       - name: Build Debug APK with Gradle
