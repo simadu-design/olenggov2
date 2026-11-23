@@ -25,31 +25,55 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      - name: Configure Capacitor URL & Android SDK files
+      - name: Configure Capacitor URL, SDK & Android modules
         run: |
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk --licenses >/dev/null 2>&1 || true
 
           cat << 'CAPEOF' > capacitor.config.ts
-          import type { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from '@capacitor/cli';
 
-          const config: CapacitorConfig = {
-            appId: 'com.olenggo.lengkong',
-            appName: 'OLENG GO',
-            webDir: 'www',
-            server: {
-              url: 'https://oleng-lengkong-eight.vercel.app',
-              cleartext: true
-            }
-          };
+const config: CapacitorConfig = {
+  appId: 'com.olenggo.lengkong',
+  appName: 'OLENG GO',
+  webDir: 'www',
+  server: {
+    url: 'https://oleng-lengkong-eight.vercel.app',
+    cleartext: true
+  }
+};
 
-          export default config;
-          CAPEOF
+export default config;
+CAPEOF
+
+          mkdir -p www
+          if [ ! -f "www/index.html" ]; then
+            printf '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=https://oleng-lengkong-eight.vercel.app"></head><body></body></html>\n' > www/index.html
+          fi
+
+          rm -f android/app/capacitor.build.gradle android/capacitor-cordova-android-plugins/cordova.variables.gradle
+
+          if [ -f "package.json" ]; then
+            npm install --no-audit --no-fund
+          fi
+
+          if [ -d "android" ]; then
+            npx cap sync android || true
+          fi
 
           mkdir -p android/capacitor-cordova-android-plugins
-          printf 'ext {\n    cdvMinSdkVersion = 22\n    cdvCompileSdkVersion = 34\n    cdvTargetSdkVersion = 34\n}\n' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
-          printf '// GENERATED FILE - DO NOT EDIT\nandroid {\n}\napply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"\n' > android/app/capacitor.build.gradle
+          if [ ! -f "android/capacitor-cordova-android-plugins/cordova.variables.gradle" ]; then
+            printf 'ext {\n    cdvMinSdkVersion = 23\n    cdvCompileSdkVersion = 35\n    cdvTargetSdkVersion = 35\n}\n' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
+          fi
+
+          if [ ! -f "android/app/capacitor.build.gradle" ]; then
+            printf '// GENERATED FILE - DO NOT EDIT\nandroid {\n}\napply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"\n' > android/app/capacitor.build.gradle
+          fi
+
+          if [ -f "android/variables.gradle" ]; then
+            sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 35/g; s/targetSdkVersion = [0-9]*/targetSdkVersion = 35/g' android/variables.gradle
+          fi
 
       - name: Build Debug APK with Gradle
         working-directory: android
