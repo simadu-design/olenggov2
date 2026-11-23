@@ -65,74 +65,61 @@ jobs:
             cp capacitor.config.json android/capacitor.config.json
           fi
 
-          cat << 'PYEOF' > /tmp/make_icons.py
-          import os
-          import pathlib
-          from PIL import Image
+          ICON_SRC=$(find . -maxdepth 8 -iname "*olengorange2*" -o -iname "*oleng*orange*" | head -n 1)
+          echo "Ditemukan file icon: ${ICON_SRC:-TIDAK ADA}"
 
-          src_raw = os.environ.get("ICON_SRC", "")
-          if not src_raw:
-              raise SystemExit(0)
-
-          src = pathlib.Path(src_raw)
-          res_dir = pathlib.Path("android/app/src/main/res")
-          if not src.exists() or not res_dir.exists():
-              raise SystemExit(0)
-
-          sizes = {
-              "mipmap-mdpi": 48,
-              "mipmap-hdpi": 72,
-              "mipmap-xhdpi": 96,
-              "mipmap-xxhdpi": 144,
-              "mipmap-xxxhdpi": 192,
-          }
-
-          with Image.open(src) as im:
-              img = im.convert("RGBA")
-              for folder, px in sizes.items():
-                  d = res_dir / folder
-                  d.mkdir(parents=True, exist_ok=True)
-                  resized = img.resize((px, px), Image.Resampling.LANCZOS)
-                  for name in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
-                      resized.save(d / name, format="PNG")
-
-          for xml_path in res_dir.glob("mipmap-anydpi*/*.xml"):
-              xml_path.unlink(missing_ok=True)
-          PYEOF
-
-          ICON_SRC=$(find . -maxdepth 4 -iname "olengorange2.png" | head -n 1)
           if [ -n "$ICON_SRC" ] && [ -d android/app/src/main/res ]; then
-            python3 -c "import PIL" 2>/dev/null || python3 -m pip install --break-system-packages -q Pillow || true
-            ICON_SRC="$ICON_SRC" python3 /tmp/make_icons.py || true
+            if command -v convert >/dev/null 2>&1; then
+              for pair in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
+                folder="${pair%%:*}"
+                px="${pair##*:}"
+                mkdir -p "android/app/src/main/res/$folder"
+                for fname in "ic_launcher.png" "ic_launcher_round.png" "ic_launcher_foreground.png"; do
+                  convert "$ICON_SRC" -resize "${px}x${px}!" "android/app/src/main/res/$folder/$fname"
+                done
+              done
+            elif command -v ffmpeg >/dev/null 2>&1; then
+              for pair in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
+                folder="${pair%%:*}"
+                px="${pair##*:}"
+                mkdir -p "android/app/src/main/res/$folder"
+                for fname in "ic_launcher.png" "ic_launcher_round.png" "ic_launcher_foreground.png"; do
+                  ffmpeg -y -i "$ICON_SRC" -vf "scale=${px}:${px}" "android/app/src/main/res/$folder/$fname" >/dev/null 2>&1
+                done
+              done
+            else
+              python3 -c "import PIL" 2>/dev/null || python3 -m pip install --break-system-packages -q Pillow || true
+              ICON_SRC="$ICON_SRC" python3 - << 'PYEOF'
+import os, pathlib
+from PIL import Image
+src = pathlib.Path(os.environ["ICON_SRC"])
+res_dir = pathlib.Path("android/app/src/main/res")
+sizes = {"mipmap-mdpi": 48, "mipmap-hdpi": 72, "mipmap-xhdpi": 96, "mipmap-xxhdpi": 144, "mipmap-xxxhdpi": 192}
+with Image.open(src) as im:
+    img = im.convert("RGBA")
+    for folder, px in sizes.items():
+        d = res_dir / folder
+        d.mkdir(parents=True, exist_ok=True)
+        resized = img.resize((px, px), Image.Resampling.LANCZOS)
+        for name in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
+            resized.save(d / name, format="PNG")
+PYEOF
+            fi
+
+            find android/app/src/main/res -path "*/mipmap-anydpi*/*.xml" -delete 2>/dev/null || true
+            ls -la android/app/src/main/res/mipmap-xxxhdpi || true
           fi
 
-          cat << 'PYEOF' > /tmp/patch_android.py
-          import pathlib
-          import re
-
-          strings_xml = pathlib.Path("android/app/src/main/res/values/strings.xml")
-          if strings_xml.exists():
-              s = strings_xml.read_text()
-              s = re.sub(r'(<string\s+name="app_name"[^>]*>)[^<]*(</string>)', r'\g<1>OLENG GO\g<2>', s)
-              s = re.sub(r'(<string\s+name="title_activity_main"[^>]*>)[^<]*(</string>)', r'\g<1>OLENG GO\g<2>', s)
-              strings_xml.write_text(s)
-
-          vars_gradle = pathlib.Path("android/variables.gradle")
-          if vars_gradle.exists():
-              s = vars_gradle.read_text()
-              s = re.sub(r'(compileSdkVersion\s*=\s*)[^\r\n]+', r'\g<1>36', s)
-              s = re.sub(r'(targetSdkVersion\s*=\s*)[^\r\n]+', r'\g<1>36', s)
-              vars_gradle.write_text(s)
-
-          app_gradle = pathlib.Path("android/app/build.gradle")
-          if app_gradle.exists():
-              s = app_gradle.read_text()
-              s = re.sub(r'\bcompileSdk(Version)?\s*=?\s*[^\r\n]+', 'compileSdk 36', s)
-              s = re.sub(r'\btargetSdk(Version)?\s*=?\s*[^\r\n]+', 'targetSdk 36', s)
-              app_gradle.write_text(s)
-          PYEOF
-
-          python3 /tmp/patch_android.py
+          if [ -f android/app/src/main/res/values/strings.xml ]; then
+            python3 - << 'PYEOF'
+import pathlib, re
+p = pathlib.Path("android/app/src/main/res/values/strings.xml")
+s = p.read_text()
+s = re.sub(r'(<string\s+name="app_name"[^>]*>)[^<]*(</string>)', r'\g<1>OLENG GO\g<2>', s)
+s = re.sub(r'(<string\s+name="title_activity_main"[^>]*>)[^<]*(</string>)', r'\g<1>OLENG GO\g<2>', s)
+p.write_text(s)
+PYEOF
+          fi
 
           mkdir -p android/capacitor-cordova-android-plugins
           cat << 'EOF' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
@@ -169,6 +156,28 @@ jobs:
           }
           apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
           EOF
+
+          if [ -f android/variables.gradle ]; then
+            python3 - << 'PYEOF'
+import pathlib, re
+p = pathlib.Path("android/variables.gradle")
+s = p.read_text()
+s = re.sub(r'(compileSdkVersion\s*=\s*)[^\r\n]+', r'\g<1>36', s)
+s = re.sub(r'(targetSdkVersion\s*=\s*)[^\r\n]+', r'\g<1>36', s)
+p.write_text(s)
+PYEOF
+          fi
+
+          if [ -f android/app/build.gradle ]; then
+            python3 - << 'PYEOF'
+import pathlib, re
+p = pathlib.Path("android/app/build.gradle")
+s = p.read_text()
+s = re.sub(r'\bcompileSdk(Version)?\s*=?\s*[^\r\n]+', 'compileSdk 36', s)
+s = re.sub(r'\btargetSdk(Version)?\s*=?\s*[^\r\n]+', 'targetSdk 36', s)
+p.write_text(s)
+PYEOF
+          fi
 
       - name: Build Debug APK with Gradle
         working-directory: android
