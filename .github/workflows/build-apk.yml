@@ -66,4 +66,3 @@ jobs:
           name: OLENG-GO-APK
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-git add .github/workflows/build-apk.yml && git commit -m "Fix YAML syntax in build-apk workflow" && git push origin main
