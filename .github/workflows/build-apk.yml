@@ -142,7 +142,7 @@ jobs:
 
           find android/app/src/main/java -name "MainActivity.java" ! -path "$MAIN_FILE" -delete 2>/dev/null || true
 
-      - name: Copy Olengorange2.png to mipmap folders
+      - name: Apply Olengorange2.png icon cleanly
         run: |
           ICON_SRC=$(find . -maxdepth 8 -iname "olengorange2.png" | head -n 1)
           echo "Icon source: ${ICON_SRC:-NOT_FOUND}"
