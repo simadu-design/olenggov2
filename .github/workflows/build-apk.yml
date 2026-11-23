@@ -25,7 +25,7 @@ jobs:
           distribution: "temurin"
           java-version: "21"
 
-      - name: Configure Capacitor URL and Android SDK
+      - name: Configure Capacitor URL, Icon, and Android SDK
         run: |
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
@@ -63,6 +63,36 @@ jobs:
           cp capacitor.config.json android/app/src/main/assets/capacitor.config.json
           if [ -d android ]; then
             cp capacitor.config.json android/capacitor.config.json
+          fi
+
+          ICON_SRC=$(find . -maxdepth 4 -iname "olengorange2.png" | head -n 1)
+          if [ -n "$ICON_SRC" ] && [ -d android/app/src/main/res ]; then
+            python3 -c '
+import pathlib, sys
+from PIL import Image
+
+src = pathlib.Path(sys.argv[1])
+res_dir = pathlib.Path("android/app/src/main/res")
+sizes = {
+    "mipmap-mdpi": 48,
+    "mipmap-hdpi": 72,
+    "mipmap-xhdpi": 96,
+    "mipmap-xxhdpi": 144,
+    "mipmap-xxxhdpi": 192,
+}
+
+with Image.open(src) as im:
+    img = im.convert("RGBA")
+    for folder, px in sizes.items():
+        d = res_dir / folder
+        d.mkdir(parents=True, exist_ok=True)
+        resized = img.resize((px, px), Image.Resampling.LANCZOS)
+        for name in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
+            resized.save(d / name, format="PNG")
+
+for xml_path in res_dir.glob("mipmap-anydpi*/*.xml"):
+    xml_path.unlink(missing_ok=True)
+' "$ICON_SRC" || true
           fi
 
           if [ -f android/app/src/main/res/values/strings.xml ]; then
@@ -119,6 +149,7 @@ jobs:
           ANDROID_HOME: /usr/local/lib/android/sdk
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
+          rm -rf app/build build
           chmod +x ./gradlew
           ./gradlew assembleDebug --stacktrace
 
