@@ -36,7 +36,7 @@ jobs:
         run: |
           rm -f capacitor.config.ts capacitor.config.js android/capacitor.config.ts android/capacitor.config.js
           mkdir -p www
-          printf '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>window.location.replace("https://olenggov2.vercel.app/");</script><meta http-equiv="refresh" content="0;url=https://olenggov2.vercel.app/"></head><body><a href="https://olenggov2.vercel.app/">Buka OLENG GO</a></body></html>\n' > www/index.html
+          printf '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script>window.location.replace("https://olenggov2.vercel.app/");</script><meta http-equiv="refresh" content="0;url=https://olenggov2.vercel.app/"></head><body><a href="https://olenggov2.vercel.app/">Buka OLENG GO</a></body></html>\n' > www/index.html
 
           if [ -f package.json ]; then
             npm install --no-audit --no-fund
@@ -54,6 +54,15 @@ jobs:
             "server": {
               "url": "https://olenggov2.vercel.app/",
               "cleartext": true
+            },
+            "plugins": {
+              "SplashScreen": {
+                "launchShowDuration": 1800,
+                "launchAutoHide": true,
+                "backgroundColor": "#0D1729",
+                "androidScaleType": "CENTER_CROP",
+                "showSpinner": false
+              }
             }
           }
           EOF
@@ -64,7 +73,7 @@ jobs:
             cp capacitor.config.json android/capacitor.config.json
           fi
 
-      - name: Apply Olengorange2.png icon and app name
+      - name: Apply Olengorange2.png icon, splash, and app name
         run: |
           ICON_SRC=$(find . -maxdepth 8 -iname "olengorange2.png" | head -n 1)
           echo "Icon source: ${ICON_SRC:-NOT_FOUND}"
@@ -79,6 +88,8 @@ jobs:
                   convert "$ICON_SRC" -resize "${px}x${px}!" "android/app/src/main/res/$folder/$fname"
                 done
               done
+              mkdir -p android/app/src/main/res/drawable
+              convert "$ICON_SRC" -resize 512x512! android/app/src/main/res/drawable/splash.png
             elif command -v ffmpeg >/dev/null 2>&1; then
               for pair in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
                 folder="${pair%%:*}"
@@ -88,6 +99,8 @@ jobs:
                   ffmpeg -y -i "$ICON_SRC" -vf "scale=${px}:${px}" "android/app/src/main/res/$folder/$fname" >/dev/null 2>&1
                 done
               done
+              mkdir -p android/app/src/main/res/drawable
+              ffmpeg -y -i "$ICON_SRC" -vf "scale=512:512" android/app/src/main/res/drawable/splash.png >/dev/null 2>&1
             else
               python3 -c "import PIL" 2>/dev/null || python3 -m pip install --break-system-packages -q Pillow || true
               python3 - << 'EOF'
@@ -112,9 +125,25 @@ jobs:
                   resized = rgba.resize((px, px), Image.Resampling.LANCZOS)
                   for fname in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
                       resized.save(target_dir / fname, format="PNG")
+
+              splash_dir = res / "drawable"
+              splash_dir.mkdir(parents=True, exist_ok=True)
+              rgba.resize((512, 512), Image.Resampling.LANCZOS).save(splash_dir / "splash.png", format="PNG")
           EOF
             fi
             find android/app/src/main/res -path "*/mipmap-anydpi*/*.xml" -delete 2>/dev/null || true
+
+            cat << 'EOF' > android/app/src/main/res/drawable/launch_splash.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:drawable="@android:color/black" />
+              <item android:gravity="center">
+                  <bitmap
+                      android:src="@drawable/splash"
+                      android:gravity="center" />
+              </item>
+          </layer-list>
+          EOF
           fi
 
           if [ -f android/app/src/main/res/values/strings.xml ]; then
