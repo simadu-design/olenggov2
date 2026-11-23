@@ -157,7 +157,7 @@ jobs:
           EOF
           fi
 
-      - name: Configure MainActivity system bar insets and Gradle SDK 36
+      - name: Configure MainActivity safe area padding and Gradle SDK 36
         run: |
           MAIN_JAVA=$(find android/app/src/main/java -name "MainActivity.java" | head -n 1)
           if [ -n "$MAIN_JAVA" ]; then
@@ -167,26 +167,61 @@ jobs:
           import android.graphics.Color;
           import android.os.Bundle;
           import android.view.View;
+          import android.view.Window;
           import androidx.core.graphics.Insets;
           import androidx.core.view.ViewCompat;
+          import androidx.core.view.WindowCompat;
           import androidx.core.view.WindowInsetsCompat;
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
-              @Override
-              public void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  View root = findViewById(android.R.id.content);
-                  if (root != null) {
-                      root.setBackgroundColor(Color.parseColor("#0D1729"));
-                      ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
-                          Insets bars = windowInsets.getInsets(
+              private void applySystemBarInsets() {
+                  Window win = getWindow();
+                  if (win != null) {
+                      WindowCompat.setDecorFitsSystemWindows(win, true);
+                      win.setStatusBarColor(Color.parseColor("#0D1729"));
+                      win.setNavigationBarColor(Color.parseColor("#0D1729"));
+                  }
+                  View content = findViewById(android.R.id.content);
+                  if (content != null) {
+                      content.setBackgroundColor(Color.parseColor("#0D1729"));
+                      ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
+                          Insets bars = insets.getInsets(
                               WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.navigationBars()
                           );
                           v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-                          return WindowInsetsCompat.CONSUMED;
+                          return insets;
                       });
+                      ViewCompat.requestApplyInsets(content);
                   }
+                  if (getBridge() != null && getBridge().getWebView() != null) {
+                      View web = getBridge().getWebView();
+                      web.setBackgroundColor(Color.parseColor("#0D1729"));
+                      ViewCompat.setOnApplyWindowInsetsListener(web, (v, insets) -> {
+                          Insets bars = insets.getInsets(
+                              WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.navigationBars()
+                          );
+                          v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                          return insets;
+                      });
+                      ViewCompat.requestApplyInsets(web);
+                  }
+              }
+
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  applySystemBarInsets();
+                  View root = findViewById(android.R.id.content);
+                  if (root != null) {
+                      root.post(this::applySystemBarInsets);
+                  }
+              }
+
+              @Override
+              public void onResume() {
+                  super.onResume();
+                  applySystemBarInsets();
               }
           }
           EOF
