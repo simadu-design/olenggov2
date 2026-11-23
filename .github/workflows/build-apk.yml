@@ -52,9 +52,7 @@ jobs:
             printf 'ext {\n    cdvMinSdkVersion = 23\n    cdvCompileSdkVersion = 35\n    cdvTargetSdkVersion = 35\n}\n' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
           fi
 
-          if [ ! -s android/capacitor-cordova-android-plugins/build.gradle ]; then
-            printf 'apply from: "cordova.variables.gradle"\nandroid {\n    compileSdkVersion project.hasProperty("cdvCompileSdkVersion") ? cdvCompileSdkVersion.toInteger() : 35\n    defaultConfig {\n        minSdkVersion project.hasProperty("cdvMinSdkVersion") ? cdvMinSdkVersion.toInteger() : 23\n        targetSdkVersion project.hasProperty("cdvTargetSdkVersion") ? cdvTargetSdkVersion.toInteger() : 35\n    }\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }\n}\n' > android/capacitor-cordova-android-plugins/build.gradle
-          fi
+          printf 'apply from: "cordova.variables.gradle"\n' > android/capacitor-cordova-android-plugins/build.gradle
 
           printf '// GENERATED FILE - DO NOT EDIT\nandroid {\n}\napply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"\n' > android/app/capacitor.build.gradle
 
