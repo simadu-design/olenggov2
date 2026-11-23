@@ -157,8 +157,41 @@ jobs:
           EOF
           fi
 
-      - name: Configure Gradle SDK 36 and JDK 21
+      - name: Configure MainActivity system bar insets and Gradle SDK 36
         run: |
+          MAIN_JAVA=$(find android/app/src/main/java -name "MainActivity.java" | head -n 1)
+          if [ -n "$MAIN_JAVA" ]; then
+            cat << 'EOF' > "$MAIN_JAVA"
+          package com.olenggo.lengkong;
+
+          import android.graphics.Color;
+          import android.os.Bundle;
+          import android.view.View;
+          import androidx.core.graphics.Insets;
+          import androidx.core.view.ViewCompat;
+          import androidx.core.view.WindowInsetsCompat;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  View root = findViewById(android.R.id.content);
+                  if (root != null) {
+                      root.setBackgroundColor(Color.parseColor("#0D1729"));
+                      ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+                          Insets bars = windowInsets.getInsets(
+                              WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.navigationBars()
+                          );
+                          v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                          return WindowInsetsCompat.CONSUMED;
+                      });
+                  }
+              }
+          }
+          EOF
+          fi
+
           mkdir -p android/capacitor-cordova-android-plugins
           cat << 'EOF' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
           ext {
