@@ -1,3 +1,4 @@
+cd ~/storage/shared/olenggov2 && mkdir -p .github/workflows && cat << 'EOF' > .github/workflows/build-apk.yml
 name: Build OLENG GO Android APK
 
 on:
@@ -31,21 +32,21 @@ jobs:
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk --licenses >/dev/null 2>&1 || true
 
-          cat << 'EOF' > capacitor.config.ts
-import type { CapacitorConfig } from '@capacitor/cli';
+          cat << 'CAPEOF' > capacitor.config.ts
+          import type { CapacitorConfig } from '@capacitor/cli';
 
-const config: CapacitorConfig = {
-  appId: 'com.olenggo.lengkong',
-  appName: 'OLENG GO',
-  webDir: 'www',
-  server: {
-    url: 'https://oleng-lengkong-eight.vercel.app',
-    cleartext: true
-  }
-};
+          const config: CapacitorConfig = {
+            appId: 'com.olenggo.lengkong',
+            appName: 'OLENG GO',
+            webDir: 'www',
+            server: {
+              url: 'https://oleng-lengkong-eight.vercel.app',
+              cleartext: true
+            }
+          };
 
-export default config;
-EOF
+          export default config;
+          CAPEOF
 
           mkdir -p android/capacitor-cordova-android-plugins
           printf 'ext {\n    cdvMinSdkVersion = 22\n    cdvCompileSdkVersion = 34\n    cdvTargetSdkVersion = 34\n}\n' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
@@ -66,3 +67,5 @@ EOF
           name: OLENG-GO-APK
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+EOF
+git add .github/workflows/build-apk.yml && git commit -m "Fix YAML syntax in build-apk workflow" && git push origin main
