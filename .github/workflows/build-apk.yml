@@ -68,7 +68,8 @@ jobs:
           ICON_SRC=$(find . -maxdepth 4 -iname "olengorange2.png" | head -n 1)
           if [ -n "$ICON_SRC" ] && [ -d android/app/src/main/res ]; then
             python3 -c "import PIL" 2>/dev/null || python3 -m pip install --break-system-packages -q Pillow || true
-            ICON_SRC="$ICON_SRC" python3 - << 'PYEOF'
+            export ICON_SRC
+            python3 - << 'PYEOF'
 import os, pathlib
 from PIL import Image
 
