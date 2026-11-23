@@ -41,7 +41,7 @@ jobs:
           <html>
             <head>
               <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
               <script>window.location.replace("https://olenggov2.vercel.app/");</script>
               <meta http-equiv="refresh" content="0;url=https://olenggov2.vercel.app/">
             </head>
@@ -116,87 +116,22 @@ jobs:
           EOF
           fi
 
-      - name: Apply Olengorange2.png icon properly
+      - name: Copy Olengorange2.png to mipmap folders
         run: |
           ICON_SRC=$(find . -maxdepth 8 -iname "olengorange2.png" | head -n 1)
           echo "Icon source: ${ICON_SRC:-NOT_FOUND}"
           if [ -n "$ICON_SRC" ] && [ -d android/app/src/main/res ]; then
-            export ICON_SRC
-            python3 -c "import PIL" 2>/dev/null || python3 -m pip install --break-system-packages -q Pillow || true
-            python3 - << 'EOF'
-          import os, pathlib
-          from PIL import Image, ImageOps
-
-          src = pathlib.Path(os.environ["ICON_SRC"])
-          res = pathlib.Path("android/app/src/main/res")
-          sizes = {
-              "mipmap-mdpi": 48,
-              "mipmap-hdpi": 72,
-              "mipmap-xhdpi": 96,
-              "mipmap-xxhdpi": 144,
-              "mipmap-xxxhdpi": 192,
-          }
-
-          with Image.open(src) as im:
-              rgba = im.convert("RGBA")
-              for folder, px in sizes.items():
-                  d = res / folder
-                  d.mkdir(parents=True, exist_ok=True)
-                  fitted = ImageOps.fit(rgba, (px, px), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
-                  for fname in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
-                      fitted.save(d / fname, format="PNG")
-          EOF
+            for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
+              mkdir -p "android/app/src/main/res/$dir"
+              cp "$ICON_SRC" "android/app/src/main/res/$dir/ic_launcher.png"
+              cp "$ICON_SRC" "android/app/src/main/res/$dir/ic_launcher_round.png"
+              cp "$ICON_SRC" "android/app/src/main/res/$dir/ic_launcher_foreground.png"
+            done
           fi
 
           if [ -f android/app/src/main/res/values/strings.xml ]; then
             sed -i 's/<string name="app_name">[^<]*<\/string>/<string name="app_name">OLENG GO<\/string>/g' android/app/src/main/res/values/strings.xml || true
             sed -i 's/<string name="title_activity_main">[^<]*<\/string>/<string name="title_activity_main">OLENG GO<\/string>/g' android/app/src/main/res/values/strings.xml || true
-          fi
-
-      - name: Configure MainActivity safe area padding
-        run: |
-          MAIN_JAVA=$(find android/app/src/main/java -name "MainActivity.java" | head -n 1)
-          if [ -n "$MAIN_JAVA" ]; then
-            cat << 'EOF' > "$MAIN_JAVA"
-          package com.olenggo.lengkong;
-
-          import android.graphics.Color;
-          import android.os.Bundle;
-          import android.view.View;
-          import android.view.Window;
-          import androidx.core.graphics.Insets;
-          import androidx.core.view.ViewCompat;
-          import androidx.core.view.WindowCompat;
-          import androidx.core.view.WindowInsetsCompat;
-          import com.getcapacitor.BridgeActivity;
-
-          public class MainActivity extends BridgeActivity {
-              @Override
-              public void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  try {
-                      Window win = getWindow();
-                      if (win != null) {
-                          WindowCompat.setDecorFitsSystemWindows(win, true);
-                          win.setStatusBarColor(Color.parseColor("#0D1729"));
-                          win.setNavigationBarColor(Color.parseColor("#0D1729"));
-                      }
-                      View content = findViewById(android.R.id.content);
-                      if (content != null) {
-                          content.setBackgroundColor(Color.parseColor("#0D1729"));
-                          ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
-                              Insets bars = insets.getInsets(
-                                  WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.navigationBars()
-                              );
-                              v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-                              return insets;
-                          });
-                      }
-                  } catch (Exception ignored) {
-                  }
-              }
-          }
-          EOF
           fi
 
       - name: Build Debug APK
