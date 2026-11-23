@@ -1,4 +1,3 @@
-cd ~/storage/shared/olenggov2 && mkdir -p .github/workflows && cat << 'EOF' > .github/workflows/build-apk.yml
 name: Build OLENG GO Android APK
 
 on:
