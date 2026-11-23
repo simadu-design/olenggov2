@@ -168,6 +168,7 @@ jobs:
           import android.os.Bundle;
           import android.view.View;
           import android.view.Window;
+          import android.view.WindowManager;
           import androidx.core.graphics.Insets;
           import androidx.core.view.ViewCompat;
           import androidx.core.view.WindowCompat;
@@ -178,6 +179,11 @@ jobs:
               private void applySystemBarInsets() {
                   Window win = getWindow();
                   if (win != null) {
+                      win.clearFlags(
+                          WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS
+                              | WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION
+                      );
+                      win.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
                       WindowCompat.setDecorFitsSystemWindows(win, true);
                       win.setStatusBarColor(Color.parseColor("#0D1729"));
                       win.setNavigationBarColor(Color.parseColor("#0D1729"));
@@ -216,6 +222,12 @@ jobs:
                   if (root != null) {
                       root.post(this::applySystemBarInsets);
                   }
+              }
+
+              @Override
+              public void onStart() {
+                  super.onStart();
+                  applySystemBarInsets();
               }
 
               @Override
