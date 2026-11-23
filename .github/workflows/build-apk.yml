@@ -116,12 +116,13 @@ jobs:
           EOF
           fi
 
-      - name: Configure AndroidManifest permissions for notifications and vibration
+      - name: Configure AndroidManifest permissions and icon attributes
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST" ]; then
             python3 - << 'EOF'
           import pathlib
+          import re
 
           p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
           txt = p.read_text(encoding="utf-8")
@@ -139,6 +140,17 @@ jobs:
                       txt = txt.replace("<application", f"{line}\n    <application", 1)
                   else:
                       txt = txt.replace("</manifest>", f"    {line}\n</manifest>", 1)
+
+          if "<application" in txt:
+              if 'android:icon=' in txt:
+                  txt = re.sub(r'android:icon="[^"]*"', 'android:icon="@mipmap/ic_launcher"', txt, count=1)
+              else:
+                  txt = txt.replace("<application", '<application android:icon="@mipmap/ic_launcher"', 1)
+
+              if 'android:roundIcon=' in txt:
+                  txt = re.sub(r'android:roundIcon="[^"]*"', 'android:roundIcon="@mipmap/ic_launcher"', txt, count=1)
+              else:
+                  txt = txt.replace("<application", '<application android:roundIcon="@mipmap/ic_launcher"', 1)
 
           p.write_text(txt, encoding="utf-8")
           EOF
@@ -194,7 +206,7 @@ jobs:
 
           find android/app/src/main/java -name "MainActivity.java" ! -path "$MAIN_FILE" -delete 2>/dev/null || true
 
-      - name: Apply Olengorange2.png cleanly without clipping or missing icon
+      - name: Apply Olengorange2.png icon cleanly
         run: |
           ICON_SRC=$(find . -maxdepth 8 -iname "olengorange2.png" | head -n 1)
           echo "Icon source: ${ICON_SRC:-NOT_FOUND}"
