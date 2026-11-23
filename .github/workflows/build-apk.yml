@@ -41,7 +41,7 @@ jobs:
           <html>
             <head>
               <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
               <script>window.location.replace("https://olenggov2.vercel.app/");</script>
               <meta http-equiv="refresh" content="0;url=https://olenggov2.vercel.app/">
             </head>
@@ -53,7 +53,7 @@ jobs:
 
           cat << 'EOF' > capacitor.config.json
           {
-            "appId": "com.olenggo.lengkong",
+            "appId": "com.simadugo.app",
             "appName": "OLENG GO",
             "webDir": "www",
             "server": {
@@ -91,7 +91,7 @@ jobs:
           apply from: 'cordova.variables.gradle'
 
           android {
-              namespace "com.olenggo.lengkong.cordova.plugins"
+              namespace "com.simadugo.app.cordova.plugins"
               compileSdk 36
 
               defaultConfig {
@@ -115,6 +115,65 @@ jobs:
           apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
           EOF
           fi
+
+      - name: Ensure MainActivity matches manifest package and safe insets
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          PKG="com.simadugo.app"
+          if [ -f "$MANIFEST" ]; then
+            FOUND_PKG=$(python3 -c 'import pathlib, re, sys; m=re.search(r"package=\"([^\"]+)\"", pathlib.Path(sys.argv[1]).read_text()); print(m.group(1) if m else "")' "$MANIFEST")
+            if [ -n "$FOUND_PKG" ]; then
+              PKG="$FOUND_PKG"
+            fi
+          fi
+          echo "Target package: $PKG"
+
+          PKG_DIR="android/app/src/main/java/$(echo "$PKG" | tr '.' '/')"
+          mkdir -p "$PKG_DIR"
+          MAIN_FILE="$PKG_DIR/MainActivity.java"
+
+          cat << EOF > "$MAIN_FILE"
+          package $PKG;
+
+          import android.graphics.Color;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.view.Window;
+          import androidx.core.graphics.Insets;
+          import androidx.core.view.ViewCompat;
+          import androidx.core.view.WindowCompat;
+          import androidx.core.view.WindowInsetsCompat;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  try {
+                      Window win = getWindow();
+                      if (win != null) {
+                          WindowCompat.setDecorFitsSystemWindows(win, true);
+                          win.setStatusBarColor(Color.parseColor("#0D1729"));
+                          win.setNavigationBarColor(Color.parseColor("#0D1729"));
+                      }
+                      View content = findViewById(android.R.id.content);
+                      if (content != null) {
+                          content.setBackgroundColor(Color.parseColor("#0D1729"));
+                          ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
+                              Insets bars = insets.getInsets(
+                                  WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.navigationBars()
+                              );
+                              v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                              return insets;
+                          });
+                      }
+                  } catch (Exception ignored) {
+                  }
+              }
+          }
+          EOF
+
+          find android/app/src/main/java -name "MainActivity.java" ! -path "$MAIN_FILE" -delete 2>/dev/null || true
 
       - name: Copy Olengorange2.png to mipmap folders
         run: |
