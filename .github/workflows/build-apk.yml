@@ -36,7 +36,7 @@ jobs:
 
           mkdir -p www
           sh -c 'cat << '\''EOF'\'' > www/index.html
-          <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>window.location.replace("https://oleng-lengkong-eight.vercel.app");</script><meta http-equiv="refresh" content="0;url=https://oleng-lengkong-eight.vercel.app"></head><body><a href="https://oleng-lengkong-eight.vercel.app">Buka OLENG GO</a></body></html>
+          <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>window.location.replace("https://olenggov2.vercel.app/");</script><meta http-equiv="refresh" content="0;url=https://olenggov2.vercel.app/"></head><body><a href="https://olenggov2.vercel.app/">Buka OLENG GO</a></body></html>
           EOF'
 
           if [ -f package.json ]; then
@@ -53,7 +53,7 @@ jobs:
             "appName": "OLENG GO",
             "webDir": "www",
             "server": {
-              "url": "https://oleng-lengkong-eight.vercel.app",
+              "url": "https://olenggov2.vercel.app/",
               "cleartext": true
             }
           }
