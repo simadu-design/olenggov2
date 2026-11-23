@@ -54,15 +54,6 @@ jobs:
             "server": {
               "url": "https://olenggov2.vercel.app/",
               "cleartext": true
-            },
-            "plugins": {
-              "SplashScreen": {
-                "launchShowDuration": 1800,
-                "launchAutoHide": true,
-                "backgroundColor": "#0D1729",
-                "androidScaleType": "CENTER_CROP",
-                "showSpinner": false
-              }
             }
           }
           EOF
@@ -132,18 +123,6 @@ jobs:
           EOF
             fi
             find android/app/src/main/res -path "*/mipmap-anydpi*/*.xml" -delete 2>/dev/null || true
-
-            cat << 'EOF' > android/app/src/main/res/drawable/launch_splash.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-              <item android:drawable="@android:color/black" />
-              <item android:gravity="center">
-                  <bitmap
-                      android:src="@drawable/splash"
-                      android:gravity="center" />
-              </item>
-          </layer-list>
-          EOF
           fi
 
           if [ -f android/app/src/main/res/values/strings.xml ]; then
@@ -157,83 +136,27 @@ jobs:
           EOF
           fi
 
-      - name: Configure MainActivity safe area padding and Gradle SDK 36
+      - name: Configure MainActivity and Gradle SDK 36
         run: |
           MAIN_JAVA=$(find android/app/src/main/java -name "MainActivity.java" | head -n 1)
           if [ -n "$MAIN_JAVA" ]; then
             cat << 'EOF' > "$MAIN_JAVA"
           package com.olenggo.lengkong;
 
-          import android.graphics.Color;
           import android.os.Bundle;
-          import android.view.View;
-          import android.view.Window;
-          import android.view.WindowManager;
-          import androidx.core.graphics.Insets;
-          import androidx.core.view.ViewCompat;
           import androidx.core.view.WindowCompat;
-          import androidx.core.view.WindowInsetsCompat;
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
-              private void applySystemBarInsets() {
-                  Window win = getWindow();
-                  if (win != null) {
-                      win.clearFlags(
-                          WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS
-                              | WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION
-                      );
-                      win.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-                      WindowCompat.setDecorFitsSystemWindows(win, true);
-                      win.setStatusBarColor(Color.parseColor("#0D1729"));
-                      win.setNavigationBarColor(Color.parseColor("#0D1729"));
-                  }
-                  View content = findViewById(android.R.id.content);
-                  if (content != null) {
-                      content.setBackgroundColor(Color.parseColor("#0D1729"));
-                      ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
-                          Insets bars = insets.getInsets(
-                              WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.navigationBars()
-                          );
-                          v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-                          return insets;
-                      });
-                      ViewCompat.requestApplyInsets(content);
-                  }
-                  if (getBridge() != null && getBridge().getWebView() != null) {
-                      View web = getBridge().getWebView();
-                      web.setBackgroundColor(Color.parseColor("#0D1729"));
-                      ViewCompat.setOnApplyWindowInsetsListener(web, (v, insets) -> {
-                          Insets bars = insets.getInsets(
-                              WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.navigationBars()
-                          );
-                          v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-                          return insets;
-                      });
-                      ViewCompat.requestApplyInsets(web);
-                  }
-              }
-
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-                  applySystemBarInsets();
-                  View root = findViewById(android.R.id.content);
-                  if (root != null) {
-                      root.post(this::applySystemBarInsets);
+                  try {
+                      if (getWindow() != null) {
+                          WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+                      }
+                  } catch (Exception ignored) {
                   }
-              }
-
-              @Override
-              public void onStart() {
-                  super.onStart();
-                  applySystemBarInsets();
-              }
-
-              @Override
-              public void onResume() {
-                  super.onResume();
-                  applySystemBarInsets();
               }
           }
           EOF
