@@ -32,19 +32,24 @@ jobs:
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk --licenses >/dev/null 2>&1 || true
           /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || true
 
-      - name: Configure Capacitor and web redirect
+      - name: Configure Capacitor for OLENG GO
         run: |
           rm -f capacitor.config.ts capacitor.config.js android/capacitor.config.ts android/capacitor.config.js
           mkdir -p www
-          printf '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script>window.location.replace("https://olenggov2.vercel.app/");</script><meta http-equiv="refresh" content="0;url=https://olenggov2.vercel.app/"></head><body><a href="https://olenggov2.vercel.app/">Buka OLENG GO</a></body></html>\n' > www/index.html
-
-          if [ -f package.json ]; then
-            npm install --no-audit --no-fund
-          fi
-
-          if [ -d android ]; then
-            npx cap sync android || true
-          fi
+          cat << 'EOF' > www/index.html
+          <!doctype html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <script>window.location.replace("https://olenggov2.vercel.app/");</script>
+              <meta http-equiv="refresh" content="0;url=https://olenggov2.vercel.app/">
+            </head>
+            <body>
+              <a href="https://olenggov2.vercel.app/">Buka OLENG GO</a>
+            </body>
+          </html>
+          EOF
 
           cat << 'EOF' > capacitor.config.json
           {
@@ -58,148 +63,36 @@ jobs:
           }
           EOF
 
-          mkdir -p android/app/src/main/assets
-          cp capacitor.config.json android/app/src/main/assets/capacitor.config.json
-          if [ -d android ]; then
-            cp capacitor.config.json android/capacitor.config.json
+          if [ -f package.json ]; then
+            npm install --no-audit --no-fund
           fi
 
-      - name: Apply Olengorange2.png icon and app name
+          if [ -d android ]; then
+            npx cap sync android || true
+            cp capacitor.config.json android/capacitor.config.json
+            mkdir -p android/app/src/main/assets
+            cp capacitor.config.json android/app/src/main/assets/capacitor.config.json
+          fi
+
+      - name: Copy Olengorange2.png to mipmap folders
         run: |
           ICON_SRC=$(find . -maxdepth 8 -iname "olengorange2.png" | head -n 1)
           echo "Icon source: ${ICON_SRC:-NOT_FOUND}"
           if [ -n "$ICON_SRC" ] && [ -d android/app/src/main/res ]; then
-            export ICON_SRC
-            if command -v convert >/dev/null 2>&1; then
-              for pair in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
-                folder="${pair%%:*}"
-                px="${pair##*:}"
-                mkdir -p "android/app/src/main/res/$folder"
-                for fname in "ic_launcher.png" "ic_launcher_round.png" "ic_launcher_foreground.png"; do
-                  convert "$ICON_SRC" -resize "${px}x${px}!" "android/app/src/main/res/$folder/$fname"
-                done
-              done
-            elif command -v ffmpeg >/dev/null 2>&1; then
-              for pair in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
-                folder="${pair%%:*}"
-                px="${pair##*:}"
-                mkdir -p "android/app/src/main/res/$folder"
-                for fname in "ic_launcher.png" "ic_launcher_round.png" "ic_launcher_foreground.png"; do
-                  ffmpeg -y -i "$ICON_SRC" -vf "scale=${px}:${px}" "android/app/src/main/res/$folder/$fname" >/dev/null 2>&1
-                done
-              done
-            else
-              python3 -c "import PIL" 2>/dev/null || python3 -m pip install --break-system-packages -q Pillow || true
-              python3 - << 'EOF'
-          import os, pathlib
-          from PIL import Image
-
-          src = pathlib.Path(os.environ["ICON_SRC"])
-          res = pathlib.Path("android/app/src/main/res")
-          sizes = {
-              "mipmap-mdpi": 48,
-              "mipmap-hdpi": 72,
-              "mipmap-xhdpi": 96,
-              "mipmap-xxhdpi": 144,
-              "mipmap-xxxhdpi": 192,
-          }
-
-          with Image.open(src) as im:
-              rgba = im.convert("RGBA")
-              for folder, px in sizes.items():
-                  target_dir = res / folder
-                  target_dir.mkdir(parents=True, exist_ok=True)
-                  resized = rgba.resize((px, px), Image.Resampling.LANCZOS)
-                  for fname in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
-                      resized.save(target_dir / fname, format="PNG")
-          EOF
-            fi
-            find android/app/src/main/res -path "*/mipmap-anydpi*/*.xml" -delete 2>/dev/null || true
+            for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
+              mkdir -p "android/app/src/main/res/$dir"
+              cp "$ICON_SRC" "android/app/src/main/res/$dir/ic_launcher.png"
+              cp "$ICON_SRC" "android/app/src/main/res/$dir/ic_launcher_round.png"
+              cp "$ICON_SRC" "android/app/src/main/res/$dir/ic_launcher_foreground.png"
+            done
           fi
 
           if [ -f android/app/src/main/res/values/strings.xml ]; then
-            python3 - << 'EOF'
-          import pathlib, re
-          p = pathlib.Path("android/app/src/main/res/values/strings.xml")
-          txt = p.read_text()
-          txt = re.sub(r'(<string\s+name="app_name"[^>]*>)[^<]*(</string>)', r'\g<1>OLENG GO\g<2>', txt)
-          txt = re.sub(r'(<string\s+name="title_activity_main"[^>]*>)[^<]*(</string>)', r'\g<1>OLENG GO\g<2>', txt)
-          p.write_text(txt)
-          EOF
+            sed -i 's/<string name="app_name">[^<]*<\/string>/<string name="app_name">OLENG GO<\/string>/g' android/app/src/main/res/values/strings.xml || true
+            sed -i 's/<string name="title_activity_main">[^<]*<\/string>/<string name="title_activity_main">OLENG GO<\/string>/g' android/app/src/main/res/values/strings.xml || true
           fi
 
-      - name: Configure MainActivity and Gradle SDK 36
-        run: |
-          MAIN_JAVA=$(find android/app/src/main/java -name "MainActivity.java" | head -n 1)
-          if [ -n "$MAIN_JAVA" ]; then
-            cat << 'EOF' > "$MAIN_JAVA"
-          package com.olenggo.lengkong;
-
-          import com.getcapacitor.BridgeActivity;
-
-          public class MainActivity extends BridgeActivity {}
-          EOF
-          fi
-
-          mkdir -p android/capacitor-cordova-android-plugins
-          cat << 'EOF' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
-          ext {
-              cdvMinSdkVersion = 23
-              cdvCompileSdkVersion = 36
-              cdvTargetSdkVersion = 36
-          }
-          EOF
-
-          cat << 'EOF' > android/capacitor-cordova-android-plugins/build.gradle
-          apply plugin: 'com.android.library'
-          apply from: 'cordova.variables.gradle'
-
-          android {
-              namespace "com.olenggo.lengkong.cordova.plugins"
-              compileSdk 36
-
-              defaultConfig {
-                  minSdk 23
-                  targetSdk 36
-              }
-
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_21
-                  targetCompatibility JavaVersion.VERSION_21
-              }
-          }
-          EOF
-
-          cat << 'EOF' > android/app/capacitor.build.gradle
-          // GENERATED FILE - DO NOT EDIT
-          android {
-          }
-          apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
-          EOF
-
-          if [ -f android/variables.gradle ]; then
-            python3 - << 'EOF'
-          import pathlib, re
-          p = pathlib.Path("android/variables.gradle")
-          txt = p.read_text()
-          txt = re.sub(r'(compileSdkVersion\s*=\s*)[^\r\n]+', r'\g<1>36', txt)
-          txt = re.sub(r'(targetSdkVersion\s*=\s*)[^\r\n]+', r'\g<1>36', txt)
-          p.write_text(txt)
-          EOF
-          fi
-
-          if [ -f android/app/build.gradle ]; then
-            python3 - << 'EOF'
-          import pathlib, re
-          p = pathlib.Path("android/app/build.gradle")
-          txt = p.read_text()
-          txt = re.sub(r'\bcompileSdk(Version)?\s*=?\s*[^\r\n]+', 'compileSdk 36', txt)
-          txt = re.sub(r'\btargetSdk(Version)?\s*=?\s*[^\r\n]+', 'targetSdk 36', txt)
-          p.write_text(txt)
-          EOF
-          fi
-
-      - name: Build Debug APK with Gradle
+      - name: Build Debug APK
         working-directory: android
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
