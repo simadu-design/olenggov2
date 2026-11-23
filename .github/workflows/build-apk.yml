@@ -64,7 +64,7 @@ jobs:
             cp capacitor.config.json android/capacitor.config.json
           fi
 
-      - name: Apply Olengorange2.png icon, splash, and app name
+      - name: Apply Olengorange2.png icon and app name
         run: |
           ICON_SRC=$(find . -maxdepth 8 -iname "olengorange2.png" | head -n 1)
           echo "Icon source: ${ICON_SRC:-NOT_FOUND}"
@@ -79,8 +79,6 @@ jobs:
                   convert "$ICON_SRC" -resize "${px}x${px}!" "android/app/src/main/res/$folder/$fname"
                 done
               done
-              mkdir -p android/app/src/main/res/drawable
-              convert "$ICON_SRC" -resize 512x512! android/app/src/main/res/drawable/splash.png
             elif command -v ffmpeg >/dev/null 2>&1; then
               for pair in "mipmap-mdpi:48" "mipmap-hdpi:72" "mipmap-xhdpi:96" "mipmap-xxhdpi:144" "mipmap-xxxhdpi:192"; do
                 folder="${pair%%:*}"
@@ -90,8 +88,6 @@ jobs:
                   ffmpeg -y -i "$ICON_SRC" -vf "scale=${px}:${px}" "android/app/src/main/res/$folder/$fname" >/dev/null 2>&1
                 done
               done
-              mkdir -p android/app/src/main/res/drawable
-              ffmpeg -y -i "$ICON_SRC" -vf "scale=512:512" android/app/src/main/res/drawable/splash.png >/dev/null 2>&1
             else
               python3 -c "import PIL" 2>/dev/null || python3 -m pip install --break-system-packages -q Pillow || true
               python3 - << 'EOF'
@@ -116,10 +112,6 @@ jobs:
                   resized = rgba.resize((px, px), Image.Resampling.LANCZOS)
                   for fname in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
                       resized.save(target_dir / fname, format="PNG")
-
-              splash_dir = res / "drawable"
-              splash_dir.mkdir(parents=True, exist_ok=True)
-              rgba.resize((512, 512), Image.Resampling.LANCZOS).save(splash_dir / "splash.png", format="PNG")
           EOF
             fi
             find android/app/src/main/res -path "*/mipmap-anydpi*/*.xml" -delete 2>/dev/null || true
@@ -143,22 +135,9 @@ jobs:
             cat << 'EOF' > "$MAIN_JAVA"
           package com.olenggo.lengkong;
 
-          import android.os.Bundle;
-          import androidx.core.view.WindowCompat;
           import com.getcapacitor.BridgeActivity;
 
-          public class MainActivity extends BridgeActivity {
-              @Override
-              public void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  try {
-                      if (getWindow() != null) {
-                          WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
-                      }
-                  } catch (Exception ignored) {
-                  }
-              }
-          }
+          public class MainActivity extends BridgeActivity {}
           EOF
           fi
 
