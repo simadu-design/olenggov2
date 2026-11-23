@@ -32,7 +32,21 @@ jobs:
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk --licenses >/dev/null 2>&1 || true
           /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || true
 
-          rm -f capacitor.config.ts capacitor.config.js
+          rm -f capacitor.config.ts capacitor.config.js android/capacitor.config.ts android/capacitor.config.js
+
+          mkdir -p www
+          sh -c 'cat << '\''EOF'\'' > www/index.html
+          <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>window.location.replace("https://oleng-lengkong-eight.vercel.app");</script><meta http-equiv="refresh" content="0;url=https://oleng-lengkong-eight.vercel.app"></head><body><a href="https://oleng-lengkong-eight.vercel.app">Buka OLENG GO</a></body></html>
+          EOF'
+
+          if [ -f package.json ]; then
+            npm install --no-audit --no-fund
+          fi
+
+          if [ -d android ]; then
+            npx cap sync android || true
+          fi
+
           sh -c 'cat << '\''EOF'\'' > capacitor.config.json
           {
             "appId": "com.olenggo.lengkong",
@@ -45,19 +59,14 @@ jobs:
           }
           EOF'
 
-          mkdir -p www
-          if [ ! -f www/index.html ]; then
-            sh -c 'cat << '\''EOF'\'' > www/index.html
-          <!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=https://oleng-lengkong-eight.vercel.app"></head><body></body></html>
-          EOF'
-          fi
-
-          if [ -f package.json ]; then
-            npm install --no-audit --no-fund
-          fi
-
+          mkdir -p android/app/src/main/assets
+          cp capacitor.config.json android/app/src/main/assets/capacitor.config.json
           if [ -d android ]; then
-            npx cap sync android || true
+            cp capacitor.config.json android/capacitor.config.json
+          fi
+
+          if [ -f android/app/src/main/res/values/strings.xml ]; then
+            python3 -c 'import pathlib,re; p=pathlib.Path("android/app/src/main/res/values/strings.xml"); s=p.read_text(); s=re.sub(r"(<string\s+name=\"app_name\"[^>]*>)[^<]*(</string>)", r"\g<1>OLENG GO\g<2>", s); s=re.sub(r"(<string\s+name=\"title_activity_main\"[^>]*>)[^<]*(</string>)", r"\g<1>OLENG GO\g<2>", s); p.write_text(s)'
           fi
 
           mkdir -p android/capacitor-cordova-android-plugins
