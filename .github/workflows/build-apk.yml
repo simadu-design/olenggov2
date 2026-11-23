@@ -49,27 +49,7 @@ jobs:
 
           mkdir -p android/capacitor-cordova-android-plugins
           printf 'ext {\n    cdvMinSdkVersion = 23\n    cdvCompileSdkVersion = 35\n    cdvTargetSdkVersion = 35\n}\n' > android/capacitor-cordova-android-plugins/cordova.variables.gradle
-
-          cat << 'GRADLEEOF' > android/capacitor-cordova-android-plugins/build.gradle
-apply plugin: 'com.android.library'
-apply from: 'cordova.variables.gradle'
-
-android {
-    namespace "com.olenggo.lengkong.cordova.plugins"
-    compileSdk 35
-
-    defaultConfig {
-        minSdk 23
-        targetSdk 35
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-}
-GRADLEEOF
-
+          printf 'apply plugin: '\''com.android.library'\''\napply from: '\''cordova.variables.gradle'\''\nandroid {\n    namespace "com.olenggo.lengkong.cordova.plugins"\n    compileSdk 35\n    defaultConfig {\n        minSdk 23\n        targetSdk 35\n    }\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }\n}\n' > android/capacitor-cordova-android-plugins/build.gradle
           printf '// GENERATED FILE - DO NOT EDIT\nandroid {\n}\napply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"\n' > android/app/capacitor.build.gradle
 
           if [ -f android/variables.gradle ]; then
