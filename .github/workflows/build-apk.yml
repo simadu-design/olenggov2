@@ -31,21 +31,7 @@ jobs:
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk --licenses >/dev/null 2>&1 || true
 
-          cat << 'CAPEOF' > capacitor.config.ts
-import type { CapacitorConfig } from '@capacitor/cli';
-
-const config: CapacitorConfig = {
-  appId: 'com.olenggo.lengkong',
-  appName: 'OLENG GO',
-  webDir: 'www',
-  server: {
-    url: 'https://oleng-lengkong-eight.vercel.app',
-    cleartext: true
-  }
-};
-
-export default config;
-CAPEOF
+          node -e 'const fs=require("fs"); fs.writeFileSync("capacitor.config.ts","import type { CapacitorConfig } from '\''@capacitor/cli'\'';\n\nconst config: CapacitorConfig = {\n  appId: '\''com.olenggo.lengkong'\'',\n  appName: '\''OLENG GO'\'',\n  webDir: '\''www'\'',\n  server: {\n    url: '\''https://oleng-lengkong-eight.vercel.app'\'',\n    cleartext: true\n  }\n};\n\nexport default config;\n");'
 
           mkdir -p www
           if [ ! -f "www/index.html" ]; then
