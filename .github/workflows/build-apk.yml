@@ -142,30 +142,16 @@ jobs:
 
           find android/app/src/main/java -name "MainActivity.java" ! -path "$MAIN_FILE" -delete 2>/dev/null || true
 
-      - name: Apply Olengorange2.png with safe padding so it is not cropped
+      - name: Apply Olengorange2.png with safe padding
         run: |
           ICON_SRC=$(find . -maxdepth 8 -iname "olengorange2.png" | head -n 1)
           echo "Icon source: ${ICON_SRC:-NOT_FOUND}"
           if [ -n "$ICON_SRC" ] && [ -d android/app/src/main/res ]; then
             export ICON_SRC
-            python3 - << 'EOF' || {
-              for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
-                mkdir -p "android/app/src/main/res/$dir"
-                cp "$ICON_SRC" "android/app/src/main/res/$dir/ic_launcher.png"
-                cp "$ICON_SRC" "android/app/src/main/res/$dir/ic_launcher_round.png"
-                cp "$ICON_SRC" "android/app/src/main/res/$dir/ic_launcher_foreground.png"
-              done
-            }
-          import os, pathlib, shutil
-          try:
-              from PIL import Image, ImageOps
-          except Exception:
-              for dir in ("mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi"):
-                  d = pathlib.Path("android/app/src/main/res") / dir
-                  d.mkdir(parents=True, exist_ok=True)
-                  for name in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
-                      shutil.copy2(os.environ["ICON_SRC"], d / name)
-              raise SystemExit(0)
+            python3 - << 'EOF'
+          import os
+          import pathlib
+          import shutil
 
           src = pathlib.Path(os.environ["ICON_SRC"])
           res = pathlib.Path("android/app/src/main/res")
@@ -177,19 +163,31 @@ jobs:
               "mipmap-xxxhdpi": 192,
           }
 
-          with Image.open(src) as im:
-              rgba = im.convert("RGBA")
-              for folder, px in sizes.items():
-                  d = res / folder
-                  d.mkdir(parents=True, exist_ok=True)
-                  # Perkecil ke 70% area agar aman dari potongan mask lingkaran/kotak launcher
-                  inner_px = max(16, int(px * 0.70))
-                  contained = ImageOps.contain(rgba, (inner_px, inner_px), method=Image.Resampling.LANCZOS)
-                  canvas = Image.new("RGBA", (px, px), (13, 23, 41, 255))
-                  offset = ((px - contained.width) // 2, (px - contained.height) // 2)
-                  canvas.paste(contained, offset, contained)
+          try:
+              from PIL import Image, ImageOps
+              has_pil = True
+          except Exception:
+              has_pil = False
+
+          if has_pil:
+              with Image.open(src) as im:
+                  rgba = im.convert("RGBA")
+                  for folder, px in sizes.items():
+                      target_dir = res / folder
+                      target_dir.mkdir(parents=True, exist_ok=True)
+                      inner_px = max(16, int(px * 0.70))
+                      contained = ImageOps.contain(rgba, (inner_px, inner_px), method=Image.Resampling.LANCZOS)
+                      canvas = Image.new("RGBA", (px, px), (13, 23, 41, 255))
+                      offset = ((px - contained.width) // 2, (px - contained.height) // 2)
+                      canvas.paste(contained, offset, contained)
+                      for fname in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
+                          canvas.save(target_dir / fname, format="PNG")
+          else:
+              for folder in sizes:
+                  target_dir = res / folder
+                  target_dir.mkdir(parents=True, exist_ok=True)
                   for fname in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
-                      canvas.save(d / fname, format="PNG")
+                      shutil.copy2(src, target_dir / fname)
           EOF
           fi
 
