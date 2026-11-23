@@ -2856,13 +2856,22 @@
 
                 const activeRoleNow = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
                 if (activeRoleNow === 'driver' || activeRoleNow === 'merchant') {
-                    const pendingPopupOrder = (db.orders || []).find(o => {
-                        if (!o || !o.id) return false;
-                        if (shownPopupOrderIds.includes(String(o.id))) return false;
-                        return shouldShowOrderPopupNow(o);
-                    });
-                    if (pendingPopupOrder) {
-                        forceTriggerOrderPopupForNewOrder(pendingPopupOrder);
+                    const modalEl = document.getElementById('modal-incoming-order');
+                    const isModalAlreadyOpen = modalEl && !modalEl.classList.contains('hidden');
+                    if (!isModalAlreadyOpen) {
+                        const pendingPopupOrder = (db.orders || []).find(o => {
+                            if (!o || !o.id) return false;
+                            if (!shouldShowOrderPopupNow(o)) return false;
+                            const popupKey = String(o.id) + '::' + String(normalizePhone(currentUser?.phone) || currentUser?.name || '');
+                            return !shownPopupOrderIds.includes(o.id) && !shownPopupOrderIds.includes(popupKey);
+                        });
+                        if (pendingPopupOrder) {
+                            const popupKey = String(pendingPopupOrder.id) + '::' + String(normalizePhone(currentUser?.phone) || currentUser?.name || '');
+                            shownPopupOrderIds.push(popupKey);
+                            shownPopupOrderIds = shownPopupOrderIds.slice(-200);
+                            localStorage.setItem('oleng_shown_popup_orders', JSON.stringify(shownPopupOrderIds));
+                            forceTriggerOrderPopupForNewOrder(pendingPopupOrder);
+                        }
                     }
                 }
 
@@ -6473,7 +6482,6 @@
             renderPersonalChatMessages();
         }
         function renderChatContacts() {
-            const me = String(currentUser?.name || '').trim().toLowerCase();
             const myPhone = normalizePhone(currentUser?.phone);
             const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
 
@@ -6600,6 +6608,45 @@
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 2500);
         }
+
+        // =========================================================================
+        // PERBAIKAN PAKSA POP-UP ORDER MASUK (DRIVER & MERCHANT)
+        // =========================================================================
+        (function patchOrderPopupTrigger() {
+            const _origPull = window.pullInitialFromSupabase;
+            window.pullInitialFromSupabase = async function (forceRefreshUI = false) {
+                if (typeof _origPull === 'function') {
+                    await _origPull(forceRefreshUI);
+                }
+                if (!currentUser) return;
+                const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+                if (activeRole !== 'driver' && activeRole !== 'merchant') return;
+
+                const modalEl = document.getElementById('modal-incoming-order');
+                const isModalAlreadyOpen = modalEl && !modalEl.classList.contains('hidden');
+                if (isModalAlreadyOpen) return;
+
+                const incomingOffer = (db.orders || []).find(o => {
+                    if (!o || !o.id) return false;
+                    const st = normalizeOrderStatusCode(o.status);
+                    if (st === 'completed' || st === 'cancelled') return false;
+                    if (!isOrderTargetedToCurrentUser(o)) return false;
+                    if (activeRole === 'driver') return shouldDriverReceiveOfferAlarm(o);
+                    if (activeRole === 'merchant') return ['searching_driver', 'driver_assigned', 'merchant_confirmation'].includes(st);
+                    return false;
+                });
+
+                if (incomingOffer) {
+                    const popupKey = String(incomingOffer.id) + '::' + String(normalizePhone(currentUser.phone) || currentUser.name);
+                    if (!shownPopupOrderIds.includes(popupKey)) {
+                        shownPopupOrderIds.push(popupKey);
+                        shownPopupOrderIds = shownPopupOrderIds.slice(-200);
+                        localStorage.setItem('oleng_shown_popup_orders', JSON.stringify(shownPopupOrderIds));
+                        forceTriggerOrderPopupForNewOrder(incomingOffer);
+                    }
+                }
+            };
+        })();
     </script>
 </body>
 </html>
