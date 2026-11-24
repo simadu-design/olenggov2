@@ -190,7 +190,7 @@
                             </div>
                             <div>
                                 <label class="text-[10px] font-extrabold text-sky-900 uppercase">Nama Toko *</label>
-                                <input type="text" id="reg-merchant-shop" class="w-full mt-1 px-3 py-2 border border-sky-200 rounded-xl text-xs font-bold bg-white" placeholder="Contoh: Warung Berkah Lengkong">
+                                <input type="text" id="reg-merchant-shop" class="w-full mt-1 px-3 py-2 border border-sky-200 rounded-xl text-xs font-bold bg-white" placeholder="Nama Toko">
                             </div>
                             <div>
                                 <label class="text-[10px] font-extrabold text-sky-900 uppercase">Nomor KTP *</label>
@@ -200,7 +200,7 @@
                                 <div class="flex justify-between items-center flex-wrap gap-1">
                                     <label class="text-[10px] font-extrabold text-sky-900 uppercase">Lokasi Toko (Klik / Geser Map) *</label>
                                     <div class="flex gap-1">
-                                        <button type="button" onclick="openFullGoogleMapsForCoords(regMerchantLatLng[0], regMerchantLatLng[1], 'Lokasi Toko')" class="px-2 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-extrabold cursor-pointer">
+                                        <button type="button" onclick="openFullGoogleMapsForCoords(regMerchantLatLng[0], regMerchantLatLng[1], '')" class="px-2 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-extrabold cursor-pointer">
                                             <i class="fa-solid fa-diamond-turn-right"></i> GMap
                                         </button>
                                         <button type="button" onclick="useCurrentGPSForMerchantReg()" class="px-2 py-1 bg-sky-700 text-white rounded-lg text-[10px] font-extrabold cursor-pointer">
@@ -210,7 +210,7 @@
                                 </div>
                                 <div id="reg-merchant-map" class="map-container border-2 border-sky-400" style="height: 170px;"></div>
                                 <div class="flex items-center justify-between gap-2 bg-white p-2 rounded-xl border border-sky-200 text-[10px]">
-                                    <span id="reg-merchant-coords-label" class="font-bold text-sky-950 truncate">Koordinat: -7.1240, 106.8460</span>
+                                    <span id="reg-merchant-coords-label" class="font-bold text-sky-950 truncate"></span>
                                     <button type="button" onclick="lockMerchantMapPin()" id="btn-lock-merchant-pin" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg font-extrabold cursor-pointer shrink-0">
                                         <i class="fa-solid fa-lock"></i> Kunci Lokasi
                                     </button>
@@ -505,6 +505,47 @@
             media: localStorage.getItem('oleng_perm_media') || 'siap_galeri_kamera'
         };
 
+        function getHomeTabForCurrentRole() {
+            if (!currentUser) return 'home';
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            if (role === 'admin') return 'admin-dash';
+            if (role === 'merchant') return 'merchant-manage';
+            return 'home';
+        }
+
+        function openExitOlenggoConfirmModal() {
+            let modal = document.getElementById('modal-exit-olenggo');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'modal-exit-olenggo';
+                modal.className = 'fixed inset-0 bg-black/75 backdrop-blur-xs z-[95] flex flex-col justify-center items-center p-4';
+                document.body.appendChild(modal);
+            }
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-5 w-full max-w-xs space-y-4 shadow-2xl border-4 border-yellow-400 text-center">
+                    <div class="w-12 h-12 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center text-xl mx-auto">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </div>
+                    <p class="text-xs font-black text-sky-950 leading-relaxed">Apakah Anda yakin ingin keluar dari aplikasi Olenggo?</p>
+                    <div class="grid grid-cols-2 gap-2.5 pt-1">
+                        <button type="button" onclick="confirmExitOlenggoApp()" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-2xl text-xs cursor-pointer shadow">
+                            Ya, Keluar
+                        </button>
+                        <button type="button" onclick="document.getElementById('modal-exit-olenggo').classList.add('hidden')" class="py-2.5 bg-sky-100 hover:bg-sky-200 text-sky-900 font-black rounded-2xl text-xs cursor-pointer">
+                            Tetap di Aplikasi
+                        </button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+        }
+
+        function confirmExitOlenggoApp() {
+            document.getElementById('modal-exit-olenggo')?.classList.add('hidden');
+            try { window.close(); } catch (e) {}
+            showToast('Anda berada di halaman utama Olenggo.', 'info');
+        }
+
         async function requestAllDevicePermissions(showFeedback = true) {
             if ('Notification' in window && Notification.permission === 'default') {
                 try {
@@ -555,6 +596,11 @@
         }
 
         function handleHardwareBackAction() {
+            const exitModal = document.getElementById('modal-exit-olenggo');
+            if (exitModal && !exitModal.classList.contains('hidden')) {
+                exitModal.classList.add('hidden');
+                return;
+            }
             const confirmLogoutModal = document.getElementById('modal-confirm-logout');
             if (confirmLogoutModal && !confirmLogoutModal.classList.contains('hidden')) {
                 cancelLogoutModal();
@@ -608,11 +654,16 @@
             if (currentUser && document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden')) {
                 if (tabNavigationHistory.length > 1) {
                     tabNavigationHistory.pop();
-                    const prevTab = tabNavigationHistory[tabNavigationHistory.length - 1] || 'home';
+                    const prevTab = tabNavigationHistory[tabNavigationHistory.length - 1] || getHomeTabForCurrentRole();
                     renderDashboardContent(prevTab, false);
-                } else if (currentSubTab !== 'home') {
-                    renderDashboardContent('home', false);
+                    return;
                 }
+                const rootTab = getHomeTabForCurrentRole();
+                if (currentSubTab !== rootTab) {
+                    renderDashboardContent(rootTab, false);
+                    return;
+                }
+                openExitOlenggoConfirmModal();
             }
         }
 
@@ -638,7 +689,7 @@
             } else if (Array.isArray(destLatLng) && destLatLng.length === 2) {
                 url = `https://www.google.com/maps/search/?api=1&query=${destLatLng[0]},${destLatLng[1]}`;
             } else {
-                const q = encodeURIComponent((labelText || 'Lengkong, Sukabumi') + ', Lengkong, Sukabumi');
+                const q = encodeURIComponent(labelText || 'Lengkong, Sukabumi');
                 url = `https://www.google.com/maps/search/?api=1&query=${q}`;
             }
             window.open(url, '_blank');
@@ -667,7 +718,7 @@
             if (typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)) {
                 url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
             } else {
-                const q = encodeURIComponent((pickupText || orderObj?.pickup || 'Lengkong, Sukabumi'));
+                const q = encodeURIComponent(pickupText || orderObj?.pickup || 'Lengkong, Sukabumi');
                 url = `https://www.google.com/maps/search/?api=1&query=${q}`;
             }
             window.open(url, '_blank');
@@ -693,7 +744,7 @@
             if (typeof targetLat === 'number' && typeof targetLng === 'number' && !isNaN(targetLat) && !isNaN(targetLng)) {
                 url = `https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLng}`;
             } else {
-                const q = encodeURIComponent((destText || orderObj?.dest || storeName || 'Lengkong, Sukabumi'));
+                const q = encodeURIComponent(destText || orderObj?.dest || storeName || 'Lengkong, Sukabumi');
                 url = `https://www.google.com/maps/search/?api=1&query=${q}`;
             }
             window.open(url, '_blank');
@@ -2561,7 +2612,7 @@
             }
             const addrInput = document.getElementById('reg-merchant-address');
             if (addrInput && !addrInput.value.trim()) {
-                addrInput.value = `Lokasi Terkunci Map (${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}) - Lengkong, Sukabumi`;
+                addrInput.value = `${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}`;
             }
             showToast(`Berhasil! Lokasi toko dikunci di ${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}.`, 'success');
         }
@@ -2695,7 +2746,7 @@
                     return;
                 }
 
-                const finalAddr = address || `Lokasi Toko (${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}) - Lengkong, Sukabumi`;
+                const finalAddr = address || `${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}`;
                 merchantData = {
                     ownerName,
                     shopName,
@@ -2715,7 +2766,7 @@
                 phone,
                 role,
                 status: 'Aktif',
-                address: merchantData.address || 'Kecamatan Lengkong, Sukabumi',
+                address: merchantData.address || '',
                 balance: (role !== 'customer' ? 50000 : undefined),
                 password: password,
                 photo: 'https://placehold.co/150x150/0369a1/ffffff?text=' + encodeURIComponent(name.charAt(0).toUpperCase()),
@@ -2760,7 +2811,7 @@
                     vehicle: driverData.vehicle,
                     rating: 5.0,
                     ratingCount: 0,
-                    location: 'Lengkong, Sukabumi',
+                    location: '',
                     lat: userCurrentLatLng[0],
                     lng: userCurrentLatLng[1],
                     phone,
@@ -2897,7 +2948,7 @@
                 targetTab = 'home';
                 if(activeRole === 'merchant') targetTab = 'merchant-manage';
                 else if(activeRole === 'admin') targetTab = 'admin-dash';
-                else if(activeRole === 'driver') targetTab = 'driver-orders';
+                else if(activeRole === 'driver') targetTab = 'history';
             }
             renderDashboardContent(targetTab, false);
         }
@@ -3526,7 +3577,7 @@
                         </button>
                         <button onclick="renderDashboardContent('history')" class="bg-white p-3 rounded-2xl shadow-sm border-2 border-sky-100 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-400 transition">
                             <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-receipt"></i></div>
-                            <span class="text-[10px] font-extrabold text-sky-950 text-center leading-tight">Riwayat Pesanan</span>
+                            <span class="text-[10px] font-extrabold text-sky-950 text-center leading-tight">Riwayat</span>
                         </button>
                     </div>
 
@@ -3887,11 +3938,6 @@
             const driverListEl = document.getElementById('checkout-driver-list');
             const merchant = db.activeMerchant || db.merchants[0];
             const confirmBtn = document.getElementById('btn-confirm-cart-driver');
-            
-            const pickupEl = document.getElementById('cart-pickup-label');
-            if (pickupEl && !pickupEl.textContent) {
-                pickupEl.innerText = merchant?.name || '';
-            }
 
             const sortedDrivers = getAvailableOnlineDriversSorted(merchant.lat, merchant.lng);
             if (confirmBtn) {
@@ -4004,7 +4050,7 @@
                     total: subtotal + ongkir,
                     status: 'searching_driver',
                     items: compactItemsText,
-                    pickup: document.getElementById('cart-pickup-label')?.innerText || merchant.name,
+                    pickup: document.getElementById('cart-pickup-label')?.innerText || `${merchant.lat}, ${merchant.lng}`,
                     pickupLat: Number(merchant.lat),
                     pickupLng: Number(merchant.lng),
                     dest: document.getElementById('cart-dest-label')?.innerText || '',
@@ -5242,8 +5288,8 @@
             const isPickup = routeSelectionState.stepMode === 'pickup';
             if (statusEl) {
                 statusEl.textContent = isPickup
-                    ? 'Langkah 1: Klik Titik Awal / Jemputan di peta (lalu otomatis ke Tujuan)'
-                    : 'Langkah 2: Klik Titik Tujuan di peta';
+                    ? 'Tahap 1: Pilih Titik Jemput (klik peta / GPS, lalu otomatis ke Tujuan)'
+                    : 'Tahap 2: Pilih Titik Tujuan (klik titik tujuan di peta)';
             }
             if (btnPickup) {
                 btnPickup.className = isPickup
@@ -5293,7 +5339,7 @@
 
         function triggerLiveGPSToPickup(mapId) {
             if (!navigator.geolocation) {
-                return showToast('GPS tidak didukung perangkat; klik titik awal di peta.', 'info');
+                return showToast('GPS tidak didukung perangkat; klik titik jemput di peta.', 'info');
             }
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
@@ -5306,12 +5352,12 @@
                     if (targetMap) targetMap.setView(userCurrentLatLng, Math.max(targetMap.getZoom(), 16));
                     routeSelectionState.stepMode = 'dest';
                     refreshRouteModePanel(mapId);
-                    showToast(`GPS terkini dikunci (${lat}, ${lng}). Sekarang klik Titik Tujuan di peta.`, 'success');
+                    showToast(`GPS terkini dikunci (${lat}, ${lng}). Tahap 2: klik Titik Tujuan di peta.`, 'success');
                 },
                 () => {
                     devicePermissionsStatus.gps = 'ditolak_atau_mati';
                     localStorage.setItem('oleng_perm_gps', 'ditolak_atau_mati');
-                    showToast('Aktifkan izin lokasi (GPS) di browser HP atau klik Titik Awal di peta.', 'error');
+                    showToast('Aktifkan izin lokasi (GPS) di browser HP atau klik Titik Jemput di peta.', 'error');
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
@@ -5332,7 +5378,7 @@
             getBaseTileLayerForMode().addTo(map);
             plotAllMerchantsAndDrivers(map, false);
 
-            const pickupMarker = L.marker(userCurrentLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Awal / Jemputan</b>');
+            const pickupMarker = L.marker(userCurrentLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Jemput</b>');
             const destMarker = L.marker(destLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Tujuan</b>');
 
             routeSelectionState = {
@@ -5352,11 +5398,11 @@
                     applyCoordinateToRole('pickup', lat, lng, `${lat}, ${lng}`);
                     routeSelectionState.stepMode = 'dest';
                     refreshRouteModePanel(mapId);
-                    showToast(`Titik awal tersimpan (${lat}, ${lng}). Silakan klik Titik Tujuan di peta.`, 'success');
+                    showToast(`Titik jemput tersimpan (${lat}, ${lng}). Lanjut Tahap 2: klik Titik Tujuan di peta.`, 'success');
                 } else {
                     applyCoordinateToRole('dest', lat, lng, `${lat}, ${lng}`);
                     refreshRouteModePanel(mapId);
-                    showToast(`Titik tujuan tersimpan (${lat}, ${lng}).`, 'success');
+                    showToast(`Titik tujuan tersimpan (${lat}, ${lng}). Tahap 3: Konfirmasi Lokasi.`, 'success');
                 }
             });
 
@@ -5365,7 +5411,7 @@
                 applyCoordinateToRole('pickup', pos.lat, pos.lng, `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`);
                 routeSelectionState.stepMode = 'dest';
                 refreshRouteModePanel(mapId);
-                showToast('Titik awal diperbarui. Silakan klik Titik Tujuan di peta.', 'success');
+                showToast('Titik jemput diperbarui. Lanjut klik Titik Tujuan di peta.', 'success');
             });
 
             destMarker.on('dragend', () => {
@@ -5396,20 +5442,19 @@
                 </div>
                 <div class="flex flex-wrap gap-1.5">
                     <button type="button" id="route-mode-pickup-${mapId}" onclick="setRouteStepMode('pickup', '${mapId}')">
-                        Titik Awal / Jemputan (Klik Peta)
+                        Titik Jemput
                     </button>
                     <button type="button" onclick="triggerLiveGPSToPickup('${mapId}')" class="px-2.5 py-1 rounded-xl bg-yellow-400 text-sky-950 font-black cursor-pointer border border-sky-700">
                         GPS Lokasi Terkini
                     </button>
                     <button type="button" id="route-mode-dest-${mapId}" onclick="setRouteStepMode('dest', '${mapId}')">
-                        Titik Tujuan (Klik Peta)
+                        Titik Tujuan
                     </button>
                 </div>
             `;
             refreshRouteModePanel(mapId);
 
-            // Aktifkan GPS lokasi terkini otomatis saat peta dibuka jika izin tersedia
-            if (navigator.geolocation && (!currentUser || (currentUser.role === 'customer' || adminViewMode === 'customer'))) {
+            if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
                         const lat = Number(pos.coords.latitude.toFixed(6));
@@ -5462,7 +5507,7 @@
                 }, () => {
                     devicePermissionsStatus.gps = 'ditolak_atau_mati';
                     localStorage.setItem('oleng_perm_gps', 'ditolak_atau_mati');
-                    showToast('GPS tidak aktif atau belum diizinkan. Aktifkan izin lokasi browser atau klik Titik Awal di peta.', 'error');
+                    showToast('GPS tidak aktif atau belum diizinkan. Aktifkan izin lokasi browser atau klik Titik Jemput di peta.', 'error');
                 }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
             }
         }
