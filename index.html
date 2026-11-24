@@ -1481,7 +1481,7 @@
                         merged.password = String(merged.password).trim();
                     }
                     if (!merged.password) {
-                        merged.password = '123456';
+                        merged.password = '123';
                     }
                     if (prev && typeof prev.balance === 'number') {
                         merged.balance = Math.max(Number(prev.balance || 0), Number(item.balance || 0));
@@ -1555,7 +1555,7 @@
                         role: u.role,
                         status: u.status || 'Aktif',
                         address: u.address || 'Kecamatan Lengkong, Sukabumi',
-                        password_hash: String(u.password || '123456').trim(),
+                        password_hash: String(u.password || '123').trim(),
                         photo_url: u.photo || 'https://placehold.co/150x150/0369a1/ffffff?text=USR',
                         balance: Number(u.balance || 0),
                         ktp: u.ktp || null,
@@ -1973,7 +1973,7 @@
                         const localMatch = localUsersBackup.find(lu => (cleanPhone && normalizePhone(lu.phone) === cleanPhone && lu.role === r.role) || String(lu.accountId || '').toUpperCase() === accUpper);
                         const resolvedPass = (r.password_hash && String(r.password_hash).trim())
                             ? String(r.password_hash).trim()
-                            : (localMatch?.password || '123456');
+                            : (localMatch?.password || '123');
                         const resolvedPhoto = (r.photo_url && String(r.photo_url).trim())
                             ? String(r.photo_url).trim()
                             : (localMatch?.photo || 'https://placehold.co/150x150/0369a1/ffffff?text=USR');
@@ -2196,7 +2196,7 @@
         function addAccountNotification(title, desc, targetUser = null, dedupKey = null) {
             const owner = targetUser || (currentUser ? currentUser.name : 'ALL');
             if (dedupKey) {
-                const fullKey = `${String(dedupKey)}::${normalizeMatchKey(owner)}`;
+                const fullKey = `${String(dedupKey)}::${String(owner).toLowerCase()}`;
                 if (sentNotifDedupeKeys.includes(fullKey)) return;
                 sentNotifDedupeKeys.push(fullKey);
                 sentNotifDedupeKeys = sentNotifDedupeKeys.slice(-300);
@@ -2211,7 +2211,7 @@
                 desc: desc
             });
             saveDB();
-            if (currentUser && (owner === 'ALL' || normalizeMatchKey(owner) === normalizeMatchKey(currentUser.name) || normalizeMatchKey(owner) === normalizeMatchKey(currentUser.shopName))) {
+            if (currentUser && (owner === 'ALL' || String(owner).toLowerCase() === String(currentUser.name || '').toLowerCase())) {
                 playAlarmRingtone();
                 notifyBackgroundOnce('notif-' + notifId + '-' + owner, title, desc);
             }
@@ -2566,7 +2566,7 @@
                 return;
             }
 
-            const storedPass = String(foundUser.password || '123456').trim();
+            const storedPass = String(foundUser.password || '123').trim();
             const isAdminDefaultMatch = (phone === '085624736602' && role === 'admin' && password === '123');
             if (storedPass !== password && !isAdminDefaultMatch) {
                 showToast('Kata sandi salah! Pastikan sandi tidak ada spasi tambahan.', 'error');
@@ -3285,10 +3285,10 @@
 
                     const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
                     if (activeRole === 'merchant' || activeRole === 'admin') {
-                        const m = db.merchants.find(x => normalizeMatchKey(x.name) === normalizeMatchKey(order.merchant) || normalizePhone(x.whatsapp) === normalizePhone(currentUser.phone));
+                        const m = db.merchants.find(x => x.name === order.merchant || normalizePhone(x.whatsapp) === normalizePhone(currentUser.phone));
                         const ownerLabel = m ? m.name : order.merchant;
                         if (m) m.balance = Number(m.balance || 0) + netEarnings;
-                        const u = db.users.find(x => (x.role === 'merchant' || x.role === 'admin') && (normalizeMatchKey(x.name) === normalizeMatchKey(order.merchant) || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
+                        const u = db.users.find(x => (x.role === 'merchant' || x.role === 'admin') && (x.name === order.merchant || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
                         if (u) u.balance = Number(u.balance || 0) + netEarnings;
                         recordWalletMutation({
                             ownerName: ownerLabel,
@@ -3300,10 +3300,10 @@
                             netAmount: netEarnings
                         });
                     } else {
-                        const d = db.drivers.find(x => normalizeMatchKey(x.name) === normalizeMatchKey(order.driver) || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
+                        const d = db.drivers.find(x => x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone));
                         const driverLabel = d ? d.name : order.driver;
                         if (d) d.balance = Number(d.balance || 0) + netEarnings;
-                        const u = db.users.find(x => x.role === 'driver' && (normalizeMatchKey(x.name) === normalizeMatchKey(order.driver) || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
+                        const u = db.users.find(x => x.role === 'driver' && (x.name === order.driver || normalizePhone(x.phone) === normalizePhone(currentUser.phone)));
                         if (u) u.balance = Number(u.balance || 0) + netEarnings;
                         recordWalletMutation({
                             ownerName: driverLabel,
@@ -3373,7 +3373,7 @@
             order.rating = selectedRatingStar;
             order.reviewText = comment;
 
-            const drv = db.drivers.find(d => normalizeMatchKey(d.name) === normalizeMatchKey(order.driver));
+            const drv = db.drivers.find(d => d.name === order.driver);
             if (drv) {
                 const count = Number(drv.ratingCount || 0) + 1;
                 const prevTotal = Number(drv.rating || 5) * Number(drv.ratingCount || 0);
@@ -3381,7 +3381,7 @@
                 drv.ratingCount = count;
             }
 
-            const mrc = db.merchants.find(m => normalizeMatchKey(m.name) === normalizeMatchKey(order.merchant));
+            const mrc = db.merchants.find(m => m.name === order.merchant);
             if (mrc) {
                 const count = Number(mrc.ratingCount || 0) + 1;
                 const prevTotal = Number(mrc.rating || 5) * Number(mrc.ratingCount || 0);
@@ -3535,7 +3535,7 @@
                                 <button onclick="openFullGoogleMapsForCoords(destLatLng[0], destLatLng[1], 'Lokasi Tujuan Makanan Lengkong')" class="px-2 py-1 bg-emerald-600 text-white rounded-xl text-[10px] font-extrabold cursor-pointer">
                                     <i class="fa-solid fa-diamond-turn-right"></i> Google Maps
                                 </button>
-                                <button onclick="toggleMapLayerMode()" class="px-2 py-1 bg-sky-900 text-yellow-300 rounded-xl text-[10px] font-extrabold cursor-pointer">
+                                <button onclick="toggleMapLayerMode()" class="px-2.5 py-1 bg-sky-900 text-yellow-300 rounded-xl text-[10px] font-extrabold cursor-pointer">
                                     <i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span>
                                 </button>
                                 <button onclick="useCurrentGPSLocation('food')" class="px-2.5 py-1 bg-yellow-400 text-sky-950 rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer shadow-xs">
@@ -3588,7 +3588,7 @@
             if (!merchant) return;
             db.activeMerchant = merchant;
             const merchantFoods = db.foods.filter(f => Number(f.merchantId) === Number(merchantId));
-            const merchantReviews = (db.reviews || []).filter(r => normalizeMatchKey(r.merchant) === normalizeMatchKey(merchant.name));
+            const merchantReviews = (db.reviews || []).filter(r => r.merchant === merchant.name);
             const dist = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], merchant.lat, merchant.lng);
             const isOpen = merchant.status === 'Buka';
 
