@@ -3522,7 +3522,7 @@
             const layerBtnLabel = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
 
             container.innerHTML = `
-                <div class="p-4 space-y-4 bg-gradient-to-b from-sky-700 via-sky-600 to-white min-h-full pb-20">
+                <div class="p-4 space-y-4 bg-gradient-to-b from-sky-700 via-sky-600 to-white min-h-full pb-24">
                     
                     <div class="bg-gradient-to-r from-sky-800 to-sky-950 text-white p-4 rounded-3xl shadow-xl flex items-center justify-between border-2 border-yellow-400">
                         <div class="flex items-center space-x-3">
@@ -3569,22 +3569,19 @@
                         <img src="${activeBanner}" class="w-full h-36 object-cover" alt="Banner Oleng Go">
                     </div>
 
-                    <div class="grid grid-cols-4 gap-2">
-                        <button onclick="renderDashboardContent('ojek')" class="bg-white p-3 rounded-2xl shadow-sm border-2 border-sky-100 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-400 transition">
-                            <div class="w-12 h-12 bg-sky-100 text-sky-800 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-motorcycle"></i></div>
-                            <span class="text-[10px] font-extrabold text-sky-950 text-center leading-tight">Pesan Ojek</span>
+                    <!-- 2 PANEL MENU UTAMA SEJAJAR PROPORSIONAL DI ATAS PETA -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="renderDashboardContent('ojek')" class="bg-white min-h-[108px] px-3 py-4 rounded-3xl shadow-md border-2 border-sky-200 hover:border-yellow-400 flex flex-col items-center justify-center cursor-pointer transition">
+                            <div class="w-14 h-14 bg-sky-100 text-sky-800 rounded-2xl flex items-center justify-center text-2xl mb-2 shadow-inner">
+                                <i class="fa-solid fa-motorcycle"></i>
+                            </div>
+                            <span class="text-xs font-black text-sky-950 text-center leading-snug">Pesan Ojek</span>
                         </button>
-                        <button onclick="renderDashboardContent('food')" class="bg-white p-3 rounded-2xl shadow-sm border-2 border-sky-100 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-400 transition">
-                            <div class="w-12 h-12 bg-yellow-100 text-amber-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-utensils"></i></div>
-                            <span class="text-[10px] font-extrabold text-sky-950 text-center leading-tight">Pesan Makanan</span>
-                        </button>
-                        <button onclick="switchView('chat')" class="bg-white p-3 rounded-2xl shadow-sm border-2 border-sky-100 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-400 transition">
-                            <div class="w-12 h-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-comments"></i></div>
-                            <span class="text-[10px] font-extrabold text-sky-950 text-center leading-tight">Live Chat Bantuan</span>
-                        </button>
-                        <button onclick="renderDashboardContent('history')" class="bg-white p-3 rounded-2xl shadow-sm border-2 border-sky-100 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-400 transition">
-                            <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl mb-1.5 shadow-inner"><i class="fa-solid fa-receipt"></i></div>
-                            <span class="text-[10px] font-extrabold text-sky-950 text-center leading-tight">Riwayat</span>
+                        <button onclick="renderDashboardContent('food')" class="bg-white min-h-[108px] px-3 py-4 rounded-3xl shadow-md border-2 border-sky-200 hover:border-yellow-400 flex flex-col items-center justify-center cursor-pointer transition">
+                            <div class="w-14 h-14 bg-yellow-100 text-amber-700 rounded-2xl flex items-center justify-center text-2xl mb-2 shadow-inner">
+                                <i class="fa-solid fa-utensils"></i>
+                            </div>
+                            <span class="text-xs font-black text-sky-950 text-center leading-snug">Pesan Makanan</span>
                         </button>
                     </div>
 
