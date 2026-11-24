@@ -869,11 +869,13 @@
             if (mapLayerMode === 'satellite') {
                 return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                     maxZoom: 19,
+                    minZoom: 5,
                     attribution: 'Tiles &copy; Esri'
                 });
             }
             return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
+                minZoom: 5,
                 attribution: '&copy; OpenStreetMap'
             });
         }
@@ -1070,6 +1072,13 @@
         let destLatLng = [-7.1285, 106.8510];
         let regMerchantLatLng = [-7.1240, 106.8460];
         let isRegMerchantLocationLocked = false;
+
+        const LENGKONG_LANDMARKS = [
+            { name: 'Alun-Alun Lengkong', lat: -7.1234, lng: 106.8456, desc: 'Patokan pusat Lengkong, Sukabumi' },
+            { name: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, desc: 'Area pasar & kuliner Lengkong' },
+            { name: 'Jl. Raya Lengkong', lat: -7.1240, lng: 106.8460, desc: 'Jalur utama Kecamatan Lengkong' },
+            { name: 'Kantor Kec. Lengkong', lat: -7.1225, lng: 106.8445, desc: 'Pusat pemerintahan Lengkong' }
+        ];
 
         const DEFAULT_MAIN_BANNER = 'https://placehold.co/600x300/0369a1/facc15?text=OLENG+GO+OJEK+ONLINE+LENGKONG';
 
@@ -2461,7 +2470,7 @@
                 regMerchantMapInstance.remove();
                 regMerchantMapInstance = null;
             }
-            regMerchantMapInstance = L.map('reg-merchant-map', { zoomControl: true }).setView(regMerchantLatLng, 16);
+            regMerchantMapInstance = L.map('reg-merchant-map', { zoomControl: true, minZoom: 5, maxZoom: 19 }).setView(regMerchantLatLng, 16);
             getBaseTileLayerForMode().addTo(regMerchantMapInstance);
 
             const marker = L.marker(regMerchantLatLng, { draggable: true })
@@ -3496,6 +3505,7 @@
                         <div class="flex items-center justify-between text-[10px] text-sky-900 font-bold pt-1">
                             <span><i class="fa-solid fa-store text-amber-500"></i> Mitra Toko</span>
                             <span><i class="fa-solid fa-motorcycle text-sky-700"></i> Mitra Ojek</span>
+                            <span><i class="fa-solid fa-location-pin text-rose-600"></i> Patokan Real</span>
                         </div>
                     </div>
                 </div>
@@ -5067,6 +5077,12 @@
         }
 
         function plotAllMerchantsAndDrivers(targetMap, syncCurrentUserDriverGPS = false) {
+            LENGKONG_LANDMARKS.forEach(lm => {
+                L.circleMarker([lm.lat, lm.lng], { radius: 6, color: '#0c4a6e', fillColor: '#facc15', fillOpacity: 0.95, weight: 2 })
+                    .addTo(targetMap)
+                    .bindPopup(`<b><i class="fa-solid fa-location-pin"></i> ${lm.name}</b><br>${lm.desc}`);
+            });
+
             db.merchants.forEach(m => {
                 if (typeof m.lat === 'number' && typeof m.lng === 'number' && String(m.name || '').trim() !== '') {
                     L.marker([m.lat, m.lng], { icon: createStoreMarkerIcon(m.name) }).addTo(targetMap)
@@ -5092,7 +5108,7 @@
             if(!mapEl) return;
             if(mapInstance) mapInstance.remove();
             const startCenter = currentMapCenter || userCurrentLatLng;
-            mapInstance = L.map('map', { zoomControl: true }).setView(startCenter, currentMapZoom);
+            mapInstance = L.map('map', { zoomControl: true, minZoom: 5, maxZoom: 19 }).setView(startCenter, currentMapZoom);
             getBaseTileLayerForMode().addTo(mapInstance);
             plotAllMerchantsAndDrivers(mapInstance, true);
 
@@ -5132,54 +5148,249 @@
             }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
         }
 
+        let activeMapPopupState = {
+            map: null,
+            pickupMarker: null,
+            destMarker: null,
+            pickupLabelId: null,
+            destLabelId: null,
+            isOjek: false,
+            mapId: null,
+            lat: null,
+            lng: null
+        };
+
+        function syncPickupLabelAndFare(lat, lng, sourceText = '') {
+            userCurrentLatLng = [Number(lat.toFixed(6)), Number(lng.toFixed(6))];
+            if (activeMapPopupState.pickupMarker) {
+                activeMapPopupState.pickupMarker.setLatLng(userCurrentLatLng);
+            }
+            const el = activeMapPopupState.pickupLabelId ? document.getElementById(activeMapPopupState.pickupLabelId) : null;
+            const textVal = sourceText || `Jemput (${userCurrentLatLng[0]}, ${userCurrentLatLng[1]})`;
+            if (el) {
+                if (el.tagName === 'INPUT') el.value = textVal;
+                else el.innerText = textVal;
+            }
+            if (activeMapPopupState.isOjek && typeof updateOjekFareUI === 'function') {
+                updateOjekFareUI();
+            } else if (activeMapPopupState.mapId === 'checkout-map' && typeof updateCartUI === 'function') {
+                updateCartUI();
+            }
+        }
+
+        function syncDestLabelAndFare(lat, lng, sourceText = '') {
+            destLatLng = [Number(lat.toFixed(6)), Number(lng.toFixed(6))];
+            if (activeMapPopupState.destMarker) {
+                activeMapPopupState.destMarker.setLatLng(destLatLng);
+            }
+            const el = activeMapPopupState.destLabelId ? document.getElementById(activeMapPopupState.destLabelId) : null;
+            const coordText = sourceText || `Lokasi (${destLatLng[0]}, ${destLatLng[1]})`;
+            if (el) {
+                if (el.tagName === 'INPUT') {
+                    el.value = coordText;
+                } else {
+                    el.innerText = coordText;
+                }
+            }
+            if (activeMapPopupState.isOjek && typeof updateOjekFareUI === 'function') {
+                updateOjekFareUI();
+            } else if (activeMapPopupState.mapId === 'checkout-map' && typeof updateCartUI === 'function') {
+                updateCartUI();
+            }
+        }
+
+        function olengMapChoosePickupTap() {
+            if (typeof activeMapPopupState.lat !== 'number' || typeof activeMapPopupState.lng !== 'number') return;
+            syncPickupLabelAndFare(activeMapPopupState.lat, activeMapPopupState.lng);
+            if (activeMapPopupState.map) activeMapPopupState.map.closePopup();
+            showToast(`Titik jemputan diatur ke (${activeMapPopupState.lat.toFixed(6)}, ${activeMapPopupState.lng.toFixed(6)}).`, 'success');
+        }
+
+        function olengMapChoosePickupGPS() {
+            if (!navigator.geolocation) {
+                return showToast('Perangkat tidak mendukung GPS.', 'error');
+            }
+            if (activeMapPopupState.map) activeMapPopupState.map.closePopup();
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const lat = Number(pos.coords.latitude.toFixed(6));
+                    const lng = Number(pos.coords.longitude.toFixed(6));
+                    syncPickupLabelAndFare(lat, lng, `GPS Terkini (${lat}, ${lng})`);
+                    if (activeMapPopupState.map) {
+                        activeMapPopupState.map.setView([lat, lng], Math.max(activeMapPopupState.map.getZoom(), 16));
+                    }
+                    showToast(`Titik jemputan GPS terkini dikunci (${lat}, ${lng}).`, 'success');
+                },
+                () => {
+                    showToast('Gagal mengambil lokasi GPS terkini. Periksa izin lokasi.', 'error');
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function olengMapChooseDestTap() {
+            if (typeof activeMapPopupState.lat !== 'number' || typeof activeMapPopupState.lng !== 'number') return;
+            syncDestLabelAndFare(activeMapPopupState.lat, activeMapPopupState.lng);
+            if (activeMapPopupState.map) activeMapPopupState.map.closePopup();
+            showToast(`Titik tujuan diatur ke (${activeMapPopupState.lat.toFixed(6)}, ${activeMapPopupState.lng.toFixed(6)}).`, 'success');
+        }
+
+        function olengSetPickupFromGPS(pickupId, destId, isOjek, mapId) {
+            if (!navigator.geolocation) return showToast('GPS tidak didukung perangkat ini.', 'error');
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const lat = Number(pos.coords.latitude.toFixed(6));
+                    const lng = Number(pos.coords.longitude.toFixed(6));
+                    activeMapPopupState.pickupLabelId = pickupId;
+                    activeMapPopupState.destLabelId = destId;
+                    activeMapPopupState.isOjek = isOjek;
+                    activeMapPopupState.mapId = mapId;
+                    syncPickupLabelAndFare(lat, lng, `GPS Terkini (${lat}, ${lng})`);
+                    const targetMap = mapId === 'checkout-map' ? checkoutMapInstance : mapId === 'ojek-map' ? ojekMapInstance : mapInstance;
+                    if (targetMap) targetMap.setView(userCurrentLatLng, Math.max(targetMap.getZoom(), 16));
+                    showToast(`Titik jemputan GPS dikunci: ${lat}, ${lng}`, 'success');
+                },
+                () => showToast('Gagal mengambil GPS. Aktifkan izin lokasi HP.', 'error'),
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function olengApplyLandmark(idx, mode, pickupId, destId, isOjek, mapId) {
+            const lm = LENGKONG_LANDMARKS[Number(idx)];
+            if (!lm) return;
+            const targetMap = mapId === 'checkout-map' ? checkoutMapInstance : mapId === 'ojek-map' ? ojekMapInstance : mapInstance;
+            activeMapPopupState.pickupLabelId = pickupId;
+            activeMapPopupState.destLabelId = destId;
+            activeMapPopupState.isOjek = isOjek;
+            activeMapPopupState.mapId = mapId;
+            if (mode === 'pickup') {
+                syncPickupLabelAndFare(lm.lat, lm.lng, lm.name);
+            } else {
+                syncDestLabelAndFare(lm.lat, lm.lng, lm.name);
+            }
+            if (targetMap) targetMap.setView([lm.lat, lm.lng], Math.max(targetMap.getZoom(), 16));
+            showToast(`${mode === 'pickup' ? 'Titik jemputan' : 'Titik tujuan'}: ${lm.name}`, 'success');
+        }
+
+        function olengZoomRouteMap(mapId, delta) {
+            const targetMap = mapId === 'checkout-map' ? checkoutMapInstance : mapId === 'ojek-map' ? ojekMapInstance : mapInstance;
+            if (!targetMap) return;
+            if (delta > 0) targetMap.zoomIn(Math.abs(delta));
+            else targetMap.zoomOut(Math.abs(delta));
+        }
+
         function initInteractiveRouteMap(mapId, pickupInputId, destInputId, isOjek = false, mode = 'ojek') {
             const mapEl = document.getElementById(mapId);
             if(!mapEl) return;
 
-            const map = L.map(mapId, { zoomControl: true }).setView(userCurrentLatLng, 15);
+            const map = L.map(mapId, { zoomControl: true, minZoom: 5, maxZoom: 19 }).setView(userCurrentLatLng, 15);
             getBaseTileLayerForMode().addTo(map);
             plotAllMerchantsAndDrivers(map, false);
 
-            const pickupMarker = L.marker(userCurrentLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Awal (GPS Akurat)</b>').openPopup();
+            const pickupMarker = L.marker(userCurrentLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Awal (Jemput)</b>').openPopup();
             const destMarker = L.marker(destLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Tujuan</b>');
 
-            const applyNewDestination = (lat, lng) => {
-                destLatLng = [Number(lat.toFixed(6)), Number(lng.toFixed(6))];
-                destMarker.setLatLng(destLatLng);
-                const coordText = `Lokasi (${destLatLng[0]}, ${destLatLng[1]})`;
-                const destLabelEl = document.getElementById(destInputId);
-                if (destLabelEl) {
-                    if (destLabelEl.tagName === 'INPUT') {
-                        if (!destLabelEl.value.trim()) destLabelEl.value = coordText;
-                    } else {
-                        destLabelEl.innerText = coordText;
-                    }
-                }
-                if (isOjek) updateOjekFareUI();
-                else if (mapId === 'checkout-map') updateCartUI();
+            activeMapPopupState = {
+                map,
+                pickupMarker,
+                destMarker,
+                pickupLabelId: pickupInputId,
+                destLabelId: destInputId,
+                isOjek,
+                mapId,
+                lat: userCurrentLatLng[0],
+                lng: userCurrentLatLng[1]
             };
 
             map.on('click', (e) => {
-                applyNewDestination(e.latlng.lat, e.latlng.lng);
-                showToast('Titik tujuan dipilih pada peta!', 'success');
+                activeMapPopupState = {
+                    map,
+                    pickupMarker,
+                    destMarker,
+                    pickupLabelId: pickupInputId,
+                    destLabelId: destInputId,
+                    isOjek,
+                    mapId,
+                    lat: Number(e.latlng.lat.toFixed(6)),
+                    lng: Number(e.latlng.lng.toFixed(6))
+                };
+
+                const htmlMenu = `
+                    <div style="min-width:195px;font-family:'Plus Jakarta Sans',sans-serif;" class="space-y-1.5">
+                        <div style="font-size:10px;font-weight:800;color:#0c4a6e;">
+                            Pilih fungsi titik (${activeMapPopupState.lat}, ${activeMapPopupState.lng}):
+                        </div>
+                        <button type="button" onclick="olengMapChoosePickupTap()" style="width:100%;padding:6px 8px;border-radius:10px;background:#0369a1;color:#fff;font-size:11px;font-weight:800;border:none;cursor:pointer;text-align:left;">
+                            1. Titik Jemputan (Ketuk)
+                        </button>
+                        <button type="button" onclick="olengMapChoosePickupGPS()" style="width:100%;padding:6px 8px;border-radius:10px;background:#facc15;color:#0c4a6e;font-size:11px;font-weight:900;border:1px solid #0369a1;cursor:pointer;text-align:left;">
+                            2. Titik Jemputan GPS Terkini
+                        </button>
+                        <button type="button" onclick="olengMapChooseDestTap()" style="width:100%;padding:6px 8px;border-radius:10px;background:#059669;color:#fff;font-size:11px;font-weight:800;border:none;cursor:pointer;text-align:left;">
+                            3. Titik Tujuan
+                        </button>
+                    </div>
+                `;
+
+                L.popup({ closeButton: true, autoPan: true })
+                    .setLatLng(e.latlng)
+                    .setContent(htmlMenu)
+                    .openOn(map);
             });
 
             pickupMarker.on('dragend', () => {
                 const pos = pickupMarker.getLatLng();
-                userCurrentLatLng = [Number(pos.lat.toFixed(6)), Number(pos.lng.toFixed(6))];
-                if(isOjek) updateOjekFareUI();
-                else if (mapId === 'checkout-map') updateCartUI();
-                showToast('Berhasil memperbarui titik awal peta!', 'success');
+                activeMapPopupState.pickupLabelId = pickupInputId;
+                activeMapPopupState.destLabelId = destInputId;
+                activeMapPopupState.isOjek = isOjek;
+                activeMapPopupState.mapId = mapId;
+                syncPickupLabelAndFare(pos.lat, pos.lng);
+                showToast('Berhasil memperbarui titik awal jemput!', 'success');
             });
 
             destMarker.on('dragend', () => {
                 const pos = destMarker.getLatLng();
-                applyNewDestination(pos.lat, pos.lng);
+                activeMapPopupState.pickupLabelId = pickupInputId;
+                activeMapPopupState.destLabelId = destInputId;
+                activeMapPopupState.isOjek = isOjek;
+                activeMapPopupState.mapId = mapId;
+                syncDestLabelAndFare(pos.lat, pos.lng);
                 showToast('Berhasil memperbarui titik tujuan peta!', 'success');
             });
 
             if(mapId === 'checkout-map') checkoutMapInstance = map;
             else if(mapId === 'ojek-map') ojekMapInstance = map;
+
+            let barId = `outside-map-controls-${mapId}`;
+            let bar = document.getElementById(barId);
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = barId;
+                bar.className = 'mt-2 p-2.5 rounded-2xl bg-sky-50 border border-sky-200 space-y-2 text-[10px]';
+                mapEl.insertAdjacentElement('afterend', bar);
+            }
+
+            bar.innerHTML = `
+                <div class="flex flex-wrap gap-1.5 items-center justify-between">
+                    <span class="font-black text-sky-950 uppercase">Menu Luar Peta (Jemput & Tujuan):</span>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="olengSetPickupFromGPS('${pickupInputId}','${destInputId}',${isOjek},'${mapId}')" class="px-2 py-1 rounded-lg bg-sky-700 text-white font-black cursor-pointer">
+                            <i class="fa-solid fa-crosshairs"></i> Jemput GPS Terkini
+                        </button>
+                        <button type="button" onclick="olengZoomRouteMap('${mapId}', 2)" class="px-2 py-1 rounded-lg bg-yellow-400 text-sky-950 font-black cursor-pointer">Zoom +</button>
+                        <button type="button" onclick="olengZoomRouteMap('${mapId}', -2)" class="px-2 py-1 rounded-lg bg-white border border-sky-300 text-sky-900 font-black cursor-pointer">Zoom -</button>
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <span class="font-bold text-sky-900 block">Patokan Real Lengkong (Klik untuk Jemput / Tujuan):</span>
+                    <div class="flex flex-wrap gap-1">
+                        ${LENGKONG_LANDMARKS.map((lm, i) => `
+                            <button type="button" onclick="olengApplyLandmark(${i},'pickup','${pickupInputId}','${destInputId}',${isOjek},'${mapId}')" class="px-2 py-1 rounded-lg bg-sky-100 text-sky-900 font-bold cursor-pointer">Jemput: ${lm.name}</button>
+                            <button type="button" onclick="olengApplyLandmark(${i},'dest','${pickupInputId}','${destInputId}',${isOjek},'${mapId}')" class="px-2 py-1 rounded-lg bg-amber-100 text-amber-900 font-bold cursor-pointer">Tujuan: ${lm.name}</button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
 
             setTimeout(() => {
                 try { map.invalidateSize(); } catch (e) {}
@@ -5397,155 +5608,6 @@
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 2500);
         }
-
-        // PATCH 3 PILIHAN SAAT PETA DIKLIK: TITIK JEMPUTAN (KETUK), TITIK JEMPUTAN GPS TERKINI, & TITIK TUJUAN
-        (function () {
-            let activeMapPopupState = {
-                map: null,
-                pickupMarker: null,
-                destMarker: null,
-                pickupLabelId: null,
-                destLabelId: null,
-                isOjek: false,
-                mapId: null,
-                lat: null,
-                lng: null
-            };
-
-            function syncPickupLabelAndFare(lat, lng, sourceText = '') {
-                userCurrentLatLng = [Number(lat.toFixed(6)), Number(lng.toFixed(6))];
-                if (activeMapPopupState.pickupMarker) {
-                    activeMapPopupState.pickupMarker.setLatLng(userCurrentLatLng);
-                }
-                const el = activeMapPopupState.pickupLabelId ? document.getElementById(activeMapPopupState.pickupLabelId) : null;
-                const textVal = sourceText || `Jemput (${userCurrentLatLng[0]}, ${userCurrentLatLng[1]})`;
-                if (el) {
-                    if (el.tagName === 'INPUT') el.value = textVal;
-                    else el.innerText = textVal;
-                }
-                if (activeMapPopupState.isOjek && typeof updateOjekFareUI === 'function') {
-                    updateOjekFareUI();
-                } else if (activeMapPopupState.mapId === 'checkout-map' && typeof updateCartUI === 'function') {
-                    updateCartUI();
-                }
-            }
-
-            function syncDestLabelAndFare(lat, lng) {
-                destLatLng = [Number(lat.toFixed(6)), Number(lng.toFixed(6))];
-                if (activeMapPopupState.destMarker) {
-                    activeMapPopupState.destMarker.setLatLng(destLatLng);
-                }
-                const el = activeMapPopupState.destLabelId ? document.getElementById(activeMapPopupState.destLabelId) : null;
-                const coordText = `Lokasi (${destLatLng[0]}, ${destLatLng[1]})`;
-                if (el) {
-                    if (el.tagName === 'INPUT') {
-                        if (!el.value.trim() || el.value.startsWith('Lokasi (')) el.value = coordText;
-                    } else {
-                        el.innerText = coordText;
-                    }
-                }
-                if (activeMapPopupState.isOjek && typeof updateOjekFareUI === 'function') {
-                    updateOjekFareUI();
-                } else if (activeMapPopupState.mapId === 'checkout-map' && typeof updateCartUI === 'function') {
-                    updateCartUI();
-                }
-            }
-
-            window.olengMapChoosePickupTap = function () {
-                if (typeof activeMapPopupState.lat !== 'number' || typeof activeMapPopupState.lng !== 'number') return;
-                syncPickupLabelAndFare(activeMapPopupState.lat, activeMapPopupState.lng);
-                if (activeMapPopupState.map) activeMapPopupState.map.closePopup();
-                showToast(`Titik jemputan diatur ke (${activeMapPopupState.lat.toFixed(6)}, ${activeMapPopupState.lng.toFixed(6)}).`, 'success');
-            };
-
-            window.olengMapChoosePickupGPS = function () {
-                if (!navigator.geolocation) {
-                    return showToast('Perangkat tidak mendukung GPS.', 'error');
-                }
-                if (activeMapPopupState.map) activeMapPopupState.map.closePopup();
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        const lat = Number(pos.coords.latitude.toFixed(6));
-                        const lng = Number(pos.coords.longitude.toFixed(6));
-                        syncPickupLabelAndFare(lat, lng, `GPS Terkini (${lat}, ${lng})`);
-                        if (activeMapPopupState.map) {
-                            activeMapPopupState.map.setView([lat, lng], Math.max(activeMapPopupState.map.getZoom(), 15));
-                        }
-                        showToast(`Titik jemputan GPS terkini dikunci (${lat}, ${lng}).`, 'success');
-                    },
-                    () => {
-                        showToast('Gagal mengambil lokasi GPS terkini. Periksa izin lokasi.', 'error');
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
-            };
-
-            window.olengMapChooseDestTap = function () {
-                if (typeof activeMapPopupState.lat !== 'number' || typeof activeMapPopupState.lng !== 'number') return;
-                syncDestLabelAndFare(activeMapPopupState.lat, activeMapPopupState.lng);
-                if (activeMapPopupState.map) activeMapPopupState.map.closePopup();
-                showToast(`Titik tujuan diatur ke (${activeMapPopupState.lat.toFixed(6)}, ${activeMapPopupState.lng.toFixed(6)}).`, 'success');
-            };
-
-            const _origInitInteractiveRouteMap = initInteractiveRouteMap;
-            initInteractiveRouteMap = function (mapId, pickupInputId, destInputId, isOjek = false, mode = 'ojek') {
-                _origInitInteractiveRouteMap(mapId, pickupInputId, destInputId, isOjek, mode);
-
-                const targetMap =
-                    mapId === 'checkout-map' ? checkoutMapInstance :
-                    mapId === 'ojek-map' ? ojekMapInstance :
-                    mapInstance;
-
-                if (!targetMap) return;
-
-                let pickupMarker = null;
-                let destMarker = null;
-                targetMap.eachLayer((layer) => {
-                    if (layer instanceof L.Marker && layer.options && layer.options.draggable) {
-                        const popupContent = String(layer.getPopup()?.getContent() || '');
-                        if (popupContent.includes('Titik Awal')) pickupMarker = layer;
-                        else if (popupContent.includes('Titik Tujuan')) destMarker = layer;
-                    }
-                });
-
-                targetMap.off('click');
-                targetMap.on('click', (e) => {
-                    activeMapPopupState = {
-                        map: targetMap,
-                        pickupMarker,
-                        destMarker,
-                        pickupLabelId: pickupInputId,
-                        destLabelId: destInputId,
-                        isOjek,
-                        mapId,
-                        lat: Number(e.latlng.lat.toFixed(6)),
-                        lng: Number(e.latlng.lng.toFixed(6))
-                    };
-
-                    const htmlMenu = `
-                        <div style="min-width:190px;font-family:'Plus Jakarta Sans',sans-serif;" class="space-y-1.5">
-                            <div style="font-size:10px;font-weight:800;color:#0c4a6e;">
-                                Pilih fungsi titik (${activeMapPopupState.lat}, ${activeMapPopupState.lng}):
-                            </div>
-                            <button type="button" onclick="olengMapChoosePickupTap()" style="width:100%;padding:6px 8px;border-radius:10px;background:#0369a1;color:#fff;font-size:11px;font-weight:800;border:none;cursor:pointer;text-align:left;">
-                                1. Titik Jemputan (Ketuk)
-                            </button>
-                            <button type="button" onclick="olengMapChoosePickupGPS()" style="width:100%;padding:6px 8px;border-radius:10px;background:#facc15;color:#0c4a6e;font-size:11px;font-weight:900;border:1px solid #0369a1;cursor:pointer;text-align:left;">
-                                2. Titik Jemputan GPS Terkini
-                            </button>
-                            <button type="button" onclick="olengMapChooseDestTap()" style="width:100%;padding:6px 8px;border-radius:10px;background:#059669;color:#fff;font-size:11px;font-weight:800;border:none;cursor:pointer;text-align:left;">
-                                3. Titik Tujuan
-                            </button>
-                        </div>
-                    `;
-
-                    L.popup({ closeButton: true, autoPan: true })
-                        .setLatLng(e.latlng)
-                        .setContent(htmlMenu)
-                        .openOn(targetMap);
-                });
-            };
-        })();
     </script>
 </body>
 </html>
