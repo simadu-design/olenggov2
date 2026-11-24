@@ -70,17 +70,16 @@
             }
             setTimeout(hideOlengSplashScreen, 1600);
             window.addEventListener('load', () => setTimeout(hideOlengSplashScreen, 350));
-            window.addEventListener('error', () => setTimeout(hideOlengSplashScreen, 200));
         })();
     </script>
 
     <!-- TOAST CONTAINER -->
     <div id="toast-container" class="fixed top-4 right-4 z-[9998] flex flex-col gap-2 pointer-events-none max-w-xs"></div>
 
-    <!-- MAIN APP CONTAINER -->
+    <!-- MAIN APP SHELL -->
     <div id="app" class="flex-1 flex flex-col h-full max-w-md mx-auto w-full bg-white shadow-2xl relative overflow-hidden border-x border-zinc-800">
 
-        <!-- AUTH VIEW -->
+        <!-- AUTH VIEW (TEMA ORANYE - HITAM - PUTIH) -->
         <div id="view-auth" class="flex-1 flex flex-col justify-between p-6 bg-gradient-to-br from-orange-600 via-zinc-900 to-black text-white overflow-y-auto z-30">
             <div class="my-auto text-center space-y-5">
                 <div class="flex items-center justify-between px-2">
@@ -112,7 +111,7 @@
                             <input type="password" id="login-password" required class="w-full mt-1 px-4 py-2.5 border-2 border-zinc-200 bg-white rounded-2xl text-sm font-semibold text-zinc-950" placeholder="••••••••">
                         </div>
                         <div>
-                            <label class="text-[11px] font-extrabold text-zinc-800 uppercase">Peran (Role Akses)</label>
+                            <label class="text-[11px] font-extrabold text-zinc-800 uppercase">Peran Akun</label>
                             <select id="login-role" class="w-full mt-1 px-4 py-2.5 border-2 border-zinc-200 rounded-2xl text-sm bg-white font-extrabold text-zinc-950">
                                 <option value="customer">Customer (Konsumen)</option>
                                 <option value="driver">Driver (Mitra Ojek / Kurir)</option>
@@ -121,11 +120,8 @@
                             </select>
                         </div>
                         <button type="submit" class="w-full py-3.5 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-2xl shadow-lg transition text-sm cursor-pointer border-b-4 border-zinc-950">
-                            Masuk dengan Nomor HP
+                            Masuk ke OLENG GO
                         </button>
-                        <div class="text-center pt-1">
-                            <button type="button" onclick="openForgotPasswordModal()" class="text-[11px] font-extrabold text-orange-700 hover:underline cursor-pointer">Lupa Kata Sandi? Hubungi Admin</button>
-                        </div>
                     </form>
 
                     <form id="form-register" onsubmit="handleRegister(event)" class="space-y-3 hidden">
@@ -146,27 +142,19 @@
                             <input type="text" id="reg-name" required class="w-full mt-1 px-3.5 py-2 border-2 border-zinc-200 bg-white rounded-2xl text-sm text-zinc-950" placeholder="Nama Lengkap Anda">
                         </div>
                         <div id="reg-driver-fields" class="hidden space-y-2 bg-zinc-50 p-3 rounded-2xl border border-zinc-300">
-                            <input type="text" id="reg-driver-ktp" class="w-full px-3 py-2 border border-zinc-200 rounded-xl text-xs bg-white" placeholder="Nomor KTP *">
-                            <input type="text" id="reg-driver-plate" class="w-full px-3 py-2 border border-zinc-200 rounded-xl text-xs font-bold uppercase bg-white" placeholder="Nomor Plat Motor (F 1234 XY) *">
-                            <input type="text" id="reg-driver-bike" class="w-full px-3 py-2 border border-zinc-200 rounded-xl text-xs font-semibold bg-white" placeholder="Jenis Motor (Honda Beat) *">
+                            <input type="text" id="reg-driver-plate" class="w-full px-3 py-2 border border-zinc-200 rounded-xl text-xs font-bold uppercase bg-white" placeholder="Nomor Plat Motor (Contoh: F 1234 XY)">
+                            <input type="text" id="reg-driver-bike" class="w-full px-3 py-2 border border-zinc-200 rounded-xl text-xs font-semibold bg-white" placeholder="Jenis Motor (Contoh: Honda Beat)">
                         </div>
                         <div id="reg-merchant-fields" class="hidden space-y-2 bg-orange-50 p-3 rounded-2xl border border-orange-300">
-                            <input type="text" id="reg-merchant-owner" class="w-full px-3 py-2 border border-orange-200 rounded-xl text-xs bg-white" placeholder="Nama Pemilik Toko *">
-                            <input type="text" id="reg-merchant-shop" class="w-full px-3 py-2 border border-orange-200 rounded-xl text-xs font-bold bg-white" placeholder="Nama Toko *">
-                            <input type="text" id="reg-merchant-ktp" class="w-full px-3 py-2 border border-orange-200 rounded-xl text-xs bg-white" placeholder="Nomor KTP *">
-                            <div id="reg-merchant-map" class="map-container border-2 border-orange-400" style="height:150px;"></div>
-                            <div class="flex items-center justify-between gap-2 bg-white p-2 rounded-xl border border-orange-200 text-[10px]">
-                                <span id="reg-merchant-coords-label" class="font-bold text-zinc-950 truncate">Koordinat: -7.1240, 106.8460</span>
-                                <button type="button" onclick="lockMerchantMapPin()" id="btn-lock-merchant-pin" class="px-2.5 py-1 bg-orange-600 text-white rounded-lg font-extrabold cursor-pointer">Kunci Lokasi</button>
-                            </div>
-                            <input type="text" id="reg-merchant-address" class="w-full px-3 py-2 border border-orange-200 rounded-xl text-xs bg-white" placeholder="Detail alamat toko di Lengkong *">
+                            <input type="text" id="reg-merchant-shop" class="w-full px-3 py-2 border border-orange-200 rounded-xl text-xs font-bold bg-white" placeholder="Nama Toko / Warung *">
+                            <input type="text" id="reg-merchant-address" class="w-full px-3 py-2 border border-orange-200 rounded-xl text-xs bg-white" placeholder="Alamat Toko di Lengkong *">
                         </div>
                         <div>
                             <label class="text-[11px] font-extrabold text-zinc-800 uppercase">Kata Sandi *</label>
                             <input type="password" id="reg-password" required class="w-full mt-1 px-3.5 py-2 border-2 border-zinc-200 bg-white rounded-2xl text-sm text-zinc-950" placeholder="••••••••">
                         </div>
                         <button type="submit" class="w-full py-3.5 bg-zinc-950 hover:bg-zinc-800 text-white font-black rounded-2xl shadow-lg cursor-pointer text-sm border-b-4 border-orange-500">
-                            Daftar & Simpan Akun
+                            Daftar Akun
                         </button>
                     </form>
                 </div>
@@ -178,30 +166,33 @@
         <div id="view-dashboard" class="flex-1 flex flex-col hidden bg-white relative overflow-hidden">
             <div id="admin-switcher-bar" class="bg-zinc-950 text-white px-3 py-2 flex items-center justify-between text-xs z-30 hidden border-b border-orange-500">
                 <span class="font-black text-orange-400 text-[10px] uppercase">ADMIN MODE:</span>
-                <div class="flex gap-1.5 overflow-x-auto hide-scrollbar">
-                    <button onclick="adminSwitchViewMode('customer')" id="mode-btn-customer" class="px-2.5 py-1 bg-zinc-800 hover:bg-orange-600 rounded-lg text-[10px] font-extrabold cursor-pointer">Konsumen</button>
-                    <button onclick="adminSwitchViewMode('driver')" id="mode-btn-driver" class="px-2.5 py-1 bg-zinc-800 hover:bg-orange-600 rounded-lg text-[10px] font-extrabold cursor-pointer">Driver</button>
-                    <button onclick="adminSwitchViewMode('merchant')" id="mode-btn-merchant" class="px-2.5 py-1 bg-zinc-800 hover:bg-orange-600 rounded-lg text-[10px] font-extrabold cursor-pointer">Toko</button>
-                    <button onclick="adminSwitchViewMode('admin')" id="mode-btn-admin" class="px-2.5 py-1 bg-orange-600 text-white rounded-lg text-[10px] font-extrabold cursor-pointer">Master Control</button>
+                <div class="flex gap-1.5">
+                    <button onclick="adminSwitchViewMode('customer')" class="px-2.5 py-1 bg-zinc-800 hover:bg-orange-600 rounded-lg text-[10px] font-extrabold cursor-pointer">Konsumen</button>
+                    <button onclick="adminSwitchViewMode('driver')" class="px-2.5 py-1 bg-zinc-800 hover:bg-orange-600 rounded-lg text-[10px] font-extrabold cursor-pointer">Driver</button>
+                    <button onclick="adminSwitchViewMode('merchant')" class="px-2.5 py-1 bg-zinc-800 hover:bg-orange-600 rounded-lg text-[10px] font-extrabold cursor-pointer">Toko</button>
+                    <button onclick="adminSwitchViewMode('admin')" class="px-2.5 py-1 bg-orange-600 text-white rounded-lg text-[10px] font-extrabold cursor-pointer">Admin</button>
                 </div>
             </div>
 
-            <main id="main-content" class="flex-1 overflow-y-auto pb-28 hide-scrollbar bg-white"></main>
+            <main id="main-content" class="flex-1 overflow-y-auto pb-24 hide-scrollbar bg-white"></main>
 
             <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-zinc-950 text-white border-t-2 border-orange-500 px-3 py-2 flex justify-around items-center z-30"></nav>
         </div>
 
-        <!-- MERCHANT DETAIL SUB-VIEW -->
-        <div id="view-merchant-detail" class="absolute inset-0 bg-white z-40 hidden flex flex-col overflow-y-auto"></div>
-
-        <!-- MODAL PROFIL CHAT -->
-        <div id="modal-chat-partner-info" class="absolute inset-0 bg-black/70 z-[60] hidden flex flex-col justify-center items-center p-4">
-            <div id="chat-partner-info-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-orange-500"></div>
+        <!-- MODAL CEK NOTIFIKASI -->
+        <div id="modal-notif" class="absolute inset-0 bg-black/70 z-50 hidden flex flex-col justify-end">
+            <div class="bg-white rounded-t-3xl p-5 max-h-[78vh] overflow-y-auto space-y-3 border-t-4 border-orange-500">
+                <div class="flex justify-between items-center border-b border-zinc-200 pb-3">
+                    <h3 class="font-black text-sm text-zinc-950"><i class="fa-solid fa-bell text-orange-600 mr-2"></i>Cek Notifikasi Akun</h3>
+                    <button onclick="closeNotificationModal()" class="text-zinc-500 text-2xl font-bold cursor-pointer">&times;</button>
+                </div>
+                <div id="notification-list" class="space-y-2.5"></div>
+            </div>
         </div>
 
         <!-- MODAL POP-UP ORDER MASUK -->
         <div id="modal-incoming-order" class="absolute inset-0 bg-black/75 z-50 hidden flex flex-col justify-center items-center p-4">
-            <div id="incoming-order-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-orange-500 max-h-[90vh] overflow-y-auto"></div>
+            <div id="incoming-order-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-orange-500"></div>
         </div>
 
         <!-- MODAL POP-UP CHAT MASUK -->
@@ -209,177 +200,22 @@
             <div id="incoming-chat-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-zinc-950"></div>
         </div>
 
-        <!-- MODAL RATING & ULASAN -->
-        <div id="modal-rating" class="absolute inset-0 bg-black/70 z-50 hidden flex flex-col justify-center items-center p-4">
-            <div class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-4 shadow-2xl border-4 border-orange-500">
-                <div class="flex justify-between items-center border-b pb-2">
-                    <h3 class="font-black text-sm text-zinc-950"><i class="fa-solid fa-star text-orange-500 mr-1"></i> Beri Rating & Ulasan</h3>
-                    <button onclick="closeRatingModal()" class="text-zinc-400 text-xl font-bold cursor-pointer">&times;</button>
-                </div>
-                <p id="rating-order-info" class="text-xs text-zinc-600 font-semibold"></p>
-                <div id="rating-stars-group" class="flex justify-center gap-2 text-2xl">
-                    <button type="button" onclick="setRatingStar(1)" data-star="1" class="rating-star text-zinc-300 cursor-pointer"><i class="fa-solid fa-star"></i></button>
-                    <button type="button" onclick="setRatingStar(2)" data-star="2" class="rating-star text-zinc-300 cursor-pointer"><i class="fa-solid fa-star"></i></button>
-                    <button type="button" onclick="setRatingStar(3)" data-star="3" class="rating-star text-zinc-300 cursor-pointer"><i class="fa-solid fa-star"></i></button>
-                    <button type="button" onclick="setRatingStar(4)" data-star="4" class="rating-star text-zinc-300 cursor-pointer"><i class="fa-solid fa-star"></i></button>
-                    <button type="button" onclick="setRatingStar(5)" data-star="5" class="rating-star text-zinc-300 cursor-pointer"><i class="fa-solid fa-star"></i></button>
-                </div>
-                <textarea id="rating-comment-input" rows="2" placeholder="Bagaimana pelayanan driver atau rasa makanan?" class="w-full p-2.5 border-2 border-zinc-200 bg-white rounded-2xl text-xs font-semibold"></textarea>
-                <button onclick="submitOrderRating()" class="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-2xl text-xs cursor-pointer">
-                    Simpan Rating & Ulasan
-                </button>
-            </div>
-        </div>
-
-        <!-- MODAL KERANJANG & CHECKOUT -->
-        <div id="modal-cart" class="absolute inset-0 bg-black/65 z-50 hidden flex flex-col justify-end">
-            <div class="bg-white rounded-t-3xl p-5 max-h-[92vh] overflow-y-auto space-y-4 shadow-2xl border-t-4 border-orange-500">
-                <div class="flex justify-between items-center border-b pb-3">
-                    <h3 class="font-extrabold text-base text-zinc-950 flex items-center gap-2">
-                        <i class="fa-solid fa-cart-shopping text-orange-600"></i> Checkout Pesanan & Peta GPS
-                    </h3>
-                    <button onclick="closeCartModal()" class="text-zinc-400 text-2xl font-bold cursor-pointer">&times;</button>
-                </div>
-
-                <div class="space-y-2">
-                    <div class="flex justify-between items-center flex-wrap gap-1">
-                        <span class="text-[11px] font-extrabold text-zinc-950 uppercase">Klik Peta / Geser Pin Tujuan</span>
-                        <div class="flex gap-1.5 flex-wrap">
-                            <button onclick="openFullGoogleMapsForCoords(destLatLng[0], destLatLng[1], document.getElementById('cart-dest-label')?.innerText || 'Tujuan Lengkong')" class="px-2 py-1 bg-zinc-950 text-white rounded-xl text-[10px] font-extrabold cursor-pointer">
-                                <i class="fa-solid fa-diamond-turn-right"></i> Google Maps
-                            </button>
-                            <button onclick="toggleMapLayerMode()" class="px-2 py-1 bg-orange-600 text-white rounded-xl text-[10px] font-extrabold cursor-pointer">
-                                <i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">Satelit</span>
-                            </button>
-                            <button onclick="useCurrentGPSLocation('cart')" class="px-2.5 py-1 bg-zinc-800 text-white rounded-xl text-[10px] font-extrabold cursor-pointer">
-                                <i class="fa-solid fa-crosshairs"></i> Lokasi Terkini
-                            </button>
-                        </div>
-                    </div>
-                    <div id="checkout-map" class="map-container border-2 border-zinc-200"></div>
-                    <div class="grid grid-cols-2 gap-2 text-[10px]">
-                        <div class="bg-zinc-50 p-2 rounded-xl border border-zinc-200">
-                            <span class="font-extrabold text-zinc-900 block">Titik Awal (Toko):</span>
-                            <span id="cart-pickup-label" class="text-zinc-700 font-semibold truncate block">Lokasi Toko</span>
-                        </div>
-                        <div class="bg-orange-50 p-2 rounded-xl border border-orange-200">
-                            <span class="font-extrabold text-orange-700 block">Titik Tujuan Anda:</span>
-                            <span id="cart-dest-label" class="text-zinc-950 font-semibold truncate block">Klik Peta / Geser Pin</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-zinc-50 p-3 rounded-2xl border border-zinc-200 space-y-2">
-                    <div class="flex justify-between items-center">
-                        <label class="text-[11px] font-extrabold text-zinc-950 uppercase">Driver Aktif & Tersedia</label>
-                        <button type="button" onclick="refreshActiveDriversList('cart')" class="px-2 py-1 bg-white border border-zinc-300 text-zinc-900 rounded-lg text-[10px] font-extrabold cursor-pointer">
-                            <i class="fa-solid fa-rotate"></i> Refresh
-                        </button>
-                    </div>
-                    <div id="checkout-driver-list" class="space-y-2 max-h-36 overflow-y-auto pr-1"></div>
-                    <button type="button" id="btn-confirm-cart-driver" onclick="confirmDraftDriverSelection('cart')" class="w-full py-2.5 bg-zinc-950 hover:bg-zinc-800 text-orange-400 font-black rounded-xl text-xs cursor-pointer">
-                        <i class="fa-solid fa-check-circle mr-1"></i> KONFIRMASI DRIVER
-                    </button>
-                </div>
-
-                <div id="cart-items-container" class="space-y-2 divide-y divide-zinc-100 max-h-36 overflow-y-auto"></div>
-
-                <div class="bg-white p-3.5 rounded-2xl space-y-1.5 border-2 border-zinc-200">
-                    <div class="flex justify-between text-xs font-medium">
-                        <span class="text-zinc-700">Subtotal Menu</span>
-                        <span id="cart-subtotal" class="font-bold text-zinc-950">Rp 0</span>
-                    </div>
-                    <div class="flex justify-between text-xs font-medium">
-                        <span class="text-zinc-700" id="cart-distance-label">Ongkos Kirim</span>
-                        <span id="cart-ongkir" class="font-bold text-orange-600">Rp 5.000</span>
-                    </div>
-                    <div class="flex justify-between text-sm border-t border-zinc-100 pt-2 font-black text-zinc-950">
-                        <span>Total Bayar</span>
-                        <span id="cart-total" class="text-orange-600 text-base">Rp 0</span>
-                    </div>
-                </div>
-
-                <button onclick="submitFoodOrder()" class="w-full py-3.5 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-2xl shadow-lg cursor-pointer text-sm border-b-4 border-zinc-950">
-                    Konfirmasi & Kirim Pesanan
-                </button>
-            </div>
-        </div>
-
-        <!-- MODAL LUPA PASSWORD -->
-        <div id="modal-forgot" class="absolute inset-0 bg-black/65 z-50 hidden flex flex-col justify-center items-center p-4">
-            <div class="bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-2xl border-2 border-orange-500">
-                <div class="flex justify-between items-center border-b pb-2">
-                    <h3 class="font-black text-sm text-zinc-950"><i class="fa-solid fa-headset text-orange-600 mr-1"></i> Lupa Password • Hubungi Admin</h3>
-                    <button onclick="document.getElementById('modal-forgot').classList.add('hidden')" class="text-zinc-400 text-xl font-bold cursor-pointer">&times;</button>
-                </div>
-                <p class="text-xs text-zinc-700">Masukkan Nomor WhatsApp Anda lalu hubungi <b>Admin SIMADU</b>:</p>
-                <input type="tel" id="forgot-account-ref" placeholder="Masukkan Nomor WhatsApp Anda" class="w-full p-3 border-2 border-zinc-200 bg-white rounded-2xl text-xs font-bold">
-                <div class="space-y-2">
-                    <button onclick="redirectForgotPasswordToAdminChat()" class="w-full py-3 bg-zinc-950 text-white font-extrabold rounded-2xl text-xs cursor-pointer">
-                        Arahkan ke Live Chat Admin
-                    </button>
-                    <button onclick="redirectForgotPasswordToAdminWA()" class="w-full py-3 bg-orange-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer">
-                        Arahkan ke WhatsApp Admin (085624736602)
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- MODAL CEK NOTIFIKASI -->
-        <div id="modal-notif" class="absolute inset-0 bg-black/65 z-50 hidden flex flex-col justify-end">
-            <div class="bg-white rounded-t-3xl p-6 max-h-[78vh] overflow-y-auto space-y-4 border-t-4 border-orange-500">
-                <div class="flex justify-between items-center border-b pb-3">
-                    <h3 class="font-extrabold text-base text-zinc-950"><i class="fa-solid fa-bell text-orange-600 mr-2"></i>Cek Notifikasi Akun</h3>
-                    <button onclick="closeNotificationModal()" class="text-zinc-400 text-xl font-bold cursor-pointer">&times;</button>
-                </div>
-                <div id="notification-list" class="space-y-3"></div>
-            </div>
-        </div>
-
         <!-- LIVE CHAT VIEW -->
         <div id="view-chat" class="absolute inset-0 bg-white z-50 hidden flex flex-col">
             <div class="bg-zinc-950 text-white px-4 py-3 flex items-center justify-between border-b-2 border-orange-500">
                 <div class="flex items-center space-x-2.5 min-w-0">
-                    <button onclick="closeChat()" class="text-white text-lg cursor-pointer shrink-0"><i class="fa-solid fa-arrow-left"></i></button>
-                    <button type="button" onclick="openChatPartnerProfileModal(activeChatTarget)" class="text-left min-w-0 cursor-pointer">
-                        <h3 id="chat-title" class="font-extrabold text-sm truncate text-orange-400">Chat Privat</h3>
-                        <span class="text-[10px] text-zinc-300 block truncate">Klik judul untuk lihat profil & no HP</span>
-                    </button>
+                    <button onclick="closeChat()" class="text-white text-lg cursor-pointer"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3 id="chat-title" class="font-extrabold text-sm truncate text-orange-400">Live Chat</h3>
                 </div>
-                <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-orange-600 text-white shrink-0">
-                    <i class="fa-solid fa-bell"></i> <span id="chat-alarm-state">ON</span>
+                <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-orange-600 text-white">
+                    Alarm: <span id="chat-alarm-state">ON</span>
                 </button>
             </div>
-            <div class="bg-zinc-50 border-b max-h-40 overflow-y-auto divide-y divide-zinc-200" id="chat-contact-selector"></div>
+            <div class="bg-zinc-50 border-b border-zinc-200 max-h-36 overflow-y-auto divide-y divide-zinc-200" id="chat-contact-selector"></div>
             <div id="chat-messages" class="flex-1 p-3.5 overflow-y-auto space-y-2.5 bg-zinc-50"></div>
-            <div id="chat-sticker-panel" class="hidden bg-white border-t border-zinc-200 px-3 py-2 space-y-2">
-                <div class="flex flex-wrap gap-1.5 text-lg">
-                    <button type="button" onclick="appendChatEmot('😊')" class="p-1 hover:bg-zinc-100 rounded cursor-pointer">😊</button>
-                    <button type="button" onclick="appendChatEmot('🙏')" class="p-1 hover:bg-zinc-100 rounded cursor-pointer">🙏</button>
-                    <button type="button" onclick="appendChatEmot('👍')" class="p-1 hover:bg-zinc-100 rounded cursor-pointer">👍</button>
-                    <button type="button" onclick="appendChatEmot('🏍️')" class="p-1 hover:bg-zinc-100 rounded cursor-pointer">🏍️</button>
-                    <button type="button" onclick="appendChatEmot('🍲')" class="p-1 hover:bg-zinc-100 rounded cursor-pointer">🍲</button>
-                    <button type="button" onclick="appendChatEmot('🐝')" class="p-1 hover:bg-zinc-100 rounded cursor-pointer">🐝</button>
-                </div>
-                <div class="grid grid-cols-2 gap-1.5 text-[10px] font-black">
-                    <button type="button" onclick="sendChatSticker('🐝 OTW SEKARANG!')" class="py-1.5 px-2 bg-orange-600 text-white rounded-xl cursor-pointer">🐝 OTW SEKARANG!</button>
-                    <button type="button" onclick="sendChatSticker('📍 SUDAH SAMPAI')" class="py-1.5 px-2 bg-zinc-950 text-orange-400 rounded-xl cursor-pointer">📍 SUDAH SAMPAI</button>
-                </div>
-            </div>
-            <div class="p-2.5 bg-white border-t border-zinc-200 flex items-center space-x-1.5">
-                <input type="file" id="chat-gallery-input" accept="image/*" class="hidden" onchange="handleSendChatImage(event)">
-                <input type="file" id="chat-camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleSendChatImage(event)">
-                <button type="button" onclick="toggleChatStickerPanel()" class="w-9 h-9 bg-orange-100 text-orange-700 rounded-full flex items-center justify-center cursor-pointer shrink-0">
-                    <i class="fa-solid fa-face-smile text-sm"></i>
-                </button>
-                <button type="button" onclick="document.getElementById('chat-gallery-input').click()" class="w-9 h-9 bg-zinc-100 text-zinc-900 rounded-full flex items-center justify-center cursor-pointer shrink-0">
-                    <i class="fa-solid fa-image text-sm"></i>
-                </button>
-                <button type="button" onclick="document.getElementById('chat-camera-input').click()" class="w-9 h-9 bg-zinc-100 text-zinc-900 rounded-full flex items-center justify-center cursor-pointer shrink-0">
-                    <i class="fa-solid fa-camera text-sm"></i>
-                </button>
-                <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 border-2 border-zinc-200 bg-white rounded-full px-3.5 py-2 text-xs font-medium min-w-0">
-                <button type="button" onclick="sendPersonalChatMessage()" class="bg-orange-600 hover:bg-orange-700 text-white w-9 h-9 rounded-full flex items-center justify-center cursor-pointer shrink-0">
+            <div class="p-2.5 bg-white border-t border-zinc-200 flex items-center space-x-2">
+                <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 border-2 border-zinc-200 bg-white rounded-full px-4 py-2 text-xs font-semibold text-zinc-950">
+                <button type="button" onclick="sendPersonalChatMessage()" class="bg-orange-600 hover:bg-orange-700 text-white w-10 h-10 rounded-full flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-paper-plane text-xs"></i>
                 </button>
             </div>
@@ -390,360 +226,70 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const ADMIN_MAIN_WA = '6285624736602';
-        const ADMIN_OWN_STORE_ID = 'TOKOADM01';
-        const SUPABASE_PROJECT_ID = 'yhyjofvdkmuudpqzucnw';
         const SUPABASE_URL = 'https://yhyjofvdkmuudpqzucnw.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_EFykp9Q2vKT3U_8KcIw8oQ_orxoyX1h';
         const supabaseClient = (window.supabase && typeof window.supabase.createClient === 'function')
             ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
             : null;
 
-        const ORDER_STATUS_LABELS = {
-            searching_driver: 'Mencari Driver',
-            driver_assigned: 'Driver Ditemukan',
-            merchant_confirmation: 'Menunggu Persetujuan Toko',
-            merchant_accepted: 'Toko Menyetujui',
-            preparing: 'Toko Menyiapkan Barang',
-            driver_arriving: 'Driver Menuju Toko',
-            picked_up: 'Barang Diambil',
-            delivering: 'Dalam Pengantaran',
-            completed: 'Selesai',
-            cancelled: 'Dibatalkan'
-        };
-
-        const ORDER_ALLOWED_TRANSITIONS = {
-            searching_driver: ['driver_assigned', 'merchant_confirmation', 'cancelled'],
-            driver_assigned: ['merchant_confirmation', 'searching_driver', 'cancelled'],
-            merchant_confirmation: ['merchant_accepted', 'preparing', 'searching_driver', 'cancelled'],
-            merchant_accepted: ['preparing', 'driver_arriving', 'cancelled'],
-            preparing: ['driver_arriving', 'cancelled'],
-            driver_arriving: ['picked_up', 'cancelled'],
-            picked_up: ['delivering', 'cancelled'],
-            delivering: ['completed', 'cancelled'],
-            completed: [],
-            cancelled: []
-        };
-
         let currentUser = null;
         let currentSubTab = 'home';
         let adminViewMode = null;
         let activeChatTarget = 'Admin SIMADU';
-        let searchQuery = '';
-        let draftSelectedDriverId = null;
-        let confirmedOrderDriverId = null;
         let alarmEnabled = localStorage.getItem('oleng_alarm_enabled') !== 'false';
-        let mapLayerMode = localStorage.getItem('oleng_map_layer_mode') || 'street';
-        let currentMapZoom = Number(localStorage.getItem('oleng_map_zoom') || 15);
-        let currentMapCenter = null;
         let readChatIds = JSON.parse(localStorage.getItem('oleng_read_chat_ids') || '[]');
         let readNotifIds = JSON.parse(localStorage.getItem('oleng_read_notif_ids') || '[]');
         let shownPopupOrderIds = JSON.parse(localStorage.getItem('oleng_shown_popup_orders') || '[]');
         let shownPopupChatIds = JSON.parse(localStorage.getItem('oleng_shown_popup_chats') || '[]');
-        let sentNotifDedupeKeys = JSON.parse(localStorage.getItem('oleng_sent_notif_keys') || '[]');
-        let ratingOrderTargetId = null;
-        let selectedRatingStar = 5;
-        let hasPendingMediaSelection = false;
-        let isSyncingNow = false;
-        let realtimeChannel = null;
         let mapInstance = null;
-        let checkoutMapInstance = null;
-        let ojekMapInstance = null;
-        let regMerchantMapInstance = null;
         let userCurrentLatLng = [-7.1234, 106.8456];
-        let destLatLng = [-7.1285, 106.8510];
-        let regMerchantLatLng = [-7.1240, 106.8460];
-        let isRegMerchantLocationLocked = false;
-        let tempStoreBanner = null;
-        let tempStorePhoto = null;
-        let tempNewFoodPhoto = null;
-        let tempUserProfilePhoto = null;
-        let lastSupabaseStatus = { ok: false, label: 'Supabase: Mengecek...' };
-
-        const DEFAULT_MAIN_BANNER = 'https://placehold.co/600x300/ea580c/ffffff?text=OLENG+GO+LENGKONG+SUKABUMI';
-        const defaultPricing = {
-            minFare: 8000,
-            ojekPerKm: 2500,
-            foodPerKm: 2000,
-            commissionPercent: 10,
-            driverResponseTimeoutSec: 45,
-            driverSearchTimeoutSec: 60
-        };
-
-        const DEFAULT_ADMIN_ACCOUNT = {
-            id: 4, accountId: 'ADM01', name: 'Admin SIMADU', phone: '085624736602',
-            role: 'admin', status: 'Aktif', address: 'Kantor Pusat Lengkong',
-            balance: 1200000, password: '123456',
-            photo: './olengorange2.png'
-        };
-
-        const DEFAULT_ADMIN_STORE = {
-            id: 901, accountId: ADMIN_OWN_STORE_ID, name: 'Toko SIMADU Lengkong',
-            ownerName: 'Admin SIMADU', ktp: '3202247366020001',
-            subtitle: 'Toko Resmi Admin SIMADU Lengkong', category: 'Kuliner & Oleh-Oleh',
-            status: 'Buka', banner: DEFAULT_MAIN_BANNER, image: './olengorange2.png',
-            rating: 5.0, ratingCount: 1, lat: -7.1238, lng: 106.8459,
-            address: 'Jl. Raya Lengkong No. 01, Sukabumi', operationalHours: '07:00 - 22:00 WIB',
-            whatsapp: ADMIN_MAIN_WA, balance: 0
-        };
+        let realtimeChannel = null;
 
         const defaultDB = {
-            mainBanner: DEFAULT_MAIN_BANNER,
-            pricing: { ...defaultPricing },
-            commissionLogs: [],
-            walletMutations: [],
-            authLogs: [],
-            driverChangeLogs: [],
-            reviews: [],
             users: [
-                { id: 1, accountId: 'CUST01', name: 'Budi Santoso', phone: '085611112222', role: 'customer', status: 'Aktif', address: 'Kp. Lengkong RT 02/01', password: '123456', photo: './olengorange2.png' },
-                { id: 2, accountId: 'DRIV01', name: 'Asep Supriatna', phone: '085622223333', role: 'driver', status: 'Aktif', address: 'Alun-Alun Lengkong', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', balance: 150000, password: '123456', vehicle: 'Honda Beat - F 4321 ABC', photo: './olengorange2.png' },
-                { id: 3, accountId: 'MRCH01', name: 'MADU TOKO', ownerName: 'H. Madu', ktp: '3202110202880002', phone: '085633334444', role: 'merchant', status: 'Aktif', address: 'Jl. Raya Lengkong No. 12, Sukabumi', lat: -7.1240, lng: 106.8460, balance: 350000, password: '123456', shopName: 'MADU TOKO', photo: './olengorange2.png' },
-                { ...DEFAULT_ADMIN_ACCOUNT }
+                { id: 1, name: 'Budi Santoso', phone: '085611112222', role: 'customer', password: '123456', address: 'Lengkong, Sukabumi' },
+                { id: 2, name: 'Asep Supriatna', phone: '085622223333', role: 'driver', password: '123456', status: 'Online', vehicle: 'Honda Beat - F 4321 ABC', lat: -7.1235, lng: 106.8458 },
+                { id: 3, name: 'MADU TOKO', phone: '085633334444', role: 'merchant', shopName: 'MADU TOKO', password: '123456', status: 'Buka', address: 'Jl. Raya Lengkong No. 12', lat: -7.1240, lng: 106.8460 },
+                { id: 4, name: 'Admin SIMADU', phone: '085624736602', role: 'admin', password: '123456', address: 'Lengkong, Sukabumi' }
             ],
             merchants: [
-                { ...DEFAULT_ADMIN_STORE },
-                { id: 1, accountId: 'MRCH01', name: 'MADU TOKO', ownerName: 'H. Madu', ktp: '3202110202880002', subtitle: 'Warung Nasi Sunda Lengkong', category: 'Makanan Berat', status: 'Buka', banner: DEFAULT_MAIN_BANNER, image: './olengorange2.png', rating: 4.9, ratingCount: 1, lat: -7.1240, lng: 106.8460, address: 'Jl. Raya Lengkong No. 12, Sukabumi', operationalHours: '08:00 - 21:00 WIB', whatsapp: '085633334444', balance: 350000 }
-            ],
-            foods: [
-                { id: 9011, merchantId: 901, name: 'Nasi Kuning SIMADU Spesial', price: 18000, desc: 'Nasi kuning harum, telur balado, ayam suwir & sambal kacang.', stock: 25, image: './olengorange2.png' },
-                { id: 101, merchantId: 1, name: 'Paket Nasi Liwet Lengkap', price: 25000, desc: 'Nasi liwet hangat, ikan asin jambal, tahu tempe & lalapan.', stock: 15, image: './olengorange2.png' },
-                { id: 102, merchantId: 1, name: 'Ayam Bakar Madu Kampung', price: 20000, desc: 'Ayam kampung bumbu rempah bakar madu.', stock: 12, image: './olengorange2.png' }
+                { id: 1, name: 'MADU TOKO', status: 'Buka', address: 'Jl. Raya Lengkong No. 12', lat: -7.1240, lng: 106.8460, whatsapp: '085633334444' }
             ],
             drivers: [
-                { id: 1, accountId: 'DRIV01', name: 'Asep Supriatna', ktp: '3202110101900001', plate: 'F 4321 ABC', bikeType: 'Honda Beat', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Honda Beat - F 4321 ABC', rating: 4.9, ratingCount: 1, location: 'Alun-Alun Lengkong', lat: -7.1235, lng: 106.8458, phone: '085622223333', balance: 150000, photo: './olengorange2.png' },
-                { id: 2, accountId: 'DRIV02', name: 'Ujang Hendra', ktp: '3202110404910004', plate: 'F 8891 ZY', bikeType: 'Yamaha Mio', status: 'Online', availability: 'available', activeOrderId: null, vehicle: 'Yamaha Mio - F 8891 ZY', rating: 4.8, ratingCount: 1, location: 'Pasar Lengkong', lat: -7.1265, lng: 106.8490, phone: '085644445555', balance: 120000, photo: './olengorange2.png' }
+                { id: 1, name: 'Asep Supriatna', status: 'Online', vehicle: 'Honda Beat - F 4321 ABC', lat: -7.1235, lng: 106.8458, phone: '085622223333' }
             ],
             orders: [],
-            notifications: [],
             chats: [],
-            cart: [],
-            activeMerchant: null
+            notifications: []
         };
 
         let db = JSON.parse(localStorage.getItem('oleng_go_db')) || defaultDB;
-        if (!db.pricing) db.pricing = { ...defaultPricing };
-        ['commissionLogs', 'walletMutations', 'authLogs', 'driverChangeLogs', 'reviews', 'orders', 'notifications', 'chats', 'cart'].forEach(k => {
-            if (!Array.isArray(db[k])) db[k] = [];
-        });
-        if (!Array.isArray(db.users)) db.users = [...defaultDB.users];
-        if (!Array.isArray(db.merchants)) db.merchants = [...defaultDB.merchants];
-        if (!Array.isArray(db.drivers)) db.drivers = [...defaultDB.drivers];
-        if (!Array.isArray(db.foods)) db.foods = [...defaultDB.foods];
 
-        function normalizePhone(rawPhone) {
-            let digits = String(rawPhone || '').replace(/\D/g, '');
-            if (!digits) return '';
-            if (digits.startsWith('62')) digits = '0' + digits.slice(2);
-            else if (digits.startsWith('8')) digits = '0' + digits;
-            return digits;
+        function normalizePhone(p) {
+            let d = String(p || '').replace(/\D/g, '');
+            if (d.startsWith('62')) d = '0' + d.slice(2);
+            else if (d.startsWith('8')) d = '0' + d;
+            return d;
         }
-        function normalizeMatchKey(val) {
-            return String(val || '').trim().toLowerCase().replace(/\s+/g, ' ');
-        }
-        function generateAutoAccountIdFromPhone(normPhone, role = 'customer') {
-            const prefix = role === 'admin' ? 'ADM' : role === 'merchant' ? 'MRC' : role === 'driver' ? 'DRV' : 'USR';
-            return (prefix + (normalizePhone(normPhone) || Date.now())).toUpperCase().slice(0, 20);
-        }
-        function resetDriverSelectionDraft() {
-            draftSelectedDriverId = null;
-            confirmedOrderDriverId = null;
-        }
-
-        function normalizeOrderStatusCode(rawStatus) {
-            const s = String(rawStatus || '').trim().toLowerCase();
-            if (['searching_driver', 'menunggu driver', 'menunggu konfirmasi'].includes(s)) return 'searching_driver';
-            if (['driver_assigned'].includes(s)) return 'driver_assigned';
-            if (['merchant_confirmation'].includes(s)) return 'merchant_confirmation';
-            if (['merchant_accepted'].includes(s)) return 'merchant_accepted';
-            if (['preparing', 'sedang diproses'].includes(s)) return 'preparing';
-            if (['driver_arriving'].includes(s)) return 'driver_arriving';
-            if (['picked_up'].includes(s)) return 'picked_up';
-            if (['delivering'].includes(s)) return 'delivering';
-            if (['completed', 'selesai'].includes(s)) return 'completed';
-            if (['cancelled', 'ditolak', 'dibatalkan'].includes(s)) return 'cancelled';
-            return 'searching_driver';
-        }
-        function getOrderStatusLabel(rawStatus) {
-            const code = normalizeOrderStatusCode(rawStatus);
-            return ORDER_STATUS_LABELS[code] || rawStatus || 'Mencari Driver';
-        }
-        function appendOrderStatusHistory(order, toStatus, actorRole = 'system', actorName = 'Sistem', note = '') {
-            const code = normalizeOrderStatusCode(toStatus);
-            if (!Array.isArray(order.statusHistory)) order.statusHistory = [];
-            order.status = code;
-            order.statusHistory.push({
-                toStatus: code,
-                label: ORDER_STATUS_LABELS[code] || code,
-                actorRole,
-                actorName,
-                note,
-                at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            });
-            return true;
-        }
-
-        function getAdminOwnStore() {
-            let store = db.merchants.find(m => String(m.accountId || '').toUpperCase() === ADMIN_OWN_STORE_ID);
-            if (!store) {
-                store = { ...DEFAULT_ADMIN_STORE };
-                db.merchants.unshift(store);
-            }
-            return store;
-        }
-
-        function ensureRoleListsSyncedFromUsers() {
-            getAdminOwnStore();
-            db.users.forEach((u, idx) => {
-                const phone = normalizePhone(u.phone);
-                const accId = String(u.accountId || generateAutoAccountIdFromPhone(phone || ('0800' + idx), u.role)).toUpperCase();
-                u.accountId = accId;
-                u.phone = phone;
-                if (u.role === 'merchant') {
-                    let m = db.merchants.find(x => String(x.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID && ((accId && String(x.accountId || '').toUpperCase() === accId) || (phone && normalizePhone(x.whatsapp) === phone)));
-                    if (!m) {
-                        db.merchants.push({
-                            id: u.id || (Date.now() + idx + 10),
-                            accountId: accId,
-                            name: u.shopName || u.name,
-                            ownerName: u.ownerName || u.name,
-                            ktp: u.ktp || '',
-                            category: 'Kuliner',
-                            status: 'Buka',
-                            banner: db.mainBanner || DEFAULT_MAIN_BANNER,
-                            image: u.photo || './olengorange2.png',
-                            rating: 5.0,
-                            ratingCount: 0,
-                            lat: typeof u.lat === 'number' ? u.lat : -7.1240,
-                            lng: typeof u.lng === 'number' ? u.lng : 106.8460,
-                            address: u.address || 'Lengkong, Sukabumi',
-                            operationalHours: '08:00 - 21:00 WIB',
-                            whatsapp: phone || ADMIN_MAIN_WA,
-                            balance: Number(u.balance || 0)
-                        });
-                    }
-                } else if (u.role === 'driver') {
-                    let d = db.drivers.find(x => (accId && String(x.accountId || '').toUpperCase() === accId) || (phone && normalizePhone(x.phone) === phone) || normalizeMatchKey(x.name) === normalizeMatchKey(u.name));
-                    if (!d) {
-                        db.drivers.push({
-                            id: u.id || (Date.now() + idx + 20),
-                            accountId: accId,
-                            name: u.name,
-                            ktp: u.ktp || '',
-                            plate: u.plate || '',
-                            bikeType: u.bikeType || '',
-                            status: 'Online',
-                            availability: 'available',
-                            vehicle: u.vehicle || 'Motor Mitra Lengkong',
-                            rating: 5.0,
-                            ratingCount: 0,
-                            location: u.address || 'Lengkong, Sukabumi',
-                            lat: -7.1235,
-                            lng: 106.8458,
-                            phone: phone || ADMIN_MAIN_WA,
-                            balance: Number(u.balance || 0),
-                            photo: u.photo || './olengorange2.png'
-                        });
-                    }
-                }
-            });
-        }
-        ensureRoleListsSyncedFromUsers();
-
-        function getPartnerIdentityKeys() {
-            const names = new Set();
-            const phones = new Set();
-            if (!currentUser) return { names, phones };
-            [currentUser.name, currentUser.shopName, currentUser.ownerName].forEach(n => {
-                if (normalizeMatchKey(n)) names.add(normalizeMatchKey(n));
-            });
-            if (normalizePhone(currentUser.phone)) phones.add(normalizePhone(currentUser.phone));
-            (db.merchants || []).forEach(m => {
-                if (normalizePhone(m.whatsapp) === normalizePhone(currentUser.phone) || (currentUser.shopName && normalizeMatchKey(m.name) === normalizeMatchKey(currentUser.shopName))) {
-                    if (normalizeMatchKey(m.name)) names.add(normalizeMatchKey(m.name));
-                }
-            });
-            (db.drivers || []).forEach(d => {
-                if (normalizePhone(d.phone) === normalizePhone(currentUser.phone) || normalizeMatchKey(d.name) === normalizeMatchKey(currentUser.name)) {
-                    if (normalizeMatchKey(d.name)) names.add(normalizeMatchKey(d.name));
-                }
-            });
-            return { names, phones };
-        }
-
-        function isMessageForCurrentUser(msg) {
-            if (!currentUser || !msg) return false;
-            const { names, phones } = getPartnerIdentityKeys();
-            const fromK = normalizeMatchKey(msg.from);
-            const fromP = normalizePhone(msg.from);
-            const toK = normalizeMatchKey(msg.to);
-            const toP = normalizePhone(msg.to);
-            if (!fromK || names.has(fromK) || (fromP && phones.has(fromP))) return false;
-            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            if (role === 'admin') return toK === 'admin simadu' || toK === 'admin' || toP === '085624736602';
-            return names.has(toK) || (toP && phones.has(toP));
-        }
-
-        function isOrderTargetedToCurrentUser(order) {
-            if (!currentUser || !order) return false;
-            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            const st = normalizeOrderStatusCode(order.status);
-            const { names, phones } = getPartnerIdentityKeys();
-            if (role === 'admin') return true;
-            if (role === 'customer') return names.has(normalizeMatchKey(order.customer));
-            if (role === 'driver') {
-                const drvK = normalizeMatchKey(order.driver);
-                const drvP = normalizePhone(order.assignedDriverPhone);
-                return (drvK && names.has(drvK)) || (drvP && phones.has(drvP)) || (st === 'searching_driver' && !drvK);
-            }
-            if (role === 'merchant') {
-                const mrcK = normalizeMatchKey(order.merchant);
-                return Boolean(mrcK && names.has(mrcK));
-            }
-            return false;
-        }
-
-        function getAccountNotifs() {
-            if (!currentUser) return [];
-            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            const { names } = getPartnerIdentityKeys();
-            return (db.notifications || []).filter(n => {
-                if (role === 'admin') return true;
-                return n.targetUser === 'ALL' || names.has(normKeyOrEmpty(n.targetUser));
-            });
-        }
-        function normKeyOrEmpty(v) { return normalizeMatchKey(v || ''); }
-
-        function getUnreadNotifCount() {
-            return getAccountNotifs().filter(n => !readNotifIds.includes(String(n.id))).length;
-        }
-        function getUnreadChatCount() {
-            return (db.chats || []).filter(c => isMessageForCurrentUser(c) && !readChatIds.includes(String(c.id))).length;
-        }
-        function updateHomeHeaderBadgesOnly() {
-            const nb = document.getElementById('home-notif-badge');
-            const cb = document.getElementById('home-chat-badge');
-            const nC = getUnreadNotifCount();
-            const cC = getUnreadChatCount();
-            if (nb) { nb.textContent = String(nC); nb.classList.toggle('hidden', nC <= 0); }
-            if (cb) { cb.textContent = String(cC); cb.classList.toggle('hidden', cC <= 0); }
-        }
+        function normKey(v) { return String(v || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+        function saveLocal() { localStorage.setItem('oleng_go_db', JSON.stringify(db)); }
 
         function playAlarmRingtone() {
             if (!alarmEnabled) return;
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                [880, 1174.66, 880, 1318.51].forEach((freq, i) => {
+                [880, 1174.66, 880].forEach((freq, idx) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
                     osc.type = 'triangle';
-                    const start = ctx.currentTime + i * 0.14;
-                    osc.frequency.setValueAtTime(freq, start);
-                    gain.gain.setValueAtTime(0.16, start);
-                    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.13);
+                    const t = ctx.currentTime + idx * 0.14;
+                    osc.frequency.setValueAtTime(freq, t);
+                    gain.gain.setValueAtTime(0.15, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
                     osc.connect(gain);
                     gain.connect(ctx.destination);
-                    osc.start(start);
-                    osc.stop(start + 0.13);
+                    osc.start(t);
+                    osc.stop(t + 0.13);
                 });
             } catch (e) {}
         }
@@ -753,7 +299,7 @@
             localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled));
             const el = document.getElementById('chat-alarm-state');
             if (el) el.textContent = alarmEnabled ? 'ON' : 'OFF';
-            showToast(`Alarm notifikasi ${alarmEnabled ? 'AKTIF (ON)' : 'MATI (OFF)'}`, 'success');
+            showToast(`Alarm notifikasi ${alarmEnabled ? 'AKTIF' : 'MATI'}`, 'info');
             if (currentUser && !document.getElementById('view-dashboard').classList.contains('hidden')) {
                 renderDashboardContent(currentSubTab);
             }
@@ -763,272 +309,179 @@
             if (type !== 'info') playAlarmRingtone();
             const box = document.getElementById('toast-container');
             const div = document.createElement('div');
-            const bg = type === 'error' ? 'bg-red-600' : type === 'info' ? 'bg-zinc-900 border border-orange-500' : 'bg-orange-600';
-            div.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold flex items-center gap-2 ${bg}`;
-            div.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i> ${msg}`;
+            const colorClass = type === 'error' ? 'bg-red-600' : type === 'info' ? 'bg-zinc-900 border border-orange-500' : 'bg-orange-600';
+            div.className = `px-4 py-3 rounded-2xl shadow-xl text-white text-xs font-extrabold ${colorClass}`;
+            div.textContent = msg;
             box.appendChild(div);
             setTimeout(() => div.remove(), 2500);
         }
 
-        function saveDB(msg = null, syncRemote = true) {
-            ensureRoleListsSyncedFromUsers();
-            localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            if (msg) showToast(`Berhasil! ${msg}`, 'success');
-            if (syncRemote) syncAllToSupabase();
+        function getPartnerKeys() {
+            const names = new Set();
+            const phones = new Set();
+            if (!currentUser) return { names, phones };
+            [currentUser.name, currentUser.shopName].forEach(n => { if (normKey(n)) names.add(normKey(n)); });
+            if (normalizePhone(currentUser.phone)) phones.add(normalizePhone(currentUser.phone));
+            (db.merchants || []).forEach(m => {
+                if (normalizePhone(m.whatsapp) === normalizePhone(currentUser.phone) || normKey(m.name) === normKey(currentUser.shopName)) {
+                    if (normKey(m.name)) names.add(normKey(m.name));
+                }
+            });
+            (db.drivers || []).forEach(d => {
+                if (normalizePhone(d.phone) === normalizePhone(currentUser.phone) || normKey(d.name) === normKey(currentUser.name)) {
+                    if (normKey(d.name)) names.add(normKey(d.name));
+                }
+            });
+            return { names, phones };
         }
 
-        function addAccountNotification(title, desc, targetUser = 'ALL', dedupKey = null) {
-            if (dedupKey) {
-                const k = `${dedupKey}::${normalizeMatchKey(targetUser)}`;
-                if (sentNotifDedupeKeys.includes(k)) return;
-                sentNotifDedupeKeys.push(k);
-                localStorage.setItem('oleng_sent_notif_keys', JSON.stringify(sentNotifDedupeKeys.slice(-250)));
-            }
-            db.notifications.unshift({
-                id: Date.now() + Math.floor(Math.random() * 90),
-                targetUser,
-                title,
-                desc,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            });
-            saveDB(null, true);
-            updateBadgesOrHome();
+        function isMessageForMe(msg) {
+            if (!currentUser || !msg) return false;
+            const { names, phones } = getPartnerKeys();
+            const fromK = normKey(msg.from);
+            const fromP = normalizePhone(msg.from);
+            const toK = normKey(msg.to);
+            const toP = normalizePhone(msg.to);
+            if (!fromK || names.has(fromK) || (fromP && phones.has(fromP))) return false;
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            if (role === 'admin') return toK === 'admin simadu' || toK === 'admin' || toP === '085624736602';
+            return names.has(toK) || (toP && phones.has(toP));
         }
-        function updateBadgesOrHome() { updateHomeHeaderBadgesOnly(); }
+
+        function isOrderForMe(order) {
+            if (!currentUser || !order) return false;
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            if (role === 'admin') return true;
+            const { names, phones } = getPartnerKeys();
+            if (role === 'customer') return names.has(normKey(order.customer));
+            if (role === 'driver') {
+                const drvK = normKey(order.driver);
+                const drvP = normalizePhone(order.assignedDriverPhone);
+                return (drvK && names.has(drvK)) || (drvP && phones.has(drvP)) || (!drvK && order.status === 'searching_driver');
+            }
+            if (role === 'merchant') return names.has(normKey(order.merchant));
+            return false;
+        }
+
+        function getMyNotifs() {
+            if (!currentUser) return [];
+            const { names } = getPartnerKeys();
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            return (db.notifications || []).filter(n => {
+                if (role === 'admin') return true;
+                return n.target === 'ALL' || names.has(normKey(n.target));
+            });
+        }
+
+        function updateBadges() {
+            const nUnread = getMyNotifs().filter(n => !readNotifIds.includes(String(n.id))).length;
+            const cUnread = (db.chats || []).filter(c => isMessageForMe(c) && !readChatIds.includes(String(c.id))).length;
+            const nb = document.getElementById('home-notif-badge');
+            const cb = document.getElementById('home-chat-badge');
+            if (nb) { nb.textContent = String(nUnread); nb.classList.toggle('hidden', nUnread <= 0); }
+            if (cb) { cb.textContent = String(cUnread); cb.classList.toggle('hidden', cUnread <= 0); }
+        }
 
         function openNotificationModal() {
-            const list = getAccountNotifs();
+            const list = getMyNotifs();
             readNotifIds = Array.from(new Set([...readNotifIds, ...list.map(x => String(x.id))]));
             localStorage.setItem('oleng_read_notif_ids', JSON.stringify(readNotifIds));
-            updateHomeHeaderBadgesOnly();
-            const box = document.getElementById('notification-list');
-            box.innerHTML = list.length ? list.map(n => `
-                <div class="p-3.5 bg-zinc-50 rounded-2xl text-xs border border-zinc-200 space-y-1">
+            updateBadges();
+            const container = document.getElementById('notification-list');
+            container.innerHTML = list.length ? list.map(n => `
+                <div class="p-3 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs space-y-1">
                     <div class="flex justify-between font-black text-zinc-950">
                         <span>${n.title}</span>
-                        <span class="text-[10px] text-orange-600">${n.time}</span>
+                        <span class="text-[10px] text-orange-600">${n.time || ''}</span>
                     </div>
                     <p class="text-zinc-700">${n.desc}</p>
                 </div>
-            `).join('') : '<p class="text-xs text-zinc-500 text-center py-4">Belum ada notifikasi untuk akun ini.</p>';
+            `).join('') : '<p class="text-xs text-zinc-500 text-center py-4">Belum ada notifikasi.</p>';
             document.getElementById('modal-notif').classList.remove('hidden');
         }
-        function closeNotificationModal() { document.getElementById('modal-notif').classList.add('hidden'); }
 
-        function checkAndShowIncomingOrderPopup(forceShow = false) {
-            if (!currentUser) return;
-            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            if (!['driver', 'merchant', 'admin'].includes(role)) return;
-            const targetOrder = (db.orders || []).find(o => {
-                const st = normalizeOrderStatusCode(o.status);
-                if (st === 'completed' || st === 'cancelled') return false;
-                if (!forceShow && shownPopupOrderIds.includes(o.id)) return false;
-                return isOrderTargetedToCurrentUser(o);
-            });
-            if (targetOrder) openIncomingOrderModal(targetOrder.id, false);
+        function closeNotificationModal() {
+            document.getElementById('modal-notif').classList.add('hidden');
         }
 
-        function openIncomingOrderModal(orderId, showFull = false) {
-            const order = (db.orders || []).find(o => o.id === orderId);
-            if (!order) return;
-            if (!shownPopupOrderIds.includes(order.id)) {
-                shownPopupOrderIds.push(order.id);
-                localStorage.setItem('oleng_shown_popup_orders', JSON.stringify(shownPopupOrderIds));
-            }
+        function showOrderPopup(order) {
+            if (!order || !isOrderForMe(order)) return;
             playAlarmRingtone();
-            const st = normalizeOrderStatusCode(order.status);
             const card = document.getElementById('incoming-order-card');
-            if (!showFull) {
-                card.innerHTML = `
-                    <div class="flex justify-between items-center border-b pb-2">
-                        <span class="bg-orange-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">POP-UP ORDER (${order.id})</span>
-                        <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-zinc-400 text-xl font-bold cursor-pointer">&times;</button>
-                    </div>
-                    <div class="text-xs space-y-1">
-                        <h4 class="font-black text-sm text-zinc-950">Order Baru Masuk</h4>
-                        <p>Kode: <b>${order.id}</b> • Status: <b class="text-orange-600">${getOrderStatusLabel(st)}</b></p>
-                        <p class="text-zinc-600">Ketuk <b>Cek Order</b> untuk melihat detail dan memproses pesanan.</p>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-                        <button onclick="openIncomingOrderModal('${order.id}', true)" class="py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-black cursor-pointer">Cek Order</button>
-                        <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="py-2.5 bg-zinc-950 text-white rounded-xl text-xs font-black cursor-pointer">Tutup</button>
-                    </div>
-                `;
-            } else {
-                const role = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
-                let btns = '';
-                if (st !== 'completed' && st !== 'cancelled') {
-                    if (['driver', 'admin'].includes(role)) {
-                        if (['searching_driver', 'driver_assigned'].includes(st)) {
-                            btns += `<div class="grid grid-cols-2 gap-2"><button onclick="processOrderAction('${order.id}','accept')" class="py-2 bg-orange-600 text-white rounded-xl text-[11px] font-black cursor-pointer">TERIMA</button><button onclick="processOrderAction('${order.id}','reject')" class="py-2 bg-zinc-900 text-white rounded-xl text-[11px] font-black cursor-pointer">TOLAK</button></div>`;
-                        }
-                        if (['merchant_accepted', 'preparing', 'driver_arriving', 'picked_up'].includes(st)) {
-                            const nextMap = { merchant_accepted: 'driver_arriving', preparing: 'driver_arriving', driver_arriving: 'picked_up', picked_up: 'delivering' };
-                            btns += `<button onclick="processOrderAction('${order.id}','${nextMap[st]}')" class="w-full py-2 bg-zinc-950 text-orange-400 rounded-xl text-xs font-black cursor-pointer mt-1">Update: ${nextMap[st]}</button>`;
-                        }
-                        if (st === 'delivering') {
-                            btns += `<button onclick="processOrderAction('${order.id}','complete')" class="w-full py-2.5 bg-orange-600 text-white rounded-xl text-xs font-black cursor-pointer mt-1">Selesaikan Order</button>`;
-                        }
-                    }
-                    if (['merchant', 'admin'].includes(role) && ['driver_assigned', 'merchant_confirmation'].includes(st)) {
-                        btns += `<div class="grid grid-cols-2 gap-2 mt-1"><button onclick="processOrderAction('${order.id}','merchant_accept')" class="py-2 bg-orange-600 text-white rounded-xl text-[11px] font-black cursor-pointer">TOKO SETUJU</button><button onclick="processOrderAction('${order.id}','cancel')" class="py-2 bg-red-600 text-white rounded-xl text-[11px] font-black cursor-pointer">TOLAK</button></div>`;
-                    }
-                }
-                card.innerHTML = `
-                    <div class="flex justify-between items-center border-b pb-2">
-                        <span class="bg-zinc-950 text-orange-400 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">DETAIL (${order.id})</span>
-                        <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-zinc-400 text-xl font-bold cursor-pointer">&times;</button>
-                    </div>
-                    <div class="text-xs bg-zinc-50 p-3 rounded-2xl border border-zinc-200 space-y-1">
-                        <p class="font-black text-zinc-950">${order.merchant}</p>
-                        <p>Pemesan: <b>${order.customer}</b></p>
-                        <p>Isi: <b>${order.items}</b></p>
-                        <p>Driver: <b>${order.driver || 'Mencari driver'}</b></p>
-                        <p>Status: <b class="text-orange-600">${getOrderStatusLabel(st)} (${st})</b></p>
-                        <p class="font-black text-zinc-950 pt-1">Total: Rp ${Number(order.total || 0).toLocaleString()}</p>
-                    </div>
-                    ${btns}
-                    <button onclick="openGoogleMapsNavigation(db.orders.find(x=>x.id==='${order.id}'))" class="w-full py-2.5 bg-zinc-950 text-white rounded-xl text-xs font-black cursor-pointer">
-                        <i class="fa-solid fa-diamond-turn-right text-orange-400 mr-1"></i> Google Maps
-                    </button>
-                `;
-            }
+            card.innerHTML = `
+                <div class="flex justify-between items-center border-b pb-2">
+                    <span class="bg-orange-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">POP-UP ORDER (${order.id})</span>
+                    <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="text-zinc-500 text-xl font-bold cursor-pointer">&times;</button>
+                </div>
+                <div class="text-xs space-y-1 bg-zinc-50 p-3 rounded-2xl border border-zinc-200">
+                    <p class="font-black text-zinc-950">${order.merchant || 'Layanan Ojek'}</p>
+                    <p>Pemesan: <b>${order.customer}</b></p>
+                    <p>Detail: <b>${order.items}</b></p>
+                    <p class="text-orange-600 font-black pt-1">Total: Rp ${Number(order.total || 0).toLocaleString()}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="acceptOrderPopup('${order.id}')" class="py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-black cursor-pointer">TERIMA</button>
+                    <button onclick="document.getElementById('modal-incoming-order').classList.add('hidden')" class="py-2.5 bg-zinc-950 text-white rounded-xl text-xs font-black cursor-pointer">TUTUP</button>
+                </div>
+            `;
             document.getElementById('modal-incoming-order').classList.remove('hidden');
         }
 
-        function processOrderAction(orderId, act) {
+        function acceptOrderPopup(orderId) {
             const ord = (db.orders || []).find(o => o.id === orderId);
-            if (!ord) return;
-            if (act === 'accept') {
-                if (currentUser?.role === 'driver') ord.driver = currentUser.name;
-                appendOrderStatusHistory(ord, ord.type === 'food' ? 'merchant_confirmation' : 'delivering', 'driver', ord.driver || 'Driver', 'Diterima driver');
-                addAccountNotification(`Driver Diterima (${ord.id})`, `Driver ${ord.driver} menerima order ${ord.id}.`, ord.customer, `${ord.id}-acc`);
-            } else if (act === 'reject') {
-                ord.driver = null;
-                appendOrderStatusHistory(ord, 'searching_driver', 'driver', currentUser?.name || 'Driver', 'Ditolak driver');
-            } else if (act === 'merchant_accept') {
-                appendOrderStatusHistory(ord, 'preparing', 'merchant', ord.merchant, 'Toko menyiapkan pesanan');
-                addAccountNotification(`Toko Menyetujui (${ord.id})`, `${ord.merchant} menyiapkan pesanan ${ord.items}.`, ord.customer, `${ord.id}-macc`);
-            } else if (act === 'cancel') {
-                appendOrderStatusHistory(ord, 'cancelled', 'merchant', ord.merchant, 'Dibatalkan');
-            } else if (act === 'complete') {
-                appendOrderStatusHistory(ord, 'completed', 'driver', ord.driver || 'Driver', 'Selesai');
-                if (!ord.settled) {
-                    const pct = Number(db.pricing?.commissionPercent || 10);
-                    const comm = Math.round((Number(ord.total || 0) * pct) / 100);
-                    const net = Math.max(0, Number(ord.total || 0) - comm);
-                    ord.settled = true;
-                    ord.commissionFee = comm;
-                    ord.netEarnings = net;
-                    db.commissionLogs.unshift({ id: 'KOM-' + Date.now(), orderId: ord.id, amount: comm, netAmount: net, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
-                }
-            } else {
-                appendOrderStatusHistory(ord, act, 'driver', ord.driver || 'Driver', `Tahap ${act}`);
+            if (ord) {
+                ord.status = 'driver_assigned';
+                if (currentUser && currentUser.role === 'driver') ord.driver = currentUser.name;
+                saveLocal();
+                syncToSupabase();
+                showToast(`Order ${orderId} diterima`, 'success');
             }
-            saveDB(`Order ${ord.id} diperbarui`);
             document.getElementById('modal-incoming-order').classList.add('hidden');
             renderDashboardContent(currentSubTab);
         }
 
-        function checkAndTriggerIncomingChatPopup(msg) {
-            if (!currentUser || !msg || !isMessageForCurrentUser(msg)) return;
+        function showChatPopup(msg) {
+            if (!msg || !isMessageForMe(msg)) return;
             const k = String(msg.id);
-            if (shownPopupChatIds.includes(k) || readChatIds.includes(k)) return;
+            if (shownPopupChatIds.includes(k)) return;
             shownPopupChatIds.push(k);
-            localStorage.setItem('oleng_shown_popup_chats', JSON.stringify(shownPopupChatIds));
+            localStorage.setItem('oleng_shown_popup_chats', JSON.stringify(shownPopupChatIds.slice(-100)));
             playAlarmRingtone();
             const safeFrom = String(msg.from || 'Pengguna').replace(/'/g, "\\'");
-            document.getElementById('incoming-chat-card').innerHTML = `
+            const card = document.getElementById('incoming-chat-card');
+            card.innerHTML = `
                 <div class="flex justify-between items-center border-b pb-2">
                     <span class="bg-zinc-950 text-orange-400 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">CHAT MASUK</span>
-                    <button onclick="document.getElementById('modal-incoming-chat').classList.add('hidden')" class="text-zinc-400 text-xl font-bold cursor-pointer">&times;</button>
+                    <button onclick="document.getElementById('modal-incoming-chat').classList.add('hidden')" class="text-zinc-500 text-xl font-bold cursor-pointer">&times;</button>
                 </div>
                 <div class="text-xs space-y-1.5">
                     <p class="font-black text-zinc-950">Dari: ${msg.from}</p>
-                    <p class="bg-zinc-50 p-3 rounded-2xl border border-zinc-200 font-semibold">${String(msg.text || '').startsWith('data:image') ? '📷 Mengirim foto' : `"${msg.text}"`}</p>
+                    <p class="bg-zinc-50 p-3 rounded-2xl border border-zinc-200 font-semibold">"${msg.text}"</p>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                    <button onclick="document.getElementById('modal-incoming-chat').classList.add('hidden'); startPersonalChat('${safeFrom}')" class="py-2.5 bg-orange-600 text-white rounded-xl text-xs font-black cursor-pointer">Balas Chat</button>
-                    <button onclick="document.getElementById('modal-incoming-chat').classList.add('hidden')" class="py-2.5 bg-zinc-200 text-zinc-900 rounded-xl text-xs font-black cursor-pointer">Tutup</button>
+                    <button onclick="document.getElementById('modal-incoming-chat').classList.add('hidden'); openChat('${safeFrom}')" class="py-2.5 bg-orange-600 text-white rounded-xl text-xs font-black cursor-pointer">BALAS CHAT</button>
+                    <button onclick="document.getElementById('modal-incoming-chat').classList.add('hidden')" class="py-2.5 bg-zinc-200 text-zinc-900 rounded-xl text-xs font-black cursor-pointer">TUTUP</button>
                 </div>
             `;
             document.getElementById('modal-incoming-chat').classList.remove('hidden');
-        }
-
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-            return Math.max(0.1, Math.round((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))) * 10) / 10);
-        }
-        function calculateShippingCost(distKm, mode = 'ojek') {
-            const p = db.pricing || defaultPricing;
-            const rate = mode === 'food' ? Number(p.foodPerKm || 2000) : Number(p.ojekPerKm || 2500);
-            return Math.max(Number(p.minFare || 8000), Math.round((distKm * rate) / 500) * 500);
-        }
-        function openFullGoogleMapsForCoords(lat, lng, labelText = '') {
-            if (typeof lat === 'number' && typeof lng === 'number') {
-                window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
-            } else {
-                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((labelText || 'Lengkong, Sukabumi') + ', Lengkong, Sukabumi')}`, '_blank');
-            }
-        }
-        function openGoogleMapsNavigation(orderObj) {
-            if (orderObj && typeof orderObj.destLat === 'number' && typeof orderObj.destLng === 'number') {
-                window.open(`https://www.google.com/maps/dir/?api=1&destination=${orderObj.destLat},${orderObj.destLng}`, '_blank');
-            } else {
-                openFullGoogleMapsForCoords(destLatLng[0], destLatLng[1], orderObj?.dest || 'Lengkong, Sukabumi');
-            }
-        }
-        function getBaseTileLayerForMode() {
-            if (mapLayerMode === 'satellite') {
-                return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-            }
-            return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
-        }
-        function toggleMapLayerMode() {
-            mapLayerMode = mapLayerMode === 'satellite' ? 'street' : 'satellite';
-            localStorage.setItem('oleng_map_layer_mode', mapLayerMode);
-            document.querySelectorAll('.map-layer-label').forEach(el => { el.textContent = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit'; });
-            renderDashboardContent(currentSubTab);
         }
 
         function switchAuthTab(tab) {
             const isLogin = tab === 'login';
             document.getElementById('form-login').classList.toggle('hidden', !isLogin);
             document.getElementById('form-register').classList.toggle('hidden', isLogin);
-            document.getElementById('tab-login-btn').className = isLogin ? 'flex-1 font-extrabold text-center text-orange-600 border-b-2 border-orange-600 pb-1.5 text-sm cursor-pointer' : 'flex-1 font-bold text-center text-zinc-400 pb-1.5 text-sm cursor-pointer';
-            document.getElementById('tab-register-btn').className = !isLogin ? 'flex-1 font-extrabold text-center text-orange-600 border-b-2 border-orange-600 pb-1.5 text-sm cursor-pointer' : 'flex-1 font-bold text-center text-zinc-400 pb-1.5 text-sm cursor-pointer';
-            if (!isLogin) toggleRegisterRoleFields();
+            document.getElementById('tab-login-btn').className = isLogin
+                ? 'flex-1 font-extrabold text-center text-orange-600 border-b-2 border-orange-600 pb-1.5 text-sm cursor-pointer'
+                : 'flex-1 font-bold text-center text-zinc-400 pb-1.5 text-sm cursor-pointer';
+            document.getElementById('tab-register-btn').className = !isLogin
+                ? 'flex-1 font-extrabold text-center text-orange-600 border-b-2 border-orange-600 pb-1.5 text-sm cursor-pointer'
+                : 'flex-1 font-bold text-center text-zinc-400 pb-1.5 text-sm cursor-pointer';
         }
+
         function toggleRegisterRoleFields() {
             const r = document.getElementById('reg-role').value;
             document.getElementById('reg-driver-fields').classList.toggle('hidden', r !== 'driver');
             document.getElementById('reg-merchant-fields').classList.toggle('hidden', r !== 'merchant');
-            if (r === 'merchant') setTimeout(initRegisterMerchantMap, 200);
-        }
-        function initRegisterMerchantMap() {
-            const el = document.getElementById('reg-merchant-map');
-            if (!el) return;
-            if (regMerchantMapInstance) { regMerchantMapInstance.remove(); regMerchantMapInstance = null; }
-            regMerchantMapInstance = L.map('reg-merchant-map').setView(regMerchantLatLng, 16);
-            getBaseTileLayerForMode().addTo(regMerchantMapInstance);
-            const marker = L.marker(regMerchantLatLng, { draggable: true }).addTo(regMerchantMapInstance);
-            const upd = (lat, lng) => {
-                regMerchantLatLng = [Number(lat.toFixed(6)), Number(lng.toFixed(6))];
-                const lbl = document.getElementById('reg-merchant-coords-label');
-                if (lbl) lbl.textContent = `Koordinat: ${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}`;
-            };
-            marker.on('dragend', () => { isRegMerchantLocationLocked = false; upd(marker.getLatLng().lat, marker.getLatLng().lng); });
-            regMerchantMapInstance.on('click', (e) => { marker.setLatLng(e.latlng); isRegMerchantLocationLocked = false; upd(e.latlng.lat, e.latlng.lng); });
-            setTimeout(() => regMerchantMapInstance && regMerchantMapInstance.invalidateSize(), 300);
-        }
-        function lockMerchantMapPin() {
-            isRegMerchantLocationLocked = true;
-            const addr = document.getElementById('reg-merchant-address');
-            if (addr && !addr.value.trim()) addr.value = `Lokasi Map (${regMerchantLatLng[0]}, ${regMerchantLatLng[1]}) Lengkong`;
-            showToast('Lokasi toko dikunci', 'success');
         }
 
         async function handleLogin(e) {
@@ -1036,15 +489,16 @@
             const phone = normalizePhone(document.getElementById('login-phone').value);
             const pass = document.getElementById('login-password').value.trim();
             const role = document.getElementById('login-role').value;
-            if (role === 'admin' && phone !== '085624736602') return showToast('Login Admin wajib 085624736602', 'error');
-            await pullInitialFromSupabase(false);
+            await pullFromSupabase();
             let u = db.users.find(x => normalizePhone(x.phone) === phone && x.role === role);
-            if (!u && phone === '085624736602' && role === 'admin') u = { ...DEFAULT_ADMIN_ACCOUNT };
-            if (!u) return showToast('Akun tidak ditemukan', 'error');
-            if (String(u.password || '123456').trim() !== pass && !(phone === '085624736602' && pass === '123')) return showToast('Kata sandi salah', 'error');
+            if (!u && phone === '085624736602' && role === 'admin') {
+                u = defaultDB.users[3];
+            }
+            if (!u || String(u.password || '123456') !== pass) {
+                return showToast('Nomor HP, sandi, atau peran tidak sesuai', 'error');
+            }
             currentUser = { ...u };
             adminViewMode = role === 'admin' ? 'admin' : null;
-            currentSubTab = role === 'admin' ? 'admin-dash' : role === 'merchant' ? 'merchant-manage' : 'home';
             localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
             enterDashboard();
         }
@@ -1056,802 +510,332 @@
             const name = document.getElementById('reg-name').value.trim();
             const password = document.getElementById('reg-password').value.trim();
             if (phone.length < 9 || !name || !password) return showToast('Lengkapi data wajib', 'error');
-            if (db.users.some(x => normalizePhone(x.phone) === phone && x.role === role)) return showToast('Nomor HP sudah terdaftar', 'error');
-            let extra = {};
-            if (role === 'driver') {
-                extra = {
-                    ktp: document.getElementById('reg-driver-ktp').value.trim(),
-                    plate: document.getElementById('reg-driver-plate').value.trim().toUpperCase(),
-                    bikeType: document.getElementById('reg-driver-bike').value.trim()
-                };
-                extra.vehicle = `${extra.bikeType || 'Motor'} - ${extra.plate || ''}`;
-            } else if (role === 'merchant') {
-                if (!isRegMerchantLocationLocked) return showToast('Klik Kunci Lokasi pada peta toko dulu', 'error');
-                extra = {
-                    ownerName: document.getElementById('reg-merchant-owner').value.trim() || name,
-                    shopName: document.getElementById('reg-merchant-shop').value.trim() || name,
-                    ktp: document.getElementById('reg-merchant-ktp').value.trim(),
-                    address: document.getElementById('reg-merchant-address').value.trim() || 'Lengkong, Sukabumi',
-                    lat: regMerchantLatLng[0],
-                    lng: regMerchantLatLng[1]
-                };
+            const shopName = document.getElementById('reg-merchant-shop')?.value.trim() || name;
+            const address = document.getElementById('reg-merchant-address')?.value.trim() || 'Lengkong, Sukabumi';
+            const plate = document.getElementById('reg-driver-plate')?.value.trim().toUpperCase() || '';
+            const bike = document.getElementById('reg-driver-bike')?.value.trim() || '';
+
+            const newUser = { id: Date.now(), name, phone, role, password, address, shopName };
+            db.users.unshift(newUser);
+            if (role === 'merchant') {
+                db.merchants.push({ id: Date.now() + 1, name: shopName, status: 'Buka', address, lat: -7.1240, lng: 106.8460, whatsapp: phone });
+            } else if (role === 'driver') {
+                db.drivers.push({ id: Date.now() + 1, name, status: 'Online', vehicle: `${bike || 'Motor'} ${plate}`.trim(), lat: -7.1235, lng: 106.8458, phone });
             }
-            const accId = generateAutoAccountIdFromPhone(phone, role);
-            const newAcc = { id: Date.now(), accountId: accId, name, phone, role, status: 'Aktif', address: extra.address || 'Lengkong, Sukabumi', balance: role !== 'customer' ? 50000 : undefined, password, photo: './olengorange2.png', ...extra };
-            db.users.unshift(newAcc);
-            ensureRoleListsSyncedFromUsers();
-            saveDB('Akun berhasil didaftarkan');
+            saveLocal();
+            await syncToSupabase();
             switchAuthTab('login');
             document.getElementById('login-phone').value = phone;
             document.getElementById('login-role').value = role;
+            showToast('Akun terdaftar, silakan masuk', 'success');
         }
 
-        function openForgotPasswordModal() { document.getElementById('modal-forgot').classList.remove('hidden'); }
-        function redirectForgotPasswordToAdminChat() {
-            const ref = document.getElementById('forgot-account-ref').value.trim() || '-';
-            document.getElementById('modal-forgot').classList.add('hidden');
-            if (!currentUser) currentUser = { id: 0, name: `Pemohon (${ref})`, phone: ADMIN_MAIN_WA, role: 'customer', photo: './olengorange2.png' };
+        function enterDashboard() {
             document.getElementById('view-auth').classList.add('hidden');
             document.getElementById('view-dashboard').classList.remove('hidden');
-            startPersonalChat('Admin SIMADU');
-            const inp = document.getElementById('chat-input');
-            if (inp) inp.value = `Halo Admin SIMADU, lupa sandi No. HP ${ref}`;
-        }
-        function redirectForgotPasswordToAdminWA() {
-            const ref = document.getElementById('forgot-account-ref').value.trim() || '-';
-            window.open(`https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin SIMADU, lupa sandi No. HP ' + ref)}`, '_blank');
+            document.getElementById('admin-switcher-bar').classList.toggle('hidden', currentUser.role !== 'admin');
+            renderNav();
+            renderDashboardContent(currentSubTab || 'home');
+            updateBadges();
+            const pendingOrd = (db.orders || []).find(o => o.status !== 'completed' && isOrderForMe(o));
+            if (pendingOrd && !shownPopupOrderIds.includes(pendingOrd.id)) {
+                shownPopupOrderIds.push(pendingOrd.id);
+                localStorage.setItem('oleng_shown_popup_orders', JSON.stringify(shownPopupOrderIds));
+                showOrderPopup(pendingOrd);
+            }
         }
 
-        function handleLogout() {
-            resetDriverSelectionDraft();
+        function adminSwitchViewMode(mode) {
+            adminViewMode = mode;
+            renderNav();
+            renderDashboardContent(mode === 'admin' ? 'home' : 'orders');
+        }
+
+        function renderNav() {
+            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            const nav = document.getElementById('bottom-nav');
+            nav.innerHTML = `
+                <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-3 text-orange-400 font-extrabold cursor-pointer">
+                    <i class="fa-solid fa-house text-sm"></i><span class="text-[10px] mt-1">Beranda</span>
+                </button>
+                <button onclick="renderDashboardContent('orders')" class="flex flex-col items-center py-1 px-3 text-white hover:text-orange-400 font-bold cursor-pointer">
+                    <i class="fa-solid fa-receipt text-sm"></i><span class="text-[10px] mt-1">Order (${role})</span>
+                </button>
+                <button onclick="openChat('${role === 'admin' ? (db.users[0]?.name || 'Budi Santoso') : 'Admin SIMADU'}')" class="flex flex-col items-center py-1 px-3 text-white hover:text-orange-400 font-bold cursor-pointer">
+                    <i class="fa-solid fa-comments text-sm"></i><span class="text-[10px] mt-1">Chat</span>
+                </button>
+                <button onclick="logoutApp()" class="flex flex-col items-center py-1 px-3 text-red-400 font-bold cursor-pointer">
+                    <i class="fa-solid fa-right-from-bracket text-sm"></i><span class="text-[10px] mt-1">Keluar</span>
+                </button>
+            `;
+        }
+
+        function logoutApp() {
             currentUser = null;
-            adminViewMode = null;
             localStorage.removeItem('oleng_user_session');
             document.getElementById('view-dashboard').classList.add('hidden');
             document.getElementById('view-auth').classList.remove('hidden');
         }
 
-        function enterDashboard() {
-            ensureRoleListsSyncedFromUsers();
-            document.getElementById('view-auth').classList.add('hidden');
-            document.getElementById('view-dashboard').classList.remove('hidden');
-            document.getElementById('admin-switcher-bar').classList.toggle('hidden', currentUser.role !== 'admin');
-            const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            renderDashboardNavigation(role);
-            renderDashboardContent(currentSubTab || 'home');
-            setTimeout(() => { checkAndShowIncomingOrderPopup(true); updateHomeHeaderBadgesOnly(); }, 400);
-        }
-
-        function adminSwitchViewMode(mode) {
-            resetDriverSelectionDraft();
-            adminViewMode = mode;
-            renderDashboardNavigation(mode);
-            renderDashboardContent(mode === 'admin' ? 'admin-dash' : mode === 'merchant' ? 'merchant-manage' : 'home');
-        }
-
-        function renderDashboardNavigation(role) {
-            const nav = document.getElementById('bottom-nav');
-            if (role === 'admin') {
-                nav.innerHTML = `
-                    <button onclick="renderDashboardContent('admin-dash')" class="flex flex-col items-center py-1 px-1.5 text-orange-400 font-extrabold cursor-pointer"><i class="fa-solid fa-chart-pie text-sm"></i><span class="text-[9px] mt-1">Monitor</span></button>
-                    <button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-1.5 text-white hover:text-orange-400 font-bold cursor-pointer"><i class="fa-solid fa-users text-sm"></i><span class="text-[9px] mt-1">User</span></button>
-                    <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-1.5 text-white cursor-pointer"><div class="w-11 h-11 bg-orange-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-white"><i class="fa-solid fa-house text-base"></i></div></button>
-                    <button onclick="renderDashboardContent('admin-stores')" class="flex flex-col items-center py-1 px-1.5 text-white hover:text-orange-400 font-bold cursor-pointer"><i class="fa-solid fa-store text-sm"></i><span class="text-[9px] mt-1">Toko</span></button>
-                    <button onclick="renderDashboardContent('admin-banner')" class="flex flex-col items-center py-1 px-1.5 text-white hover:text-orange-400 font-bold cursor-pointer"><i class="fa-solid fa-image text-sm"></i><span class="text-[9px] mt-1">Banner</span></button>
-                `;
-            } else if (role === 'merchant') {
-                nav.innerHTML = `
-                    <button onclick="renderDashboardContent('merchant-manage')" class="flex flex-col items-center py-1 px-3 text-orange-400 font-extrabold cursor-pointer"><i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1">Kelola Toko</span></button>
-                    <button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-3 text-white hover:text-orange-400 font-bold cursor-pointer"><i class="fa-solid fa-receipt text-base"></i><span class="text-[9px] mt-1">Riwayat</span></button>
-                    <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-3 text-white cursor-pointer"><div class="w-11 h-11 bg-orange-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-white"><i class="fa-solid fa-house text-base"></i></div></button>
-                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-white hover:text-orange-400 font-bold cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1">Profil</span></button>
-                `;
-            } else {
-                nav.innerHTML = `
-                    <button onclick="renderDashboardContent('food')" class="flex flex-col items-center py-1 px-2 text-white hover:text-orange-400 cursor-pointer"><i class="fa-solid fa-utensils text-base"></i><span class="text-[9px] mt-1 font-extrabold">Food</span></button>
-                    <button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-2 text-white hover:text-orange-400 cursor-pointer"><i class="fa-solid fa-clock-rotate-left text-base"></i><span class="text-[9px] mt-1 font-extrabold">Riwayat</span></button>
-                    <button onclick="renderDashboardContent('home')" class="flex flex-col items-center py-1 px-2 text-white cursor-pointer"><div class="w-11 h-11 bg-orange-600 rounded-full flex items-center justify-center text-white shadow-lg -mt-4 border-2 border-white"><i class="fa-solid fa-house text-base"></i></div></button>
-                    <button onclick="renderDashboardContent('ojek')" class="flex flex-col items-center py-1 px-2 text-white hover:text-orange-400 cursor-pointer"><i class="fa-solid fa-motorcycle text-base"></i><span class="text-[9px] mt-1 font-extrabold">Ojek</span></button>
-                    <button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-2 text-white hover:text-orange-400 cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1 font-extrabold">Profil</span></button>
-                `;
-            }
-        }
-
         function renderDashboardContent(tab) {
-            if (mapInstance) { mapInstance.remove(); mapInstance = null; }
-            if (ojekMapInstance) { ojekMapInstance.remove(); ojekMapInstance = null; }
-            if (checkoutMapInstance) { checkoutMapInstance.remove(); checkoutMapInstance = null; }
-            if (currentSubTab !== tab) resetDriverSelectionDraft();
             currentSubTab = tab;
-            document.getElementById('view-merchant-detail').classList.add('hidden');
-            const box = document.getElementById('main-content');
-            if (tab === 'home') renderCustomerHome(box);
-            else if (tab === 'food') renderCustomerFood(box);
-            else if (tab === 'ojek') renderCustomerOjek(box);
-            else if (tab === 'history') renderOrderHistory(box);
-            else if (tab === 'profile') renderProfile(box);
-            else if (tab === 'merchant-manage') renderMerchantManage(box);
-            else if (tab === 'admin-dash') renderAdminDash(box);
-            else if (tab === 'admin-users') renderAdminUsers(box);
-            else if (tab === 'admin-stores') renderAdminStores(box);
-            else if (tab === 'admin-drivers') renderAdminDrivers(box);
-            else if (tab === 'admin-banner') renderAdminBanner(box);
-            else renderCustomerHome(box);
-        }
-
-        function renderCustomerHome(container) {
-            const uNotif = getUnreadNotifCount();
-            const uChat = getUnreadChatCount();
-            const bannerSrc = db.mainBanner || DEFAULT_MAIN_BANNER;
-            container.innerHTML = `
-                <div class="p-4 space-y-4 bg-gradient-to-b from-orange-600 via-orange-500 to-white min-h-full pb-24">
-                    <div class="bg-zinc-950 text-white p-4 rounded-3xl shadow-xl flex items-center justify-between border-2 border-orange-400">
-                        <div class="flex items-center space-x-3">
-                            <img src="${currentUser.photo || './olengorange2.png'}" onerror="this.src='./olengorange2.png'" class="w-12 h-12 rounded-2xl object-cover border-2 border-orange-500 bg-white">
-                            <div>
-                                <span class="text-xs text-orange-300 font-extrabold block">Halo, ${currentUser.name}</span>
-                                <h3 class="text-xs font-black text-white">${currentUser.phone || 'WARGA LENGKONG'}</h3>
+            if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+            const main = document.getElementById('main-content');
+            if (tab === 'orders') {
+                const mine = (db.orders || []).filter(o => isOrderForMe(o));
+                main.innerHTML = `
+                    <div class="p-4 space-y-3 pb-24">
+                        <h2 class="font-black text-base text-zinc-950">Daftar Order</h2>
+                        ${mine.length ? mine.map(o => `
+                            <div class="p-4 rounded-2xl border-2 border-zinc-200 bg-white space-y-1.5 text-xs">
+                                <div class="flex justify-between font-black">
+                                    <span class="text-orange-600">${o.id}</span>
+                                    <span class="px-2 py-0.5 rounded bg-zinc-950 text-white text-[10px]">${o.status}</span>
+                                </div>
+                                <p class="font-bold text-zinc-950">${o.merchant || 'Ojek'} • ${o.items}</p>
+                                <p class="text-zinc-600">Pemesan: ${o.customer} • Driver: ${o.driver || '-'}</p>
+                                <p class="font-black text-zinc-950">Rp ${Number(o.total || 0).toLocaleString()}</p>
                             </div>
+                        `).join('') : '<p class="text-xs text-zinc-500 text-center py-6">Belum ada order.</p>'}
+                    </div>
+                `;
+                return;
+            }
+
+            main.innerHTML = `
+                <div class="p-4 space-y-4 pb-24">
+                    <div class="bg-zinc-950 text-white p-4 rounded-3xl border-2 border-orange-500 flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] text-orange-400 font-extrabold uppercase block">AKUN AKTIF</span>
+                            <h2 class="font-black text-sm">${currentUser.name} (${currentUser.phone})</h2>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="openNotificationModal()" class="relative p-2.5 bg-orange-600 hover:bg-orange-700 rounded-2xl text-white cursor-pointer">
-                                <i class="fa-solid fa-bell text-sm"></i>
-                                <span id="home-notif-badge" class="absolute -top-1 -right-1 bg-zinc-950 text-orange-400 text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ${uNotif > 0 ? '' : 'hidden'}">${uNotif}</span>
+                        <div class="flex gap-2">
+                            <button onclick="openNotificationModal()" class="relative px-3 py-2 bg-orange-600 text-white rounded-2xl text-xs font-black cursor-pointer">
+                                <i class="fa-solid fa-bell"></i>
+                                <span id="home-notif-badge" class="ml-1 bg-zinc-950 text-orange-400 px-1.5 py-0.5 rounded-full text-[10px]">0</span>
                             </button>
-                            <button onclick="startPersonalChat('Admin SIMADU')" class="relative p-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-white cursor-pointer">
-                                <i class="fa-solid fa-comments text-sm"></i>
-                                <span id="home-chat-badge" class="absolute -top-1 -right-1 bg-orange-600 text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ${uChat > 0 ? '' : 'hidden'}">${uChat}</span>
+                            <button onclick="openChat('Admin SIMADU')" class="relative px-3 py-2 bg-white text-zinc-950 rounded-2xl text-xs font-black cursor-pointer">
+                                <i class="fa-solid fa-comments"></i>
+                                <span id="home-chat-badge" class="ml-1 bg-orange-600 text-white px-1.5 py-0.5 rounded-full text-[10px]">0</span>
                             </button>
-                            <button onclick="handleLogout()" class="p-2.5 bg-red-600 hover:bg-red-700 rounded-2xl text-white cursor-pointer"><i class="fa-solid fa-power-off text-sm"></i></button>
                         </div>
                     </div>
 
-                    <div class="bg-white px-4 py-2.5 rounded-2xl border-2 border-zinc-200 flex items-center justify-between text-xs gap-2">
-                        <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${alarmEnabled ? 'bg-zinc-950 text-orange-400' : 'bg-zinc-200 text-zinc-700'}">
-                            Alarm: ${alarmEnabled ? 'ON' : 'OFF'}
+                    <div class="flex items-center justify-between bg-zinc-100 px-3.5 py-2 rounded-2xl text-xs">
+                        <button onclick="toggleNotificationAlarm()" class="font-black text-zinc-950 cursor-pointer">
+                            <i class="fa-solid fa-volume-high text-orange-600 mr-1"></i> Alarm: ${alarmEnabled ? 'ON' : 'OFF'}
                         </button>
-                        <button onclick="manualForceSync(true)" id="home-supabase-badge" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-orange-50 text-orange-800 border border-orange-300 cursor-pointer">
-                            ${lastSupabaseStatus.label}
-                        </button>
-                    </div>
-
-                    <div class="rounded-3xl shadow-lg overflow-hidden border-2 border-zinc-950 bg-white">
-                        <img src="${bannerSrc}" class="w-full h-36 object-cover" alt="Banner OLENG GO">
-                    </div>
-
-                    <div class="grid grid-cols-4 gap-2">
-                        <button onclick="renderDashboardContent('ojek')" class="bg-white p-3 rounded-2xl border-2 border-zinc-200 hover:border-orange-500 flex flex-col items-center cursor-pointer">
-                            <div class="w-11 h-11 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-lg mb-1"><i class="fa-solid fa-motorcycle"></i></div>
-                            <span class="text-[10px] font-extrabold text-zinc-950 text-center">Pesan Ojek</span>
-                        </button>
-                        <button onclick="renderDashboardContent('food')" class="bg-white p-3 rounded-2xl border-2 border-zinc-200 hover:border-orange-500 flex flex-col items-center cursor-pointer">
-                            <div class="w-11 h-11 bg-zinc-950 text-orange-400 rounded-2xl flex items-center justify-center text-lg mb-1"><i class="fa-solid fa-utensils"></i></div>
-                            <span class="text-[10px] font-extrabold text-zinc-950 text-center">OLENG Food</span>
-                        </button>
-                        <button onclick="openNotificationModal()" class="bg-white p-3 rounded-2xl border-2 border-zinc-200 hover:border-orange-500 flex flex-col items-center cursor-pointer">
-                            <div class="w-11 h-11 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-lg mb-1"><i class="fa-solid fa-bell"></i></div>
-                            <span class="text-[10px] font-extrabold text-zinc-950 text-center">Notifikasi</span>
-                        </button>
-                        <button onclick="renderDashboardContent('history')" class="bg-white p-3 rounded-2xl border-2 border-zinc-200 hover:border-orange-500 flex flex-col items-center cursor-pointer">
-                            <div class="w-11 h-11 bg-zinc-950 text-orange-400 rounded-2xl flex items-center justify-center text-lg mb-1"><i class="fa-solid fa-receipt"></i></div>
-                            <span class="text-[10px] font-extrabold text-zinc-950 text-center">Riwayat</span>
+                        <button onclick="manualForceSync(true)" id="home-supabase-badge" class="font-black text-orange-700 cursor-pointer">
+                            Sinkron Supabase
                         </button>
                     </div>
 
-                    <div class="bg-white p-4 rounded-3xl border-2 border-zinc-200 space-y-2">
-                        <div class="flex justify-between items-center gap-1 flex-wrap">
-                            <h3 class="font-extrabold text-xs text-zinc-950 uppercase"><i class="fa-solid fa-map-location-dot text-orange-600 mr-1"></i> Peta Lengkong</h3>
-                            <div class="flex gap-1.5">
-                                <button onclick="openFullGoogleMapsForCoords(userCurrentLatLng[0], userCurrentLatLng[1], 'Lengkong Sukabumi')" class="px-2 py-1 bg-zinc-950 text-white rounded-xl text-[10px] font-extrabold cursor-pointer">Google Maps</button>
-                                <button onclick="toggleMapLayerMode()" class="px-2.5 py-1 bg-orange-600 text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><span class="map-layer-label">${mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit'}</span></button>
-                            </div>
-                        </div>
-                        <div id="map" class="map-container border-2 border-zinc-200"></div>
+                    <div class="bg-white p-4 rounded-3xl border-2 border-orange-500 space-y-2.5">
+                        <h3 class="font-black text-xs text-zinc-950 uppercase">Buat Order Cepat (Uji Pop-Up Mitra)</h3>
+                        <select id="quick-target-role" class="w-full p-2.5 border-2 border-zinc-200 rounded-2xl text-xs font-bold bg-white">
+                            ${(db.merchants || []).map(m => `<option value="merchant:${m.name}">Toko: ${m.name}</option>`).join('')}
+                            ${(db.drivers || []).map(d => `<option value="driver:${d.name}">Driver: ${d.name}</option>`).join('')}
+                        </select>
+                        <input type="text" id="quick-order-note" placeholder="Contoh: Nasi Liwet 1 / Antar ke Alun-Alun" class="w-full p-2.5 border-2 border-zinc-200 rounded-2xl text-xs font-semibold bg-white">
+                        <button onclick="createQuickOrder()" class="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-2xl text-xs cursor-pointer">
+                            Kirim Order Sekarang
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-3 rounded-3xl border-2 border-zinc-200 space-y-2">
+                        <h3 class="font-black text-xs text-zinc-950 uppercase">Peta Lengkong, Sukabumi</h3>
+                        <div id="map" class="map-container"></div>
                     </div>
                 </div>
             `;
+            updateBadges();
             setTimeout(() => {
                 const el = document.getElementById('map');
                 if (!el) return;
-                mapInstance = L.map('map').setView(currentMapCenter || userCurrentLatLng, currentMapZoom);
-                getBaseTileLayerForMode().addTo(mapInstance);
-                db.merchants.forEach(m => { if (m.lat && m.lng) L.marker([m.lat, m.lng]).addTo(mapInstance).bindPopup(`<b>${m.name}</b>`); });
-                db.drivers.forEach(d => { if (d.lat && d.lng) L.marker([d.lat, d.lng]).addTo(mapInstance).bindPopup(`<b>Driver: ${d.name}</b>`); });
-                setTimeout(() => mapInstance && mapInstance.invalidateSize(), 300);
+                mapInstance = L.map('map').setView(userCurrentLatLng, 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapInstance);
+                setTimeout(() => mapInstance && mapInstance.invalidateSize(), 250);
             }, 200);
         }
 
-        function renderCustomerFood(container) {
-            const stores = db.merchants.filter(m => String(m.name || '').trim() && (m.name.toLowerCase().includes(searchQuery.toLowerCase())));
-            container.innerHTML = `
-                <div class="p-4 space-y-4 pb-24 bg-white min-h-full">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h2 class="font-black text-base text-zinc-950">OLENG Food Lengkong</h2>
-                            <p class="text-[11px] text-orange-700 font-semibold">Min. Tarif: Rp ${Number(db.pricing.minFare).toLocaleString()} • Food/km: Rp ${Number(db.pricing.foodPerKm).toLocaleString()}</p>
-                        </div>
-                        <button onclick="openCartModal()" class="bg-orange-600 text-white px-3.5 py-2 rounded-2xl text-xs font-black cursor-pointer">
-                            <i class="fa-solid fa-cart-shopping"></i> Keranjang (${db.cart.length})
-                        </button>
-                    </div>
-                    <input type="text" value="${searchQuery}" oninput="searchQuery=this.value;renderCustomerFood(document.getElementById('main-content'))" placeholder="Cari nama toko..." class="w-full p-3 border-2 border-zinc-200 rounded-2xl text-xs font-semibold bg-white">
-                    <div class="space-y-2.5">
-                        ${stores.map(m => {
-                            const dist = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], m.lat, m.lng);
-                            return `
-                                <div onclick="openMerchantDetail(${m.id})" class="bg-white p-4 rounded-3xl border-2 border-zinc-200 hover:border-orange-500 cursor-pointer flex items-center space-x-3.5">
-                                    <img src="${m.image || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border border-zinc-200">
-                                    <div class="flex-1">
-                                        <div class="flex justify-between items-start">
-                                            <h4 class="font-bold text-sm text-zinc-950">${m.name}</h4>
-                                            <span class="text-[10px] px-2 py-0.5 rounded font-black ${m.status === 'Buka' ? 'bg-orange-100 text-orange-800' : 'bg-zinc-200 text-zinc-700'}">${m.status}</span>
-                                        </div>
-                                        <p class="text-[11px] text-zinc-600">${m.category || 'Kuliner'} • <b>${dist} km</b></p>
-                                        <p class="text-[10px] text-zinc-500 mt-0.5">${m.address || 'Lengkong, Sukabumi'}</p>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        function openMerchantDetail(merchantId) {
-            const m = db.merchants.find(x => x.id === merchantId);
-            if (!m) return;
-            db.activeMerchant = m;
-            const foods = db.foods.filter(f => Number(f.merchantId) === Number(merchantId));
-            const el = document.getElementById('view-merchant-detail');
-            el.classList.remove('hidden');
-            el.innerHTML = `
-                <div class="relative bg-zinc-950 text-white">
-                    <img src="${m.banner || DEFAULT_MAIN_BANNER}" class="w-full h-44 object-cover opacity-80">
-                    <button onclick="document.getElementById('view-merchant-detail').classList.add('hidden')" class="absolute top-4 left-4 w-10 h-10 bg-white text-zinc-950 rounded-full flex items-center justify-center font-bold shadow cursor-pointer"><i class="fa-solid fa-arrow-left"></i></button>
-                    <button onclick="openCartModal()" class="absolute top-4 right-4 px-3.5 py-2 bg-orange-600 text-white rounded-full font-black text-xs shadow cursor-pointer">Keranjang (${db.cart.length})</button>
-                </div>
-                <div class="p-4 space-y-4 pb-24">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h2 class="font-black text-lg text-zinc-950">${m.name}</h2>
-                            <p class="text-xs text-zinc-600">${m.address || 'Lengkong, Sukabumi'} • ${m.operationalHours || '08:00 - 21:00 WIB'}</p>
-                        </div>
-                        <button onclick="startPersonalChat('${m.name.replace(/'/g, "\\'")}')" class="px-3 py-2 bg-zinc-950 text-orange-400 rounded-2xl text-xs font-black cursor-pointer">Chat Toko</button>
-                    </div>
-                    <div class="space-y-2.5">
-                        ${foods.map(f => `
-                            <div class="p-3.5 rounded-3xl border-2 border-zinc-200 flex items-center justify-between gap-3">
-                                <div class="flex items-center gap-3">
-                                    <img src="${f.image || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border">
-                                    <div>
-                                        <h4 class="font-bold text-xs text-zinc-950">${f.name}</h4>
-                                        <p class="text-[11px] text-zinc-600">${f.desc}</p>
-                                        <span class="text-xs font-black text-orange-600">Rp ${Number(f.price).toLocaleString()} • Stok: ${f.stock ?? 20}</span>
-                                    </div>
-                                </div>
-                                <button onclick="addToCart(${f.id})" class="w-10 h-10 bg-orange-600 hover:bg-orange-700 text-white rounded-full font-black flex items-center justify-center cursor-pointer shrink-0"><i class="fa-solid fa-plus"></i></button>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        function addToCart(foodId) {
-            const f = db.foods.find(x => Number(x.id) === Number(foodId));
-            if (!f || Number(f.stock ?? 20) <= 0) return showToast('Menu habis', 'error');
-            db.cart.push(f);
-            saveDB(`${f.name} ditambahkan ke keranjang`, false);
-            if (!document.getElementById('view-merchant-detail').classList.contains('hidden')) openMerchantDetail(db.activeMerchant?.id);
-        }
-
-        function openCartModal() {
-            document.getElementById('modal-cart').classList.remove('hidden');
-            updateCartUI();
-            setTimeout(() => {
-                const el = document.getElementById('checkout-map');
-                if (!el) return;
-                if (checkoutMapInstance) { checkoutMapInstance.remove(); checkoutMapInstance = null; }
-                checkoutMapInstance = L.map('checkout-map').setView(userCurrentLatLng, 15);
-                getBaseTileLayerForMode().addTo(checkoutMapInstance);
-                const destM = L.marker(destLatLng, { draggable: true }).addTo(checkoutMapInstance);
-                const setDest = (lat, lng) => {
-                    destLatLng = [Number(lat.toFixed(6)), Number(lng.toFixed(6))];
-                    destM.setLatLng(destLatLng);
-                    document.getElementById('cart-dest-label').textContent = `Lokasi (${destLatLng[0]}, ${destLatLng[1]})`;
-                    updateCartUI();
-                };
-                checkoutMapInstance.on('click', e => setDest(e.latlng.lat, e.latlng.lng));
-                destM.on('dragend', () => setDest(destM.getLatLng().lat, destM.getLatLng().lng));
-                setTimeout(() => checkoutMapInstance && checkoutMapInstance.invalidateSize(), 300);
-            }, 200);
-        }
-
-        function closeCartModal() {
-            resetDriverSelectionDraft();
-            if (checkoutMapInstance) { checkoutMapInstance.remove(); checkoutMapInstance = null; }
-            document.getElementById('modal-cart').classList.add('hidden');
-        }
-
-        function toggleDraftDriverSelection(id, ctx = 'cart') {
-            if (Number(draftSelectedDriverId) === Number(id)) {
-                draftSelectedDriverId = null;
-                if (Number(confirmedOrderDriverId) === Number(id)) confirmedOrderDriverId = null;
-            } else {
-                draftSelectedDriverId = Number(id);
-            }
-            if (ctx === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
-            else updateCartUI();
-        }
-
-        function confirmDraftDriverSelection(ctx = 'cart') {
-            if (!draftSelectedDriverId) return showToast('Pilih driver terlebih dahulu', 'error');
-            confirmedOrderDriverId = Number(draftSelectedDriverId);
-            showToast('Driver dikonfirmasi', 'success');
-            if (ctx === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
-            else updateCartUI();
-        }
-
-        function refreshActiveDriversList(ctx = 'cart') {
-            pullInitialFromSupabase(false);
-            if (ctx === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
-            else updateCartUI();
-        }
-
-        function updateCartUI() {
-            const merchant = db.activeMerchant || db.merchants[0];
-            document.getElementById('cart-pickup-label').textContent = merchant.name;
-            const drivers = (db.drivers || []).filter(d => d.status === 'Online').map(d => ({ ...d, distance: calculateDistance(merchant.lat, merchant.lng, d.lat, d.lng) })).sort((a, b) => a.distance - b.distance);
-            document.getElementById('checkout-driver-list').innerHTML = drivers.map(d => {
-                const isDraft = Number(draftSelectedDriverId) === Number(d.id);
-                const isConf = Number(confirmedOrderDriverId) === Number(d.id);
-                return `
-                    <div class="p-2 rounded-xl border flex justify-between items-center text-xs ${isDraft || isConf ? 'border-orange-600 bg-orange-50' : 'border-zinc-200 bg-white'}">
-                        <div>
-                            <b>${d.name}</b> <span class="text-[10px] text-zinc-600">(${d.distance} km)</span>
-                            ${isConf ? '<span class="ml-1 text-[9px] bg-zinc-950 text-orange-400 px-1.5 py-0.5 rounded font-black">TERKONFIRMASI</span>' : isDraft ? '<span class="ml-1 text-[9px] bg-orange-600 text-white px-1.5 py-0.5 rounded font-black">DIPILIH</span>' : ''}
-                        </div>
-                        <button type="button" onclick="toggleDraftDriverSelection(${d.id}, 'cart')" class="px-2.5 py-1 rounded-lg text-[10px] font-black cursor-pointer ${isDraft ? 'bg-red-600 text-white' : 'bg-orange-600 text-white'}">${isDraft ? 'BATAL' : 'PILIH'}</button>
-                    </div>
-                `;
-            }).join('');
-
-            const itemsBox = document.getElementById('cart-items-container');
-            itemsBox.innerHTML = db.cart.length ? db.cart.map((c, idx) => `
-                <div class="flex justify-between items-center py-2 text-xs">
-                    <span><b>${c.name}</b> • Rp ${Number(c.price).toLocaleString()}</span>
-                    <button onclick="db.cart.splice(${idx},1);updateCartUI()" class="text-red-600 cursor-pointer"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            `).join('') : '<p class="text-xs text-zinc-500 text-center py-2">Keranjang kosong.</p>';
-
-            const sub = db.cart.reduce((s, x) => s + Number(x.price || 0), 0);
-            const dist = calculateDistance(merchant.lat, merchant.lng, destLatLng[0], destLatLng[1]);
-            const ongkir = db.cart.length ? calculateShippingCost(dist, 'food') : 0;
-            document.getElementById('cart-distance-label').textContent = `Ongkir (${dist} km)`;
-            document.getElementById('cart-subtotal').textContent = `Rp ${sub.toLocaleString()}`;
-            document.getElementById('cart-ongkir').textContent = `Rp ${ongkir.toLocaleString()}`;
-            document.getElementById('cart-total').textContent = `Rp ${(sub + ongkir).toLocaleString()}`;
-        }
-
-        function submitFoodOrder() {
-            if (!db.cart.length) return showToast('Keranjang masih kosong', 'error');
-            const drvId = confirmedOrderDriverId || draftSelectedDriverId;
-            if (!drvId) return showToast('Pilih & konfirmasi driver dulu', 'error');
-            const drv = db.drivers.find(d => Number(d.id) === Number(drvId));
-            const m = db.activeMerchant || db.merchants[0];
-            const sub = db.cart.reduce((s, x) => s + Number(x.price || 0), 0);
-            const dist = calculateDistance(m.lat, m.lng, destLatLng[0], destLatLng[1]);
-            const ongkir = calculateShippingCost(dist, 'food');
-            const code = 'ORD-' + Math.floor(1000 + Math.random() * 9000);
-            const ord = {
-                id: code, type: 'food', customer: currentUser.name, merchant: m.name,
-                driver: drv.name, assignedDriverPhone: normalizePhone(drv.phone),
-                items: db.cart.map(x => x.name).join(', '),
-                dest: document.getElementById('cart-dest-label').textContent,
-                destLat: destLatLng[0], destLng: destLatLng[1],
-                total: sub + ongkir, status: 'searching_driver', settled: false
+        function createQuickOrder() {
+            const sel = document.getElementById('quick-target-role').value;
+            const note = document.getElementById('quick-order-note').value.trim() || 'Pesanan OLENG GO';
+            const [kind, targetName] = sel.split(':');
+            const newOrder = {
+                id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+                customer: currentUser.name,
+                merchant: kind === 'merchant' ? targetName : 'Layanan Ojek Online',
+                driver: kind === 'driver' ? targetName : (db.drivers[0]?.name || 'Asep Supriatna'),
+                items: note,
+                total: 15000,
+                status: 'searching_driver'
             };
-            db.orders.unshift(ord);
-            db.cart = [];
-            resetDriverSelectionDraft();
-            addAccountNotification(`Order Baru ${code}`, `${ord.items} di ${m.name}`, m.name, `${code}-m`);
-            addAccountNotification(`Tawaran Order ${code}`, `Jemput di ${m.name} untuk ${currentUser.name}`, drv.name, `${code}-d`);
-            saveDB(`Pesanan ${code} dikirim`);
-            closeCartModal();
-            document.getElementById('view-merchant-detail').classList.add('hidden');
-            renderDashboardContent('history');
-        }
-
-        function renderCustomerOjek(container) {
-            const dist = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]);
-            const fare = calculateShippingCost(dist, 'ojek');
-            const drivers = (db.drivers || []).filter(d => d.status === 'Online').map(d => ({ ...d, distance: calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], d.lat, d.lng) })).sort((a, b) => a.distance - b.distance);
-            container.innerHTML = `
-                <div class="p-4 space-y-4 pb-24 bg-white min-h-full">
-                    <h2 class="font-black text-base text-zinc-950">Pesan Ojek Online Lengkong</h2>
-                    <div class="bg-white p-4 rounded-3xl border-2 border-zinc-200 space-y-2.5">
-                        <div class="flex justify-between items-center">
-                            <span class="text-[11px] font-extrabold text-zinc-950 uppercase">Peta Tujuan Ojek</span>
-                            <button onclick="useCurrentGPSLocation('ojek')" class="px-2.5 py-1 bg-orange-600 text-white rounded-xl text-[10px] font-black cursor-pointer">Lokasi GPS</button>
-                        </div>
-                        <div id="ojek-map" class="map-container border-2 border-zinc-200" style="height:170px;"></div>
-                        <input type="text" id="ojek-to" placeholder="Tujuan (Contoh: Pasar Lengkong)" class="w-full p-2.5 border-2 border-zinc-200 rounded-2xl text-xs font-semibold bg-white">
-                        <div class="flex justify-between items-center bg-zinc-50 p-3 rounded-2xl border text-xs">
-                            <span class="font-bold">Estimasi (${dist} km):</span>
-                            <span class="font-black text-orange-600">Rp ${fare.toLocaleString()}</span>
-                        </div>
-                        <button onclick="confirmDraftDriverSelection('ojek')" class="w-full py-2.5 bg-zinc-950 text-orange-400 rounded-xl text-xs font-black cursor-pointer">KONFIRMASI DRIVER</button>
-                        <button onclick="submitOjekOrder()" class="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-xs font-black cursor-pointer">Pesan Ojek Sekarang</button>
-                    </div>
-                    <div class="space-y-2">
-                        ${drivers.map(d => `
-                            <div class="p-3 rounded-2xl border-2 flex justify-between items-center text-xs ${Number(draftSelectedDriverId) === Number(d.id) || Number(confirmedOrderDriverId) === Number(d.id) ? 'border-orange-600 bg-orange-50' : 'border-zinc-200 bg-white'}">
-                                <div>
-                                    <b>${d.name}</b> • <span class="text-zinc-600">${d.vehicle} (${d.distance} km)</span>
-                                </div>
-                                <div class="flex gap-1.5">
-                                    <button onclick="toggleDraftDriverSelection(${d.id}, 'ojek')" class="px-2.5 py-1 bg-orange-600 text-white rounded-xl text-[10px] font-black cursor-pointer">${Number(draftSelectedDriverId) === Number(d.id) ? 'BATAL' : 'PILIH'}</button>
-                                    <button onclick="startPersonalChat('${d.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-zinc-950 text-white rounded-xl text-[10px] font-bold cursor-pointer">Chat</button>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-            setTimeout(() => {
-                const el = document.getElementById('ojek-map');
-                if (!el) return;
-                ojekMapInstance = L.map('ojek-map').setView(userCurrentLatLng, 15);
-                getBaseTileLayerForMode().addTo(ojekMapInstance);
-                const m = L.marker(destLatLng, { draggable: true }).addTo(ojekMapInstance);
-                ojekMapInstance.on('click', e => { destLatLng = [Number(e.latlng.lat.toFixed(6)), Number(e.latlng.lng.toFixed(6))]; m.setLatLng(destLatLng); renderCustomerOjek(document.getElementById('main-content')); });
-                setTimeout(() => ojekMapInstance && ojekMapInstance.invalidateSize(), 300);
-            }, 200);
-        }
-
-        function submitOjekOrder() {
-            const drvId = confirmedOrderDriverId || draftSelectedDriverId;
-            if (!drvId) return showToast('Pilih & konfirmasi driver dulu', 'error');
-            const drv = db.drivers.find(d => Number(d.id) === Number(drvId));
-            const to = document.getElementById('ojek-to')?.value.trim() || `Lokasi (${destLatLng[0]}, ${destLatLng[1]})`;
-            const dist = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]);
-            const fare = calculateShippingCost(dist, 'ojek');
-            const code = 'OJK-' + Math.floor(1000 + Math.random() * 9000);
-            db.orders.unshift({
-                id: code, type: 'ojek', customer: currentUser.name, merchant: 'Layanan Ojek Online',
-                driver: drv.name, assignedDriverPhone: normalizePhone(drv.phone),
-                items: `Ojek ke ${to}`, dest: to, destLat: destLatLng[0], destLng: destLatLng[1],
-                total: fare, status: 'searching_driver', settled: false
+            db.orders.unshift(newOrder);
+            db.notifications.unshift({
+                id: Date.now(),
+                target: targetName,
+                title: `Order Baru ${newOrder.id}`,
+                desc: `${note} dari ${currentUser.name}`,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
-            resetDriverSelectionDraft();
-            addAccountNotification(`Order Ojek ${code}`, `Tujuan: ${to} (${dist} km)`, drv.name, `${code}-o`);
-            saveDB(`Order ojek ${code} dikirim`);
-            renderDashboardContent('history');
+            saveLocal();
+            syncToSupabase();
+            showToast(`Order ${newOrder.id} dikirim ke ${targetName}`, 'success');
+            renderDashboardContent('orders');
         }
 
-        function useCurrentGPSLocation(ctx) {
-            if (!navigator.geolocation) return showToast('GPS tidak didukung', 'error');
-            navigator.geolocation.getCurrentPosition(pos => {
-                userCurrentLatLng = [Number(pos.coords.latitude.toFixed(6)), Number(pos.coords.longitude.toFixed(6))];
-                showToast('Lokasi GPS diperbarui', 'success');
-                renderDashboardContent(ctx);
-            }, () => showToast('Gagal ambil lokasi GPS', 'error'), { enableHighAccuracy: true });
-        }
-
-        function renderOrderHistory(container) {
-            const orders = (db.orders || []).filter(o => isOrderTargetedToCurrentUser(o));
-            const notifs = getAccountNotifs();
-            container.innerHTML = `
-                <div class="p-4 space-y-4 pb-24 bg-white min-h-full">
-                    <div class="flex justify-between items-center">
-                        <h2 class="font-black text-base text-zinc-950">Riwayat & Notifikasi</h2>
-                        <button onclick="openNotificationModal()" class="px-3 py-1.5 bg-orange-600 text-white rounded-xl text-xs font-black cursor-pointer">Cek Notif (${notifs.length})</button>
-                    </div>
-                    <div class="space-y-2.5">
-                        ${orders.length ? orders.map(o => {
-                            const st = normalizeOrderStatusCode(o.status);
-                            return `
-                                <div class="p-4 rounded-3xl border-2 border-zinc-200 bg-white space-y-1.5 text-xs">
-                                    <div class="flex justify-between font-black">
-                                        <span class="text-orange-600">${o.id}</span>
-                                        <span class="px-2 py-0.5 rounded bg-zinc-950 text-white text-[10px]">${getOrderStatusLabel(st)}</span>
-                                    </div>
-                                    <p class="font-bold text-zinc-950">${o.merchant} • ${o.items}</p>
-                                    <p class="text-zinc-600">Pemesan: ${o.customer} • Driver: ${o.driver || '-'}</p>
-                                    <div class="flex justify-between items-center pt-2 border-t">
-                                        <span class="font-black text-zinc-950">Rp ${Number(o.total || 0).toLocaleString()}</span>
-                                        <div class="flex gap-1.5">
-                                            <button onclick="openIncomingOrderModal('${o.id}', true)" class="px-2.5 py-1 bg-orange-600 text-white rounded-lg text-[10px] font-black cursor-pointer">Proses</button>
-                                            ${st === 'completed' ? `<button onclick="openRatingModal('${o.id}')" class="px-2.5 py-1 bg-zinc-950 text-orange-400 rounded-lg text-[10px] font-black cursor-pointer">Rating</button>` : ''}
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('') : '<p class="text-xs text-zinc-500 text-center py-6">Belum ada riwayat pesanan.</p>'}
-                    </div>
-                </div>
-            `;
-        }
-
-        function openRatingModal(orderId) {
-            ratingOrderTargetId = orderId;
-            setRatingStar(5);
-            document.getElementById('rating-order-info').textContent = `Order ${orderId}`;
-            document.getElementById('modal-rating').classList.remove('hidden');
-        }
-        function closeRatingModal() { document.getElementById('modal-rating').classList.add('hidden'); }
-        function setRatingStar(n) {
-            selectedRatingStar = n;
-            document.querySelectorAll('.rating-star').forEach(b => {
-                b.className = Number(b.getAttribute('data-star')) <= n ? 'rating-star text-orange-500 cursor-pointer' : 'rating-star text-zinc-300 cursor-pointer';
-            });
-        }
-        function submitOrderRating() {
-            const ord = db.orders.find(o => o.id === ratingOrderTargetId);
-            if (ord) {
-                ord.rating = selectedRatingStar;
-                ord.reviewText = document.getElementById('rating-comment-input').value.trim();
-                saveDB('Rating tersimpan');
-            }
-            closeRatingModal();
-            renderDashboardContent('history');
-        }
-
-        function renderMerchantManage(container) {
-            const phone = normalizePhone(currentUser.phone);
-            const m = db.merchants.find(x => String(x.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID && ((currentUser.accountId && String(x.accountId || '').toUpperCase() === String(currentUser.accountId).toUpperCase()) || (phone && normalizePhone(x.whatsapp) === phone))) || db.merchants[1];
-            const foods = db.foods.filter(f => Number(f.merchantId) === Number(m.id));
-            container.innerHTML = `
-                <div class="p-4 space-y-4 pb-24 bg-white min-h-full">
-                    <div class="bg-zinc-950 text-white p-4 rounded-3xl border-2 border-orange-500 flex justify-between items-center">
-                        <div>
-                            <span class="text-[10px] text-orange-400 font-black uppercase block">KELOLA TOKO</span>
-                            <h2 class="font-black text-sm">${m.name}</h2>
-                        </div>
-                        <button onclick="m.status=m.status==='Buka'?'Tutup':'Buka';saveDB('Status toko diperbarui');renderMerchantManage(document.getElementById('main-content'))" class="px-3 py-1.5 rounded-xl text-xs font-black cursor-pointer ${m.status === 'Buka' ? 'bg-orange-600 text-white' : 'bg-zinc-700 text-white'}">${m.status}</button>
-                    </div>
-                    <div class="bg-white p-4 rounded-3xl border-2 border-zinc-200 space-y-2.5">
-                        <input type="text" id="m-edit-name" value="${m.name}" class="w-full p-2.5 border-2 border-zinc-200 rounded-2xl text-xs font-bold" placeholder="Nama Toko">
-                        <input type="text" id="m-edit-addr" value="${m.address || ''}" class="w-full p-2.5 border-2 border-zinc-200 rounded-2xl text-xs" placeholder="Alamat Toko">
-                        <input type="text" id="m-edit-hours" value="${m.operationalHours || ''}" class="w-full p-2.5 border-2 border-zinc-200 rounded-2xl text-xs" placeholder="Jam Operasional">
-                        <button onclick="m.name=document.getElementById('m-edit-name').value.trim()||m.name;m.address=document.getElementById('m-edit-addr').value.trim();m.operationalHours=document.getElementById('m-edit-hours').value.trim();saveDB('Data toko disimpan');renderMerchantManage(document.getElementById('main-content'))" class="w-full py-3 bg-orange-600 text-white font-black rounded-2xl text-xs cursor-pointer">Simpan Toko</button>
-                    </div>
-                    <div class="bg-white p-4 rounded-3xl border-2 border-zinc-200 space-y-2">
-                        <div class="flex justify-between items-center">
-                            <h3 class="font-black text-xs uppercase">Menu Toko</h3>
-                            <button onclick="const n=prompt('Nama menu:');const p=Number(prompt('Harga:','15000'));if(n){db.foods.push({id:Date.now(),merchantId:m.id,name:n,price:p||15000,desc:'Menu Lengkong',stock:20,image:'./olengorange2.png'});saveDB('Menu ditambahkan');renderMerchantManage(document.getElementById('main-content'));}" class="px-3 py-1 bg-zinc-950 text-orange-400 rounded-xl text-[10px] font-black cursor-pointer">+ Menu</button>
-                        </div>
-                        ${foods.map(f => `<div class="flex justify-between items-center p-2 bg-zinc-50 rounded-xl text-xs"><span><b>${f.name}</b> • Rp ${Number(f.price).toLocaleString()}</span><button onclick="db.foods=db.foods.filter(x=>x.id!==${f.id});saveDB('Menu dihapus');renderMerchantManage(document.getElementById('main-content'))" class="text-red-600 cursor-pointer"><i class="fa-solid fa-trash"></i></button></div>`).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderProfile(container) {
-            const bal = Number(currentUser.balance || 0);
-            container.innerHTML = `
-                <div class="p-4 space-y-4 pb-24 bg-white min-h-full">
-                    <div class="bg-zinc-950 text-white p-5 rounded-3xl border-2 border-orange-500 text-center space-y-2">
-                        <img src="${currentUser.photo || './olengorange2.png'}" class="w-20 h-20 rounded-2xl object-cover mx-auto border-2 border-orange-500 bg-white">
-                        <h2 class="font-black text-base">${currentUser.name}</h2>
-                        <p class="text-xs text-orange-400 font-bold">${currentUser.phone} • ${currentUser.role.toUpperCase()}</p>
-                        ${currentUser.role !== 'customer' ? `<p class="text-sm font-black text-white">Saldo: Rp ${bal.toLocaleString()}</p>` : ''}
-                    </div>
-                    <div class="bg-white p-4 rounded-3xl border-2 border-zinc-200 space-y-2.5">
-                        <input type="text" id="p-name" value="${currentUser.name}" class="w-full p-2.5 border-2 border-zinc-200 rounded-2xl text-xs font-bold" placeholder="Nama">
-                        <input type="text" id="p-addr" value="${currentUser.address || ''}" class="w-full p-2.5 border-2 border-zinc-200 rounded-2xl text-xs" placeholder="Alamat">
-                        <input type="password" id="p-pass" placeholder="Sandi baru (opsional)" class="w-full p-2.5 border-2 border-zinc-200 rounded-2xl text-xs">
-                        <button onclick="currentUser.name=document.getElementById('p-name').value.trim()||currentUser.name;currentUser.address=document.getElementById('p-addr').value.trim();const np=document.getElementById('p-pass').value.trim();if(np)currentUser.password=np;const idx=db.users.findIndex(x=>x.id===currentUser.id);if(idx!==-1)db.users[idx]={...currentUser};localStorage.setItem('oleng_user_session',JSON.stringify(currentUser));saveDB('Profil diperbarui');renderProfile(document.getElementById('main-content'));" class="w-full py-3 bg-orange-600 text-white font-black rounded-2xl text-xs cursor-pointer">Simpan Profil</button>
-                        <button onclick="handleLogout()" class="w-full py-3 bg-red-600 text-white font-black rounded-2xl text-xs cursor-pointer">Keluar Akun</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderAdminDash(container) {
-            const kom = (db.commissionLogs || []).reduce((s, x) => s + Number(x.amount || 0), 0);
-            container.innerHTML = `
-                <div class="p-4 space-y-4 pb-24 bg-white min-h-full">
-                    <div class="bg-zinc-950 text-white p-4 rounded-3xl border-2 border-orange-500 flex justify-between items-center">
-                        <div>
-                            <span class="text-[10px] text-orange-400 font-black uppercase block">ADMIN SIMADU</span>
-                            <h2 class="font-black text-sm">Master Control Lengkong</h2>
-                        </div>
-                        <button onclick="manualForceSync(true)" class="px-3 py-1.5 bg-orange-600 text-white rounded-xl text-[10px] font-black cursor-pointer">Sinkron</button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2.5 text-center">
-                        <div onclick="renderDashboardContent('admin-users')" class="p-3.5 rounded-3xl border-2 border-zinc-200 cursor-pointer"><span class="text-[10px] font-extrabold text-zinc-600 block">USER</span><b class="text-base text-zinc-950">${db.users.length}</b></div>
-                        <div onclick="renderDashboardContent('admin-stores')" class="p-3.5 rounded-3xl border-2 border-zinc-200 cursor-pointer"><span class="text-[10px] font-extrabold text-zinc-600 block">TOKO</span><b class="text-base text-orange-600">${db.merchants.length}</b></div>
-                        <div onclick="renderDashboardContent('admin-drivers')" class="p-3.5 rounded-3xl border-2 border-zinc-200 cursor-pointer"><span class="text-[10px] font-extrabold text-zinc-600 block">DRIVER</span><b class="text-base text-zinc-950">${db.drivers.length}</b></div>
-                        <div onclick="renderDashboardContent('history')" class="p-3.5 rounded-3xl border-2 border-zinc-200 cursor-pointer"><span class="text-[10px] font-extrabold text-zinc-600 block">KOMISI</span><b class="text-xs text-orange-600">Rp ${kom.toLocaleString()}</b></div>
-                    </div>
-                </div>
-            `;
-        }
-        function renderAdminUsers(c) { c.innerHTML = `<div class="p-4 space-y-2 pb-24"><h2 class="font-black text-sm">Daftar User (${db.users.length})</h2>${db.users.map(u=>`<div class="p-3 rounded-2xl border text-xs flex justify-between"><div><b>${u.name}</b> • ${u.phone} (${u.role})</div>${normalizePhone(u.phone)!=='085624736602'?`<button onclick="db.users=db.users.filter(x=>x.id!==${u.id});saveDB('User dihapus');renderAdminUsers(document.getElementById('main-content'))" class="text-red-600 font-bold cursor-pointer">Hapus</button>`:''}</div>`).join('')}</div>`; }
-        function renderAdminStores(c) { c.innerHTML = `<div class="p-4 space-y-2 pb-24"><h2 class="font-black text-sm">Daftar Toko (${db.merchants.length})</h2>${db.merchants.map(m=>`<div class="p-3 rounded-2xl border text-xs"><b>${m.name}</b> • ${m.status} • ${m.address||''}</div>`).join('')}</div>`; }
-        function renderAdminDrivers(c) { c.innerHTML = `<div class="p-4 space-y-2 pb-24"><h2 class="font-black text-sm">Daftar Driver (${db.drivers.length})</h2>${db.drivers.map(d=>`<div class="p-3 rounded-2xl border text-xs"><b>${d.name}</b> • ${d.status} • ${d.vehicle||''}</div>`).join('')}</div>`; }
-        function renderAdminBanner(c) { c.innerHTML = `<div class="p-4 space-y-3 pb-24"><h2 class="font-black text-sm">Banner Utama</h2><input type="text" id="adm-b-url" value="${db.mainBanner||DEFAULT_MAIN_BANNER}" class="w-full p-2.5 border-2 rounded-2xl text-xs"><button onclick="db.mainBanner=document.getElementById('adm-b-url').value.trim()||DEFAULT_MAIN_BANNER;saveDB('Banner disimpan');renderDashboardContent('home')" class="w-full py-3 bg-orange-600 text-white font-black rounded-2xl text-xs cursor-pointer">Simpan Banner</button></div>`; }
-
-        function openChatPartnerProfileModal(partnerName) {
-            document.getElementById('chat-partner-info-card').innerHTML = `
-                <div class="flex justify-between items-center border-b pb-2"><b class="text-xs">Profil Chat</b><button onclick="document.getElementById('modal-chat-partner-info').classList.add('hidden')" class="text-lg font-bold cursor-pointer">&times;</button></div>
-                <p class="text-xs font-bold">${partnerName}</p>
-                <button onclick="document.getElementById('modal-chat-partner-info').classList.add('hidden')" class="w-full py-2 bg-zinc-950 text-white rounded-xl text-xs font-black cursor-pointer">Tutup</button>
-            `;
-            document.getElementById('modal-chat-partner-info').classList.remove('hidden');
-        }
-
-        function startPersonalChat(target) {
-            activeChatTarget = target;
-            const unread = (db.chats || []).filter(c => normalizeMatchKey(c.from) === normalizeMatchKey(target)).map(c => String(c.id));
-            readChatIds = Array.from(new Set([...readChatIds, ...unread]));
+        function openChat(targetName) {
+            activeChatTarget = targetName;
+            const unreadFromTarget = (db.chats || []).filter(c => normKey(c.from) === normKey(targetName)).map(c => String(c.id));
+            readChatIds = Array.from(new Set([...readChatIds, ...unreadFromTarget]));
             localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
-            updateHomeHeaderBadgesOnly();
+            updateBadges();
             document.getElementById('view-chat').classList.remove('hidden');
             document.getElementById('chat-alarm-state').textContent = alarmEnabled ? 'ON' : 'OFF';
             renderChatContacts();
-            renderPersonalChatMessages();
+            renderChatMessages();
         }
-        function closeChat() { document.getElementById('view-chat').classList.add('hidden'); updateHomeHeaderBadgesOnly(); }
-        function toggleChatStickerPanel() { document.getElementById('chat-sticker-panel').classList.toggle('hidden'); }
-        function appendChatEmot(e) { const i = document.getElementById('chat-input'); i.value = (i.value || '') + e; i.focus(); }
-        function sendChatSticker(t) { document.getElementById('chat-sticker-panel').classList.add('hidden'); pushChatPayload(t); }
-        function handleSendChatImage(e) {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ev => { e.target.value = ''; pushChatPayload(ev.target.result); };
-            reader.readAsDataURL(file);
+
+        function closeChat() {
+            document.getElementById('view-chat').classList.add('hidden');
+            updateBadges();
         }
-        function pushChatPayload(text) {
-            if (!text || !currentUser) return;
-            const msg = { id: Date.now(), from: currentUser.name, to: activeChatTarget, text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-            db.chats.push(msg);
-            readChatIds.push(String(msg.id));
-            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
-            saveDB('Terkirim', true);
-            renderChatContacts();
-            renderPersonalChatMessages();
-        }
+
         function renderChatContacts() {
-            const me = normalizeMatchKey(currentUser?.name);
-            const list = Array.from(new Set(['Admin SIMADU', ...db.merchants.map(m => m.name), ...db.drivers.map(d => d.name), ...db.users.map(u => u.name)])).filter(n => n && normalizeMatchKey(n) !== me);
-            document.getElementById('chat-contact-selector').innerHTML = list.map(n => `
-                <button type="button" onclick="startPersonalChat('${n.replace(/'/g, "\\'")}')" class="w-full px-4 py-2 text-left text-xs font-extrabold flex justify-between cursor-pointer ${normalizeMatchKey(activeChatTarget) === normalizeMatchKey(n) ? 'bg-orange-100 text-zinc-950' : 'bg-white text-zinc-800'}">
-                    <span>${n}</span><span class="text-orange-600">Chat</span>
+            const contacts = Array.from(new Set([
+                'Admin SIMADU',
+                ...(db.merchants || []).map(m => m.name),
+                ...(db.drivers || []).map(d => d.name),
+                ...(db.users || []).map(u => u.name)
+            ])).filter(n => n && normKey(n) !== normKey(currentUser?.name));
+
+            document.getElementById('chat-contact-selector').innerHTML = contacts.map(name => `
+                <button type="button" onclick="openChat('${name.replace(/'/g, "\\'")}')" class="w-full px-4 py-2 text-left text-xs font-extrabold flex justify-between items-center cursor-pointer ${normKey(activeChatTarget) === normKey(name) ? 'bg-orange-100 text-zinc-950' : 'bg-white text-zinc-800'}">
+                    <span>${name}</span>
+                    <span class="text-[10px] text-orange-600">Chat</span>
                 </button>
             `).join('');
         }
-        function renderPersonalChatMessages() {
-            document.getElementById('chat-title').textContent = `Chat Privat: ${activeChatTarget}`;
-            const me = normalizeMatchKey(currentUser?.name);
-            const target = normalizeMatchKey(activeChatTarget);
+
+        function renderChatMessages() {
+            document.getElementById('chat-title').textContent = `Chat: ${activeChatTarget}`;
+            const me = normKey(currentUser?.name);
+            const target = normKey(activeChatTarget);
             const msgs = (db.chats || []).filter(c => {
-                const f = normalizeMatchKey(c.from);
-                const t = normalizeMatchKey(c.to);
+                const f = normKey(c.from);
+                const t = normKey(c.to);
                 return (f === me && t === target) || (f === target && t === me);
             });
             const box = document.getElementById('chat-messages');
             box.innerHTML = msgs.map(c => {
-                const mine = normalizeMatchKey(c.from) === me;
-                const body = String(c.text || '').startsWith('data:image') ? `<img src="${c.text}" class="w-40 rounded-xl mt-1">` : `<p class="mt-0.5">${c.text}</p>`;
-                return `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${mine ? 'bg-orange-600 text-white ml-auto' : 'bg-white border border-zinc-200 text-zinc-950 mr-auto'}"><b>${c.from}</b>${body}<span class="text-[9px] opacity-75 block mt-1">${c.time || ''}</span></div>`;
-            }).join('') || '<p class="text-xs text-zinc-500 text-center py-6">Mulai obrolan...</p>';
+                const mine = normKey(c.from) === me;
+                return `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${mine ? 'bg-orange-600 text-white ml-auto' : 'bg-white border border-zinc-200 text-zinc-950 mr-auto'}"><b>${c.from}</b><p class="mt-0.5">${c.text}</p><span class="text-[9px] opacity-75 block mt-1">${c.time || ''}</span></div>`;
+            }).join('') || '<p class="text-xs text-zinc-500 text-center py-6">Mulai chat...</p>';
             box.scrollTop = box.scrollHeight;
         }
+
         function sendPersonalChatMessage() {
             const inp = document.getElementById('chat-input');
-            const v = inp.value.trim();
-            if (!v) return;
+            const text = inp.value.trim();
+            if (!text || !currentUser) return;
             inp.value = '';
-            pushChatPayload(v);
+            const msg = {
+                id: Date.now(),
+                from: currentUser.name,
+                to: activeChatTarget,
+                text,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            db.chats.push(msg);
+            readChatIds.push(String(msg.id));
+            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+            saveLocal();
+            renderChatMessages();
+            syncToSupabase();
         }
 
-        async function syncAllToSupabase() {
-            if (!supabaseClient || isSyncingNow) return;
-            isSyncingNow = true;
+        async function syncToSupabase() {
+            if (!supabaseClient) return;
             try {
                 await supabaseClient.from('app_config').upsert({
                     id: 1,
-                    main_banner: db.mainBanner || DEFAULT_MAIN_BANNER,
-                    min_fare: Number(db.pricing?.minFare || 8000),
-                    ojek_per_km: Number(db.pricing?.ojekPerKm || 2500),
-                    food_per_km: Number(db.pricing?.foodPerKm || 2000),
-                    commission_percent: Number(db.pricing?.commissionPercent || 10),
-                    admin_whatsapp: ADMIN_MAIN_WA,
                     state_json: {
-                        foods: db.foods || [],
-                        notifications: db.notifications || [],
                         chats: db.chats || [],
-                        commissionLogs: db.commissionLogs || []
+                        notifications: db.notifications || [],
+                        updatedAt: Date.now()
                     }
                 }, { onConflict: 'id' });
-            } catch (e) {} finally { isSyncingNow = false; }
+            } catch (e) {}
         }
 
-        async function pullInitialFromSupabase(forceRefresh = false) {
+        async function pullFromSupabase() {
             if (!supabaseClient) return;
             try {
-                const prevChatIds = new Set((db.chats || []).map(x => String(x.id)));
-                const prevOrderIds = new Set((db.orders || []).map(x => String(x.id)));
-                const { data: cfg } = await supabaseClient.from('app_config').select('*').eq('id', 1).maybeSingle();
-                if (cfg) {
-                    if (cfg.main_banner) db.mainBanner = cfg.main_banner;
-                    if (cfg.state_json) {
-                        if (Array.isArray(cfg.state_json.chats)) {
-                            const map = new Map((db.chats || []).map(x => [String(x.id), x]));
-                            cfg.state_json.chats.forEach(x => map.set(String(x.id), x));
-                            db.chats = Array.from(map.values());
-                        }
-                        if (Array.isArray(cfg.state_json.notifications)) {
-                            const map = new Map((db.notifications || []).map(x => [String(x.id), x]));
-                            cfg.state_json.notifications.forEach(x => map.set(String(x.id), x));
-                            db.notifications = Array.from(map.values());
-                        }
+                const { data } = await supabaseClient.from('app_config').select('*').eq('id', 1).maybeSingle();
+                if (data?.state_json) {
+                    const prevChatIds = new Set((db.chats || []).map(x => String(x.id)));
+                    if (Array.isArray(data.state_json.chats)) {
+                        const map = new Map((db.chats || []).map(x => [String(x.id), x]));
+                        data.state_json.chats.forEach(x => map.set(String(x.id), x));
+                        db.chats = Array.from(map.values());
                     }
-                }
-                const { data: ordRows } = await supabaseClient.from('orders').select('*').order('id', { ascending: false });
-                if (Array.isArray(ordRows) && ordRows.length) {
-                    const map = new Map((db.orders || []).map(x => [String(x.id).toUpperCase(), x]));
-                    ordRows.forEach(r => map.set(String(r.order_code).toUpperCase(), {
-                        id: r.order_code, type: r.order_type || 'ojek', customer: r.customer_name,
-                        merchant: r.merchant_name, driver: r.driver_name, items: r.items_summary,
-                        dest: r.dest_label || 'Lengkong', total: Number(r.total_amount || 0),
-                        status: r.status || 'searching_driver', settled: Boolean(r.settled)
-                    }));
-                    db.orders = Array.from(map.values());
-                }
-                localStorage.setItem('oleng_go_db', JSON.stringify(db));
-                updateHomeHeaderBadgesOnly();
-                const newC = (db.chats || []).find(c => !prevChatIds.has(String(c.id)) && isMessageForCurrentUser(c));
-                if (newC) checkAndTriggerIncomingChatPopup(newC);
-                const newO = (db.orders || []).find(o => !prevOrderIds.has(String(o.id)) && isOrderTargetedToCurrentUser(o));
-                if (newO) checkAndShowIncomingOrderPopup(true);
-                if (!document.getElementById('view-chat').classList.contains('hidden')) {
-                    renderChatContacts();
-                    renderPersonalChatMessages();
-                } else if (forceRefresh && currentUser && !document.getElementById('view-dashboard').classList.contains('hidden')) {
-                    renderDashboardContent(currentSubTab);
+                    if (Array.isArray(data.state_json.notifications)) {
+                        const map = new Map((db.notifications || []).map(x => [String(x.id), x]));
+                        data.state_json.notifications.forEach(x => map.set(String(x.id), x));
+                        db.notifications = Array.from(map.values());
+                    }
+                    saveLocal();
+                    updateBadges();
+                    const newestChat = (db.chats || []).find(c => !prevChatIds.has(String(c.id)) && isMessageForMe(c));
+                    if (newestChat) showChatPopup(newestChat);
+                    if (!document.getElementById('view-chat').classList.contains('hidden')) renderChatMessages();
                 }
             } catch (e) {}
         }
 
         async function manualForceSync(notify = false) {
-            const badge = document.getElementById('supabase-status-badge');
-            const hBadge = document.getElementById('home-supabase-badge');
-            if (!supabaseClient) {
-                lastSupabaseStatus = { ok: false, label: 'Supabase: Gagal' };
-            } else {
-                const { error } = await supabaseClient.from('app_config').select('id').eq('id', 1).maybeSingle();
-                lastSupabaseStatus = error ? { ok: false, label: 'Supabase: Error' } : { ok: true, label: 'Supabase: Terhubung' };
-            }
-            if (badge) badge.textContent = lastSupabaseStatus.label;
-            if (hBadge) hBadge.textContent = lastSupabaseStatus.label;
-            await pullInitialFromSupabase(true);
-            await syncAllToSupabase();
-            if (notify) showToast(lastSupabaseStatus.label, lastSupabaseStatus.ok ? 'success' : 'error');
+            await pullFromSupabase();
+            await syncToSupabase();
+            if (notify) showToast('Sinkronisasi selesai', 'success');
         }
 
-        function subscribeRealtime() {
+        function initRealtime() {
             if (!supabaseClient || realtimeChannel) return;
             realtimeChannel = supabaseClient
-                .channel('oleng-go-full-rt')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, () => pullInitialFromSupabase(false))
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => pullInitialFromSupabase(false))
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, () => pullInitialFromSupabase(false))
+                .channel('oleng-orange-realtime')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'app_config' }, () => pullFromSupabase())
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chats' }, (p) => {
+                    if (p?.new) {
+                        const m = { id: p.new.id, from: p.new.sender_name, to: p.new.receiver_name, text: p.new.message_text, time: p.new.sent_time || '' };
+                        db.chats.push(m);
+                        saveLocal();
+                        updateBadges();
+                        showChatPopup(m);
+                    }
+                })
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (p) => {
+                    if (p?.new) {
+                        const o = { id: p.new.order_code, customer: p.new.customer_name, merchant: p.new.merchant_name, driver: p.new.driver_name, items: p.new.items_summary, total: p.new.total_amount, status: p.new.status };
+                        db.orders.unshift(o);
+                        saveLocal();
+                        showOrderPopup(o);
+                    }
+                })
                 .subscribe();
         }
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            subscribeRealtime();
-            await manualForceSync(false);
+        document.addEventListener('DOMContentLoaded', () => {
+            initRealtime();
+            pullFromSupabase();
             const sess = localStorage.getItem('oleng_user_session');
             if (sess) {
                 currentUser = JSON.parse(sess);
                 enterDashboard();
             }
-            setInterval(() => { if (currentUser) pullInitialFromSupabase(false); }, 4000);
+            setInterval(() => {
+                if (currentUser) pullFromSupabase();
+            }, 4000);
         });
     </script>
 </body>
