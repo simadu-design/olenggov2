@@ -63,7 +63,6 @@
 </head>
 <body class="h-full flex flex-col items-center justify-center bg-[#171717]">
 
-    <!-- SPLASH SCREEN MENGGUNAKAN olengorange2.png -->
     <div id="oleng-splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-[#171717] via-[#292929] to-[#FF7900] text-white transition-opacity duration-500">
         <div class="flex flex-col items-center space-y-4 px-6 text-center">
             <div class="w-32 h-32 rounded-3xl bg-white p-2 shadow-2xl border-4 border-[#FF7900] flex items-center justify-center overflow-hidden">
@@ -93,13 +92,10 @@
         })();
     </script>
 
-    <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-[9998] flex flex-col gap-2 pointer-events-none max-w-xs"></div>
 
-    <!-- MAIN APP CONTAINER -->
     <div id="app" class="flex-1 flex flex-col h-full max-w-md mx-auto w-full bg-white shadow-2xl relative overflow-hidden border-x border-[#292929]">
 
-        <!-- ================= AUTH VIEW ================= -->
         <div id="view-auth" class="flex-1 flex flex-col justify-between p-6 bg-gradient-to-br from-[#171717] via-[#292929] to-[#FF7900] text-white overflow-y-auto z-30">
             <div class="my-auto text-center space-y-5">
                 <div class="flex items-center justify-between px-2">
@@ -172,7 +168,6 @@
                             <label class="text-[11px] font-extrabold text-[#171717] uppercase">Nama Lengkap *</label>
                             <input type="text" id="reg-name" required class="w-full mt-1 px-3.5 py-2 border-2 border-neutral-200 bg-white rounded-2xl text-sm text-[#171717]" placeholder="Nama Lengkap Anda">
                         </div>
-
                         <div id="reg-driver-fields" class="hidden space-y-2.5 bg-[#F3F3F3] p-3 rounded-2xl border-2 border-[#292929]">
                             <span class="text-[10px] font-black text-[#171717] uppercase block"><i class="fa-solid fa-motorcycle text-[#FF7900] mr-1"></i> Data Wajib Mitra Ojek</span>
                             <div>
@@ -188,7 +183,6 @@
                                 <input type="text" id="reg-driver-bike" class="w-full mt-1 px-3 py-2 border border-neutral-300 rounded-xl text-xs font-semibold bg-white" placeholder="Contoh: Honda Beat / Yamaha NMAX">
                             </div>
                         </div>
-
                         <div id="reg-merchant-fields" class="hidden space-y-2.5 bg-[#F3F3F3] p-3 rounded-2xl border-2 border-[#FF7900]">
                             <span class="text-[10px] font-black text-[#171717] uppercase block"><i class="fa-solid fa-store text-[#FF7900] mr-1"></i> Data Wajib Mitra Toko</span>
                             <div>
@@ -225,7 +219,6 @@
                                 <input type="text" id="reg-merchant-address" class="w-full px-3 py-2 border border-neutral-300 rounded-xl text-xs bg-white" placeholder="Detail alamat toko (otomatis/bisa diedit)">
                             </div>
                         </div>
-
                         <div>
                             <label class="text-[11px] font-extrabold text-[#171717] uppercase">Buat Kata Sandi *</label>
                             <input type="password" id="reg-password" required class="w-full mt-1 px-3.5 py-2 border-2 border-neutral-200 bg-white rounded-2xl text-sm text-[#171717]" placeholder="••••••••">
@@ -237,7 +230,6 @@
             <div id="auth-simadu-footer-slot" class="mt-4"></div>
         </div>
 
-        <!-- ================= MAIN APP SHELL ================= -->
         <div id="view-dashboard" class="flex-1 flex flex-col hidden bg-white relative overflow-hidden">
             <div id="admin-switcher-bar" class="bg-[#171717] text-white px-3 py-2 flex items-center justify-between text-xs z-30 shadow-inner hidden border-b border-[#FF7900]">
                 <span class="font-bold text-[#FF9800] text-[10px] uppercase"><i class="fa-solid fa-shield-halved"></i> ADMIN MODE:</span>
@@ -254,24 +246,20 @@
             <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 bg-white border-t-2 border-[#FF7900] px-3 py-2 flex justify-around items-center z-35 shadow-2xl"></nav>
         </div>
 
-        <!-- ================= MODALS & SUB-VIEWS ================= -->
         <div id="view-merchant-detail" class="absolute inset-0 bg-white z-40 hidden flex flex-col overflow-y-auto"></div>
 
         <div id="modal-chat-partner-info" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-[60] hidden flex flex-col justify-center items-center p-4">
             <div id="chat-partner-info-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-[#FF7900]"></div>
         </div>
 
-        <!-- POP-UP ORDER MASUK -->
         <div id="modal-incoming-order" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
             <div id="incoming-order-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-[#FF7900] max-h-[90vh] overflow-y-auto"></div>
         </div>
 
-        <!-- POP-UP NOTIFIKASI CHAT MASUK -->
         <div id="modal-incoming-chat" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
             <div id="incoming-chat-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-[#171717]"></div>
         </div>
 
-        <!-- MODAL RATING & ULASAN -->
         <div id="modal-rating" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
             <div class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-4 shadow-2xl border-4 border-[#FF7900]">
                 <div class="flex justify-between items-center border-b pb-2">
@@ -299,7 +287,6 @@
             </div>
         </div>
 
-        <!-- CART CHECKOUT MODAL -->
         <div id="modal-cart" class="absolute inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex flex-col justify-end">
             <div class="bg-white rounded-t-3xl p-5 max-h-[92vh] overflow-y-auto space-y-4 shadow-2xl border-t-4 border-[#FF7900]">
                 <div class="flex justify-between items-center border-b pb-3">
@@ -610,22 +597,65 @@
             showToast('Anda berada di halaman utama Olenggo.', 'info');
         }
 
-        async function requestAllDevicePermissions(showFeedback = true) {
-            if ('Notification' in window && Notification.permission === 'default') {
-                try { devicePermissionsStatus.notif = await Notification.requestPermission(); } catch (e) {}
-            } else if ('Notification' in window) devicePermissionsStatus.notif = Notification.permission;
+        async function ensureWebPermissionsFlow(interactive = true) {
+            const out = {
+                gps: localStorage.getItem('oleng_perm_gps') || 'belum_dicek',
+                notif: ('Notification' in window) ? Notification.permission : 'unsupported'
+            };
+
+            if ('Notification' in window) {
+                out.notif = Notification.permission;
+                if (interactive && Notification.permission === 'default') {
+                    try {
+                        out.notif = await Notification.requestPermission();
+                    } catch (e) {}
+                }
+            }
+
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    userCurrentLatLng = [Number(pos.coords.latitude.toFixed(6)), Number(pos.coords.longitude.toFixed(6))];
-                    devicePermissionsStatus.gps = 'diizinkan';
-                    localStorage.setItem('oleng_perm_gps', 'diizinkan');
-                    if (showFeedback) showToast(`Izin GPS & Notifikasi aktif! Lokasi: ${userCurrentLatLng[0]}, ${userCurrentLatLng[1]}`, 'success');
-                }, () => {
-                    devicePermissionsStatus.gps = 'ditolak_atau_mati';
-                    localStorage.setItem('oleng_perm_gps', 'ditolak_atau_mati');
-                    if (showFeedback && !gpsNoticeShownInSession) { gpsNoticeShownInSession = true; showToast('Lokasi belum aktif. Ketuk langsung Titik Jemput di peta.', 'info'); }
-                }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 15000 });
-            } else if (showFeedback && !gpsNoticeShownInSession) { gpsNoticeShownInSession = true; showToast('Perangkat tidak mendukung GPS bawaan; klik titik jemput di peta.', 'info'); }
+                await new Promise((resolve) => {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            userCurrentLatLng = [
+                                Number(pos.coords.latitude.toFixed(6)),
+                                Number(pos.coords.longitude.toFixed(6))
+                            ];
+                            out.gps = 'diizinkan';
+                            localStorage.setItem('oleng_perm_gps', 'diizinkan');
+                            if (homeUserMarker && mapInstance && !currentMapCenter) {
+                                homeUserMarker.setLatLng(userCurrentLatLng);
+                            }
+                            resolve();
+                        },
+                        () => {
+                            out.gps = 'ditolak_atau_mati';
+                            localStorage.setItem('oleng_perm_gps', 'ditolak_atau_mati');
+                            resolve();
+                        },
+                        { enableHighAccuracy: false, timeout: 10000, maximumAge: 15000 }
+                    );
+                });
+            }
+
+            devicePermissionsStatus.gps = out.gps;
+            devicePermissionsStatus.notif = out.notif;
+
+            if (interactive) {
+                if (out.notif === 'denied') {
+                    showToast('Notifikasi situs masih diblokir (denied). Ketuk Reset izin / izinkan Notifikasi di info situs lalu muat ulang.', 'info');
+                } else {
+                    showToast(`Izin diperbarui: GPS (${out.gps}) • Notif (${out.notif}).`, 'success');
+                }
+                if (currentUser && currentSubTab === 'profile' && !isUserCurrentlyTypingOrEditing()) {
+                    renderProfile(document.getElementById('main-content'));
+                }
+            }
+
+            return out;
+        }
+
+        async function requestAllDevicePermissions(showFeedback = true) {
+            return ensureWebPermissionsFlow(Boolean(showFeedback));
         }
 
         function pushAppNavigationState(label = 'nav') {
@@ -1370,7 +1400,7 @@
                 }
                 const { data: merchantRows } = await supabaseClient.from('merchants').select('*');
                 if (Array.isArray(merchantRows) && merchantRows.length > 0) {
-                    db.merchants = mergeByKey(db.merchants, merchantRows.map((r, idx) => ({ id: r.id || (idx + 1), accountId: String(r.account_id || '').toUpperCase(), name: r.name, ownerName: r.owner_name || r.name, ktp: r.ktp || '', subtitle: r.subtitle || r.name, category: r.category || 'Kuliner', description: r.description || '', status: r.status || 'Buka', banner: r.banner_url || DEFAULT_MAIN_BANNER, image: r.image_url || './olengorange2.png', rating: Number(r.rating || 5.0), ratingCount: Number(r.rating_count || 0), lat: Number(r.lat || -7.1240), lng: Number(r.lng || 106.8460), address: r.address || '', operationalHours: r.operational_hours || '', whatsapp: normalizePhone(r.whatsapp) || ADMIN_MAIN_WA, balance: Number(r.balance || 0) })), m => String(m.accountId || '').toUpperCase() === ADMIN_OWN_STORE_ID ? ADMIN_OWN_STORE_ID : (normalizePhone(m.whatsapp) || String(m.accountId || m.name).toUpperCase()));
+                    db.merchants = mergeByKey(db.merchants, merchantRows.map((r, idx) => ({ id: r.id || (idx + 1), accountId: String(r.account_id || '').toUpperCase(), name: r.name, ownerName: r.owner_name || r.name, ktp: r.ktp || '', subtitle: r.subtitle || r.name, category: r.category || 'Kuliner', description: r.description || '', status: r.status || 'Buka', banner: r.banner_url || DEFAULT_MAIN_BANNER, image: r.image_url || './olengorange2.png', rating: Number(r.rating || 5.0), ratingCount: Number(r.rating_count || 0), lat: Number(r.lat || -7.1240), lng: Number(r.lng || 106.8460), address: r.address || '', operational_hours: r.operational_hours || '', whatsapp: normalizePhone(r.whatsapp) || ADMIN_MAIN_WA, balance: Number(r.balance || 0) })), m => String(m.accountId || '').toUpperCase() === ADMIN_OWN_STORE_ID ? ADMIN_OWN_STORE_ID : (normalizePhone(m.whatsapp) || String(m.accountId || m.name).toUpperCase()));
                     hasChanges = true;
                 }
                 const { data: driverRows } = await supabaseClient.from('drivers').select('*');
@@ -1430,6 +1460,21 @@
             db.notifications.unshift({ id: notifId, targetUser: owner, title, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), desc });
             saveDB();
             if (currentUser && (owner === 'ALL' || String(owner).toLowerCase() === String(currentUser.name || '').toLowerCase())) { playAlarmRingtone(); notifyBackgroundOnce('notif-' + notifId + '-' + owner, title, desc); }
+        }
+
+        function playAlarmRingtone() {
+            if (!alarmEnabled) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                [880, 1174.66, 880, 1318.51, 1174.66].forEach((freq, i) => {
+                    const osc = ctx.createOscillator(), gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    const start = ctx.currentTime + i * 0.15;
+                    osc.frequency.setValueAtTime(freq, start);
+                    gain.gain.setValueAtTime(0.18, start); gain.gain.exponentialRampToValueAtTime(0.001, start + 0.14);
+                    osc.connect(gain); gain.connect(ctx.destination); osc.start(start); osc.stop(start + 0.14);
+                });
+            } catch (e) {}
         }
 
         function toggleNotificationAlarm() {
@@ -1570,36 +1615,42 @@
         }
 
         async function handleLogin(e) {
-            e.preventDefault(); requestBackgroundNotificationPermission();
-            const rawPhone = document.getElementById('login-phone').value.trim(), phone = normalizePhone(rawPhone), password = document.getElementById('login-password').value.trim(), role = document.getElementById('login-role').value;
-            if (phone.length < 9) return showToast('Masukkan nomor HP yang valid!', 'error');
-            if (role === 'admin' && phone !== '085624736602') return showToast('Login Admin wajib menggunakan Nomor HP 085624736602!', 'error');
-            await pullInitialFromSupabase(false);
-            let foundUser = db.users.find(u => normalizePhone(u.phone) === phone && u.role === role);
-            if (!foundUser && phone === '085624736602' && role === 'admin') {
-                foundUser = { ...DEFAULT_ADMIN_ACCOUNT, password: password || '123' };
-                db.users.push(foundUser);
-                localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            e.preventDefault();
+            try {
+                await ensureWebPermissionsFlow(true);
+                const rawPhone = document.getElementById('login-phone').value.trim(), phone = normalizePhone(rawPhone), password = document.getElementById('login-password').value.trim(), role = document.getElementById('login-role').value;
+                if (phone.length < 9) return showToast('Masukkan nomor HP yang valid!', 'error');
+                if (role === 'admin' && phone !== '085624736602') return showToast('Login Admin wajib menggunakan Nomor HP 085624736602!', 'error');
+                try { await pullInitialFromSupabase(false); } catch (pullErr) {}
+                if (!Array.isArray(db.users)) db.users = [];
+                let foundUser = db.users.find(u => normalizePhone(u.phone) === phone && u.role === role);
+                if (!foundUser && phone === '085624736602' && role === 'admin') {
+                    foundUser = { ...DEFAULT_ADMIN_ACCOUNT, password: password || '123' };
+                    db.users.push(foundUser);
+                }
+                if (!foundUser) {
+                    foundUser = { id: Date.now(), accountId: generateAutoAccountIdFromPhone(phone, role), name: 'Pengguna ' + phone, phone, role, status: 'Aktif', address: 'Kecamatan Lengkong, Sukabumi', balance: role !== 'customer' ? 50000 : undefined, password: password || '123', photo: './olengorange2.png' };
+                    db.users.unshift(foundUser);
+                }
+                if (String(foundUser.status || '').toLowerCase() === 'nonaktif') return showToast(`Akun "${rawPhone}" sedang dinonaktifkan Admin!`, 'error');
+                const storedPass = String(foundUser.password || '').trim();
+                const isAdminOverride = (phone === '085624736602' && role === 'admin' && (password === '123' || !storedPass));
+                if (storedPass && storedPass !== password && !isAdminOverride) return showToast('Kata sandi salah! (Sandi awal uji coba: 123)', 'error');
+                foundUser.password = password || storedPass || '123';
+                currentUser = { ...foundUser }; adminViewMode = role === 'admin' ? 'admin' : null;
+                currentSubTab = role === 'admin' ? 'admin-dash' : role === 'merchant' ? 'merchant-manage' : role === 'driver' ? 'driver-orders' : 'home';
+                tabNavigationHistory = [currentSubTab]; ensureRoleListsSyncedFromUsers();
+                localStorage.setItem('oleng_user_session', JSON.stringify(currentUser)); localStorage.setItem('oleng_last_tab', currentSubTab); localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                showToast(`Berhasil masuk dengan Nomor HP ${currentUser.phone} (${role.toUpperCase()})!`, 'success');
+                enterDashboard(true);
+                recordAccountAuthEventToSupabase('LOGIN', currentUser).catch(() => {});
+            } catch (err) {
+                showToast('Terjadi kendala saat proses masuk: ' + (err?.message || err), 'error');
             }
-            if (!foundUser) {
-                foundUser = { id: Date.now(), accountId: generateAutoAccountIdFromPhone(phone, role), name: 'Pengguna ' + phone, phone, role, status: 'Aktif', address: 'Kecamatan Lengkong, Sukabumi', balance: role !== 'customer' ? 50000 : undefined, password: password || '123', photo: './olengorange2.png' };
-                db.users.unshift(foundUser);
-                localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            }
-            if (String(foundUser.status || '').toLowerCase() === 'nonaktif') return showToast(`Akun "${rawPhone}" sedang dinonaktifkan Admin!`, 'error');
-            const storedPass = String(foundUser.password || '123').trim();
-            if (storedPass !== password && !(phone === '085624736602' && role === 'admin' && password === '123')) return showToast('Kata sandi salah! (Sandi awal uji coba: 123)', 'error');
-            currentUser = { ...foundUser }; adminViewMode = role === 'admin' ? 'admin' : null;
-            currentSubTab = role === 'admin' ? 'admin-dash' : role === 'merchant' ? 'merchant-manage' : role === 'driver' ? 'driver-orders' : 'home';
-            tabNavigationHistory = [currentSubTab]; ensureRoleListsSyncedFromUsers();
-            localStorage.setItem('oleng_user_session', JSON.stringify(currentUser)); localStorage.setItem('oleng_last_tab', currentSubTab); localStorage.setItem('oleng_go_db', JSON.stringify(db));
-            await recordAccountAuthEventToSupabase('LOGIN', currentUser);
-            showToast(`Berhasil masuk dengan Nomor HP ${currentUser.phone} (${role.toUpperCase()})!`, 'success');
-            enterDashboard(true);
         }
 
         async function handleRegister(e) {
-            e.preventDefault(); requestBackgroundNotificationPermission();
+            e.preventDefault(); await ensureWebPermissionsFlow(true);
             const role = document.getElementById('reg-role').value, rawPhone = document.getElementById('reg-phone').value.trim(), phone = normalizePhone(rawPhone), name = document.getElementById('reg-name').value.trim(), password = document.getElementById('reg-password').value.trim();
             if (phone.length < 9 || !password) return showToast('Nomor HP dan kata sandi wajib diisi!', 'error');
             if (db.users.find(u => normalizePhone(u.phone) === phone && u.role === role)) { switchAuthTab('login'); document.getElementById('login-phone').value = phone; return showToast(`Nomor HP "${rawPhone}" sudah terdaftar.`, 'error'); }
@@ -2080,7 +2131,9 @@
         function renderProfile(container) {
             tempUserProfilePhoto = null; hasPendingMediaSelection = false;
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role, balanceVal = getProfileSyncedBalance();
-            container.innerHTML = `<div class="p-4 space-y-4 pb-28 bg-white min-h-full"><div class="bg-[#171717] text-white p-5 rounded-3xl shadow-lg text-center space-y-2 border-b-4 border-[#FF7900]"><img id="profile-header-avatar" src="${currentUser.photo || './olengorange2.png'}" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-[#FF7900] bg-white"><h2 class="font-black text-base">${currentUser.name}</h2><p class="text-xs font-black text-[#FF9800]">No. HP Login: ${currentUser.phone || '-'}</p><span class="text-[10px] bg-[#FF7900] text-white font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span><div class="pt-2 space-y-2"><p class="text-sm text-[#FF9800] font-black">Saldo Akun: Rp ${Number(balanceVal || 0).toLocaleString()}</p>${['driver', 'merchant'].includes(activeRole) ? `<button onclick="goToAdminTopUpChat()" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-2xl text-xs cursor-pointer"><i class="fa-solid fa-plus-circle mr-1"></i> Tambah Saldo (Chat Admin)</button>` : ''}</div></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><h3 class="font-extrabold text-xs text-[#171717] uppercase border-b pb-2">Izin Perangkat</h3><div class="flex flex-wrap gap-2 text-[10px]"><button type="button" onclick="requestAllDevicePermissions(true)" class="px-3 py-1.5 bg-[#171717] text-[#FF9800] rounded-xl font-black cursor-pointer">Minta Izin GPS & Notif</button><span class="px-2.5 py-1.5 bg-[#F3F3F3] rounded-xl font-bold">GPS: ${devicePermissionsStatus.gps} • Notif: ${devicePermissionsStatus.notif}</span></div></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><h3 class="font-extrabold text-xs text-[#171717] uppercase border-b pb-2">Ubah Informasi Akun</h3><input type="tel" id="acc-phone" value="${currentUser.phone}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-bold bg-[#F3F3F3]"><input type="text" id="acc-name" value="${currentUser.name}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-bold"><input type="text" id="acc-address" value="${currentUser.address || 'Kecamatan Lengkong, Sukabumi'}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="file" accept="image/*" class="w-full p-2 border-2 border-neutral-200 rounded-2xl text-xs" onchange="previewGalleryImage(event, 'user-prof-preview', 'user')"><img id="user-prof-preview" src="${currentUser.photo || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border"><input type="password" id="acc-pass" placeholder="Password baru (opsional)" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><button onclick="saveFullAccountChanges()" class="w-full py-3.5 bg-[#FF7900] text-white font-extrabold rounded-2xl text-xs cursor-pointer border-b-2 border-[#171717]">Simpan Perubahan Akun</button><button type="button" onclick="handleLogout()" class="w-full py-3.5 bg-rose-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer flex items-center justify-center gap-2"><i class="fa-solid fa-right-from-bracket"></i> Keluar Akun (Logout)</button></div>${getSimaduBrandFooterHTML()}</div>`;
+            const liveNotifPerm = ('Notification' in window) ? Notification.permission : 'unsupported';
+            devicePermissionsStatus.notif = liveNotifPerm;
+            container.innerHTML = `<div class="p-4 space-y-4 pb-28 bg-white min-h-full"><div class="bg-[#171717] text-white p-5 rounded-3xl shadow-lg text-center space-y-2 border-b-4 border-[#FF7900]"><img id="profile-header-avatar" src="${currentUser.photo || './olengorange2.png'}" class="w-24 h-24 rounded-3xl object-cover mx-auto border-4 border-[#FF7900] bg-white"><h2 class="font-black text-base">${currentUser.name}</h2><p class="text-xs font-black text-[#FF9800]">No. HP Login: ${currentUser.phone || '-'}</p><span class="text-[10px] bg-[#FF7900] text-white font-black px-3 py-0.5 rounded-full uppercase">${activeRole}</span><div class="pt-2 space-y-2"><p class="text-sm text-[#FF9800] font-black">Saldo Akun: Rp ${Number(balanceVal || 0).toLocaleString()}</p>${['driver', 'merchant'].includes(activeRole) ? `<button onclick="goToAdminTopUpChat()" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-2xl text-xs cursor-pointer"><i class="fa-solid fa-plus-circle mr-1"></i> Tambah Saldo (Chat Admin)</button>` : ''}</div></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><h3 class="font-extrabold text-xs text-[#171717] uppercase border-b pb-2">Izin Perangkat</h3><div class="flex flex-wrap gap-2 text-[10px]"><button type="button" onclick="ensureWebPermissionsFlow(true)" class="px-3 py-1.5 bg-[#171717] text-[#FF9800] rounded-xl font-black cursor-pointer">Minta Izin GPS & Notif</button><span class="px-2.5 py-1.5 bg-[#F3F3F3] rounded-xl font-bold">GPS: ${devicePermissionsStatus.gps} • Notif: ${liveNotifPerm}</span></div></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><h3 class="font-extrabold text-xs text-[#171717] uppercase border-b pb-2">Ubah Informasi Akun</h3><input type="tel" id="acc-phone" value="${currentUser.phone}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-bold bg-[#F3F3F3]"><input type="text" id="acc-name" value="${currentUser.name}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-bold"><input type="text" id="acc-address" value="${currentUser.address || 'Kecamatan Lengkong, Sukabumi'}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="file" accept="image/*" class="w-full p-2 border-2 border-neutral-200 rounded-2xl text-xs" onchange="previewGalleryImage(event, 'user-prof-preview', 'user')"><img id="user-prof-preview" src="${currentUser.photo || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border"><input type="password" id="acc-pass" placeholder="Password baru (opsional)" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><button onclick="saveFullAccountChanges()" class="w-full py-3.5 bg-[#FF7900] text-white font-extrabold rounded-2xl text-xs cursor-pointer border-b-2 border-[#171717]">Simpan Perubahan Akun</button><button type="button" onclick="handleLogout()" class="w-full py-3.5 bg-rose-600 text-white font-extrabold rounded-2xl text-xs cursor-pointer flex items-center justify-center gap-2"><i class="fa-solid fa-right-from-bracket"></i> Keluar Akun (Logout)</button></div>${getSimaduBrandFooterHTML()}</div>`;
         }
 
         async function saveFullAccountChanges() {
