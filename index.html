@@ -248,6 +248,33 @@
 
         <div id="view-merchant-detail" class="absolute inset-0 bg-white z-40 hidden flex flex-col overflow-y-auto"></div>
 
+        <!-- MODAL PETA FULL LAYAR -->
+        <div id="modal-fullscreen-map" class="fixed inset-0 bg-[#171717] z-[80] hidden flex flex-col">
+            <div class="bg-[#171717] text-white px-4 py-3 flex items-center justify-between border-b-2 border-[#FF7900] gap-2">
+                <button type="button" onclick="closeFullscreenMap()" class="px-3 py-1.5 bg-[#FF7900] text-white rounded-xl text-xs font-black cursor-pointer shrink-0">
+                    <i class="fa-solid fa-compress mr-1"></i> Tutup Full Layar
+                </button>
+                <span id="fs-map-title" class="text-xs font-black text-[#FF9800] truncate">Peta Lokasi Full Layar</span>
+                <button type="button" onclick="toggleMapLayerMode()" class="px-2.5 py-1.5 bg-[#292929] text-[#FF9800] rounded-xl text-xs font-extrabold cursor-pointer shrink-0">
+                    <i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">Satelit</span>
+                </button>
+            </div>
+            <div id="fullscreen-map-canvas" class="flex-1 w-full z-10"></div>
+            <div class="bg-white p-3 border-t-2 border-[#FF7900] space-y-2 text-xs">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <span id="fs-map-info" class="font-bold text-[#171717] truncate">Klik peta untuk memilih titik lokasi</span>
+                    <div class="flex gap-1.5">
+                        <button type="button" onclick="triggerLiveGPSToPickup('fs-map')" class="px-3 py-1.5 bg-[#FF7900] text-white rounded-xl text-[11px] font-black cursor-pointer">
+                            <i class="fa-solid fa-crosshairs"></i> GPS Terkini
+                        </button>
+                        <button type="button" onclick="closeFullscreenMap()" class="px-3 py-1.5 bg-[#171717] text-[#FF9800] rounded-xl text-[11px] font-black cursor-pointer">
+                            Simpan &amp; Kembali
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="modal-chat-partner-info" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-[60] hidden flex flex-col justify-center items-center p-4">
             <div id="chat-partner-info-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-[#FF7900]"></div>
         </div>
@@ -300,6 +327,9 @@
                     <div class="flex justify-between items-center flex-wrap gap-1">
                         <span class="text-[11px] font-extrabold text-[#171717] uppercase">Klik Peta Titik Awal & Tujuan</span>
                         <div class="flex gap-1.5 flex-wrap">
+                            <button type="button" onclick="openFullscreenMap('checkout')" class="px-2 py-1 bg-[#FF7900] text-white rounded-xl text-[10px] font-extrabold cursor-pointer">
+                                <i class="fa-solid fa-expand"></i> Full Layar
+                            </button>
                             <button onclick="openFullGoogleMapsForCoords(destLatLng[0], destLatLng[1], document.getElementById('cart-dest-label')?.innerText || '')" class="px-2 py-1 bg-[#171717] text-white rounded-xl text-[10px] font-extrabold cursor-pointer">
                                 <i class="fa-solid fa-diamond-turn-right"></i> Google Maps
                             </button>
@@ -519,6 +549,87 @@
             media: localStorage.getItem('oleng_perm_media') || 'siap_galeri_kamera'
         };
 
+        let fsMapInstance = null;
+        let fsReturnContext = null;
+
+        function openFullscreenMap(context = 'ojek') {
+            fsReturnContext = context;
+            const modal = document.getElementById('modal-fullscreen-map');
+            const titleEl = document.getElementById('fs-map-title');
+            if (!modal) return;
+            if (titleEl) {
+                titleEl.textContent = context === 'checkout'
+                    ? 'Peta Tujuan Checkout Full Layar'
+                    : context === 'home'
+                        ? 'Peta Lengkong Full Layar'
+                        : 'Peta Rute Ojek Full Layar';
+            }
+            pushAppNavigationState('fullscreen-map');
+            modal.classList.remove('hidden');
+
+            setTimeout(() => {
+                if (fsMapInstance) {
+                    fsMapInstance.remove();
+                    fsMapInstance = null;
+                }
+                fsMapInstance = L.map('fullscreen-map-canvas', { zoomControl: true, minZoom: 5, maxZoom: 19 }).setView(userCurrentLatLng, 16);
+                getBaseTileLayerForMode().addTo(fsMapInstance);
+                plotAllMerchantsAndDrivers(fsMapInstance, true);
+
+                const pMarker = L.marker(userCurrentLatLng, { draggable: true }).addTo(fsMapInstance).bindPopup('<b>Titik Jemput</b>');
+                const dMarker = L.marker(destLatLng, { draggable: true }).addTo(fsMapInstance).bindPopup('<b>Titik Tujuan</b>');
+                routeSelectionState.pickupMarker = pMarker;
+                routeSelectionState.destMarker = dMarker;
+                routeSelectionState.mapId = 'fs-map';
+                routeSelectionState.isOjek = (context === 'ojek');
+                routeSelectionState.pickupLabelId = context === 'checkout' ? 'cart-pickup-label' : 'ojek-from';
+                routeSelectionState.destLabelId = context === 'checkout' ? 'cart-dest-label' : 'ojek-to';
+
+                fsMapInstance.on('click', (e) => {
+                    if (routeSelectionState.stepMode === 'pickup') {
+                        applyCoordinateToRole('pickup', e.latlng.lat, e.latlng.lng);
+                        routeSelectionState.stepMode = 'dest';
+                        showToast('Titik jemput tersimpan. Klik Titik Tujuan di peta.', 'success');
+                    } else {
+                        applyCoordinateToRole('dest', e.latlng.lat, e.latlng.lng);
+                        showToast('Titik tujuan tersimpan!', 'success');
+                    }
+                    const infoEl = document.getElementById('fs-map-info');
+                    if (infoEl) infoEl.textContent = `Jemput: ${userCurrentLatLng[0]}, ${userCurrentLatLng[1]} → Tujuan: ${destLatLng[0]}, ${destLatLng[1]}`;
+                });
+
+                pMarker.on('dragend', () => {
+                    applyCoordinateToRole('pickup', pMarker.getLatLng().lat, pMarker.getLatLng().lng);
+                    routeSelectionState.stepMode = 'dest';
+                });
+                dMarker.on('dragend', () => {
+                    applyCoordinateToRole('dest', dMarker.getLatLng().lat, dMarker.getLatLng().lng);
+                });
+
+                fsMapInstance.invalidateSize();
+            }, 200);
+        }
+
+        function closeFullscreenMap() {
+            const modal = document.getElementById('modal-fullscreen-map');
+            if (modal) modal.classList.add('hidden');
+            if (fsMapInstance) {
+                fsMapInstance.remove();
+                fsMapInstance = null;
+            }
+            if (fsReturnContext === 'ojek' && currentSubTab === 'ojek') {
+                renderCustomerOjek(document.getElementById('main-content'), false);
+            } else if (fsReturnContext === 'checkout' && !document.getElementById('modal-cart')?.classList.contains('hidden')) {
+                updateCartUI();
+                setTimeout(() => {
+                    initInteractiveRouteMap('checkout-map', 'cart-pickup-label', 'cart-dest-label', false, 'food');
+                }, 200);
+            } else if (fsReturnContext === 'home' && currentSubTab === 'home') {
+                initHomeMap();
+            }
+            fsReturnContext = null;
+        }
+
         function enqueueOfflineSync(reason = 'state_update') {
             offlineSyncQueue.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), reason, at: Date.now() });
             offlineSyncQueue = offlineSyncQueue.slice(-100);
@@ -672,6 +783,7 @@
         }
 
         function handleHardwareBackAction() {
+            if (!document.getElementById('modal-fullscreen-map')?.classList.contains('hidden')) { closeFullscreenMap(); return; }
             for (const id of ['modal-exit-olenggo', 'modal-chat-partner-info', 'modal-incoming-order', 'modal-forgot']) {
                 const el = document.getElementById(id);
                 if (el && !el.classList.contains('hidden')) { el.classList.add('hidden'); return; }
@@ -877,6 +989,12 @@
             const labelText = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
             document.querySelectorAll('.map-layer-label').forEach(el => { el.textContent = labelText; });
             showToast(`Berhasil! Tampilan peta diubah ke mode ${mapLayerMode === 'satellite' ? 'Satelit' : 'Peta Jalan'}.`, 'success');
+            if (fsMapInstance && !document.getElementById('modal-fullscreen-map')?.classList.contains('hidden')) {
+                const mode = fsReturnContext || 'ojek';
+                closeFullscreenMap();
+                setTimeout(() => openFullscreenMap(mode), 150);
+                return;
+            }
             if (currentSubTab === 'home') initHomeMap();
             else if (currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'));
             else if (!document.getElementById('modal-cart')?.classList.contains('hidden')) openCartModal();
@@ -1956,7 +2074,7 @@
 
         function renderCustomerHome(container) {
             const unreadNotifs = getUnreadNotifCount(), unreadChats = getUnreadChatCount(), activeBanner = getSyncedMainBanner(), layerBtnLabel = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
-            container.innerHTML = `<div class="p-4 space-y-4 bg-gradient-to-b from-[#171717] via-[#292929] to-white min-h-full pb-28"><div class="bg-[#171717] text-white p-4 rounded-3xl shadow-xl flex items-center justify-between border-2 border-[#FF7900]"><div class="flex items-center space-x-3"><img src="${currentUser.photo || './olengorange2.png'}" class="w-12 h-12 rounded-2xl object-cover border-2 border-[#FF7900]"><div><span class="text-xs text-[#FF9800] font-extrabold block">Halo, ${currentUser.name}</span><h3 class="text-xs font-black text-white">${currentUser.phone || 'WARGA LENGKONG'}</h3></div></div><div class="flex items-center space-x-2"><button onclick="openNotificationModal()" class="relative p-2.5 bg-[#292929] hover:bg-[#FF7900] rounded-2xl text-white cursor-pointer border border-[#FF7900]/50"><i class="fa-solid fa-bell text-sm"></i><span id="home-notif-badge" class="absolute -top-1 -right-1 bg-[#FF7900] text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ${unreadNotifs > 0 ? '' : 'hidden'}">${unreadNotifs}</span></button><button onclick="switchView('chat')" class="relative p-2.5 bg-[#292929] hover:bg-[#FF7900] rounded-2xl text-white cursor-pointer border border-[#FF7900]/50"><i class="fa-solid fa-comments text-sm"></i><span id="home-chat-badge" class="absolute -top-1 -right-1 bg-rose-600 text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ${unreadChats > 0 ? '' : 'hidden'}">${unreadChats}</span></button><button onclick="handleLogout()" class="p-2.5 bg-rose-600 hover:bg-rose-700 rounded-2xl text-white cursor-pointer"><i class="fa-solid fa-power-off text-sm"></i></button></div></div><div class="bg-white px-4 py-2.5 rounded-2xl border-2 border-neutral-200 flex items-center justify-between gap-2 flex-wrap"><div class="flex items-center gap-1.5 flex-wrap"><i class="fa-solid fa-bell-ring text-[#FF7900] text-xs"></i><button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${alarmEnabled ? 'bg-[#171717] text-[#FF9800]' : 'bg-[#F3F3F3] text-[#171717]'}">Alarm: ${alarmEnabled ? 'ON' : 'OFF'}</button><button onclick="requestAllDevicePermissions(true)" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-[#FF7900] text-white"><i class="fa-solid fa-shield-check"></i> Izin GPS & Notif</button><button onclick="openMainAdminWhatsApp()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-[#171717] text-white"><i class="fa-brands fa-whatsapp text-[#FF9800]"></i> WA Utama</button></div><button type="button" onclick="manualForceSync(true)" id="home-supabase-badge" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-white text-[#171717] border border-neutral-200 shadow cursor-pointer">${lastSupabaseStatus.label}</button></div><div class="rounded-3xl shadow-xl overflow-hidden border-2 border-[#FF7900] bg-white"><img src="${activeBanner}" class="w-full h-36 object-cover" alt="Banner Oleng Go"></div><div class="grid grid-cols-2 gap-3"><button onclick="renderDashboardContent('ojek')" class="bg-white min-h-[108px] px-3 py-4 rounded-3xl shadow-md border-2 border-neutral-200 hover:border-[#FF7900] flex flex-col items-center justify-center cursor-pointer transition"><div class="w-14 h-14 bg-[#171717] text-[#FF9800] rounded-2xl flex items-center justify-center text-2xl mb-2"><i class="fa-solid fa-motorcycle"></i></div><span class="text-xs font-black text-[#171717]">Pesan Ojek</span></button><button onclick="renderDashboardContent('food')" class="bg-white min-h-[108px] px-3 py-4 rounded-3xl shadow-md border-2 border-neutral-200 hover:border-[#FF7900] flex flex-col items-center justify-center cursor-pointer transition"><div class="w-14 h-14 bg-[#FF7900] text-white rounded-2xl flex items-center justify-center text-2xl mb-2"><i class="fa-solid fa-utensils"></i></div><span class="text-xs font-black text-[#171717]">Pesan Makanan</span></button></div><div class="bg-white p-4 rounded-3xl shadow-sm border-2 border-neutral-200 space-y-2.5"><div class="flex justify-between items-center gap-2 flex-wrap"><h3 class="font-extrabold text-xs text-[#171717] uppercase flex items-center gap-1.5"><i class="fa-solid fa-map-location-dot text-[#FF7900]"></i> Peta Ojek & Toko Lengkong</h3><div class="flex items-center gap-1.5 flex-wrap"><button onclick="openFullGoogleMapsForCoords(userCurrentLatLng[0], userCurrentLatLng[1], '')" class="px-2 py-1 bg-[#171717] text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-diamond-turn-right text-[#FF9800]"></i> Google Maps</button><button onclick="toggleMapLayerMode()" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span></button><button onclick="recenterHomeMapToAccurateGPS()" class="text-[10px] bg-[#F3F3F3] text-[#171717] border border-neutral-300 px-2 py-1 rounded-full font-extrabold cursor-pointer"><i class="fa-solid fa-location-crosshairs text-[#FF7900]"></i> GPS Akurat</button></div></div><div id="map" class="map-container shadow-inner border-2 border-neutral-200"></div><div class="flex items-center justify-between text-[10px] text-[#171717] font-bold pt-1"><span><i class="fa-solid fa-store text-[#FF7900]"></i> Mitra Toko</span><span><i class="fa-solid fa-motorcycle text-[#171717]"></i> Mitra Ojek</span></div></div>${getSimaduBrandFooterHTML()}</div>`;
+            container.innerHTML = `<div class="p-4 space-y-4 bg-gradient-to-b from-[#171717] via-[#292929] to-white min-h-full pb-28"><div class="bg-[#171717] text-white p-4 rounded-3xl shadow-xl flex items-center justify-between border-2 border-[#FF7900]"><div class="flex items-center space-x-3"><img src="${currentUser.photo || './olengorange2.png'}" class="w-12 h-12 rounded-2xl object-cover border-2 border-[#FF7900]"><div><span class="text-xs text-[#FF9800] font-extrabold block">Halo, ${currentUser.name}</span><h3 class="text-xs font-black text-white">${currentUser.phone || 'WARGA LENGKONG'}</h3></div></div><div class="flex items-center space-x-2"><button onclick="openNotificationModal()" class="relative p-2.5 bg-[#292929] hover:bg-[#FF7900] rounded-2xl text-white cursor-pointer border border-[#FF7900]/50"><i class="fa-solid fa-bell text-sm"></i><span id="home-notif-badge" class="absolute -top-1 -right-1 bg-[#FF7900] text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ${unreadNotifs > 0 ? '' : 'hidden'}">${unreadNotifs}</span></button><button onclick="switchView('chat')" class="relative p-2.5 bg-[#292929] hover:bg-[#FF7900] rounded-2xl text-white cursor-pointer border border-[#FF7900]/50"><i class="fa-solid fa-comments text-sm"></i><span id="home-chat-badge" class="absolute -top-1 -right-1 bg-rose-600 text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center ${unreadChats > 0 ? '' : 'hidden'}">${unreadChats}</span></button><button onclick="handleLogout()" class="p-2.5 bg-rose-600 hover:bg-rose-700 rounded-2xl text-white cursor-pointer"><i class="fa-solid fa-power-off text-sm"></i></button></div></div><div class="bg-white px-4 py-2.5 rounded-2xl border-2 border-neutral-200 flex items-center justify-between gap-2 flex-wrap"><div class="flex items-center gap-1.5 flex-wrap"><i class="fa-solid fa-bell-ring text-[#FF7900] text-xs"></i><button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${alarmEnabled ? 'bg-[#171717] text-[#FF9800]' : 'bg-[#F3F3F3] text-[#171717]'}">Alarm: ${alarmEnabled ? 'ON' : 'OFF'}</button><button onclick="requestAllDevicePermissions(true)" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-[#FF7900] text-white"><i class="fa-solid fa-shield-check"></i> Izin GPS & Notif</button><button onclick="openMainAdminWhatsApp()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-[#171717] text-white"><i class="fa-brands fa-whatsapp text-[#FF9800]"></i> WA Utama</button></div><button type="button" onclick="manualForceSync(true)" id="home-supabase-badge" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-white text-[#171717] border border-neutral-200 shadow cursor-pointer">${lastSupabaseStatus.label}</button></div><div class="rounded-3xl shadow-xl overflow-hidden border-2 border-[#FF7900] bg-white"><img src="${activeBanner}" class="w-full h-36 object-cover" alt="Banner Oleng Go"></div><div class="grid grid-cols-2 gap-3"><button onclick="renderDashboardContent('ojek')" class="bg-white min-h-[108px] px-3 py-4 rounded-3xl shadow-md border-2 border-neutral-200 hover:border-[#FF7900] flex flex-col items-center justify-center cursor-pointer transition"><div class="w-14 h-14 bg-[#171717] text-[#FF9800] rounded-2xl flex items-center justify-center text-2xl mb-2"><i class="fa-solid fa-motorcycle"></i></div><span class="text-xs font-black text-[#171717]">Pesan Ojek</span></button><button onclick="renderDashboardContent('food')" class="bg-white min-h-[108px] px-3 py-4 rounded-3xl shadow-md border-2 border-neutral-200 hover:border-[#FF7900] flex flex-col items-center justify-center cursor-pointer transition"><div class="w-14 h-14 bg-[#FF7900] text-white rounded-2xl flex items-center justify-center text-2xl mb-2"><i class="fa-solid fa-utensils"></i></div><span class="text-xs font-black text-[#171717]">Pesan Makanan</span></button></div><div class="bg-white p-4 rounded-3xl shadow-sm border-2 border-neutral-200 space-y-2.5"><div class="flex justify-between items-center gap-2 flex-wrap"><h3 class="font-extrabold text-xs text-[#171717] uppercase flex items-center gap-1.5"><i class="fa-solid fa-map-location-dot text-[#FF7900]"></i> Peta Ojek & Toko Lengkong</h3><div class="flex items-center gap-1.5 flex-wrap"><button type="button" onclick="openFullscreenMap('home')" class="px-2 py-1 bg-[#FF7900] text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-expand"></i> Full Layar</button><button onclick="openFullGoogleMapsForCoords(userCurrentLatLng[0], userCurrentLatLng[1], '')" class="px-2 py-1 bg-[#171717] text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-diamond-turn-right text-[#FF9800]"></i> Google Maps</button><button onclick="toggleMapLayerMode()" class="px-2.5 py-1 bg-[#292929] text-[#FF9800] rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span></button><button onclick="recenterHomeMapToAccurateGPS()" class="text-[10px] bg-[#F3F3F3] text-[#171717] border border-neutral-300 px-2 py-1 rounded-full font-extrabold cursor-pointer"><i class="fa-solid fa-location-crosshairs text-[#FF7900]"></i> GPS Akurat</button></div></div><div id="map" class="map-container shadow-inner border-2 border-neutral-200"></div><div class="flex items-center justify-between text-[10px] text-[#171717] font-bold pt-1"><span><i class="fa-solid fa-store text-[#FF7900]"></i> Mitra Toko</span><span><i class="fa-solid fa-motorcycle text-[#171717]"></i> Mitra Ojek</span></div></div>${getSimaduBrandFooterHTML()}</div>`;
             applySupabaseBadgeStyle(document.getElementById('home-supabase-badge'), lastSupabaseStatus); updateHomeHeaderBadgesOnly(); setTimeout(initHomeMap, 200);
         }
 
@@ -1981,7 +2099,7 @@
             const availableDrivers = getAvailableOnlineDriversSorted(userCurrentLatLng[0], userCurrentLatLng[1]), filteredDrivers = availableDrivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.vehicle.toLowerCase().includes(searchQuery.toLowerCase()));
             const distanceKm = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]), estFare = calculateShippingCost(distanceKm, 'ojek'), layerBtnLabel = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
             const confirmedDrv = confirmedOrderDriverId ? availableDrivers.find(x => Number(x.id) === Number(confirmedOrderDriverId)) : null;
-            container.innerHTML = `<div class="p-4 space-y-4 pb-28 bg-white min-h-full"><h2 class="font-extrabold text-base text-[#171717]">Pesan Ojek Online & Kurir</h2><div class="bg-white p-3 rounded-2xl border-2 border-neutral-200 flex items-center gap-2"><i class="fa-solid fa-search text-[#FF7900] pl-2"></i><input type="text" id="search-driver-input" value="${searchQuery}" oninput="searchQuery=this.value;renderCustomerOjek(document.getElementById('main-content'), false)" placeholder="Cari nama ojek / driver terdekat..." class="w-full text-xs font-semibold focus:outline-none bg-transparent"></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><div class="flex justify-between items-center gap-1 flex-wrap"><span class="text-[11px] font-extrabold text-[#171717] uppercase"><i class="fa-solid fa-route text-[#FF7900] mr-1"></i> Klik Peta: Titik Awal Lalu Tujuan</span><div class="flex gap-1.5 flex-wrap"><button onclick="openFullGoogleMapsForCoords(destLatLng[0], destLatLng[1], document.getElementById('ojek-to')?.value || '')" class="px-2 py-1 bg-[#171717] text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-diamond-turn-right text-[#FF9800]"></i> Google Maps</button><button onclick="toggleMapLayerMode()" class="px-2.5 py-1 bg-[#292929] text-[#FF9800] rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span></button><button onclick="useCurrentGPSLocation('ojek')" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer"><i class="fa-solid fa-crosshairs"></i> Lokasi Terkini</button></div></div><div id="ojek-map" class="map-container shadow-inner border-2 border-neutral-200" style="height: 185px;"></div><div class="space-y-2"><div><label class="text-[10px] font-extrabold text-[#171717] uppercase">Titik Awal / Jemputan</label><input type="text" id="ojek-from" value="" placeholder="Klik titik awal di peta atau aktifkan GPS terkini" class="w-full mt-0.5 p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold bg-[#F3F3F3]"></div><div><label class="text-[10px] font-extrabold text-[#171717] uppercase">Titik Tujuan</label><input type="text" id="ojek-to" value="" placeholder="Klik titik tujuan di peta atau ketik tujuan" class="w-full mt-0.5 p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold bg-white"></div></div><div class="bg-[#F3F3F3] p-3 rounded-2xl flex justify-between items-center border border-neutral-200"><span class="text-[11px] text-[#171717] font-bold" id="ojek-dist-label">Estimasi Tarif (${distanceKm} km):</span><span class="text-sm font-black text-[#FF7900]" id="ojek-fare-label">Rp ${estFare.toLocaleString()}</span></div><div class="bg-[#F3F3F3] p-2.5 rounded-2xl border border-[#FF7900] text-[11px] font-bold text-[#171717] flex items-center justify-between gap-2 flex-wrap"><span>Driver Terkonfirmasi: <b>${confirmedDrv ? confirmedDrv.name : 'Belum dikonfirmasi'}</b></span><div class="flex gap-1.5"><button type="button" onclick="autoPickNearestDriver('ojek')" class="px-2.5 py-1.5 bg-[#FF7900] text-white rounded-xl text-[10px] font-black cursor-pointer">CARI OTOMATIS</button><button type="button" onclick="confirmDraftDriverSelection('ojek')" class="px-3 py-1.5 bg-[#171717] text-[#FF9800] rounded-xl text-[10px] font-black cursor-pointer">KONFIRMASI DRIVER</button></div></div><button onclick="submitOjekOrder()" class="w-full py-3.5 bg-[#FF7900] hover:bg-[#FF9800] text-white font-black rounded-2xl shadow-md text-xs cursor-pointer border-b-2 border-[#171717]">Pesan Ojek Sekarang</button></div><div class="space-y-2.5"><div class="flex justify-between items-center"><h3 class="font-extrabold text-xs text-[#171717] uppercase">Daftar Driver Aktif & Tersedia</h3><button type="button" onclick="refreshActiveDriversList('ojek')" class="px-2.5 py-1 bg-[#F3F3F3] text-[#171717] rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-rotate"></i> Refresh</button></div><div class="space-y-2.5">${filteredDrivers.length > 0 ? filteredDrivers.map((d, index) => { const isDraft = Number(draftSelectedDriverId) === Number(d.id), isConfirmed = Number(confirmedOrderDriverId) === Number(d.id); const avatarSrc = d.photo || './olengorange2.png'; return `<div class="bg-white p-3.5 rounded-2xl border-2 flex items-center justify-between gap-2 ${isDraft || isConfirmed ? 'border-[#FF7900] bg-[#F3F3F3]' : 'border-neutral-200'}"><div class="flex items-center space-x-3 min-w-0 flex-1"><img src="${avatarSrc}" class="w-12 h-12 rounded-2xl object-cover border shrink-0" alt="Driver"><div class="min-w-0"><h4 class="font-bold text-xs text-[#171717] truncate">${d.name} <span class="text-[9px] bg-[#171717] text-[#FF9800] px-1.5 py-0.5 rounded font-extrabold ml-1">Online • Available</span></h4>${index === 0 ? '<span class="bg-[#FF7900] text-white px-2 py-0.5 rounded text-[9px] font-black inline-block my-0.5">Terdekat</span>' : ''}<p class="text-[10px] text-neutral-600 truncate">${d.vehicle} ${d.plate ? `• <b>${d.plate}</b>` : ''} • <i class="fa-solid fa-star text-[#FF7900]"></i> <b>${d.rating || 5.0}</b></p><p class="text-[10px] text-neutral-700 font-bold mt-0.5 truncate"><i class="fa-solid fa-location-dot text-[#FF7900]"></i> Jarak GPS: ${d.distance} km (${d.location})</p></div></div><div class="flex flex-col gap-1 shrink-0"><button type="button" onclick="toggleDraftDriverSelection(${d.id}, 'ojek')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black cursor-pointer ${isDraft ? 'bg-rose-600 text-white' : 'bg-[#FF7900] text-white'}">${isDraft ? 'BATAL PILIH' : 'PILIH'}</button><a href="https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin OLENG GO (' + ADMIN_MAIN_WA + '), saya pesan ojek bersama ' + d.name + '.')}" target="_blank" class="px-2.5 py-1 bg-[#171717] text-white rounded-xl text-[10px] font-bold text-center"><i class="fa-brands fa-whatsapp text-[#FF9800]"></i> WA Utama</a><button type="button" onclick="startPersonalChat('${d.name}')" class="px-2.5 py-1 bg-[#292929] text-white rounded-xl text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments"></i> Chat</button></div></div>`; }).join('') : '<p class="text-center text-xs text-rose-700 font-bold bg-rose-50 border border-rose-200 p-4 rounded-2xl">Driver aktif yang tersedia belum ada saat ini.</p>'}</div></div>${getSimaduBrandFooterHTML()}</div>`;
+            container.innerHTML = `<div class="p-4 space-y-4 pb-28 bg-white min-h-full"><h2 class="font-extrabold text-base text-[#171717]">Pesan Ojek Online & Kurir</h2><div class="bg-white p-3 rounded-2xl border-2 border-neutral-200 flex items-center gap-2"><i class="fa-solid fa-search text-[#FF7900] pl-2"></i><input type="text" id="search-driver-input" value="${searchQuery}" oninput="searchQuery=this.value;renderCustomerOjek(document.getElementById('main-content'), false)" placeholder="Cari nama ojek / driver terdekat..." class="w-full text-xs font-semibold focus:outline-none bg-transparent"></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><div class="flex justify-between items-center gap-1 flex-wrap"><span class="text-[11px] font-extrabold text-[#171717] uppercase"><i class="fa-solid fa-route text-[#FF7900] mr-1"></i> Klik Peta: Titik Awal Lalu Tujuan</span><div class="flex gap-1.5 flex-wrap"><button type="button" onclick="openFullscreenMap('ojek')" class="px-2 py-1 bg-[#FF7900] text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-expand"></i> Full Layar</button><button onclick="openFullGoogleMapsForCoords(destLatLng[0], destLatLng[1], document.getElementById('ojek-to')?.value || '')" class="px-2 py-1 bg-[#171717] text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-diamond-turn-right text-[#FF9800]"></i> Google Maps</button><button onclick="toggleMapLayerMode()" class="px-2.5 py-1 bg-[#292929] text-[#FF9800] rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span></button><button onclick="useCurrentGPSLocation('ojek')" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer"><i class="fa-solid fa-crosshairs"></i> Lokasi Terkini</button></div></div><div id="ojek-map" class="map-container shadow-inner border-2 border-neutral-200" style="height: 185px;"></div><div class="space-y-2"><div><label class="text-[10px] font-extrabold text-[#171717] uppercase">Titik Awal / Jemputan</label><input type="text" id="ojek-from" value="" placeholder="Klik titik awal di peta atau aktifkan GPS terkini" class="w-full mt-0.5 p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold bg-[#F3F3F3]"></div><div><label class="text-[10px] font-extrabold text-[#171717] uppercase">Titik Tujuan</label><input type="text" id="ojek-to" value="" placeholder="Klik titik tujuan di peta atau ketik tujuan" class="w-full mt-0.5 p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold bg-white"></div></div><div class="bg-[#F3F3F3] p-3 rounded-2xl flex justify-between items-center border border-neutral-200"><span class="text-[11px] text-[#171717] font-bold" id="ojek-dist-label">Estimasi Tarif (${distanceKm} km):</span><span class="text-sm font-black text-[#FF7900]" id="ojek-fare-label">Rp ${estFare.toLocaleString()}</span></div><div class="bg-[#F3F3F3] p-2.5 rounded-2xl border border-[#FF7900] text-[11px] font-bold text-[#171717] flex items-center justify-between gap-2 flex-wrap"><span>Driver Terkonfirmasi: <b>${confirmedDrv ? confirmedDrv.name : 'Belum dikonfirmasi'}</b></span><div class="flex gap-1.5"><button type="button" onclick="autoPickNearestDriver('ojek')" class="px-2.5 py-1.5 bg-[#FF7900] text-white rounded-xl text-[10px] font-black cursor-pointer">CARI OTOMATIS</button><button type="button" onclick="confirmDraftDriverSelection('ojek')" class="px-3 py-1.5 bg-[#171717] text-[#FF9800] rounded-xl text-[10px] font-black cursor-pointer">KONFIRMASI DRIVER</button></div></div><button onclick="submitOjekOrder()" class="w-full py-3.5 bg-[#FF7900] hover:bg-[#FF9800] text-white font-black rounded-2xl shadow-md text-xs cursor-pointer border-b-2 border-[#171717]">Pesan Ojek Sekarang</button></div><div class="space-y-2.5"><div class="flex justify-between items-center"><h3 class="font-extrabold text-xs text-[#171717] uppercase">Daftar Driver Aktif & Tersedia</h3><button type="button" onclick="refreshActiveDriversList('ojek')" class="px-2.5 py-1 bg-[#F3F3F3] text-[#171717] rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-rotate"></i> Refresh</button></div><div class="space-y-2.5">${filteredDrivers.length > 0 ? filteredDrivers.map((d, index) => { const isDraft = Number(draftSelectedDriverId) === Number(d.id), isConfirmed = Number(confirmedOrderDriverId) === Number(d.id); const avatarSrc = d.photo || './olengorange2.png'; return `<div class="bg-white p-3.5 rounded-2xl border-2 flex items-center justify-between gap-2 ${isDraft || isConfirmed ? 'border-[#FF7900] bg-[#F3F3F3]' : 'border-neutral-200'}"><div class="flex items-center space-x-3 min-w-0 flex-1"><img src="${avatarSrc}" class="w-12 h-12 rounded-2xl object-cover border shrink-0" alt="Driver"><div class="min-w-0"><h4 class="font-bold text-xs text-[#171717] truncate">${d.name} <span class="text-[9px] bg-[#171717] text-[#FF9800] px-1.5 py-0.5 rounded font-extrabold ml-1">Online • Available</span></h4>${index === 0 ? '<span class="bg-[#FF7900] text-white px-2 py-0.5 rounded text-[9px] font-black inline-block my-0.5">Terdekat</span>' : ''}<p class="text-[10px] text-neutral-600 truncate">${d.vehicle} ${d.plate ? `• <b>${d.plate}</b>` : ''} • <i class="fa-solid fa-star text-[#FF7900]"></i> <b>${d.rating || 5.0}</b></p><p class="text-[10px] text-neutral-700 font-bold mt-0.5 truncate"><i class="fa-solid fa-location-dot text-[#FF7900]"></i> Jarak GPS: ${d.distance} km (${d.location})</p></div></div><div class="flex flex-col gap-1 shrink-0"><button type="button" onclick="toggleDraftDriverSelection(${d.id}, 'ojek')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black cursor-pointer ${isDraft ? 'bg-rose-600 text-white' : 'bg-[#FF7900] text-white'}">${isDraft ? 'BATAL PILIH' : 'PILIH'}</button><a href="https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin OLENG GO (' + ADMIN_MAIN_WA + '), saya pesan ojek bersama ' + d.name + '.')}" target="_blank" class="px-2.5 py-1 bg-[#171717] text-white rounded-xl text-[10px] font-bold text-center"><i class="fa-brands fa-whatsapp text-[#FF9800]"></i> WA Utama</a><button type="button" onclick="startPersonalChat('${d.name}')" class="px-2.5 py-1 bg-[#292929] text-white rounded-xl text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments"></i> Chat</button></div></div>`; }).join('') : '<p class="text-center text-xs text-rose-700 font-bold bg-rose-50 border border-rose-200 p-4 rounded-2xl">Driver aktif yang tersedia belum ada saat ini.</p>'}</div></div>${getSimaduBrandFooterHTML()}</div>`;
             setTimeout(() => initInteractiveRouteMap('ojek-map', 'ojek-from', 'ojek-to', true, 'ojek'), 250);
         }
 
@@ -2280,13 +2398,13 @@
             navigator.geolocation.getCurrentPosition(pos => {
                 applyCoordinateToRole('pickup', pos.coords.latitude, pos.coords.longitude);
                 devicePermissionsStatus.gps = 'diizinkan'; localStorage.setItem('oleng_perm_gps', 'diizinkan');
-                const m = mapId === 'checkout-map' ? checkoutMapInstance : mapId === 'ojek-map' ? ojekMapInstance : mapInstance;
+                const m = mapId === 'fs-map' ? fsMapInstance : mapId === 'checkout-map' ? checkoutMapInstance : mapId === 'ojek-map' ? ojekMapInstance : mapInstance;
                 if (m) m.setView(userCurrentLatLng, Math.max(m.getZoom(), 16));
                 routeSelectionState.stepMode = 'dest'; refreshRouteModePanel(mapId); showToast('GPS terkini dikunci. Klik Titik Tujuan di peta.', 'success');
             }, () => { if (!gpsNoticeShownInSession) { gpsNoticeShownInSession = true; showToast('Lokasi belum aktif. Ketuk langsung Titik Jemput di peta.', 'info'); } }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 15000 });
         }
 
-        function zoomRouteMapBy(mapId, delta) { const m = mapId === 'checkout-map' ? checkoutMapInstance : mapId === 'ojek-map' ? ojekMapInstance : mapInstance; if (m) delta > 0 ? m.zoomIn(Math.abs(delta)) : m.zoomOut(Math.abs(delta)); }
+        function zoomRouteMapBy(mapId, delta) { const m = mapId === 'fs-map' ? fsMapInstance : mapId === 'checkout-map' ? checkoutMapInstance : mapId === 'ojek-map' ? ojekMapInstance : mapInstance; if (m) delta > 0 ? m.zoomIn(Math.abs(delta)) : m.zoomOut(Math.abs(delta)); }
 
         function initInteractiveRouteMap(mapId, pickupInputId, destInputId, isOjek = false) {
             const mapEl = document.getElementById(mapId); if (!mapEl) return;
