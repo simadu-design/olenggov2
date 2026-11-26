@@ -429,7 +429,6 @@
 
         <!-- VIEW CHAT ALA WHATSAPP (DAFTAR CHAT + CARI USER DI ATAS -> KLIK MASUK RUANG OBROLAN) -->
         <div id="view-chat" class="absolute inset-0 bg-white z-50 hidden flex flex-col">
-            <!-- PANEL 1: DAFTAR CHAT & PENCARIAN NAMA USER DI ATAS -->
             <div id="chat-list-panel" class="flex-1 flex flex-col bg-white overflow-hidden">
                 <div class="bg-[#171717] text-white px-4 py-3 flex items-center justify-between shadow border-b-2 border-[#FF7900]">
                     <div class="flex items-center space-x-2.5 min-w-0">
@@ -460,7 +459,6 @@
                 <div id="chat-contact-selector" class="flex-1 overflow-y-auto divide-y divide-[#F3F3F3] bg-white"></div>
             </div>
 
-            <!-- PANEL 2: RUANG OBROLAN SATU USER SAJA (TANPA DAFTAR USER LAIN) -->
             <div id="chat-room-panel" class="hidden flex-1 flex flex-col bg-[#F3F3F3] overflow-hidden">
                 <div class="bg-[#171717] text-white px-4 py-3 flex items-center justify-between shadow border-b-2 border-[#FF7900]">
                     <div class="flex items-center space-x-2.5 min-w-0">
@@ -783,14 +781,31 @@
                 modal.className = 'fixed inset-0 bg-black/75 backdrop-blur-xs z-[95] flex flex-col justify-center items-center p-4';
                 document.body.appendChild(modal);
             }
-            modal.innerHTML = `<div class="bg-white rounded-3xl p-5 w-full max-w-xs space-y-4 shadow-2xl border-4 border-[#FF7900] text-center"><div class="w-12 h-12 bg-[#F3F3F3] text-[#FF7900] rounded-2xl flex items-center justify-center text-xl mx-auto"><i class="fa-solid fa-circle-question"></i></div><p class="text-xs font-black text-[#171717] leading-relaxed">Apakah Anda yakin ingin keluar dari aplikasi Olenggo?</p><div class="grid grid-cols-2 gap-2.5 pt-1"><button type="button" onclick="confirmExitOlenggoApp()" class="py-2.5 bg-[#171717] hover:bg-[#292929] text-white font-black rounded-2xl text-xs cursor-pointer shadow">Ya, Keluar</button><button type="button" onclick="document.getElementById('modal-exit-olenggo').classList.add('hidden')" class="py-2.5 bg-[#FF7900] hover:bg-[#FF9800] text-white font-black rounded-2xl text-xs cursor-pointer">Tetap di Aplikasi</button></div></div>`;
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-5 w-full max-w-xs space-y-4 shadow-2xl border-4 border-[#FF7900] text-center">
+                    <div class="w-12 h-12 bg-[#F3F3F3] text-[#FF7900] rounded-2xl flex items-center justify-center text-xl mx-auto">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </div>
+                    <h3 class="font-black text-sm text-[#171717]">Yakin untuk keluar?</h3>
+                    <p class="text-xs text-neutral-700 leading-relaxed">Apakah Anda yakin ingin keluar dari aplikasi <b>OLENG GO</b>?</p>
+                    <div class="grid grid-cols-2 gap-2.5 pt-1">
+                        <button type="button" onclick="confirmExitOlenggoApp()" class="py-2.5 bg-[#171717] hover:bg-[#292929] text-white font-black rounded-2xl text-xs cursor-pointer shadow">Ya</button>
+                        <button type="button" onclick="cancelExitOlenggoModal()" class="py-2.5 bg-[#FF7900] hover:bg-[#FF9800] text-white font-black rounded-2xl text-xs cursor-pointer">Batal</button>
+                    </div>
+                </div>
+            `;
             modal.classList.remove('hidden');
+        }
+
+        function cancelExitOlenggoModal() {
+            document.getElementById('modal-exit-olenggo')?.classList.add('hidden');
+            armBackNavigationTrap();
         }
 
         function confirmExitOlenggoApp() {
             document.getElementById('modal-exit-olenggo')?.classList.add('hidden');
             try { window.close(); } catch (e) {}
-            showToast('Anda berada di halaman utama Olenggo.', 'info');
+            showToast('Silakan tutup tab atau tekan tombol home HP untuk keluar.', 'info');
         }
 
         async function ensureWebPermissionsFlow(interactive = true) {
@@ -854,10 +869,20 @@
             return ensureWebPermissionsFlow(Boolean(showFeedback));
         }
 
+        function armBackNavigationTrap() {
+            try {
+                const curState = window.history.state || {};
+                if (!curState.olengAnchor) {
+                    window.history.replaceState({ ...curState, olengAnchor: true, ts: Date.now() }, '', window.location.href);
+                }
+                window.history.pushState({ olengGuard: true, ts: Date.now() }, '', window.location.href);
+            } catch (e) {}
+        }
+
         function pushAppNavigationState(label = 'nav') {
             if (isHandlingHardwareBack) return;
             const now = Date.now();
-            if (now - lastHistoryPushTime < 450) return;
+            if (now - lastHistoryPushTime < 120) return;
             lastHistoryPushTime = now;
             try { window.history.pushState({ olengNav: label, ts: now }, '', window.location.href); } catch (e) {}
         }
@@ -868,8 +893,9 @@
         }
 
         function handleHardwareBackAction() {
+            if (!document.getElementById('modal-exit-olenggo')?.classList.contains('hidden')) { cancelExitOlenggoModal(); return; }
             if (!document.getElementById('modal-fullscreen-map')?.classList.contains('hidden')) { closeFullscreenMap(); return; }
-            for (const id of ['modal-exit-olenggo', 'modal-chat-partner-info', 'modal-incoming-order', 'modal-forgot']) {
+            for (const id of ['modal-chat-partner-info', 'modal-incoming-order', 'modal-forgot']) {
                 const el = document.getElementById(id);
                 if (el && !el.classList.contains('hidden')) { el.classList.add('hidden'); return; }
             }
@@ -879,32 +905,42 @@
             if (!document.getElementById('modal-cart')?.classList.contains('hidden')) { closeCartModal(); return; }
             if (!document.getElementById('modal-notif')?.classList.contains('hidden')) { closeNotificationModal(); return; }
             if (!document.getElementById('view-chat')?.classList.contains('hidden')) {
-                if (isChatRoomActive()) { backToChatList(); return; }
+                if (typeof isChatRoomActive === 'function' && isChatRoomActive()) {
+                    backToChatList();
+                    return;
+                }
                 closeChat();
                 return;
             }
             if (isMerchantDetailOpen()) { closeMerchantDetail(); return; }
             if (currentUser && !document.getElementById('view-dashboard')?.classList.contains('hidden')) {
+                const rootTab = getHomeTabForCurrentRole();
                 if (tabNavigationHistory.length > 1) {
                     tabNavigationHistory.pop();
-                    renderDashboardContent(tabNavigationHistory[tabNavigationHistory.length - 1] || getHomeTabForCurrentRole(), false);
+                    const prevTab = tabNavigationHistory[tabNavigationHistory.length - 1] || rootTab;
+                    renderDashboardContent(prevTab, false);
                     return;
                 }
-                const rootTab = getHomeTabForCurrentRole();
-                if (currentSubTab !== rootTab) { renderDashboardContent(rootTab, false); return; }
+                if (currentSubTab !== rootTab) {
+                    tabNavigationHistory = [rootTab];
+                    renderDashboardContent(rootTab, false);
+                    return;
+                }
                 openExitOlenggoConfirmModal();
+                return;
             }
+            openExitOlenggoConfirmModal();
         }
 
         window.addEventListener('popstate', function () {
-            if (Date.now() - lastHistoryPushTime < 350) return;
             isHandlingHardwareBack = true;
             handleHardwareBackAction();
-            try { window.history.pushState({ olengGuard: true, ts: Date.now() }, '', window.location.href); } catch (e) {}
-            setTimeout(() => { isHandlingHardwareBack = false; }, 120);
+            armBackNavigationTrap();
+            setTimeout(() => { isHandlingHardwareBack = false; }, 80);
         });
 
-        try { window.history.replaceState({ olengRoot: true }, '', window.location.href); window.history.pushState({ olengGuard: true }, '', window.location.href); } catch (e) {}
+        armBackNavigationTrap();
+        armBackNavigationTrap();
 
         function openFullGoogleMapsForCoords(lat = null, lng = null, labelText = '') {
             const url = (typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng))
@@ -1996,8 +2032,9 @@
 
         function updateDashboardShell(preserveSavedTab = false) {
             const activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
+            const rootTab = getHomeTabForCurrentRole();
             renderDashboardNavigation(activeRole);
-            renderDashboardContent((preserveSavedTab && currentSubTab) ? currentSubTab : (activeRole === 'merchant' ? 'merchant-manage' : activeRole === 'admin' ? 'admin-dash' : activeRole === 'driver' ? 'history' : 'home'), false);
+            renderDashboardContent((preserveSavedTab && currentSubTab) ? currentSubTab : rootTab, false);
         }
 
         function adminSwitchViewMode(mode) {
