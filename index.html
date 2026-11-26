@@ -279,11 +279,11 @@
             <div id="chat-partner-info-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-[#FF7900]"></div>
         </div>
 
-        <div id="modal-incoming-order" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
+        <div id="modal-incoming-order" class="absolute inset-0 bg-black/75 backdrop-blur-xs z-[70] hidden flex flex-col justify-center items-center p-4">
             <div id="incoming-order-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-[#FF7900] max-h-[90vh] overflow-y-auto"></div>
         </div>
 
-        <div id="modal-incoming-chat" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex flex-col justify-center items-center p-4">
+        <div id="modal-incoming-chat" class="absolute inset-0 bg-black/70 backdrop-blur-xs z-[65] hidden flex flex-col justify-center items-center p-4">
             <div id="incoming-chat-card" class="bg-white rounded-3xl p-5 w-full max-w-sm space-y-3 shadow-2xl border-4 border-[#171717]"></div>
         </div>
 
@@ -1073,11 +1073,11 @@
                     })
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
                         pullInitialFromSupabase(false).then(() => {
-                            if (payload?.eventType === 'INSERT' && payload?.new) {
+                            if ((payload?.eventType === 'INSERT' || payload?.eventType === 'UPDATE') && payload?.new) {
                                 const r = payload.new;
-                                const ordObj = { id: r.order_code, type: r.order_type || 'ojek', customer: r.customer_name, merchant: r.merchant_name, driver: r.driver_name, items: r.items_summary, total: Number(r.total_amount || 0), status: r.status || 'searching_driver' };
+                                const ordObj = { id: r.order_code, type: r.order_type || 'ojek', customer: r.customer_name, merchant: r.merchant_name, driver: r.driver_name, assignedDriverPhone: r.assigned_driver_phone || r.driver_phone || '', items: r.items_summary, pickup: r.pickup_label || '', dest: r.dest_label || '', total: Number(r.total_amount || 0), status: r.status || 'searching_driver' };
                                 if (isOrderTargetedToCurrentUser(ordObj)) {
-                                    notifyBackgroundOnce('order-' + ordObj.id, `Order Baru ${ordObj.id}`, `${ordObj.items} (${ordObj.customer})`);
+                                    notifyBackgroundOnce('order-' + ordObj.id + '-' + payload.eventType, `Order Baru ${ordObj.id}`, `${ordObj.items} (${ordObj.customer})`);
                                     playAlarmRingtone();
                                     triggerIncomingOrderPopupForOrder(ordObj, true);
                                 }
@@ -1390,7 +1390,9 @@
             if (role === 'customer') return names.has(normalizeMatchKey(order.customer));
             if (role === 'driver') {
                 const ordDriverKey = normalizeMatchKey(order.driver), ordDriverPhone = normalizePhone(order.assignedDriverPhone || order.driverPhone);
-                return (ordDriverKey && names.has(ordDriverKey)) || (ordDriverPhone && phones.has(ordDriverPhone)) || (st === 'searching_driver' && !ordDriverKey);
+                if ((ordDriverKey && names.has(ordDriverKey)) || (ordDriverPhone && phones.has(ordDriverPhone))) return true;
+                if (st === 'searching_driver') return true;
+                return false;
             }
             if (role === 'merchant') return Boolean(normalizeMatchKey(order.merchant) && names.has(normalizeMatchKey(order.merchant)));
             return false;
@@ -1553,6 +1555,7 @@
                 if (newlyArrivedChats.length > 0) { const latestC = newlyArrivedChats[newlyArrivedChats.length - 1]; notifyBackgroundOnce('chat-' + latestC.id, `Chat Masuk dari ${latestC.from}`, String(latestC.text || '').startsWith('data:image') ? '📷 Mengirim foto' : latestC.text); playAlarmRingtone(); checkAndTriggerIncomingChatPopup(latestC); }
                 const newlyArrivedOrders = (db.orders || []).filter(o => !prevOrderIds.has(String(o.id)) && isOrderTargetedToCurrentUser(o));
                 if (newlyArrivedOrders.length > 0) { const latestO = newlyArrivedOrders[0]; notifyBackgroundOnce('order-' + latestO.id, `Order Masuk ${latestO.id}`, `${latestO.items} • Tujuan: ${latestO.dest || ''}`); playAlarmRingtone(); triggerIncomingOrderPopupForOrder(latestO, true); }
+                else { checkAndShowIncomingOrderPopup(false); }
                 updateHomeHeaderBadgesOnly();
 
                 if (isUserCurrentlyTypingOrEditing() || (activeMapScreen && !forceRefreshUI)) return;
@@ -1611,7 +1614,7 @@
             alarmEnabled = !alarmEnabled; localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled));
             const chatAlarmState = document.getElementById('chat-alarm-state');
             if (chatAlarmState) chatAlarmState.textContent = alarmEnabled ? 'ON' : 'OFF';
-            if (alarmEnabled) playAlarmRingtone();
+            if (alarmEnabled) { playAlarmRingtone(); checkAndShowIncomingOrderPopup(true); }
             showToast(`Berhasil! Alarm notifikasi ${alarmEnabled ? 'DINYALAKAN (ON)' : 'DIMATIKAN (OFF)'}.`, 'success');
             if (!isUserCurrentlyTypingOrEditing() && currentUser && !document.getElementById('view-dashboard')?.classList.contains('hidden')) renderDashboardContent(currentSubTab, false);
         }
@@ -1695,7 +1698,9 @@
                         enterDashboard(true);
                     }
                 }
-                pullInitialFromSupabase(false).then(() => syncAllToSupabase()).catch(() => {});
+                await pullInitialFromSupabase(false);
+                syncAllToSupabase().catch(() => {});
+                setTimeout(() => checkAndShowIncomingOrderPopup(true), 300);
             } catch (e) { console.warn('Init error:', e); }
             finally { const splash = document.getElementById('oleng-splash-screen'); if (splash) { splash.classList.add('opacity-0'); setTimeout(() => { splash.style.display = 'none'; }, 400); } }
             setInterval(() => { processDriverResponseTimeouts(); flushOfflineSyncQueue(); if (!document.hidden && !isUserCurrentlyTypingOrEditing()) pullInitialFromSupabase(false); }, 6000);
@@ -1879,6 +1884,10 @@
             currentSubTab = tab; localStorage.setItem('oleng_last_tab', tab); document.getElementById('view-merchant-detail').classList.add('hidden');
             const mapTabs = { home: renderCustomerHome, food: renderCustomerFood, ojek: renderCustomerOjek, history: renderOrderHistory, profile: renderProfile, 'merchant-manage': renderMerchantManage, 'admin-own-store': renderAdminOwnStoreManage, 'merchant-orders': renderOrderHistory, 'driver-orders': renderOrderHistory, 'admin-dash': renderAdminDash, 'admin-users': renderAdminUsers, 'admin-stores': renderAdminStores, 'admin-drivers': renderAdminDrivers, 'admin-orders': renderOrderHistory, 'admin-banner': renderAdminBanner };
             (mapTabs[tab] || renderCustomerHome)(document.getElementById('main-content'));
+            const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+            if (activeRole === 'driver' && document.getElementById('modal-incoming-order')?.classList.contains('hidden')) {
+                setTimeout(() => checkAndShowIncomingOrderPopup(false), 180);
+            }
         }
 
         function getAccountNotifs() {
