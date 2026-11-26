@@ -261,16 +261,18 @@
             </div>
             <div id="fullscreen-map-canvas" class="flex-1 w-full z-10"></div>
             <div class="bg-white p-3 border-t-2 border-[#FF7900] space-y-2 text-xs">
+                <div class="flex gap-1.5 flex-wrap">
+                    <button type="button" id="fs-btn-pickup" onclick="setRouteStepMode('pickup', 'fs-map')" class="px-2.5 py-1 rounded-xl bg-[#171717] text-[#FF9800] text-[10px] font-black cursor-pointer">Klik Titik Jemput</button>
+                    <button type="button" id="fs-btn-dest" onclick="setRouteStepMode('dest', 'fs-map')" class="px-2.5 py-1 rounded-xl bg-white text-[#171717] border border-neutral-300 text-[10px] font-bold cursor-pointer">Klik Titik Tujuan</button>
+                    <button type="button" onclick="triggerLiveGPSToPickup('fs-map')" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-xl text-[10px] font-black cursor-pointer">
+                        <i class="fa-solid fa-crosshairs"></i> GPS Terkini
+                    </button>
+                </div>
                 <div class="flex items-center justify-between gap-2 flex-wrap">
-                    <span id="fs-map-info" class="font-bold text-[#171717] truncate">Klik peta untuk memilih titik lokasi</span>
-                    <div class="flex gap-1.5">
-                        <button type="button" onclick="triggerLiveGPSToPickup('fs-map')" class="px-3 py-1.5 bg-[#FF7900] text-white rounded-xl text-[11px] font-black cursor-pointer">
-                            <i class="fa-solid fa-crosshairs"></i> GPS Terkini
-                        </button>
-                        <button type="button" onclick="closeFullscreenMap()" class="px-3 py-1.5 bg-[#171717] text-[#FF9800] rounded-xl text-[11px] font-black cursor-pointer">
-                            Simpan &amp; Kembali
-                        </button>
-                    </div>
+                    <span id="fs-map-info" class="font-bold text-[#171717] truncate">Klik peta untuk memilih titik jemput / tujuan</span>
+                    <button type="button" onclick="closeFullscreenMap()" class="px-3 py-1.5 bg-[#171717] text-[#FF9800] rounded-xl text-[11px] font-black cursor-pointer">
+                        Simpan &amp; Kembali
+                    </button>
                 </div>
             </div>
         </div>
@@ -549,10 +551,55 @@
             media: localStorage.getItem('oleng_perm_media') || 'siap_galeri_kamera'
         };
 
+        let savedOjekRouteDraft = {
+            fromText: '',
+            toText: '',
+            pickupLatLng: null,
+            destLatLng: null
+        };
+
+        function persistOjekRouteDraft() {
+            const fromEl = document.getElementById('ojek-from');
+            const toEl = document.getElementById('ojek-to');
+            if (fromEl && fromEl.value.trim()) {
+                savedOjekRouteDraft.fromText = fromEl.value.trim();
+            }
+            if (toEl && toEl.value.trim()) {
+                savedOjekRouteDraft.toText = toEl.value.trim();
+            }
+            if (Array.isArray(userCurrentLatLng) && userCurrentLatLng.length === 2) {
+                savedOjekRouteDraft.pickupLatLng = [Number(userCurrentLatLng[0]), Number(userCurrentLatLng[1])];
+            }
+            if (Array.isArray(destLatLng) && destLatLng.length === 2) {
+                savedOjekRouteDraft.destLatLng = [Number(destLatLng[0]), Number(destLatLng[1])];
+            }
+        }
+
+        function restoreOjekRouteDraftToInputs() {
+            if (Array.isArray(savedOjekRouteDraft.pickupLatLng) && savedOjekRouteDraft.pickupLatLng.length === 2) {
+                userCurrentLatLng = [...savedOjekRouteDraft.pickupLatLng];
+                if (routeSelectionState.pickupMarker) routeSelectionState.pickupMarker.setLatLng(userCurrentLatLng);
+            }
+            if (Array.isArray(savedOjekRouteDraft.destLatLng) && savedOjekRouteDraft.destLatLng.length === 2) {
+                destLatLng = [...savedOjekRouteDraft.destLatLng];
+                if (routeSelectionState.destMarker) routeSelectionState.destMarker.setLatLng(destLatLng);
+            }
+            const fromEl = document.getElementById('ojek-from');
+            const toEl = document.getElementById('ojek-to');
+            if (fromEl && savedOjekRouteDraft.fromText) {
+                fromEl.value = savedOjekRouteDraft.fromText;
+            }
+            if (toEl && savedOjekRouteDraft.toText) {
+                toEl.value = savedOjekRouteDraft.toText;
+            }
+            if (typeof updateOjekFareUI === 'function') updateOjekFareUI();
+        }
+
         let fsMapInstance = null;
         let fsReturnContext = null;
 
         function openFullscreenMap(context = 'ojek') {
+            if (context === 'ojek') persistOjekRouteDraft();
             fsReturnContext = context;
             const modal = document.getElementById('modal-fullscreen-map');
             const titleEl = document.getElementById('fs-map-title');
@@ -584,12 +631,12 @@
                 routeSelectionState.isOjek = (context === 'ojek');
                 routeSelectionState.pickupLabelId = context === 'checkout' ? 'cart-pickup-label' : 'ojek-from';
                 routeSelectionState.destLabelId = context === 'checkout' ? 'cart-dest-label' : 'ojek-to';
+                refreshRouteModePanel('fs-map');
 
                 fsMapInstance.on('click', (e) => {
                     if (routeSelectionState.stepMode === 'pickup') {
                         applyCoordinateToRole('pickup', e.latlng.lat, e.latlng.lng);
-                        routeSelectionState.stepMode = 'dest';
-                        showToast('Titik jemput tersimpan. Klik Titik Tujuan di peta.', 'success');
+                        showToast('Titik jemput tersimpan! Klik Titik Tujuan atau tombol tujuan.', 'success');
                     } else {
                         applyCoordinateToRole('dest', e.latlng.lat, e.latlng.lng);
                         showToast('Titik tujuan tersimpan!', 'success');
@@ -600,7 +647,6 @@
 
                 pMarker.on('dragend', () => {
                     applyCoordinateToRole('pickup', pMarker.getLatLng().lat, pMarker.getLatLng().lng);
-                    routeSelectionState.stepMode = 'dest';
                 });
                 dMarker.on('dragend', () => {
                     applyCoordinateToRole('dest', dMarker.getLatLng().lat, dMarker.getLatLng().lng);
@@ -611,6 +657,7 @@
         }
 
         function closeFullscreenMap() {
+            if (fsReturnContext === 'ojek') persistOjekRouteDraft();
             const modal = document.getElementById('modal-fullscreen-map');
             if (modal) modal.classList.add('hidden');
             if (fsMapInstance) {
@@ -619,6 +666,7 @@
             }
             if (fsReturnContext === 'ojek' && currentSubTab === 'ojek') {
                 renderCustomerOjek(document.getElementById('main-content'), false);
+                setTimeout(restoreOjekRouteDraftToInputs, 80);
             } else if (fsReturnContext === 'checkout' && !document.getElementById('modal-cart')?.classList.contains('hidden')) {
                 updateCartUI();
                 setTimeout(() => {
@@ -672,6 +720,7 @@
         }
 
         function autoPickNearestDriver(context = 'ojek') {
+            if (context === 'ojek') persistOjekRouteDraft();
             const origin = context === 'cart' && db.activeMerchant ? [db.activeMerchant.lat, db.activeMerchant.lng] : userCurrentLatLng;
             const list = getAvailableOnlineDriversSorted(origin[0], origin[1]);
             if (list.length === 0) return showToast('Belum ada driver online yang tersedia saat ini.', 'error');
@@ -680,8 +729,10 @@
             confirmedOrderDriverId = Number(nearest.id);
             selectedDriverId = Number(nearest.id);
             showToast(`Driver terdekat ${nearest.name} (${nearest.distance} km) dipilih & dikonfirmasi!`, 'success');
-            if (context === 'ojek' && currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'), false);
-            else if (context === 'cart') updateCartUI();
+            if (context === 'ojek' && currentSubTab === 'ojek') {
+                renderCustomerOjek(document.getElementById('main-content'), false);
+                setTimeout(restoreOjekRouteDraftToInputs, 80);
+            } else if (context === 'cart') updateCartUI();
         }
 
         function getHomeTabForCurrentRole() {
@@ -1385,13 +1436,12 @@
         function isOrderTargetedToCurrentUser(order) {
             if (!currentUser || !order) return false;
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            const st = normalizeOrderStatusCode(order.status), { names, phones } = getPartnerIdentityKeys();
-            if (role === 'admin') return true;
+            const { names, phones } = getPartnerIdentityKeys();
+            if (role === 'admin') return false;
             if (role === 'customer') return names.has(normalizeMatchKey(order.customer));
             if (role === 'driver') {
                 const ordDriverKey = normalizeMatchKey(order.driver), ordDriverPhone = normalizePhone(order.assignedDriverPhone || order.driverPhone);
                 if ((ordDriverKey && names.has(ordDriverKey)) || (ordDriverPhone && phones.has(ordDriverPhone))) return true;
-                if (st === 'searching_driver') return true;
                 return false;
             }
             if (role === 'merchant') return Boolean(normalizeMatchKey(order.merchant) && names.has(normalizeMatchKey(order.merchant)));
@@ -1647,29 +1697,61 @@
         }
 
         function toggleDraftDriverSelection(driverId, context = 'ojek') {
+            if (context === 'ojek') persistOjekRouteDraft();
             const d = (db.drivers || []).find(x => Number(x.id) === Number(driverId));
             if (!d) return;
             if (d.status !== 'Online' || (d.availability && d.availability !== 'available')) return showToast(`Driver ${d.name} sedang tidak tersedia.`, 'error');
-            if (Number(draftSelectedDriverId) === Number(driverId)) { draftSelectedDriverId = null; if (Number(confirmedOrderDriverId) === Number(driverId)) confirmedOrderDriverId = null; showToast(`Pilihan sementara untuk ${d.name} dibatalkan.`, 'info'); }
-            else { draftSelectedDriverId = Number(driverId); showToast(`Driver ${d.name} dipilih sementara. Tekan KONFIRMASI DRIVER.`, 'info'); }
-            if (context === 'ojek' && currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'), false);
-            else if (context === 'cart') updateCartUI();
+            if (Number(draftSelectedDriverId) === Number(driverId)) {
+                draftSelectedDriverId = null;
+                if (Number(confirmedOrderDriverId) === Number(driverId)) confirmedOrderDriverId = null;
+                showToast(`Pilihan sementara untuk ${d.name} dibatalkan.`, 'info');
+            } else {
+                draftSelectedDriverId = Number(driverId);
+                confirmedOrderDriverId = Number(driverId);
+                selectedDriverId = Number(driverId);
+                showToast(`Driver ${d.name} dipilih!`, 'success');
+            }
+            if (context === 'ojek' && currentSubTab === 'ojek') {
+                renderCustomerOjek(document.getElementById('main-content'), false);
+                setTimeout(restoreOjekRouteDraftToInputs, 80);
+            } else if (context === 'cart') updateCartUI();
         }
 
         function confirmDraftDriverSelection(context = 'ojek') {
-            if (!draftSelectedDriverId) return showToast('Pilih satu driver terlebih dahulu sebelum menekan KONFIRMASI DRIVER!', 'error');
+            if (context === 'ojek') {
+                persistOjekRouteDraft();
+            }
+            if (!draftSelectedDriverId) {
+                showToast('Pilih satu driver terlebih dahulu sebelum menekan KONFIRMASI DRIVER!', 'error');
+                if (context === 'ojek') setTimeout(restoreOjekRouteDraftToInputs, 50);
+                return;
+            }
             const d = (db.drivers || []).find(x => Number(x.id) === Number(draftSelectedDriverId));
-            if (!d || d.status !== 'Online' || (d.availability && d.availability !== 'available')) { draftSelectedDriverId = null; return showToast('Driver pilihan sudah tidak tersedia.', 'error'); }
-            confirmedOrderDriverId = Number(d.id); selectedDriverId = Number(d.id);
+            if (!d || d.status !== 'Online' || (d.availability && d.availability !== 'available')) {
+                draftSelectedDriverId = null;
+                showToast('Driver pilihan sudah tidak tersedia.', 'error');
+                if (context === 'ojek') setTimeout(restoreOjekRouteDraftToInputs, 50);
+                return;
+            }
+            confirmedOrderDriverId = Number(d.id);
+            selectedDriverId = Number(d.id);
             showToast(`Driver ${d.name} dikonfirmasi!`, 'success');
-            if (context === 'ojek' && currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'), false);
-            else if (context === 'cart') updateCartUI();
+            if (context === 'ojek' && currentSubTab === 'ojek') {
+                renderCustomerOjek(document.getElementById('main-content'), false);
+                setTimeout(restoreOjekRouteDraftToInputs, 80);
+            } else if (context === 'cart') {
+                updateCartUI();
+            }
         }
 
         function refreshActiveDriversList(context = 'ojek') {
-            pullInitialFromSupabase(false); showToast('Daftar driver aktif diperbarui.', 'success');
-            if (context === 'ojek' && currentSubTab === 'ojek') renderCustomerOjek(document.getElementById('main-content'), false);
-            else if (context === 'cart') updateCartUI();
+            if (context === 'ojek') persistOjekRouteDraft();
+            pullInitialFromSupabase(false);
+            showToast('Daftar driver aktif diperbarui.', 'success');
+            if (context === 'ojek' && currentSubTab === 'ojek') {
+                renderCustomerOjek(document.getElementById('main-content'), false);
+                setTimeout(restoreOjekRouteDraftToInputs, 80);
+            } else if (context === 'cart') updateCartUI();
         }
 
         function startLiveHighAccuracyGPSWatcher() {
@@ -2104,12 +2186,25 @@
 
         function closeMerchantDetail() { document.getElementById('view-merchant-detail').classList.add('hidden'); }
 
+        function applyMaximQuickOjekDefaults() {
+            if (!confirmedOrderDriverId && !draftSelectedDriverId) {
+                const list = getAvailableOnlineDriversSorted(userCurrentLatLng[0], userCurrentLatLng[1]);
+                if (list.length > 0) {
+                    draftSelectedDriverId = Number(list[0].id);
+                    confirmedOrderDriverId = Number(list[0].id);
+                    selectedDriverId = Number(list[0].id);
+                }
+            }
+            restoreOjekRouteDraftToInputs();
+            if (typeof updateOjekFareUI === 'function') updateOjekFareUI();
+        }
+
         function renderCustomerOjek(container) {
             const availableDrivers = getAvailableOnlineDriversSorted(userCurrentLatLng[0], userCurrentLatLng[1]), filteredDrivers = availableDrivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.vehicle.toLowerCase().includes(searchQuery.toLowerCase()));
             const distanceKm = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]), estFare = calculateShippingCost(distanceKm, 'ojek'), layerBtnLabel = mapLayerMode === 'satellite' ? 'Peta Jalan' : 'Satelit';
             const confirmedDrv = confirmedOrderDriverId ? availableDrivers.find(x => Number(x.id) === Number(confirmedOrderDriverId)) : null;
-            container.innerHTML = `<div class="p-4 space-y-4 pb-28 bg-white min-h-full"><h2 class="font-extrabold text-base text-[#171717]">Pesan Ojek Online & Kurir</h2><div class="bg-white p-3 rounded-2xl border-2 border-neutral-200 flex items-center gap-2"><i class="fa-solid fa-search text-[#FF7900] pl-2"></i><input type="text" id="search-driver-input" value="${searchQuery}" oninput="searchQuery=this.value;renderCustomerOjek(document.getElementById('main-content'), false)" placeholder="Cari nama ojek / driver terdekat..." class="w-full text-xs font-semibold focus:outline-none bg-transparent"></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><div class="flex justify-between items-center gap-1 flex-wrap"><span class="text-[11px] font-extrabold text-[#171717] uppercase"><i class="fa-solid fa-route text-[#FF7900] mr-1"></i> Klik Peta: Titik Awal Lalu Tujuan</span><div class="flex gap-1.5 flex-wrap"><button type="button" onclick="openFullscreenMap('ojek')" class="px-2 py-1 bg-[#FF7900] text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-expand"></i> Full Layar</button><button onclick="openFullGoogleMapsForCoords(destLatLng[0], destLatLng[1], document.getElementById('ojek-to')?.value || '')" class="px-2 py-1 bg-[#171717] text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-diamond-turn-right text-[#FF9800]"></i> Google Maps</button><button onclick="toggleMapLayerMode()" class="px-2.5 py-1 bg-[#292929] text-[#FF9800] rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span></button><button onclick="useCurrentGPSLocation('ojek')" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer"><i class="fa-solid fa-crosshairs"></i> Lokasi Terkini</button></div></div><div id="ojek-map" class="map-container shadow-inner border-2 border-neutral-200" style="height: 185px;"></div><div class="space-y-2"><div><label class="text-[10px] font-extrabold text-[#171717] uppercase">Titik Awal / Jemputan</label><input type="text" id="ojek-from" value="" placeholder="Klik titik awal di peta atau aktifkan GPS terkini" class="w-full mt-0.5 p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold bg-[#F3F3F3]"></div><div><label class="text-[10px] font-extrabold text-[#171717] uppercase">Titik Tujuan</label><input type="text" id="ojek-to" value="" placeholder="Klik titik tujuan di peta atau ketik tujuan" class="w-full mt-0.5 p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold bg-white"></div></div><div class="bg-[#F3F3F3] p-3 rounded-2xl flex justify-between items-center border border-neutral-200"><span class="text-[11px] text-[#171717] font-bold" id="ojek-dist-label">Estimasi Tarif (${distanceKm} km):</span><span class="text-sm font-black text-[#FF7900]" id="ojek-fare-label">Rp ${estFare.toLocaleString()}</span></div><div class="bg-[#F3F3F3] p-2.5 rounded-2xl border border-[#FF7900] text-[11px] font-bold text-[#171717] flex items-center justify-between gap-2 flex-wrap"><span>Driver Terkonfirmasi: <b>${confirmedDrv ? confirmedDrv.name : 'Belum dikonfirmasi'}</b></span><div class="flex gap-1.5"><button type="button" onclick="autoPickNearestDriver('ojek')" class="px-2.5 py-1.5 bg-[#FF7900] text-white rounded-xl text-[10px] font-black cursor-pointer">CARI OTOMATIS</button><button type="button" onclick="confirmDraftDriverSelection('ojek')" class="px-3 py-1.5 bg-[#171717] text-[#FF9800] rounded-xl text-[10px] font-black cursor-pointer">KONFIRMASI DRIVER</button></div></div><button onclick="submitOjekOrder()" class="w-full py-3.5 bg-[#FF7900] hover:bg-[#FF9800] text-white font-black rounded-2xl shadow-md text-xs cursor-pointer border-b-2 border-[#171717]">Pesan Ojek Sekarang</button></div><div class="space-y-2.5"><div class="flex justify-between items-center"><h3 class="font-extrabold text-xs text-[#171717] uppercase">Daftar Driver Aktif & Tersedia</h3><button type="button" onclick="refreshActiveDriversList('ojek')" class="px-2.5 py-1 bg-[#F3F3F3] text-[#171717] rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-rotate"></i> Refresh</button></div><div class="space-y-2.5">${filteredDrivers.length > 0 ? filteredDrivers.map((d, index) => { const isDraft = Number(draftSelectedDriverId) === Number(d.id), isConfirmed = Number(confirmedOrderDriverId) === Number(d.id); const avatarSrc = d.photo || './olengorange2.png'; return `<div class="bg-white p-3.5 rounded-2xl border-2 flex items-center justify-between gap-2 ${isDraft || isConfirmed ? 'border-[#FF7900] bg-[#F3F3F3]' : 'border-neutral-200'}"><div class="flex items-center space-x-3 min-w-0 flex-1"><img src="${avatarSrc}" class="w-12 h-12 rounded-2xl object-cover border shrink-0" alt="Driver"><div class="min-w-0"><h4 class="font-bold text-xs text-[#171717] truncate">${d.name} <span class="text-[9px] bg-[#171717] text-[#FF9800] px-1.5 py-0.5 rounded font-extrabold ml-1">Online • Available</span></h4>${index === 0 ? '<span class="bg-[#FF7900] text-white px-2 py-0.5 rounded text-[9px] font-black inline-block my-0.5">Terdekat</span>' : ''}<p class="text-[10px] text-neutral-600 truncate">${d.vehicle} ${d.plate ? `• <b>${d.plate}</b>` : ''} • <i class="fa-solid fa-star text-[#FF7900]"></i> <b>${d.rating || 5.0}</b></p><p class="text-[10px] text-neutral-700 font-bold mt-0.5 truncate"><i class="fa-solid fa-location-dot text-[#FF7900]"></i> Jarak GPS: ${d.distance} km (${d.location})</p></div></div><div class="flex flex-col gap-1 shrink-0"><button type="button" onclick="toggleDraftDriverSelection(${d.id}, 'ojek')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black cursor-pointer ${isDraft ? 'bg-rose-600 text-white' : 'bg-[#FF7900] text-white'}">${isDraft ? 'BATAL PILIH' : 'PILIH'}</button><a href="https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin OLENG GO (' + ADMIN_MAIN_WA + '), saya pesan ojek bersama ' + d.name + '.')}" target="_blank" class="px-2.5 py-1 bg-[#171717] text-white rounded-xl text-[10px] font-bold text-center"><i class="fa-brands fa-whatsapp text-[#FF9800]"></i> WA Utama</a><button type="button" onclick="startPersonalChat('${d.name}')" class="px-2.5 py-1 bg-[#292929] text-white rounded-xl text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments"></i> Chat</button></div></div>`; }).join('') : '<p class="text-center text-xs text-rose-700 font-bold bg-rose-50 border border-rose-200 p-4 rounded-2xl">Driver aktif yang tersedia belum ada saat ini.</p>'}</div></div>${getSimaduBrandFooterHTML()}</div>`;
-            setTimeout(() => initInteractiveRouteMap('ojek-map', 'ojek-from', 'ojek-to', true, 'ojek'), 250);
+            container.innerHTML = `<div class="p-4 space-y-4 pb-28 bg-white min-h-full"><h2 class="font-extrabold text-base text-[#171717]">Pesan Ojek Online & Kurir</h2><div class="bg-white p-3 rounded-2xl border-2 border-neutral-200 flex items-center gap-2"><i class="fa-solid fa-search text-[#FF7900] pl-2"></i><input type="text" id="search-driver-input" value="${searchQuery}" oninput="searchQuery=this.value;persistOjekRouteDraft();renderCustomerOjek(document.getElementById('main-content'), false);setTimeout(restoreOjekRouteDraftToInputs,80)" placeholder="Cari nama ojek / driver terdekat..." class="w-full text-xs font-semibold focus:outline-none bg-transparent"></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><div class="flex justify-between items-center gap-1 flex-wrap"><span class="text-[11px] font-extrabold text-[#171717] uppercase"><i class="fa-solid fa-route text-[#FF7900] mr-1"></i> Klik Peta Titik Awal & Tujuan</span><div class="flex gap-1.5 flex-wrap"><button type="button" onclick="openFullscreenMap('ojek')" class="px-2 py-1 bg-[#FF7900] text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-expand"></i> Full Layar</button><button onclick="openFullGoogleMapsForCoords(destLatLng[0], destLatLng[1], document.getElementById('ojek-to')?.value || '')" class="px-2 py-1 bg-[#171717] text-white rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-diamond-turn-right text-[#FF9800]"></i> Google Maps</button><button onclick="toggleMapLayerMode()" class="px-2.5 py-1 bg-[#292929] text-[#FF9800] rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-layer-group"></i> <span class="map-layer-label">${layerBtnLabel}</span></button><button onclick="useCurrentGPSLocation('ojek')" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-xl text-[10px] font-extrabold flex items-center gap-1 cursor-pointer"><i class="fa-solid fa-crosshairs"></i> Lokasi Terkini</button></div></div><div id="ojek-map" class="map-container shadow-inner border-2 border-neutral-200" style="height: 185px;"></div><div class="space-y-2"><div><label class="text-[10px] font-extrabold text-[#171717] uppercase">Titik Awal / Jemputan (Bisa Diklik di Peta)</label><input type="text" id="ojek-from" value="${savedOjekRouteDraft.fromText || ''}" oninput="persistOjekRouteDraft()" placeholder="Klik titik awal di peta atau aktifkan GPS terkini" class="w-full mt-0.5 p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold bg-[#F3F3F3]"></div><div><label class="text-[10px] font-extrabold text-[#171717] uppercase">Titik Tujuan (Bisa Diklik di Peta)</label><input type="text" id="ojek-to" value="${savedOjekRouteDraft.toText || ''}" oninput="persistOjekRouteDraft()" placeholder="Klik titik tujuan di peta atau ketik tujuan" class="w-full mt-0.5 p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold bg-white"></div></div><div class="bg-[#F3F3F3] p-3 rounded-2xl flex justify-between items-center border border-neutral-200"><span class="text-[11px] text-[#171717] font-bold" id="ojek-dist-label">Estimasi Tarif (${distanceKm} km):</span><span class="text-sm font-black text-[#FF7900]" id="ojek-fare-label">Rp ${estFare.toLocaleString()}</span></div><div class="bg-[#F3F3F3] p-2.5 rounded-2xl border border-[#FF7900] text-[11px] font-bold text-[#171717] flex items-center justify-between gap-2 flex-wrap"><span>Driver Terpilih: <b>${confirmedDrv ? confirmedDrv.name : 'Belum dipilih'}</b></span><div class="flex gap-1.5"><button type="button" onclick="autoPickNearestDriver('ojek')" class="px-2.5 py-1.5 bg-[#FF7900] text-white rounded-xl text-[10px] font-black cursor-pointer">TERDEKAT</button><button type="button" onclick="confirmDraftDriverSelection('ojek')" class="px-3 py-1.5 bg-[#171717] text-[#FF9800] rounded-xl text-[10px] font-black cursor-pointer">KONFIRMASI DRIVER</button></div></div><button onclick="submitOjekOrder()" class="w-full py-3.5 bg-[#FF7900] hover:bg-[#FF9800] text-white font-black rounded-2xl shadow-md text-xs cursor-pointer border-b-2 border-[#171717]">Pesan Ojek Sekarang</button></div><div class="space-y-2.5"><div class="flex justify-between items-center"><h3 class="font-extrabold text-xs text-[#171717] uppercase">Daftar Driver Aktif & Tersedia</h3><button type="button" onclick="refreshActiveDriversList('ojek')" class="px-2.5 py-1 bg-[#F3F3F3] text-[#171717] rounded-xl text-[10px] font-extrabold cursor-pointer"><i class="fa-solid fa-rotate"></i> Refresh</button></div><div class="space-y-2.5">${filteredDrivers.length > 0 ? filteredDrivers.map((d, index) => { const isDraft = Number(draftSelectedDriverId) === Number(d.id), isConfirmed = Number(confirmedOrderDriverId) === Number(d.id); const avatarSrc = d.photo || './olengorange2.png'; return `<div class="bg-white p-3.5 rounded-2xl border-2 flex items-center justify-between gap-2 ${isDraft || isConfirmed ? 'border-[#FF7900] bg-[#F3F3F3]' : 'border-neutral-200'}"><div class="flex items-center space-x-3 min-w-0 flex-1"><img src="${avatarSrc}" class="w-12 h-12 rounded-2xl object-cover border shrink-0" alt="Driver"><div class="min-w-0"><h4 class="font-bold text-xs text-[#171717] truncate">${d.name} <span class="text-[9px] bg-[#171717] text-[#FF9800] px-1.5 py-0.5 rounded font-extrabold ml-1">Online • Available</span></h4>${index === 0 ? '<span class="bg-[#FF7900] text-white px-2 py-0.5 rounded text-[9px] font-black inline-block my-0.5">Terdekat</span>' : ''}<p class="text-[10px] text-neutral-600 truncate">${d.vehicle} ${d.plate ? `• <b>${d.plate}</b>` : ''} • <i class="fa-solid fa-star text-[#FF7900]"></i> <b>${d.rating || 5.0}</b></p><p class="text-[10px] text-neutral-700 font-bold mt-0.5 truncate"><i class="fa-solid fa-location-dot text-[#FF7900]"></i> Jarak GPS: ${d.distance} km (${d.location})</p></div></div><div class="flex flex-col gap-1 shrink-0"><button type="button" onclick="toggleDraftDriverSelection(${d.id}, 'ojek')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black cursor-pointer ${isDraft ? 'bg-rose-600 text-white' : 'bg-[#FF7900] text-white'}">${isDraft ? 'BATAL PILIH' : 'PILIH'}</button><a href="https://wa.me/${ADMIN_MAIN_WA}?text=${encodeURIComponent('Halo Admin OLENG GO (' + ADMIN_MAIN_WA + '), saya pesan ojek bersama ' + d.name + '.')}" target="_blank" class="px-2.5 py-1 bg-[#171717] text-white rounded-xl text-[10px] font-bold text-center"><i class="fa-brands fa-whatsapp text-[#FF9800]"></i> WA Utama</a><button type="button" onclick="startPersonalChat('${d.name}')" class="px-2.5 py-1 bg-[#292929] text-white rounded-xl text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-comments"></i> Chat</button></div></div>`; }).join('') : '<p class="text-center text-xs text-rose-700 font-bold bg-rose-50 border border-rose-200 p-4 rounded-2xl">Driver aktif yang tersedia belum ada saat ini.</p>'}</div></div>${getSimaduBrandFooterHTML()}</div>`;
+            setTimeout(() => { initInteractiveRouteMap('ojek-map', 'ojek-from', 'ojek-to', true, 'ojek'); applyMaximQuickOjekDefaults(); }, 250);
         }
 
         function addToCart(foodId) {
@@ -2162,15 +2257,19 @@
 
         async function submitOjekOrder() {
             if (isSubmittingOrder) return;
+            persistOjekRouteDraft();
             const driver = validateSelectedDriverBeforeSubmit(); if (!driver) return;
             isSubmittingOrder = true;
             try {
-                const to = document.getElementById('ojek-to').value.trim(), from = document.getElementById('ojek-from').value.trim();
+                const to = (document.getElementById('ojek-to')?.value || savedOjekRouteDraft.toText || '').trim();
+                const from = (document.getElementById('ojek-from')?.value || savedOjekRouteDraft.fromText || '').trim();
                 if (!from || !to) return showToast('Tentukan titik awal/jemputan dan titik tujuan terlebih dahulu.', 'error');
                 const distKm = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]), fare = calculateShippingCost(distKm, 'ojek'), orderCode = 'OJK-' + Math.floor(1000 + Math.random() * 9000), respTimeoutMs = Number(db.pricing?.driverResponseTimeoutSec || 45) * 1000, searchTimeoutMs = Number(db.pricing?.driverSearchTimeoutSec || 60) * 1000;
                 const newOrder = { id: orderCode, type: 'ojek', customer: currentUser.name, merchant: 'Layanan Ojek Online', driver: driver.name, assignedDriverPhone: normalizePhone(driver.phone), driverConfirmed: true, driverResponseDeadline: Date.now() + respTimeoutMs, driverSearchDeadline: Date.now() + searchTimeoutMs, total: fare, status: 'searching_driver', items: `Ojek (${from} → ${to})`, pickup: from, pickupLat: Number(userCurrentLatLng[0]), pickupLng: Number(userCurrentLatLng[1]), dest: to, destLat: Number(destLatLng[0]), destLng: Number(destLatLng[1]), settled: false, rating: null, reviewText: '', statusHistory: [{ fromStatus: null, toStatus: 'searching_driver', label: ORDER_STATUS_LABELS.searching_driver, actorRole: 'customer', actorName: currentUser.name, note: `Konfirmasi driver ${driver.name}`, at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }], driverChangeHistory: [] };
                 recordDriverChangeLog(newOrder, null, driver.name, 'Konfirmasi driver ojek oleh pelanggan', 'CONFIRM');
-                db.orders.unshift(newOrder); resetDriverSelectionDraft(); syncDriverAvailabilityLocks(); localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                db.orders.unshift(newOrder);
+                savedOjekRouteDraft = { fromText: '', toText: '', pickupLatLng: null, destLatLng: null };
+                resetDriverSelectionDraft(); syncDriverAvailabilityLocks(); localStorage.setItem('oleng_go_db', JSON.stringify(db));
                 addAccountNotification(`Tawaran Ojek Baru (${newOrder.id})`, `Jemput ${currentUser.name} (${from} → ${to}, ${distKm} km, Rp ${fare.toLocaleString()}).`, newOrder.driver, `${newOrder.id}-offer-drv-${driver.name}`);
                 showToast(`Order ojek ${newOrder.id} terkirim ke ${driver.name}!`, 'success');
                 renderDashboardContent('history', false);
@@ -2379,9 +2478,12 @@
 
         function refreshRouteModePanel(mapId) {
             const statusEl = document.getElementById(`route-step-status-${mapId}`), btnPickup = document.getElementById(`route-mode-pickup-${mapId}`), btnDest = document.getElementById(`route-mode-dest-${mapId}`), isPickup = routeSelectionState.stepMode === 'pickup';
-            if (statusEl) statusEl.textContent = isPickup ? 'Tahap 1: Pilih Titik Jemput (klik peta / GPS, lalu otomatis ke Tujuan)' : 'Tahap 2: Pilih Titik Tujuan (klik titik tujuan di peta)';
+            if (statusEl) statusEl.textContent = isPickup ? 'Mode aktif: Klik Titik Jemput di peta' : 'Mode aktif: Klik Titik Tujuan di peta';
             if (btnPickup) btnPickup.className = isPickup ? 'px-2.5 py-1 rounded-xl bg-[#171717] text-[#FF9800] font-black cursor-pointer ring-2 ring-[#FF7900]' : 'px-2.5 py-1 rounded-xl bg-white text-[#171717] border border-neutral-300 font-bold cursor-pointer';
             if (btnDest) btnDest.className = !isPickup ? 'px-2.5 py-1 rounded-xl bg-[#FF7900] text-white font-black cursor-pointer ring-2 ring-[#171717]' : 'px-2.5 py-1 rounded-xl bg-white text-[#171717] border border-neutral-300 font-bold cursor-pointer';
+            const fsPickup = document.getElementById('fs-btn-pickup'), fsDest = document.getElementById('fs-btn-dest');
+            if (fsPickup) fsPickup.className = isPickup ? 'px-2.5 py-1 rounded-xl bg-[#171717] text-[#FF9800] text-[10px] font-black cursor-pointer ring-2 ring-[#FF7900]' : 'px-2.5 py-1 rounded-xl bg-white text-[#171717] border border-neutral-300 text-[10px] font-bold cursor-pointer';
+            if (fsDest) fsDest.className = !isPickup ? 'px-2.5 py-1 rounded-xl bg-[#FF7900] text-white text-[10px] font-black cursor-pointer ring-2 ring-[#171717]' : 'px-2.5 py-1 rounded-xl bg-white text-[#171717] border border-neutral-300 text-[10px] font-bold cursor-pointer';
         }
 
         function setRouteStepMode(mode, mapId) { routeSelectionState.stepMode = mode === 'dest' ? 'dest' : 'pickup'; refreshRouteModePanel(mapId); }
@@ -2389,17 +2491,40 @@
         function applyCoordinateToRole(roleType, lat, lng, labelOverride = '') {
             const fLat = Number(lat.toFixed(6)), fLng = Number(lng.toFixed(6)), baseText = labelOverride || `${fLat}, ${fLng}`;
             if (roleType === 'pickup') {
-                userCurrentLatLng = [fLat, fLng]; if (routeSelectionState.pickupMarker) routeSelectionState.pickupMarker.setLatLng(userCurrentLatLng);
+                userCurrentLatLng = [fLat, fLng];
+                if (routeSelectionState.pickupMarker) routeSelectionState.pickupMarker.setLatLng(userCurrentLatLng);
                 const pEl = routeSelectionState.pickupLabelId ? document.getElementById(routeSelectionState.pickupLabelId) : null;
                 if (pEl) { if (pEl.tagName === 'INPUT') pEl.value = baseText; else pEl.innerText = baseText; }
-                reverseGeocodeLabel(fLat, fLng).then(addr => { const el = routeSelectionState.pickupLabelId ? document.getElementById(routeSelectionState.pickupLabelId) : null; if (!el) return; if (el.tagName === 'INPUT' && (!el.value || el.value === baseText)) el.value = addr; else if (el.tagName !== 'INPUT' && el.innerText === baseText) el.innerText = addr; });
+                if (routeSelectionState.isOjek) savedOjekRouteDraft.fromText = baseText;
+                reverseGeocodeLabel(fLat, fLng).then(addr => {
+                    const el = routeSelectionState.pickupLabelId ? document.getElementById(routeSelectionState.pickupLabelId) : null;
+                    if (el) {
+                        if (el.tagName === 'INPUT' && (!el.value || el.value === baseText)) el.value = addr;
+                        else if (el.tagName !== 'INPUT' && el.innerText === baseText) el.innerText = addr;
+                    }
+                    if (routeSelectionState.isOjek) persistOjekRouteDraft();
+                });
             } else {
-                destLatLng = [fLat, fLng]; if (routeSelectionState.destMarker) routeSelectionState.destMarker.setLatLng(destLatLng);
+                destLatLng = [fLat, fLng];
+                if (routeSelectionState.destMarker) routeSelectionState.destMarker.setLatLng(destLatLng);
                 const dEl = routeSelectionState.destLabelId ? document.getElementById(routeSelectionState.destLabelId) : null;
                 if (dEl) { if (dEl.tagName === 'INPUT') dEl.value = baseText; else dEl.innerText = baseText; }
-                reverseGeocodeLabel(fLat, fLng).then(addr => { const el = routeSelectionState.destLabelId ? document.getElementById(routeSelectionState.destLabelId) : null; if (!el) return; if (el.tagName === 'INPUT' && (!el.value || el.value === baseText)) el.value = addr; else if (el.tagName !== 'INPUT' && el.innerText === baseText) el.innerText = addr; });
+                if (routeSelectionState.isOjek) savedOjekRouteDraft.toText = baseText;
+                reverseGeocodeLabel(fLat, fLng).then(addr => {
+                    const el = routeSelectionState.destLabelId ? document.getElementById(routeSelectionState.destLabelId) : null;
+                    if (el) {
+                        if (el.tagName === 'INPUT' && (!el.value || el.value === baseText)) el.value = addr;
+                        else if (el.tagName !== 'INPUT' && el.innerText === baseText) el.innerText = addr;
+                    }
+                    if (routeSelectionState.isOjek) persistOjekRouteDraft();
+                });
             }
-            if (routeSelectionState.isOjek) updateOjekFareUI(); else if (routeSelectionState.mapId === 'checkout-map') updateCartUI();
+            if (routeSelectionState.isOjek) {
+                persistOjekRouteDraft();
+                updateOjekFareUI();
+            } else if (routeSelectionState.mapId === 'checkout-map') {
+                updateCartUI();
+            }
         }
 
         function triggerLiveGPSToPickup(mapId) {
@@ -2409,7 +2534,7 @@
                 devicePermissionsStatus.gps = 'diizinkan'; localStorage.setItem('oleng_perm_gps', 'diizinkan');
                 const m = mapId === 'fs-map' ? fsMapInstance : mapId === 'checkout-map' ? checkoutMapInstance : mapId === 'ojek-map' ? ojekMapInstance : mapInstance;
                 if (m) m.setView(userCurrentLatLng, Math.max(m.getZoom(), 16));
-                routeSelectionState.stepMode = 'dest'; refreshRouteModePanel(mapId); showToast('GPS terkini dikunci. Klik Titik Tujuan di peta.', 'success');
+                refreshRouteModePanel(mapId); showToast('GPS terkini dikunci ke Titik Jemput!', 'success');
             }, () => { if (!gpsNoticeShownInSession) { gpsNoticeShownInSession = true; showToast('Lokasi belum aktif. Ketuk langsung Titik Jemput di peta.', 'info'); } }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 15000 });
         }
 
@@ -2422,15 +2547,15 @@
             const pickupMarker = L.marker(userCurrentLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Jemput</b>'), destMarker = L.marker(destLatLng, { draggable: true }).addTo(map).bindPopup('<b>Titik Tujuan</b>');
             routeSelectionState = { pickupMarker, destMarker, pickupLabelId: pickupInputId, destLabelId: destInputId, isOjek, mapId, stepMode: 'pickup' };
             map.on('click', e => {
-                if (routeSelectionState.stepMode === 'pickup') { applyCoordinateToRole('pickup', e.latlng.lat, e.latlng.lng); routeSelectionState.stepMode = 'dest'; refreshRouteModePanel(mapId); showToast('Titik jemput tersimpan. Klik Titik Tujuan di peta.', 'success'); }
+                if (routeSelectionState.stepMode === 'pickup') { applyCoordinateToRole('pickup', e.latlng.lat, e.latlng.lng); refreshRouteModePanel(mapId); showToast('Titik jemput tersimpan! Klik Titik Tujuan atau tombol tujuan.', 'success'); }
                 else { applyCoordinateToRole('dest', e.latlng.lat, e.latlng.lng); refreshRouteModePanel(mapId); showToast('Titik tujuan tersimpan!', 'success'); }
             });
-            pickupMarker.on('dragend', () => { applyCoordinateToRole('pickup', pickupMarker.getLatLng().lat, pickupMarker.getLatLng().lng); routeSelectionState.stepMode = 'dest'; refreshRouteModePanel(mapId); });
+            pickupMarker.on('dragend', () => { applyCoordinateToRole('pickup', pickupMarker.getLatLng().lat, pickupMarker.getLatLng().lng); });
             destMarker.on('dragend', () => applyCoordinateToRole('dest', destMarker.getLatLng().lat, destMarker.getLatLng().lng));
             if (mapId === 'checkout-map') checkoutMapInstance = map; else if (mapId === 'ojek-map') ojekMapInstance = map;
             const panelId = `route-outside-panel-${mapId}`; let panel = document.getElementById(panelId);
             if (!panel) { panel = document.createElement('div'); panel.id = panelId; panel.className = 'mt-2 p-3 rounded-2xl bg-[#F3F3F3] border-2 border-neutral-200 space-y-2 text-[10px]'; mapEl.insertAdjacentElement('afterend', panel); }
-            panel.innerHTML = `<div class="flex items-center justify-between gap-2 flex-wrap"><span id="route-step-status-${mapId}" class="font-extrabold text-[#171717]"></span><div class="flex gap-1"><button type="button" onclick="zoomRouteMapBy('${mapId}', 2)" class="px-2 py-1 rounded-lg bg-white border border-neutral-300 font-black cursor-pointer">Zoom +</button><button type="button" onclick="zoomRouteMapBy('${mapId}', -2)" class="px-2 py-1 rounded-lg bg-white border border-neutral-300 font-black cursor-pointer">Zoom -</button></div></div><div class="flex flex-wrap gap-1.5"><button type="button" id="route-mode-pickup-${mapId}" onclick="setRouteStepMode('pickup', '${mapId}')">Titik Jemput</button><button type="button" onclick="triggerLiveGPSToPickup('${mapId}')" class="px-2.5 py-1 rounded-xl bg-[#FF7900] text-white font-black cursor-pointer border border-[#171717]">GPS Lokasi Terkini</button><button type="button" id="route-mode-dest-${mapId}" onclick="setRouteStepMode('dest', '${mapId}')">Titik Tujuan</button></div>`;
+            panel.innerHTML = `<div class="flex items-center justify-between gap-2 flex-wrap"><span id="route-step-status-${mapId}" class="font-extrabold text-[#171717]"></span><div class="flex gap-1"><button type="button" onclick="zoomRouteMapBy('${mapId}', 2)" class="px-2 py-1 rounded-lg bg-white border border-neutral-300 font-black cursor-pointer">Zoom +</button><button type="button" onclick="zoomRouteMapBy('${mapId}', -2)" class="px-2 py-1 rounded-lg bg-white border border-neutral-300 font-black cursor-pointer">Zoom -</button></div></div><div class="flex flex-wrap gap-1.5"><button type="button" id="route-mode-pickup-${mapId}" onclick="setRouteStepMode('pickup', '${mapId}')">Titik Jemput</button><button type="button" id="route-mode-dest-${mapId}" onclick="setRouteStepMode('dest', '${mapId}')">Titik Tujuan</button><button type="button" onclick="triggerLiveGPSToPickup('${mapId}')" class="px-2.5 py-1 rounded-xl bg-[#FF7900] text-white font-black cursor-pointer border border-[#171717]">GPS Lokasi Terkini</button></div>`;
             refreshRouteModePanel(mapId);
             setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 350);
         }
@@ -2438,12 +2563,16 @@
         function updateOjekFareUI() { const d = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]); if (document.getElementById('ojek-dist-label')) document.getElementById('ojek-dist-label').innerText = `Estimasi Tarif (${d} km):`; if (document.getElementById('ojek-fare-label')) document.getElementById('ojek-fare-label').innerText = `Rp ${calculateShippingCost(d, 'ojek').toLocaleString()}`; }
 
         function useCurrentGPSLocation(context) {
+            if (context === 'ojek') persistOjekRouteDraft();
             if (!navigator.geolocation) return showToast('Perangkat tidak mendukung GPS.', 'info');
             navigator.geolocation.getCurrentPosition(pos => {
                 userCurrentLatLng = [Number(pos.coords.latitude.toFixed(6)), Number(pos.coords.longitude.toFixed(6))]; devicePermissionsStatus.gps = 'diizinkan'; localStorage.setItem('oleng_perm_gps', 'diizinkan');
                 applyCoordinateToRole('pickup', userCurrentLatLng[0], userCurrentLatLng[1]);
                 showToast(`Lokasi terkini dikunci (${userCurrentLatLng[0]}, ${userCurrentLatLng[1]})!`, 'success');
-                if (context === 'ojek') renderCustomerOjek(document.getElementById('main-content'), false); else if (context === 'cart') openCartModal();
+                if (context === 'ojek') {
+                    renderCustomerOjek(document.getElementById('main-content'), false);
+                    setTimeout(restoreOjekRouteDraftToInputs, 80);
+                } else if (context === 'cart') openCartModal();
             }, () => { if (!gpsNoticeShownInSession) { gpsNoticeShownInSession = true; showToast('Lokasi belum aktif. Ketuk langsung Titik Awal di peta.', 'info'); } }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 15000 });
         }
 
