@@ -427,60 +427,94 @@
             </div>
         </div>
 
+        <!-- VIEW CHAT ALA WHATSAPP (DAFTAR CHAT + CARI USER DI ATAS -> KLIK MASUK RUANG OBROLAN) -->
         <div id="view-chat" class="absolute inset-0 bg-white z-50 hidden flex flex-col">
-            <div class="bg-[#171717] text-white px-4 py-3 flex items-center justify-between shadow border-b-2 border-[#FF7900]">
-                <div class="flex items-center space-x-2.5 min-w-0">
-                    <button onclick="closeChat()" class="text-white text-lg cursor-pointer shrink-0"><i class="fa-solid fa-arrow-left"></i></button>
-                    <button type="button" onclick="openChatPartnerProfileModal(activeChatTarget)" class="text-left min-w-0 cursor-pointer group" title="Klik untuk lihat detail profil, toko & no HP">
-                        <h3 id="chat-title" class="font-extrabold text-sm truncate group-hover:underline text-[#FF9800]">Chat Privat</h3>
-                        <span class="text-[10px] text-neutral-300 font-bold block truncate"><i class="fa-solid fa-circle-info mr-0.5"></i> Klik profil untuk lihat data, toko & no HP</span>
+            <!-- PANEL 1: DAFTAR CHAT & PENCARIAN NAMA USER DI ATAS -->
+            <div id="chat-list-panel" class="flex-1 flex flex-col bg-white overflow-hidden">
+                <div class="bg-[#171717] text-white px-4 py-3 flex items-center justify-between shadow border-b-2 border-[#FF7900]">
+                    <div class="flex items-center space-x-2.5 min-w-0">
+                        <button type="button" onclick="closeChat()" class="text-white text-lg cursor-pointer shrink-0"><i class="fa-solid fa-arrow-left"></i></button>
+                        <div class="min-w-0">
+                            <h3 class="font-extrabold text-sm text-[#FF9800] truncate">Pesan &amp; Chat</h3>
+                            <span class="text-[10px] text-neutral-300 font-bold block truncate">Ketuk nama user untuk membuka ruang chat</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button type="button" onclick="pullInitialFromSupabase(true)" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-[#292929] text-[#FF9800] border border-[#FF7900]/50">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                        <button type="button" onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-[#FF7900] text-white">
+                            <i class="fa-solid fa-bell"></i> <span id="chat-alarm-state-list">ON</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-[#F3F3F3] border-b border-neutral-200">
+                    <div class="bg-white px-3.5 py-2 rounded-2xl border-2 border-neutral-200 focus-within:border-[#FF7900] flex items-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass text-[#FF7900] text-xs"></i>
+                        <input type="text" id="chat-search-input" oninput="handleChatSearchInput(this.value)" placeholder="Cari nama user, toko, atau driver..." class="w-full text-xs font-semibold text-[#171717] bg-transparent focus:outline-none">
+                        <button type="button" id="chat-search-clear-btn" onclick="clearChatSearchInput()" class="hidden text-neutral-400 hover:text-[#171717] text-xs cursor-pointer"><i class="fa-solid fa-circle-xmark"></i></button>
+                    </div>
+                </div>
+
+                <div id="chat-contact-selector" class="flex-1 overflow-y-auto divide-y divide-[#F3F3F3] bg-white"></div>
+            </div>
+
+            <!-- PANEL 2: RUANG OBROLAN SATU USER SAJA (TANPA DAFTAR USER LAIN) -->
+            <div id="chat-room-panel" class="hidden flex-1 flex flex-col bg-[#F3F3F3] overflow-hidden">
+                <div class="bg-[#171717] text-white px-4 py-3 flex items-center justify-between shadow border-b-2 border-[#FF7900]">
+                    <div class="flex items-center space-x-2.5 min-w-0">
+                        <button type="button" onclick="backToChatList()" class="text-white text-lg cursor-pointer shrink-0" title="Kembali ke daftar chat"><i class="fa-solid fa-arrow-left"></i></button>
+                        <img id="chat-room-avatar" src="./olengorange2.png" class="w-9 h-9 rounded-full object-cover border-2 border-[#FF7900] bg-white shrink-0" alt="Avatar Chat">
+                        <button type="button" onclick="openChatPartnerProfileModal(activeChatTarget)" class="text-left min-w-0 cursor-pointer group" title="Klik untuk lihat detail profil, toko & no HP">
+                            <h3 id="chat-title" class="font-extrabold text-sm truncate group-hover:underline text-[#FF9800]">Chat Privat</h3>
+                            <span class="text-[10px] text-neutral-300 font-bold block truncate"><i class="fa-solid fa-circle-info mr-0.5"></i> Klik profil untuk lihat data, toko &amp; no HP</span>
+                        </button>
+                    </div>
+                    <button type="button" onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-[#FF7900] text-white shrink-0">
+                        <i class="fa-solid fa-bell"></i> <span id="chat-alarm-state">ON</span>
                     </button>
                 </div>
-                <button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer bg-[#FF7900] text-white shrink-0">
-                    <i class="fa-solid fa-bell"></i> <span id="chat-alarm-state">ON</span>
-                </button>
-            </div>
 
-            <div class="bg-white border-b max-h-40 overflow-y-auto divide-y divide-[#F3F3F3]" id="chat-contact-selector"></div>
-
-            <div id="chat-messages" class="flex-1 p-3.5 overflow-y-auto space-y-2.5 bg-[#F3F3F3]">
-                <div id="chat-messages-stream"></div>
-                <div id="chat-simadu-footer-slot" class="pt-4 pb-2"></div>
-            </div>
-
-            <div id="chat-sticker-panel" class="hidden bg-white border-t border-neutral-200 px-3 py-2 space-y-2">
-                <div class="flex flex-wrap gap-1.5 text-lg">
-                    <button type="button" onclick="appendChatEmot('😊')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">😊</button>
-                    <button type="button" onclick="appendChatEmot('🙏')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">🙏</button>
-                    <button type="button" onclick="appendChatEmot('👍')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">👍</button>
-                    <button type="button" onclick="appendChatEmot('🏍️')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">🏍️</button>
-                    <button type="button" onclick="appendChatEmot('🍲')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">🍲</button>
-                    <button type="button" onclick="appendChatEmot('🐝')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">🐝</button>
-                    <button type="button" onclick="appendChatEmot('❤️')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">❤️</button>
-                    <button type="button" onclick="appendChatEmot('😂')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">😂</button>
+                <div id="chat-messages" class="flex-1 p-3.5 overflow-y-auto space-y-2.5 bg-[#F3F3F3]">
+                    <div id="chat-messages-stream"></div>
+                    <div id="chat-simadu-footer-slot" class="pt-4 pb-2"></div>
                 </div>
-                <div class="grid grid-cols-4 gap-1.5 text-[10px] font-black">
-                    <button type="button" onclick="sendChatSticker('🐝 OTW SEKARANG!')" class="py-1.5 px-2 bg-[#FF7900] text-white rounded-xl cursor-pointer">🐝 OTW!</button>
-                    <button type="button" onclick="sendChatSticker('🙏 TERIMA KASIH!')" class="py-1.5 px-2 bg-[#F3F3F3] text-[#171717] rounded-xl cursor-pointer">🙏 MAKASIH</button>
-                    <button type="button" onclick="sendChatSticker('✅ SIAP PESANAN!')" class="py-1.5 px-2 bg-[#171717] text-[#FF9800] rounded-xl cursor-pointer">✅ SIAP!</button>
-                    <button type="button" onclick="sendChatSticker('📍 SUDAH SAMPAI')" class="py-1.5 px-2 bg-[#F3F3F3] border border-[#FF7900] text-[#171717] rounded-xl cursor-pointer">📍 SAMPAI</button>
-                </div>
-            </div>
 
-            <div class="p-2.5 bg-white border-t border-neutral-200 flex items-center space-x-1.5">
-                <input type="file" id="chat-gallery-input" accept="image/*" class="hidden" onchange="handleSendChatImage(event)">
-                <input type="file" id="chat-camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleSendChatImage(event)">
-                <button type="button" onclick="toggleChatStickerPanel()" class="w-9 h-9 bg-[#F3F3F3] text-[#FF7900] rounded-full flex items-center justify-center cursor-pointer shrink-0" title="Emot & Stiker">
-                    <i class="fa-solid fa-face-smile text-sm"></i>
-                </button>
-                <button type="button" onclick="document.getElementById('chat-gallery-input').click()" class="w-9 h-9 bg-[#F3F3F3] text-[#171717] rounded-full flex items-center justify-center cursor-pointer shrink-0" title="Kirim Foto Galeri">
-                    <i class="fa-solid fa-image text-sm"></i>
-                </button>
-                <button type="button" onclick="document.getElementById('chat-camera-input').click()" class="w-9 h-9 bg-[#171717] text-[#FF9800] rounded-full flex items-center justify-center cursor-pointer shrink-0" title="Ambil Foto Kamera">
-                    <i class="fa-solid fa-camera text-sm"></i>
-                </button>
-                <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 border-2 border-neutral-200 bg-white rounded-full px-3.5 py-2 text-xs font-medium min-w-0">
-                <button type="button" onclick="sendPersonalChatMessage()" class="bg-[#FF7900] hover:bg-[#FF9800] text-white w-9 h-9 rounded-full flex items-center justify-center shadow cursor-pointer shrink-0"><i class="fa-solid fa-paper-plane text-xs"></i></button>
+                <div id="chat-sticker-panel" class="hidden bg-white border-t border-neutral-200 px-3 py-2 space-y-2">
+                    <div class="flex flex-wrap gap-1.5 text-lg">
+                        <button type="button" onclick="appendChatEmot('😊')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">😊</button>
+                        <button type="button" onclick="appendChatEmot('🙏')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">🙏</button>
+                        <button type="button" onclick="appendChatEmot('👍')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">👍</button>
+                        <button type="button" onclick="appendChatEmot('🏍️')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">🏍️</button>
+                        <button type="button" onclick="appendChatEmot('🍲')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">🍲</button>
+                        <button type="button" onclick="appendChatEmot('🐝')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">🐝</button>
+                        <button type="button" onclick="appendChatEmot('❤️')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">❤️</button>
+                        <button type="button" onclick="appendChatEmot('😂')" class="p-1 hover:bg-[#F3F3F3] rounded cursor-pointer">😂</button>
+                    </div>
+                    <div class="grid grid-cols-4 gap-1.5 text-[10px] font-black">
+                        <button type="button" onclick="sendChatSticker('🐝 OTW SEKARANG!')" class="py-1.5 px-2 bg-[#FF7900] text-white rounded-xl cursor-pointer">🐝 OTW!</button>
+                        <button type="button" onclick="sendChatSticker('🙏 TERIMA KASIH!')" class="py-1.5 px-2 bg-[#F3F3F3] text-[#171717] rounded-xl cursor-pointer">🙏 MAKASIH</button>
+                        <button type="button" onclick="sendChatSticker('✅ SIAP PESANAN!')" class="py-1.5 px-2 bg-[#171717] text-[#FF9800] rounded-xl cursor-pointer">✅ SIAP!</button>
+                        <button type="button" onclick="sendChatSticker('📍 SUDAH SAMPAI')" class="py-1.5 px-2 bg-[#F3F3F3] border border-[#FF7900] text-[#171717] rounded-xl cursor-pointer">📍 SAMPAI</button>
+                    </div>
+                </div>
+
+                <div class="p-2.5 bg-white border-t border-neutral-200 flex items-center space-x-1.5">
+                    <input type="file" id="chat-gallery-input" accept="image/*" class="hidden" onchange="handleSendChatImage(event)">
+                    <input type="file" id="chat-camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleSendChatImage(event)">
+                    <button type="button" onclick="toggleChatStickerPanel()" class="w-9 h-9 bg-[#F3F3F3] text-[#FF7900] rounded-full flex items-center justify-center cursor-pointer shrink-0" title="Emot & Stiker">
+                        <i class="fa-solid fa-face-smile text-sm"></i>
+                    </button>
+                    <button type="button" onclick="document.getElementById('chat-gallery-input').click()" class="w-9 h-9 bg-[#F3F3F3] text-[#171717] rounded-full flex items-center justify-center cursor-pointer shrink-0" title="Kirim Foto Galeri">
+                        <i class="fa-solid fa-image text-sm"></i>
+                    </button>
+                    <button type="button" onclick="document.getElementById('chat-camera-input').click()" class="w-9 h-9 bg-[#171717] text-[#FF9800] rounded-full flex items-center justify-center cursor-pointer shrink-0" title="Ambil Foto Kamera">
+                        <i class="fa-solid fa-camera text-sm"></i>
+                    </button>
+                    <input type="text" id="chat-input" placeholder="Tulis pesan..." class="flex-1 border-2 border-neutral-200 bg-white rounded-full px-3.5 py-2 text-xs font-medium min-w-0">
+                    <button type="button" onclick="sendPersonalChatMessage()" class="bg-[#FF7900] hover:bg-[#FF9800] text-white w-9 h-9 rounded-full flex items-center justify-center shadow cursor-pointer shrink-0"><i class="fa-solid fa-paper-plane text-xs"></i></button>
+                </div>
             </div>
         </div>
 
@@ -844,7 +878,11 @@
             if (!document.getElementById('modal-incoming-chat')?.classList.contains('hidden')) { closeIncomingChatModal(); return; }
             if (!document.getElementById('modal-cart')?.classList.contains('hidden')) { closeCartModal(); return; }
             if (!document.getElementById('modal-notif')?.classList.contains('hidden')) { closeNotificationModal(); return; }
-            if (!document.getElementById('view-chat')?.classList.contains('hidden')) { closeChat(); return; }
+            if (!document.getElementById('view-chat')?.classList.contains('hidden')) {
+                if (isChatRoomActive()) { backToChatList(); return; }
+                closeChat();
+                return;
+            }
             if (isMerchantDetailOpen()) { closeMerchantDetail(); return; }
             if (currentUser && !document.getElementById('view-dashboard')?.classList.contains('hidden')) {
                 if (tabNavigationHistory.length > 1) {
@@ -969,6 +1007,14 @@
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
                 await syncAllToSupabase();
             } catch (e) {}
+        }
+
+        function getPartnerAvatarUrl(partnerName) {
+            const targetLow = normalizeMatchKey(partnerName);
+            const matchedUser = (db.users || []).find(u => normalizeMatchKey(u.name) === targetLow || normalizeMatchKey(u.shopName) === targetLow);
+            const matchedStore = (db.merchants || []).find(m => normalizeMatchKey(m.name) === targetLow);
+            const matchedDriver = (db.drivers || []).find(d => normalizeMatchKey(d.name) === targetLow);
+            return matchedUser?.photo || matchedStore?.image || matchedDriver?.photo || './olengorange2.png';
         }
 
         function openChatPartnerProfileModal(partnerName) {
@@ -1154,6 +1200,7 @@
         }
 
         let currentUser = null, currentSubTab = 'home', adminViewMode = null, activeChatTarget = 'Admin SIMADU';
+        let chatSearchQuery = '', chatRoomOpened = false;
         let selectedDriverId = null, searchQuery = '', alarmEnabled = localStorage.getItem('oleng_alarm_enabled') !== 'false';
         let shownPopupOrderIds = JSON.parse(localStorage.getItem('oleng_shown_popup_orders') || '[]');
         let ratingOrderTargetId = null, selectedRatingStar = 5;
@@ -1503,7 +1550,7 @@
         function openChatFromPopup(msgId, senderName) {
             readChatIds = Array.from(new Set([...readChatIds, String(msgId)]));
             localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
-            closeIncomingChatModal(); activeChatTarget = senderName; switchView('chat');
+            closeIncomingChatModal(); activeChatTarget = senderName; switchView('chat', true);
         }
 
         function processDriverResponseTimeouts() {
@@ -1616,7 +1663,10 @@
 
                 if (isUserCurrentlyTypingOrEditing() || (activeMapScreen && !forceRefreshUI)) return;
                 const chatViewVisible = document.getElementById('view-chat') && !document.getElementById('view-chat').classList.contains('hidden');
-                if (chatViewVisible) { renderChatContacts(); renderPersonalChatMessages(); }
+                if (chatViewVisible) {
+                    if (isChatRoomActive()) renderPersonalChatMessages();
+                    else renderChatContacts();
+                }
                 if ((hasChanges || forceRefreshUI) && !chatViewVisible && currentUser && !document.getElementById('view-dashboard')?.classList.contains('hidden')) {
                     if (currentSubTab !== 'home' || forceRefreshUI) renderDashboardContent(currentSubTab, false);
                 }
@@ -1668,8 +1718,11 @@
 
         function toggleNotificationAlarm() {
             alarmEnabled = !alarmEnabled; localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled));
+            const labelText = alarmEnabled ? 'ON' : 'OFF';
             const chatAlarmState = document.getElementById('chat-alarm-state');
-            if (chatAlarmState) chatAlarmState.textContent = alarmEnabled ? 'ON' : 'OFF';
+            if (chatAlarmState) chatAlarmState.textContent = labelText;
+            const chatAlarmList = document.getElementById('chat-alarm-state-list');
+            if (chatAlarmList) chatAlarmList.textContent = labelText;
             if (alarmEnabled) { playAlarmRingtone(); checkAndShowIncomingOrderPopup(true); }
             showToast(`Berhasil! Alarm notifikasi ${alarmEnabled ? 'DINYALAKAN (ON)' : 'DIMATIKAN (OFF)'}.`, 'success');
             if (!isUserCurrentlyTypingOrEditing() && currentUser && !document.getElementById('view-dashboard')?.classList.contains('hidden')) renderDashboardContent(currentSubTab, false);
@@ -1906,7 +1959,7 @@
             const refVal = (document.getElementById('forgot-account-ref')?.value || '').trim() || 'No. HP Belum Diisi';
             document.getElementById('modal-forgot').classList.add('hidden'); document.getElementById('view-auth').classList.add('hidden'); document.getElementById('view-dashboard').classList.remove('hidden');
             if (!currentUser) currentUser = { id: 0, accountId: 'TAMU01', name: `Pemohon (${refVal})`, phone: ADMIN_MAIN_WA, role: 'customer', photo: './olengorange2.png' };
-            activeChatTarget = 'Admin SIMADU'; switchView('chat');
+            activeChatTarget = 'Admin SIMADU'; switchView('chat', true);
             const inp = document.getElementById('chat-input'); if (inp) { inp.value = `Halo Admin SIMADU, saya lupa kata sandi untuk Nomor HP: ${refVal}. Mohon bantu reset password.`; inp.focus(); }
         }
         function redirectForgotPasswordToAdminWA() {
@@ -2372,7 +2425,7 @@
         function getCurrentWalletBalance() { return getProfileSyncedBalance(); }
         function goToAdminTopUpChat() {
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            activeChatTarget = 'Admin SIMADU'; switchView('chat');
+            activeChatTarget = 'Admin SIMADU'; switchView('chat', true);
             const input = document.getElementById('chat-input'); if (input) { input.value = `Halo Admin SIMADU, saya ${currentUser.name} (No. HP: ${currentUser.phone || '-'}, ${role.toUpperCase()}) ingin request tambah saldo akun.`; input.focus(); }
         }
 
@@ -2625,11 +2678,76 @@
         function openNotificationModal() { markAllNotifsAsRead(); playAlarmRingtone(); pushAppNavigationState('notif'); document.getElementById('modal-notif').classList.remove('hidden'); document.getElementById('notification-list').innerHTML = getAccountNotifs().map(n => `<div class="p-3 bg-[#F3F3F3] rounded-2xl text-xs border border-neutral-200"><b>${n.title}</b> <span class="text-[10px] text-neutral-500 float-right">${n.time}</span><p class="text-neutral-700 mt-0.5">${n.desc}</p></div>`).join('') || '<p class="text-xs text-neutral-500 text-center py-4">Belum ada notifikasi.</p>'; }
         function closeNotificationModal() { document.getElementById('modal-notif').classList.add('hidden'); }
 
-        async function switchView(view) {
-            if (view === 'chat') { markAllChatsAsRead(); pushAppNavigationState('chat'); document.getElementById('view-chat').classList.remove('hidden'); document.getElementById('chat-sticker-panel')?.classList.add('hidden'); const st = document.getElementById('chat-alarm-state'); if (st) st.textContent = alarmEnabled ? 'ON' : 'OFF'; renderChatContacts(); renderPersonalChatMessages(); pullInitialFromSupabase(false); }
+        function isChatRoomActive() {
+            const roomEl = document.getElementById('chat-room-panel');
+            return Boolean(chatRoomOpened && roomEl && !roomEl.classList.contains('hidden'));
         }
-        function startPersonalChat(target) { activeChatTarget = target; switchView('chat'); }
-        function closeChat() { markAllChatsAsRead(); document.getElementById('view-chat').classList.add('hidden'); updateHomeHeaderBadgesOnly(); }
+
+        function syncChatPanelsVisibility() {
+            const listPanel = document.getElementById('chat-list-panel');
+            const roomPanel = document.getElementById('chat-room-panel');
+            if (!listPanel || !roomPanel) return;
+            listPanel.classList.toggle('hidden', chatRoomOpened);
+            roomPanel.classList.toggle('hidden', !chatRoomOpened);
+        }
+
+        function backToChatList() {
+            chatRoomOpened = false;
+            document.getElementById('chat-sticker-panel')?.classList.add('hidden');
+            syncChatPanelsVisibility();
+            renderChatContacts();
+        }
+
+        function handleChatSearchInput(val) {
+            chatSearchQuery = String(val || '');
+            const clearBtn = document.getElementById('chat-search-clear-btn');
+            if (clearBtn) clearBtn.classList.toggle('hidden', !chatSearchQuery.trim());
+            renderChatContacts();
+        }
+
+        function clearChatSearchInput() {
+            chatSearchQuery = '';
+            const inp = document.getElementById('chat-search-input');
+            if (inp) { inp.value = ''; inp.focus(); }
+            const clearBtn = document.getElementById('chat-search-clear-btn');
+            if (clearBtn) clearBtn.classList.add('hidden');
+            renderChatContacts();
+        }
+
+        async function switchView(view, openRoomDirectly = false) {
+            if (view === 'chat') {
+                markAllChatsAsRead();
+                pushAppNavigationState('chat');
+                document.getElementById('view-chat').classList.remove('hidden');
+                document.getElementById('chat-sticker-panel')?.classList.add('hidden');
+                const labelText = alarmEnabled ? 'ON' : 'OFF';
+                const st = document.getElementById('chat-alarm-state'); if (st) st.textContent = labelText;
+                const stList = document.getElementById('chat-alarm-state-list'); if (stList) stList.textContent = labelText;
+                chatRoomOpened = Boolean(openRoomDirectly);
+                syncChatPanelsVisibility();
+                const searchInp = document.getElementById('chat-search-input');
+                if (searchInp && searchInp.value !== chatSearchQuery) searchInp.value = chatSearchQuery;
+                if (chatRoomOpened) {
+                    renderPersonalChatMessages();
+                } else {
+                    renderChatContacts();
+                }
+                pullInitialFromSupabase(false);
+            }
+        }
+
+        function startPersonalChat(target) {
+            activeChatTarget = target;
+            switchView('chat', true);
+        }
+
+        function closeChat() {
+            chatRoomOpened = false;
+            markAllChatsAsRead();
+            document.getElementById('view-chat').classList.add('hidden');
+            updateHomeHeaderBadgesOnly();
+        }
+
         function toggleChatStickerPanel() { document.getElementById('chat-sticker-panel')?.classList.toggle('hidden'); }
         function appendChatEmot(emot) { const inp = document.getElementById('chat-input'); if (inp) { inp.value = (inp.value || '') + emot; inp.focus(); } }
         function sendChatSticker(stickerText) { document.getElementById('chat-sticker-panel')?.classList.add('hidden'); pushChatPayload(stickerText); }
@@ -2639,26 +2757,39 @@
             if (!payloadText) return;
             const newMsg = { id: Date.now(), from: currentUser.name, to: activeChatTarget, text: payloadText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
             db.chats.push(newMsg); readChatIds = Array.from(new Set([...readChatIds, String(newMsg.id)])); localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
-            renderChatContacts(); renderPersonalChatMessages(); localStorage.setItem('oleng_go_db', JSON.stringify(db)); showToast('Terkirim!', 'success'); syncAllToSupabase();
+            renderPersonalChatMessages(); localStorage.setItem('oleng_go_db', JSON.stringify(db)); showToast('Terkirim!', 'success'); syncAllToSupabase();
         }
 
         function selectChatPartner(partnerName) {
-            activeChatTarget = partnerName; const me = normalizeMatchKey(currentUser?.name), pLow = normalizeMatchKey(partnerName);
+            activeChatTarget = partnerName;
+            chatRoomOpened = true;
+            const me = normalizeMatchKey(currentUser?.name), pLow = normalizeMatchKey(partnerName);
             (db.chats || []).forEach(c => { if (normalizeMatchKey(c.from) === pLow && (normalizeMatchKey(c.to) === me || (me === 'admin simadu' && ['admin', 'admin simadu'].includes(normalizeMatchKey(c.to))))) if (!readChatIds.includes(String(c.id))) readChatIds.push(String(c.id)); });
-            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds)); updateHomeHeaderBadgesOnly(); renderChatContacts(); renderPersonalChatMessages();
+            localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
+            updateHomeHeaderBadgesOnly();
+            pushAppNavigationState('chat-room');
+            syncChatPanelsVisibility();
+            renderPersonalChatMessages();
         }
 
         function renderChatContacts() {
             const me = normalizeMatchKey(currentUser?.name), activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
-            const partners = Array.from(new Set([...(activeRole !== 'admin' ? ['Admin SIMADU'] : []), ...(db.chats || []).filter(c => isMessageForCurrentUser(c)).map(c => c.from), ...db.merchants.map(m => m.name), ...db.drivers.map(d => d.name), ...(db.users || []).map(u => u.name)])).filter(n => n && normalizeMatchKey(n) !== me);
-            document.getElementById('chat-contact-selector').innerHTML = partners.map(partner => {
+            const qLow = normalizeMatchKey(chatSearchQuery);
+            const allPartners = Array.from(new Set([...(activeRole !== 'admin' ? ['Admin SIMADU'] : []), ...(db.chats || []).filter(c => isMessageForCurrentUser(c)).map(c => c.from), ...db.merchants.map(m => m.name), ...db.drivers.map(d => d.name), ...(db.users || []).map(u => u.name)]))
+                .filter(n => n && String(n).trim() !== '' && normalizeMatchKey(n) !== me);
+            const partners = qLow ? allPartners.filter(n => normalizeMatchKey(n).includes(qLow)) : allPartners;
+            document.getElementById('chat-contact-selector').innerHTML = partners.length > 0 ? partners.map(partner => {
                 const pLow = normalizeMatchKey(partner), related = (db.chats || []).filter(c => (normalizeMatchKey(c.from) === me && normalizeMatchKey(c.to) === pLow) || (normalizeMatchKey(c.from) === pLow && normalizeMatchKey(c.to) === me)), lastMsg = related[related.length - 1], unread = related.filter(c => normalizeMatchKey(c.from) === pLow && !readChatIds.includes(String(c.id))).length, safe = partner.replace(/'/g, "\\'");
-                return `<div class="w-full px-3.5 py-2.5 flex items-center justify-between gap-2 ${normalizeMatchKey(activeChatTarget) === pLow ? 'bg-[#F3F3F3] border-l-4 border-[#FF7900]' : 'bg-white'}"><button type="button" onclick="selectChatPartner('${safe}')" class="min-w-0 flex-1 text-left cursor-pointer"><span class="text-xs font-extrabold text-[#171717] block truncate">${partner}</span><p class="text-[11px] text-neutral-600 truncate">${lastMsg ? (String(lastMsg.text || '').startsWith('data:image') ? '📷 Foto' : lastMsg.text) : 'Mulai chat'}</p></button><button type="button" onclick="openChatPartnerProfileModal('${safe}')" class="px-2 py-1 bg-[#F3F3F3] border rounded-lg text-[10px] font-bold cursor-pointer">Profil</button>${unread > 0 ? `<span class="bg-[#FF7900] text-white text-[10px] font-black px-2 py-0.5 rounded-full">${unread}</span>` : ''}</div>`;
-            }).join('');
+                const avatarUrl = getPartnerAvatarUrl(partner);
+                const previewText = lastMsg ? (String(lastMsg.text || '').startsWith('data:image') ? '📷 Foto' : lastMsg.text) : 'Ketuk untuk mulai chat';
+                return `<div class="w-full px-3.5 py-3 flex items-center justify-between gap-2.5 bg-white hover:bg-[#F3F3F3] transition"><button type="button" onclick="selectChatPartner('${safe}')" class="min-w-0 flex-1 flex items-center gap-3 text-left cursor-pointer"><img src="${avatarUrl}" class="w-11 h-11 rounded-full object-cover border border-neutral-200 bg-white shrink-0" alt="Foto"><div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><span class="text-xs font-extrabold text-[#171717] block truncate">${partner}</span>${lastMsg?.time ? `<span class="text-[10px] text-neutral-400 font-semibold shrink-0">${lastMsg.time}</span>` : ''}</div><p class="text-[11px] text-neutral-600 truncate mt-0.5">${previewText}</p></div></button><div class="flex items-center gap-1.5 shrink-0">${unread > 0 ? `<span class="bg-[#FF7900] text-white text-[10px] font-black px-2 py-0.5 rounded-full">${unread}</span>` : ''}<button type="button" onclick="openChatPartnerProfileModal('${safe}')" class="px-2.5 py-1 bg-[#F3F3F3] border rounded-xl text-[10px] font-bold cursor-pointer">Profil</button></div></div>`;
+            }).join('') : `<p class="text-xs text-neutral-500 text-center py-8 px-4">${qLow ? `Tidak ada user cocok dengan "${chatSearchQuery}".` : 'Belum ada kontak chat.'}</p>`;
         }
 
         function renderPersonalChatMessages() {
-            document.getElementById('chat-title').innerText = `Chat Privat: ${activeChatTarget}`;
+            document.getElementById('chat-title').innerText = activeChatTarget;
+            const avatarEl = document.getElementById('chat-room-avatar');
+            if (avatarEl) avatarEl.src = getPartnerAvatarUrl(activeChatTarget);
             const me = normalizeMatchKey(currentUser?.name), target = normalizeMatchKey(activeChatTarget), activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
             const msgs = (db.chats || []).filter(c => { const f = normalizeMatchKey(c.from), t = normalizeMatchKey(c.to); return activeRole === 'admin' ? ((['admin simadu', 'admin', me].includes(f) && t === target) || (f === target && ['admin simadu', 'admin', me].includes(t))) : ((f === me && t === target) || (f === target && t === me)); });
             const container = document.getElementById('chat-messages');
