@@ -3169,6 +3169,7 @@
         (function () {
             const MARKET_STORAGE_KEY = 'oleng_market_addon_db_v1';
             const MARKET_PAGE_SIZE = 6;
+            const MARKET_MAX_PHOTOS = 4;
             const MARKET_OFFER_TYPES = ['JUAL', 'SEWA', 'CARI', 'JASA'];
 
             const MARKET_STATUS_META = {
@@ -3326,7 +3327,7 @@
                         description: l.description,
                         location_label: l.locationLabel,
                         whatsapp_phone: l.whatsappPhone,
-                        photos: l.photos || [],
+                        photos: (l.photos || []).slice(0, MARKET_MAX_PHOTOS),
                         status: l.status || 'active',
                         rejection_reason: l.rejectionReason || '',
                         views_count: Number(l.viewsCount || 0),
@@ -3375,7 +3376,7 @@
                             description: r.description || '',
                             locationLabel: r.location_label || 'Lengkong, Sukabumi',
                             whatsappPhone: r.whatsapp_phone || r.owner_phone || '',
-                            photos: Array.isArray(r.photos) ? r.photos : [],
+                            photos: Array.isArray(r.photos) ? r.photos.slice(0, MARKET_MAX_PHOTOS) : [],
                             status: r.status || 'active',
                             rejectionReason: r.rejection_reason || '',
                             viewsCount: Number(r.views_count || 0),
@@ -3643,7 +3644,7 @@
                 }
 
                 marketEditingId = existing ? existing.listingCode : null;
-                marketFormDraftPhotos = existing && Array.isArray(existing.photos) ? [...existing.photos].slice(0, 8) : [];
+                marketFormDraftPhotos = existing && Array.isArray(existing.photos) ? [...existing.photos].slice(0, MARKET_MAX_PHOTOS) : [];
 
                 const activeCats = marketDB.categories.filter(c => c.active !== false);
                 const selectedCatSlug = existing ? existing.categorySlug : (activeCats[0]?.slug || 'elektronik');
@@ -3664,8 +3665,8 @@
 
                     <form id="market-listing-form" onsubmit="window.__mktSubmitForm(event)" class="space-y-3 text-xs">
                         <div>
-                            <label class="text-[10px] font-extrabold uppercase block mb-1">Foto Iklan (Maksimal 8 Foto • ${marketFormDraftPhotos.length}/8)</label>
-                            <input type="file" id="mkt-photos-input" accept="image/*" multiple ${marketFormDraftPhotos.length >= 8 ? 'disabled' : ''} onchange="window.__mktHandlePhotoUpload(event)" class="w-full p-2 border-2 border-neutral-200 rounded-2xl text-[11px]">
+                            <label class="text-[10px] font-extrabold uppercase block mb-1">Foto Iklan (Maksimal ${MARKET_MAX_PHOTOS} Foto • ${marketFormDraftPhotos.length}/${MARKET_MAX_PHOTOS})</label>
+                            <input type="file" id="mkt-photos-input" accept="image/*" multiple ${marketFormDraftPhotos.length >= MARKET_MAX_PHOTOS ? 'disabled' : ''} onchange="window.__mktHandlePhotoUpload(event)" class="w-full p-2 border-2 border-neutral-200 rounded-2xl text-[11px]">
                             <div id="mkt-photo-thumbs" class="grid grid-cols-4 gap-2 mt-2">
                                 ${marketFormDraftPhotos.map((src, idx) => `
                                     <div class="relative rounded-xl overflow-hidden border border-neutral-200 h-16 bg-[#171717]">
@@ -3782,13 +3783,37 @@
                 }
             };
 
+            function renderMarketPhotoThumbs() {
+                const thumbs = document.getElementById('mkt-photo-thumbs');
+                const fileInp = document.getElementById('mkt-photos-input');
+                const labelEl = fileInp?.parentElement?.querySelector('label');
+                if (labelEl) {
+                    labelEl.textContent = `Foto Iklan (Maksimal ${MARKET_MAX_PHOTOS} Foto • ${marketFormDraftPhotos.length}/${MARKET_MAX_PHOTOS})`;
+                }
+                if (fileInp) {
+                    fileInp.disabled = marketFormDraftPhotos.length >= MARKET_MAX_PHOTOS;
+                }
+                if (thumbs) {
+                    thumbs.innerHTML = marketFormDraftPhotos.map((src, idx) => `
+                        <div class="relative rounded-xl overflow-hidden border border-neutral-200 h-16 bg-[#171717]">
+                            <img src="${src}" class="w-full h-full object-cover" alt="Foto ${idx + 1}">
+                            <button type="button" onclick="window.__mktRemoveDraftPhoto(${idx})" class="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-black cursor-pointer">&times;</button>
+                        </div>
+                    `).join('');
+                }
+            }
+
             window.__mktHandlePhotoUpload = async function (e) {
                 const files = Array.from(e.target.files || []);
                 if (files.length === 0) return;
-                const remaining = Math.max(0, 8 - marketFormDraftPhotos.length);
+                const remaining = Math.max(0, MARKET_MAX_PHOTOS - marketFormDraftPhotos.length);
                 if (remaining <= 0) {
-                    if (typeof showToast === 'function') showToast('Maksimal 8 foto per iklan.', 'error');
+                    if (typeof showToast === 'function') showToast(`Maksimal ${MARKET_MAX_PHOTOS} foto per iklan.`, 'error');
+                    e.target.value = '';
                     return;
+                }
+                if (files.length > remaining && typeof showToast === 'function') {
+                    showToast(`Hanya ${remaining} foto tambahan yang dapat dimasukkan (maksimal ${MARKET_MAX_PHOTOS} foto).`, 'info');
                 }
                 for (const file of files.slice(0, remaining)) {
                     if (!String(file.type || '').startsWith('image/')) continue;
@@ -3802,28 +3827,12 @@
                     marketFormDraftPhotos.push(dataUrl);
                 }
                 e.target.value = '';
-                const thumbs = document.getElementById('mkt-photo-thumbs');
-                if (thumbs) {
-                    thumbs.innerHTML = marketFormDraftPhotos.map((src, idx) => `
-                        <div class="relative rounded-xl overflow-hidden border border-neutral-200 h-16 bg-[#171717]">
-                            <img src="${src}" class="w-full h-full object-cover" alt="Foto ${idx + 1}">
-                            <button type="button" onclick="window.__mktRemoveDraftPhoto(${idx})" class="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-black cursor-pointer">&times;</button>
-                        </div>
-                    `).join('');
-                }
+                renderMarketPhotoThumbs();
             };
 
             window.__mktRemoveDraftPhoto = function (idx) {
                 marketFormDraftPhotos.splice(idx, 1);
-                const thumbs = document.getElementById('mkt-photo-thumbs');
-                if (thumbs) {
-                    thumbs.innerHTML = marketFormDraftPhotos.map((src, i) => `
-                        <div class="relative rounded-xl overflow-hidden border border-neutral-200 h-16 bg-[#171717]">
-                            <img src="${src}" class="w-full h-full object-cover" alt="Foto ${i + 1}">
-                            <button type="button" onclick="window.__mktRemoveDraftPhoto(${i})" class="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-black cursor-pointer">&times;</button>
-                        </div>
-                    `).join('');
-                }
+                renderMarketPhotoThumbs();
             };
 
             window.__mktSubmitForm = function (e) {
@@ -3853,7 +3862,7 @@
                     return;
                 }
 
-                const photosFinal = marketFormDraftPhotos.length > 0 ? marketFormDraftPhotos.slice(0, 8) : ['./olengorange2.png'];
+                const photosFinal = marketFormDraftPhotos.length > 0 ? marketFormDraftPhotos.slice(0, MARKET_MAX_PHOTOS) : ['./olengorange2.png'];
 
                 if (marketEditingId) {
                     const target = marketDB.listings.find(x => x.listingCode === marketEditingId);
@@ -3935,7 +3944,7 @@
                 }
 
                 const catObj = getCategoryObj(item.categorySlug);
-                const photos = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos : ['./olengorange2.png'];
+                const photos = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos.slice(0, MARKET_MAX_PHOTOS) : ['./olengorange2.png'];
                 const cleanWa = String(item.whatsappPhone || item.ownerPhone || '').replace(/\D/g, '');
                 const waIntl = cleanWa.startsWith('0') ? '62' + cleanWa.slice(1) : cleanWa;
                 const waText = `Halo ${item.ownerName}, saya melihat iklan "${item.title}" (${item.offerType}) di OLENG MARKET Lengkong. Apakah masih tersedia?`;
@@ -4322,23 +4331,42 @@
 
             function injectMarketIntoHomeUI() {
                 const mainEl = document.getElementById('main-content');
-                if (!mainEl || document.getElementById('oleng-market-home-card')) return;
-                const gridTwoCols = mainEl.querySelector('.grid.grid-cols-2.gap-3');
-                if (!gridTwoCols) return;
-                gridTwoCols.insertAdjacentHTML('afterend', `
-                    <button id="oleng-market-home-card" type="button" onclick="renderDashboardContent('market')" class="w-full bg-white px-4 py-3.5 rounded-3xl shadow-md border-2 border-[#FF7900] hover:bg-[#F3F3F3] flex items-center justify-between gap-3 cursor-pointer transition text-left">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-12 h-12 bg-[#FF7900] text-white rounded-2xl flex items-center justify-center text-xl shrink-0 border border-[#171717]">
+                if (!mainEl) return;
+
+                const oldBannerCard = document.getElementById('oleng-market-home-card');
+                if (oldBannerCard) oldBannerCard.remove();
+
+                const gridRow = mainEl.querySelector('.grid.grid-cols-2.gap-3, .grid.grid-cols-3.gap-2\\.5');
+                if (!gridRow) return;
+
+                gridRow.classList.remove('grid-cols-2', 'gap-3');
+                gridRow.classList.add('grid-cols-3', 'gap-2.5');
+
+                gridRow.querySelectorAll('button').forEach(btn => {
+                    btn.classList.remove('min-h-[108px]', 'px-3', 'py-4');
+                    btn.classList.add('min-h-[96px]', 'px-2', 'py-3');
+                    const iconBox = btn.querySelector('div');
+                    if (iconBox) {
+                        iconBox.classList.remove('w-14', 'h-14', 'text-2xl');
+                        iconBox.classList.add('w-11', 'h-11', 'text-xl');
+                    }
+                    const labelEl = btn.querySelector('span');
+                    if (labelEl) {
+                        labelEl.classList.remove('text-xs');
+                        labelEl.classList.add('text-[10px]', 'leading-tight', 'text-center');
+                    }
+                });
+
+                if (!document.getElementById('oleng-market-grid-btn')) {
+                    gridRow.insertAdjacentHTML('beforeend', `
+                        <button id="oleng-market-grid-btn" type="button" onclick="renderDashboardContent('market')" class="bg-white min-h-[96px] px-2 py-3 rounded-3xl shadow-md border-2 border-neutral-200 hover:border-[#FF7900] flex flex-col items-center justify-center cursor-pointer transition">
+                            <div class="w-11 h-11 bg-[#FF7900] text-white rounded-2xl flex items-center justify-center text-xl mb-2">
                                 <i class="fa-solid fa-bag-shopping"></i>
                             </div>
-                            <div class="min-w-0">
-                                <span class="text-xs font-black text-[#171717] block truncate">OLENG MARKET</span>
-                                <span class="text-[11px] font-semibold text-neutral-600 block truncate">Jual Beli dan Penawaran Warga Lengkong</span>
-                            </div>
-                        </div>
-                        <span class="px-2.5 py-1 rounded-xl bg-[#171717] text-[#FF9800] text-[10px] font-black shrink-0">GRATIS</span>
-                    </button>
-                `);
+                            <span class="text-[10px] font-black text-[#171717] leading-tight text-center">OLENG MARKET</span>
+                        </button>
+                    `);
+                }
             }
 
             function injectMarketIntoAdminUI() {
