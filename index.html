@@ -577,6 +577,7 @@
         let draftSelectedDriverId = null, confirmedOrderDriverId = null, isSubmittingOrder = false, gpsNoticeShownInSession = false;
         let sentNotifDedupeKeys = JSON.parse(localStorage.getItem('oleng_sent_notif_keys') || '[]');
         let offlineSyncQueue = JSON.parse(localStorage.getItem('oleng_sync_queue') || '[]');
+        let deletedChatIds = JSON.parse(localStorage.getItem('oleng_deleted_chat_ids') || '[]');
         let devicePermissionsStatus = {
             gps: localStorage.getItem('oleng_perm_gps') || 'belum_dicek',
             notif: ('Notification' in window) ? Notification.permission : 'unsupported',
@@ -1197,6 +1198,7 @@
                         pullInitialFromSupabase(false).then(() => {
                             if (payload?.eventType === 'INSERT' && payload?.new) {
                                 const r = payload.new;
+                                if (deletedChatIds.includes(String(r.id))) return;
                                 const chatObj = { id: r.id, from: r.sender_name, to: r.receiver_name, text: r.message_text, time: r.sent_time || '' };
                                 if (isMessageForCurrentUser(chatObj)) {
                                     notifyBackgroundOnce('chat-' + r.id, `Chat Masuk dari ${r.sender_name}`, String(r.message_text || '').startsWith('data:image') ? '📷 Mengirim foto' : r.message_text);
@@ -1277,6 +1279,10 @@
         if (typeof db.pricing.driverSearchTimeoutSec !== 'number') db.pricing.driverSearchTimeoutSec = 60;
         for (const k of ['commissionLogs', 'walletMutations', 'authLogs', 'driverChangeLogs', 'reviews', 'orders', 'notifications', 'chats']) {
             if (!Array.isArray(db[k])) db[k] = [];
+        }
+        if (deletedChatIds.length > 0) {
+            const delSet = new Set(deletedChatIds.map(String));
+            db.chats = db.chats.filter(c => !delSet.has(String(c.id)));
         }
         for (const k of ['users', 'merchants', 'drivers', 'foods']) {
             if (!Array.isArray(db[k]) || db[k].length === 0) db[k] = [...defaultDB[k]];
@@ -1516,6 +1522,7 @@
 
         function isMessageForCurrentUser(msg) {
             if (!currentUser || !msg) return false;
+            if (deletedChatIds.includes(String(msg.id))) return false;
             const { names, phones } = getPartnerIdentityKeys();
             const fromKey = normalizeMatchKey(msg.from), fromPhone = normalizePhone(msg.from), toKey = normalizeMatchKey(msg.to), toPhone = normalizePhone(msg.to);
             if (!fromKey || names.has(fromKey) || (fromPhone && phones.has(fromPhone))) return false;
@@ -1686,7 +1693,14 @@
                 const { data: foodRows } = await supabaseClient.from('foods').select('*').order('id', { ascending: true });
                 if (Array.isArray(foodRows) && foodRows.length > 0) { db.foods = mergeByKey(db.foods, foodRows.map(r => ({ id: r.id, merchantId: r.merchant_id || 1, name: r.name, category: r.category || 'Kuliner', price: Number(r.price || 15000), desc: r.description || '', stock: Number(r.stock ?? 20), available: (r.stock ?? 20) > 0, image: r.image_url || './olengorange2.png' })), f => String(f.id)); hasChanges = true; }
                 const { data: chatRows } = await supabaseClient.from('chats').select('*').order('id', { ascending: true });
-                if (Array.isArray(chatRows) && chatRows.length > 0) { db.chats = mergeByKey(db.chats, chatRows.map(r => ({ id: r.id, from: r.sender_name, to: r.receiver_name, text: r.message_text, time: r.sent_time || '' })), c => String(c.id)); hasChanges = true; }
+                if (Array.isArray(chatRows) && chatRows.length > 0) {
+                    const delSet = new Set(deletedChatIds.map(String));
+                    const filteredRemoteChats = chatRows
+                        .filter(r => !delSet.has(String(r.id)))
+                        .map(r => ({ id: r.id, from: r.sender_name, to: r.receiver_name, text: r.message_text, time: r.sent_time || '' }));
+                    db.chats = mergeByKey(db.chats, filteredRemoteChats, c => String(c.id)).filter(c => !delSet.has(String(c.id)));
+                    hasChanges = true;
+                }
 
                 syncDriverAvailabilityLocks();
                 localStorage.setItem('oleng_go_db', JSON.stringify(db));
@@ -2875,7 +2889,7 @@
                 else { applyCoordinateToRole('dest', e.latlng.lat, e.latlng.lng); refreshRouteModePanel(mapId); showToast('Titik tujuan tersimpan!', 'success'); }
             });
             pickupMarker.on('dragend', () => { applyCoordinateToRole('pickup', pickupMarker.getLatLng().lat, pickupMarker.getLatLng().lng); });
-            destMarker.on('dragend', () => applyCoordinateToRole('dest', destMarker.getLatLng().lat, destMarker.getLatLng().lng));
+            destMarker.on('dragend', () => { applyCoordinateToRole('dest', destMarker.getLatLng().lat, destMarker.getLatLng().lng); });
             if (mapId === 'checkout-map') checkoutMapInstance = map; else if (mapId === 'ojek-map') ojekMapInstance = map;
             const panelId = `route-outside-panel-${mapId}`; let panel = document.getElementById(panelId);
             if (!panel) { panel = document.createElement('div'); panel.id = panelId; panel.className = 'mt-2 p-3 rounded-2xl bg-[#F3F3F3] border-2 border-neutral-200 space-y-2 text-[10px]'; mapEl.insertAdjacentElement('afterend', panel); }
@@ -2981,6 +2995,8 @@
         function pushChatPayload(payloadText) {
             if (!payloadText) return;
             const newMsg = { id: Date.now(), from: currentUser.name, to: activeChatTarget, text: payloadText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+            deletedChatIds = deletedChatIds.filter(id => String(id) !== String(newMsg.id));
+            localStorage.setItem('oleng_deleted_chat_ids', JSON.stringify(deletedChatIds));
             db.chats.push(newMsg); readChatIds = Array.from(new Set([...readChatIds, String(newMsg.id)])); localStorage.setItem('oleng_read_chat_ids', JSON.stringify(readChatIds));
             renderPersonalChatMessages(); localStorage.setItem('oleng_go_db', JSON.stringify(db)); showToast('Terkirim!', 'success'); syncAllToSupabase();
         }
@@ -2997,18 +3013,126 @@
             renderPersonalChatMessages();
         }
 
+        async function deleteChatWithPartner(partnerName) {
+            const pLow = normalizeMatchKey(partnerName);
+            if (!pLow) return;
+            if (!confirm(`Hapus seluruh riwayat chat dengan "${partnerName}"?`)) return;
+
+            const me = normalizeMatchKey(currentUser?.name);
+            const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+
+            const removedIds = (db.chats || [])
+                .filter(c => {
+                    const f = normalizeMatchKey(c.from);
+                    const t = normalizeMatchKey(c.to);
+                    return activeRole === 'admin'
+                        ? ((['admin simadu', 'admin', me].includes(f) && t === pLow) || (f === pLow && ['admin simadu', 'admin', me].includes(t)))
+                        : ((f === me && t === pLow) || (f === pLow && t === me));
+                })
+                .map(c => Number(c.id))
+                .filter(id => !Number.isNaN(id));
+
+            deletedChatIds = Array.from(new Set([...deletedChatIds.map(String), ...removedIds.map(String)]));
+            localStorage.setItem('oleng_deleted_chat_ids', JSON.stringify(deletedChatIds));
+
+            db.chats = (db.chats || []).filter(c => {
+                const f = normalizeMatchKey(c.from);
+                const t = normalizeMatchKey(c.to);
+                return !(activeRole === 'admin'
+                    ? ((['admin simadu', 'admin', me].includes(f) && t === pLow) || (f === pLow && ['admin simadu', 'admin', me].includes(t)))
+                    : ((f === me && t === pLow) || (f === pLow && t === me)));
+            });
+
+            if (normalizeMatchKey(activeChatTarget) === pLow) {
+                chatRoomOpened = false;
+                syncChatPanelsVisibility();
+            }
+
+            localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            updateHomeHeaderBadgesOnly();
+            renderChatContacts();
+            showToast(`Riwayat chat dengan ${partnerName} dihapus.`, 'success');
+
+            if (supabaseClient && removedIds.length > 0 && navigator.onLine) {
+                try {
+                    await supabaseClient.from('chats').delete().in('id', removedIds);
+                } catch (err) {}
+            }
+            syncAllToSupabase().catch(() => {});
+        }
+
         function renderChatContacts() {
-            const me = normalizeMatchKey(currentUser?.name), activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
+            const me = normalizeMatchKey(currentUser?.name);
+            const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
             const qLow = normalizeMatchKey(chatSearchQuery);
-            const allPartners = Array.from(new Set([...(activeRole !== 'admin' ? ['Admin SIMADU'] : []), ...(db.chats || []).filter(c => isMessageForCurrentUser(c)).map(c => c.from), ...db.merchants.map(m => m.name), ...db.drivers.map(d => d.name), ...(db.users || []).map(u => u.name)]))
-                .filter(n => n && String(n).trim() !== '' && normalizeMatchKey(n) !== me);
-            const partners = qLow ? allPartners.filter(n => normalizeMatchKey(n).includes(qLow)) : allPartners;
-            document.getElementById('chat-contact-selector').innerHTML = partners.length > 0 ? partners.map(partner => {
-                const pLow = normalizeMatchKey(partner), related = (db.chats || []).filter(c => (normalizeMatchKey(c.from) === me && normalizeMatchKey(c.to) === pLow) || (normalizeMatchKey(c.from) === pLow && normalizeMatchKey(c.to) === me)), lastMsg = related[related.length - 1], unread = related.filter(c => normalizeMatchKey(c.from) === pLow && !readChatIds.includes(String(c.id))).length, safe = partner.replace(/'/g, "\\'");
-                const avatarUrl = getPartnerAvatarUrl(partner);
-                const previewText = lastMsg ? (String(lastMsg.text || '').startsWith('data:image') ? '📷 Foto' : lastMsg.text) : 'Ketuk untuk mulai chat';
-                return `<div class="w-full px-3.5 py-3 flex items-center justify-between gap-2.5 bg-white hover:bg-[#F3F3F3] transition"><button type="button" onclick="selectChatPartner('${safe}')" class="min-w-0 flex-1 flex items-center gap-3 text-left cursor-pointer"><img src="${avatarUrl}" class="w-11 h-11 rounded-full object-cover border border-neutral-200 bg-white shrink-0" alt="Foto"><div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><span class="text-xs font-extrabold text-[#171717] block truncate">${partner}</span>${lastMsg?.time ? `<span class="text-[10px] text-neutral-400 font-semibold shrink-0">${lastMsg.time}</span>` : ''}</div><p class="text-[11px] text-neutral-600 truncate mt-0.5">${previewText}</p></div></button><div class="flex items-center gap-1.5 shrink-0">${unread > 0 ? `<span class="bg-[#FF7900] text-white text-[10px] font-black px-2 py-0.5 rounded-full">${unread}</span>` : ''}<button type="button" onclick="openChatPartnerProfileModal('${safe}')" class="px-2.5 py-1 bg-[#F3F3F3] border rounded-xl text-[10px] font-bold cursor-pointer">Profil</button></div></div>`;
-            }).join('') : `<p class="text-xs text-neutral-500 text-center py-8 px-4">${qLow ? `Tidak ada user cocok dengan "${chatSearchQuery}".` : 'Belum ada kontak chat.'}</p>`;
+
+            const chattedPartners = new Set();
+            (db.chats || []).forEach(c => {
+                if (deletedChatIds.includes(String(c.id))) return;
+                const f = normalizeMatchKey(c.from);
+                const t = normalizeMatchKey(c.to);
+                if (!f || !t) return;
+                if (activeRole === 'admin') {
+                    if (['admin simadu', 'admin', me].includes(f) && t !== me && !['admin simadu', 'admin'].includes(t)) {
+                        chattedPartners.add(c.to);
+                    } else if (['admin simadu', 'admin', me].includes(t) && f !== me && !['admin simadu', 'admin'].includes(f)) {
+                        chattedPartners.add(c.from);
+                    }
+                } else {
+                    if (f === me && t !== me) chattedPartners.add(c.to);
+                    else if (t === me && f !== me) chattedPartners.add(c.from);
+                }
+            });
+
+            const searchableDirectory = Array.from(new Set([
+                ...Array.from(chattedPartners),
+                ...(activeRole !== 'admin' ? ['Admin SIMADU'] : []),
+                ...(db.merchants || []).map(m => m.name),
+                ...(db.drivers || []).map(d => d.name),
+                ...(db.users || []).map(u => u.name)
+            ])).filter(n => n && String(n).trim() !== '' && normalizeMatchKey(n) !== me);
+
+            const partners = qLow
+                ? searchableDirectory.filter(n => normalizeMatchKey(n).includes(qLow))
+                : Array.from(chattedPartners).filter(n => n && String(n).trim() !== '' && normalizeMatchKey(n) !== me);
+
+            document.getElementById('chat-contact-selector').innerHTML = partners.length > 0
+                ? partners.map(partner => {
+                    const pLow = normalizeMatchKey(partner);
+                    const related = (db.chats || []).filter(c =>
+                        !deletedChatIds.includes(String(c.id)) &&
+                        ((normalizeMatchKey(c.from) === me && normalizeMatchKey(c.to) === pLow) ||
+                        (normalizeMatchKey(c.from) === pLow && normalizeMatchKey(c.to) === me))
+                    );
+                    const lastMsg = related[related.length - 1];
+                    const unread = related.filter(c => normalizeMatchKey(c.from) === pLow && !readChatIds.includes(String(c.id))).length;
+                    const safe = String(partner).replace(/'/g, "\\'");
+                    const avatarUrl = getPartnerAvatarUrl(partner);
+                    const previewText = lastMsg
+                        ? (String(lastMsg.text || '').startsWith('data:image') ? '📷 Foto' : lastMsg.text)
+                        : 'Ketuk untuk mulai chat';
+
+                    return `
+                        <div class="w-full px-3.5 py-3 flex items-center justify-between gap-2 bg-white hover:bg-[#F3F3F3] transition">
+                            <button type="button" onclick="selectChatPartner('${safe}')" class="min-w-0 flex-1 flex items-center gap-3 text-left cursor-pointer">
+                                <img src="${avatarUrl}" class="w-11 h-11 rounded-full object-cover border border-neutral-200 bg-white shrink-0" alt="Foto">
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-xs font-extrabold text-[#171717] block truncate">${partner}</span>
+                                        ${lastMsg?.time ? `<span class="text-[10px] text-neutral-400 font-semibold shrink-0">${lastMsg.time}</span>` : ''}
+                                    </div>
+                                    <p class="text-[11px] text-neutral-600 truncate mt-0.5">${previewText}</p>
+                                </div>
+                            </button>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                ${unread > 0 ? `<span class="bg-[#FF7900] text-white text-[10px] font-black px-2 py-0.5 rounded-full">${unread}</span>` : ''}
+                                <button type="button" onclick="openChatPartnerProfileModal('${safe}')" class="px-2.5 py-1 bg-[#F3F3F3] border rounded-xl text-[10px] font-bold cursor-pointer">Profil</button>
+                                <button type="button" onclick="deleteChatWithPartner('${safe}')" class="px-2.5 py-1 bg-rose-100 text-rose-800 rounded-xl text-[10px] font-bold cursor-pointer">Hapus</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('')
+                : `<p class="text-xs text-neutral-500 text-center py-8 px-4">${qLow ? `Tidak ada user cocok dengan "${chatSearchQuery}".` : 'Belum ada riwayat chat. Ketik nama user di kolom cari di atas untuk memulai chat.'}</p>`;
         }
 
         function renderPersonalChatMessages() {
@@ -3016,7 +3140,11 @@
             const avatarEl = document.getElementById('chat-room-avatar');
             if (avatarEl) avatarEl.src = getPartnerAvatarUrl(activeChatTarget);
             const me = normalizeMatchKey(currentUser?.name), target = normalizeMatchKey(activeChatTarget), activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
-            const msgs = (db.chats || []).filter(c => { const f = normalizeMatchKey(c.from), t = normalizeMatchKey(c.to); return activeRole === 'admin' ? ((['admin simadu', 'admin', me].includes(f) && t === target) || (f === target && ['admin simadu', 'admin', me].includes(t))) : ((f === me && t === target) || (f === target && t === me)); });
+            const msgs = (db.chats || []).filter(c => {
+                if (deletedChatIds.includes(String(c.id))) return false;
+                const f = normalizeMatchKey(c.from), t = normalizeMatchKey(c.to);
+                return activeRole === 'admin' ? ((['admin simadu', 'admin', me].includes(f) && t === target) || (f === target && ['admin simadu', 'admin', me].includes(t))) : ((f === me && t === target) || (f === target && t === me));
+            });
             const container = document.getElementById('chat-messages');
             let streamEl = document.getElementById('chat-messages-stream');
             if (!streamEl) { container.innerHTML = `<div id="chat-messages-stream" class="space-y-2.5"></div><div id="chat-simadu-footer-slot" class="pt-4 pb-2">${getSimaduBrandFooterHTML()}</div>`; streamEl = document.getElementById('chat-messages-stream'); }
