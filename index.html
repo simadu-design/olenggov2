@@ -4059,5 +4059,86 @@
             }
         })();
     </script>
+<script id="oleng-simple-home-polish-v1">
+(function () {
+  function polishHomeLayout() {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+
+    const firstCard = main.firstElementChild;
+    if (firstCard) {
+      firstCard.classList.add("pb-28");
+      const profCard = firstCard.querySelector(".bg-\[#171717\].rounded-3xl");
+      if (profCard) {
+        const leftBox = profCard.firstElementChild;
+        if (leftBox && leftBox.children && leftBox.children[1]) {
+          leftBox.classList.add("min-w-0", "flex-1", "pr-2");
+          leftBox.children[1].classList.add("min-w-0", "flex-1");
+          const h3 = leftBox.children[1].querySelector("h3");
+          if (h3) {
+            h3.classList.remove("text-xs");
+            h3.classList.add("text-[11px]", "tracking-tight", "whitespace-nowrap");
+          }
+        }
+        const rightBtns = profCard.lastElementChild;
+        if (rightBtns && rightBtns !== leftBox) {
+          rightBtns.classList.remove("space-x-2");
+          rightBtns.classList.add("gap-1.5", "shrink-0");
+          rightBtns.querySelectorAll("button").forEach(b => {
+            b.classList.remove("p-2.5");
+            b.classList.add("w-9", "h-9", "flex", "items-center", "justify-center");
+          });
+        }
+      }
+
+      const statusBox = Array.from(firstCard.children).find(el =>
+        el.classList && el.classList.contains("bg-white") && el.classList.contains("rounded-2xl")
+      );
+      if (statusBox) {
+        const innerWrap = statusBox.firstElementChild;
+        if (innerWrap) {
+          innerWrap.classList.remove("flex-wrap", "gap-1.5");
+          innerWrap.classList.add("grid", "grid-cols-2", "gap-2", "w-full");
+          innerWrap.querySelectorAll("button").forEach(btn => {
+            btn.classList.add("w-full", "justify-center", "text-center", "truncate");
+          });
+        }
+      }
+    }
+
+    const mapEl = document.getElementById("map");
+    if (mapEl && mapEl.previousElementSibling) {
+      const mapHeader = mapEl.previousElementSibling;
+      const btnGroup = mapHeader.lastElementChild;
+      if (btnGroup && btnGroup !== mapHeader.firstElementChild) {
+        btnGroup.classList.remove("gap-1.5");
+        btnGroup.classList.add("gap-1", "w-full", "justify-between");
+        btnGroup.querySelectorAll("button, a").forEach(el => {
+          el.classList.remove("px-2.5", "px-2");
+          el.classList.add("px-2", "py-1", "text-[9px]", "leading-tight");
+        });
+      }
+    }
+  }
+
+  const origHome = window.renderCustomerHome;
+  if (typeof origHome === "function") {
+    window.renderCustomerHome = function (c) {
+      origHome(c);
+      setTimeout(polishHomeLayout, 70);
+    };
+  }
+
+  const origDash = window.renderDashboardContent;
+  if (typeof origDash === "function") {
+    window.renderDashboardContent = function (tab, rec = true) {
+      origDash(tab, rec);
+      if (tab === "home") setTimeout(polishHomeLayout, 90);
+    };
+  }
+
+  setTimeout(polishHomeLayout, 80);
+})();
+</script>
 </body>
 </html>
