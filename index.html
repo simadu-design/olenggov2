@@ -5882,5 +5882,73 @@
   });
 })();
 </script>
+<script id="oleng-production-hardening-suite-v1">
+(function () {
+  const SYNC_TIME_KEY = "oleng_last_sync_at";
+  const AUTO_CFG_KEY = "oleng_admin_auto_ops_v1";
+
+  function getAutoCfg() {
+    const def = {
+      autoCancelUnaccepted: true,
+      unacceptedTimeoutSec: 120,
+      autoReassignOnReject: true,
+      commissionPercent: 10,
+      baseFareRp: 8000,
+      perKmFareRp: 2500
+    };
+    try {
+      const saved = JSON.parse(localStorage.getItem(AUTO_CFG_KEY) || "{}");
+      return Object.assign(def, saved || {});
+    } catch (e) {
+      return def;
+    }
+  }
+
+  async function cancelOrderViaSupabase(orderId, reason) {
+    if (!orderId || typeof supabaseClient === "undefined" || !supabaseClient || !navigator.onLine) return;
+    try {
+      if (typeof supabaseClient.rpc === "function") {
+        const { error: rpcErr } = await supabaseClient.rpc("oleng_cancel_unaccepted_order", {
+          p_order_id: String(orderId),
+          p_reason: String(reason || "Dibatalkan otomatis")
+        });
+        if (!rpcErr) return;
+      }
+      await supabaseClient.from("orders").update({ status: "cancelled" }).eq("id", orderId);
+    } catch (e) {}
+  }
+
+  window.olengCancelExpiredOrderSafe = cancelOrderViaSupabase;
+
+  async function runProductionHealthAndSync() {
+    if (typeof supabaseClient === "undefined" || !supabaseClient || !navigator.onLine) return;
+    try {
+      const { error } = await supabaseClient.from("app_config").select("key").limit(1);
+      if (error) {
+        if (window.olengSyncDiagnostics) {
+          window.olengSyncDiagnostics.supabaseReachable = false;
+          window.olengSyncDiagnostics.lastError = error.message || "Supabase gagal diakses";
+        }
+        return;
+      }
+      if (typeof syncAllToSupabase === "function") {
+        await syncAllToSupabase();
+      }
+      const nowStr = new Date().toLocaleString("id-ID");
+      localStorage.setItem(SYNC_TIME_KEY, nowStr);
+      if (window.olengSyncDiagnostics) {
+        window.olengSyncDiagnostics.supabaseReachable = true;
+        window.olengSyncDiagnostics.pendingSync = false;
+        window.olengSyncDiagnostics.lastSyncAt = nowStr;
+        window.olengSyncDiagnostics.lastError = "";
+        window.olengSyncDiagnostics.autoOps = getAutoCfg();
+      }
+    } catch (e) {}
+  }
+
+  setTimeout(runProductionHealthAndSync, 1200);
+  window.addEventListener("online", () => setTimeout(runProductionHealthAndSync, 300));
+})();
+</script>
 </body>
 </html>
