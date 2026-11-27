@@ -1,3 +1,9 @@
+<style id="oleng-driver-online-contrast-css">
+  .oleng-status-on-colored-bg {
+    color: #FFFFFF !important;
+    font-weight: 800 !important;
+  }
+</style>
 <style id="oleng-map-zindex-fix-css">
   #main-content .leaflet-container {
     position: relative !important;
@@ -5079,6 +5085,79 @@
 
   window.addEventListener("scroll", refreshMapsSafely, { passive: true });
   setTimeout(refreshMapsSafely, 120);
+})();
+</script>
+<script id="oleng-driver-online-contrast-v1">
+(function () {
+  function hasColoredSurfaceAncestor(el) {
+    let cur = el;
+    for (let i = 0; i < 6 && cur; i++) {
+      const cls = String(cur.className || "");
+      const bg = cur.style && cur.style.backgroundColor ? String(cur.style.backgroundColor) : "";
+      const compBg = typeof getComputedStyle === "function" ? String(getComputedStyle(cur).backgroundColor || "") : "";
+      if (
+        cls.includes("bg-emerald") ||
+        cls.includes("bg-green") ||
+        cls.includes("bg-red") ||
+        cls.includes("bg-rose") ||
+        cls.includes("bg-[#16A36A]") ||
+        cls.includes("bg-[#DC3545]") ||
+        bg.includes("22, 163, 106") ||
+        bg.includes("220, 53, 69") ||
+        compBg.includes("22, 163, 106") ||
+        compBg.includes("220, 53, 69")
+      ) {
+        return true;
+      }
+      cur = cur.parentElement;
+    }
+    return false;
+  }
+
+  function fixOnlineOfflineTextContrast() {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+
+    main.querySelectorAll("p, span, div, strong, b").forEach(el => {
+      if (el.closest(".leaflet-container")) return;
+      if (el.children && el.children.length > 0 && String(el.textContent || "").trim().length > 35) return;
+      const txt = String(el.textContent || "").trim();
+      const lower = txt.toLowerCase();
+
+      if (lower === "anda online" || lower === "online" || lower === "anda offline" || lower === "offline") {
+        if (hasColoredSurfaceAncestor(el)) {
+          el.classList.add("oleng-status-on-colored-bg");
+          el.style.setProperty("color", "#FFFFFF", "important");
+          el.style.setProperty("font-weight", "800", "important");
+        } else {
+          el.classList.remove("oleng-status-on-colored-bg");
+          el.style.setProperty("color", lower.includes("offline") ? "#DC3545" : "#16A36A", "important");
+        }
+      }
+    });
+  }
+
+  const origDash = window.renderDashboardContent;
+  if (typeof origDash === "function") {
+    window.renderDashboardContent = function () {
+      const r = origDash.apply(this, arguments);
+      setTimeout(fixOnlineOfflineTextContrast, 80);
+      return r;
+    };
+  }
+
+  for (const fnName of ["renderCustomerHome", "renderAdminDash", "renderDashboardNavigation"]) {
+    const fn = window[fnName];
+    if (typeof fn === "function") {
+      window[fnName] = function () {
+        const r = fn.apply(this, arguments);
+        setTimeout(fixOnlineOfflineTextContrast, 80);
+        return r;
+      };
+    }
+  }
+
+  setTimeout(fixOnlineOfflineTextContrast, 120);
 })();
 </script>
 </body>
