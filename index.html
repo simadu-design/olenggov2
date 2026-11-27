@@ -4220,5 +4220,72 @@
   }, 100);
 })();
 </script>
+<script id="oleng-admin-gear-fix-v1">
+(function () {
+  function isCurrentAdmin() {
+    if (typeof currentUser === "undefined" || !currentUser) return false;
+    const rawPh = String(currentUser.phone || "").replace(/D/g, "");
+    const normPh = typeof normalizePhone === "function"
+      ? normalizePhone(currentUser.phone)
+      : (rawPh.startsWith("62") ? "0" + rawPh.slice(2) : rawPh);
+    return currentUser.role === "admin" || normPh === "085624736602";
+  }
+
+  function openAdminSettingsDirectly() {
+    if (!isCurrentAdmin()) return false;
+    const main = document.getElementById("main-content");
+    if (!main) return false;
+
+    if (typeof currentSubTab !== "undefined") currentSubTab = "admin-settings";
+    localStorage.setItem("oleng_last_tab", "admin-settings");
+    document.getElementById("view-merchant-detail")?.classList.add("hidden");
+
+    if (typeof renderRoleSettingsView === "function") {
+      renderRoleSettingsView("admin-settings");
+      return true;
+    }
+
+    if (typeof renderAdminSettings === "function") {
+      renderAdminSettings(main);
+      return true;
+    }
+
+    return false;
+  }
+
+  // Tangkap klik tombol gerigi pada header / beranda admin di level dokumen
+  document.addEventListener("click", function (ev) {
+    const btn = ev.target && ev.target.closest
+      ? ev.target.closest("#fn-btn-gear, #rh-btn-gear, [data-gtab='admin-settings'], [data-gear-tab='admin-settings']")
+      : null;
+    if (!btn) return;
+    if (!isCurrentAdmin()) return;
+
+    const gTab = btn.getAttribute("data-gtab") || btn.getAttribute("data-gear-tab") || "admin-settings";
+    if (gTab === "admin-settings") {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      openAdminSettingsDirectly();
+    }
+  }, true);
+
+  // Pastikan renderDashboardContent("admin-settings") tidak terlempar ke home untuk admin
+  const currentRenderDash = window.renderDashboardContent;
+  if (typeof currentRenderDash === "function") {
+    window.renderDashboardContent = function (tab, recordHistory = true) {
+      if (tab === "admin-settings" && isCurrentAdmin()) {
+        if (typeof currentSubTab !== "undefined" && currentSubTab !== "admin-settings" && recordHistory && Array.isArray(tabNavigationHistory)) {
+          if (tabNavigationHistory[tabNavigationHistory.length - 1] !== "admin-settings") {
+            tabNavigationHistory.push("admin-settings");
+          }
+        }
+        openAdminSettingsDirectly();
+        return;
+      }
+      return currentRenderDash.apply(this, arguments);
+    };
+  }
+})();
+</script>
 </body>
 </html>
