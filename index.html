@@ -1,6 +1,9 @@
-<style id="oleng-driver-online-contrast-css">
-  .oleng-status-on-colored-bg {
+<style id="oleng-driver-online-label-v2-css">
+  .oleng-banner-status-white,
+  .oleng-banner-status-white * {
     color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    opacity: 1 !important;
     font-weight: 800 !important;
   }
 </style>
@@ -5087,23 +5090,31 @@
   setTimeout(refreshMapsSafely, 120);
 })();
 </script>
-<script id="oleng-driver-online-contrast-v1">
+<script id="oleng-driver-online-label-v2-js">
 (function () {
-  function hasColoredSurfaceAncestor(el) {
+  function isInsideColoredStatusBanner(el) {
     let cur = el;
-    for (let i = 0; i < 6 && cur; i++) {
+    for (let i = 0; i < 8 && cur; i++) {
       const cls = String(cur.className || "");
-      const bg = cur.style && cur.style.backgroundColor ? String(cur.style.backgroundColor) : "";
+      const styleAttr = cur.getAttribute ? String(cur.getAttribute("style") || "") : "";
+      const bgStyle = cur.style && cur.style.backgroundColor ? String(cur.style.backgroundColor) : "";
       const compBg = typeof getComputedStyle === "function" ? String(getComputedStyle(cur).backgroundColor || "") : "";
+
       if (
-        cls.includes("bg-emerald") ||
-        cls.includes("bg-green") ||
-        cls.includes("bg-red") ||
-        cls.includes("bg-rose") ||
-        cls.includes("bg-[#16A36A]") ||
-        cls.includes("bg-[#DC3545]") ||
-        bg.includes("22, 163, 106") ||
-        bg.includes("220, 53, 69") ||
+        cls.includes("emerald") ||
+        cls.includes("green") ||
+        cls.includes("red") ||
+        cls.includes("rose") ||
+        cls.includes("16A36A") ||
+        cls.includes("16a36a") ||
+        cls.includes("DC3545") ||
+        cls.includes("dc3545") ||
+        styleAttr.includes("16A36A") ||
+        styleAttr.includes("16a36a") ||
+        styleAttr.includes("DC3545") ||
+        styleAttr.includes("dc3545") ||
+        bgStyle.includes("22, 163, 106") ||
+        bgStyle.includes("220, 53, 69") ||
         compBg.includes("22, 163, 106") ||
         compBg.includes("220, 53, 69")
       ) {
@@ -5114,24 +5125,26 @@
     return false;
   }
 
-  function fixOnlineOfflineTextContrast() {
+  function forceStatusLabelContrast() {
     const main = document.getElementById("main-content");
     if (!main) return;
 
-    main.querySelectorAll("p, span, div, strong, b").forEach(el => {
+    main.querySelectorAll("p, span, div, h1, h2, h3, h4, strong, b, button").forEach(el => {
       if (el.closest(".leaflet-container")) return;
-      if (el.children && el.children.length > 0 && String(el.textContent || "").trim().length > 35) return;
-      const txt = String(el.textContent || "").trim();
-      const lower = txt.toLowerCase();
+      const raw = String(el.textContent || "").trim();
+      const lower = raw.toLowerCase();
 
-      if (lower === "anda online" || lower === "online" || lower === "anda offline" || lower === "offline") {
-        if (hasColoredSurfaceAncestor(el)) {
-          el.classList.add("oleng-status-on-colored-bg");
+      if (lower === "anda online" || lower === "anda offline" || lower === "online" || lower === "offline") {
+        if (isInsideColoredStatusBanner(el)) {
+          el.classList.add("oleng-banner-status-white");
           el.style.setProperty("color", "#FFFFFF", "important");
+          el.style.setProperty("-webkit-text-fill-color", "#FFFFFF", "important");
+          el.style.setProperty("opacity", "1", "important");
           el.style.setProperty("font-weight", "800", "important");
-        } else {
-          el.classList.remove("oleng-status-on-colored-bg");
+        } else if (lower.startsWith("anda ") || lower === "online" || lower === "offline") {
+          el.classList.remove("oleng-banner-status-white");
           el.style.setProperty("color", lower.includes("offline") ? "#DC3545" : "#16A36A", "important");
+          el.style.setProperty("-webkit-text-fill-color", lower.includes("offline") ? "#DC3545" : "#16A36A", "important");
         }
       }
     });
@@ -5141,7 +5154,8 @@
   if (typeof origDash === "function") {
     window.renderDashboardContent = function () {
       const r = origDash.apply(this, arguments);
-      setTimeout(fixOnlineOfflineTextContrast, 80);
+      setTimeout(forceStatusLabelContrast, 60);
+      setTimeout(forceStatusLabelContrast, 220);
       return r;
     };
   }
@@ -5151,13 +5165,15 @@
     if (typeof fn === "function") {
       window[fnName] = function () {
         const r = fn.apply(this, arguments);
-        setTimeout(fixOnlineOfflineTextContrast, 80);
+        setTimeout(forceStatusLabelContrast, 60);
+        setTimeout(forceStatusLabelContrast, 220);
         return r;
       };
     }
   }
 
-  setTimeout(fixOnlineOfflineTextContrast, 120);
+  setTimeout(forceStatusLabelContrast, 100);
+  setTimeout(forceStatusLabelContrast, 350);
 })();
 </script>
 </body>
