@@ -4411,11 +4411,11 @@
   }
 })();
 </script>
-<script id="oleng-admin-banner-gallery-v1">
+<script id="oleng-admin-banner-gallery-v2">
 (function () {
   const BANNER_KEY = "oleng_global_main_banner_v1";
 
-  function isAdminContext() {
+  function isAdminAccountActive() {
     if (typeof currentUser === "undefined" || !currentUser) return false;
     const digits = String(currentUser.phone || "").replace(/D/g, "");
     const norm = typeof normalizePhone === "function"
@@ -4424,58 +4424,55 @@
     return currentUser.role === "admin" || norm === "085624736602";
   }
 
-  function getStoredBanner() {
+  function getSavedBannerUrl() {
+    const loc = localStorage.getItem(BANNER_KEY);
+    if (loc && loc.trim()) return loc.trim();
     if (typeof db !== "undefined" && db && typeof db.mainBanner === "string" && db.mainBanner.trim()) {
       return db.mainBanner.trim();
     }
-    const loc = localStorage.getItem(BANNER_KEY);
-    if (loc && loc.trim()) return loc.trim();
     return "./olengorange2.png";
   }
 
-  if (typeof window.getSyncedMainBanner !== "function") {
-    window.getSyncedMainBanner = getStoredBanner;
-  } else {
-    const prevGetter = window.getSyncedMainBanner;
-    window.getSyncedMainBanner = function () {
-      const loc = localStorage.getItem(BANNER_KEY);
-      if (loc && loc.trim()) return loc.trim();
-      if (typeof db !== "undefined" && db && typeof db.mainBanner === "string" && db.mainBanner.trim()) {
-        return db.mainBanner.trim();
+  function applyBannerToDom(url) {
+    if (!url) return;
+    document.querySelectorAll("#main-content img").forEach(img => {
+      const altTxt = String(img.getAttribute("alt") || "").toLowerCase();
+      const clsTxt = String(img.className || "").toLowerCase();
+      if (altTxt.includes("banner") || (clsTxt.includes("h-32") && clsTxt.includes("object-cover"))) {
+        img.src = url;
+        img.dataset.olengHomeBanner = "1";
       }
-      return prevGetter.apply(this, arguments);
-    };
+    });
   }
 
-  function compressBannerFile(file, callback) {
+  function compressImageFile(file, done) {
     const reader = new FileReader();
     reader.onload = function (ev) {
+      const rawUrl = String(ev.target && ev.target.result ? ev.target.result : "");
       const img = new Image();
       img.onload = function () {
-        const maxW = 960;
-        const scale = img.width > maxW ? maxW / img.width : 1;
-        const w = Math.max(1, Math.round(img.width * scale));
-        const hCanvas = Math.max(1, Math.round(img.height * scale));
+        const maxWidth = 960;
+        const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
+        const w = Math.max(1, Math.round(img.width * ratio));
+        const hPx = Math.max(1, Math.round(img.height * ratio));
         const canvas = document.createElement("canvas");
         canvas.width = w;
-        canvas.height = hCanvas;
+        canvas.height = hPx;
         const ctx = canvas.getContext("2d");
         if (ctx) {
-          ctx.drawImage(img, 0, 0, w, hCanvas);
-          callback(canvas.toDataURL("image/jpeg", 0.82));
+          ctx.drawImage(img, 0, 0, w, hPx);
+          done(canvas.toDataURL("image/jpeg", 0.82));
           return;
         }
-        callback(String(ev.target?.result || ""));
+        done(rawUrl);
       };
-      img.onerror = function () {
-        callback(String(ev.target?.result || ""));
-      };
-      img.src = String(ev.target?.result || "");
+      img.onerror = function () { done(rawUrl); };
+      img.src = rawUrl;
     };
     reader.readAsDataURL(file);
   }
 
-  async function saveBannerGlobally(dataUrl) {
+  async function saveBannerPermanent(dataUrl) {
     if (!dataUrl) return;
     localStorage.setItem(BANNER_KEY, dataUrl);
     if (typeof db !== "undefined" && db) {
@@ -4483,10 +4480,7 @@
       if (db.config && typeof db.config === "object") db.config.mainBanner = dataUrl;
       localStorage.setItem("oleng_go_db", JSON.stringify(db));
     }
-
-    document.querySelectorAll('img[alt*="Banner"]').forEach(img => {
-      img.src = dataUrl;
-    });
+    applyBannerToDom(dataUrl);
 
     if (typeof supabaseClient !== "undefined" && supabaseClient && navigator.onLine && typeof syncAllToSupabase === "function") {
       try {
@@ -4502,70 +4496,88 @@
     }
 
     if (typeof showToast === "function") {
-      showToast("Banner tersimpan! Akan tersinkron otomatis saat terhubung database.", "success");
+      showToast("Banner tersimpan permanen di perangkat!", "success");
     }
   }
 
-  function ensureGalleryInput() {
-    let inp = document.getElementById("oleng-admin-banner-file-input");
-    if (!inp) {
-      inp = document.createElement("input");
-      inp.type = "file";
-      inp.accept = "image/*";
-      inp.id = "oleng-admin-banner-file-input";
-      inp.className = "hidden";
-      document.body.appendChild(inp);
+  function ensureBannerGalleryPicker() {
+    let input = document.getElementById("oleng-banner-gallery-picker");
+    if (!input) {
+      input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.id = "oleng-banner-gallery-picker";
+      input.style.display = "none";
+      document.body.appendChild(input);
 
-      inp.addEventListener("change", function () {
-        const file = inp.files && inp.files[0];
+      input.addEventListener("change", function () {
+        const file = input.files && input.files[0];
         if (!file) return;
-        compressBannerFile(file, async function (compressedUrl) {
-          await saveBannerGlobally(compressedUrl);
-          inp.value = "";
+        compressImageFile(file, async function (compressed) {
+          await saveBannerPermanent(compressed);
+          input.value = "";
         });
       });
     }
-    return inp;
+    return input;
   }
 
-  function bindAdminBannerClick() {
-    if (!isAdminContext()) return;
+  function decorateAdminBanner() {
+    const saved = getSavedBannerUrl();
+    applyBannerToDom(saved);
+    if (!isAdminAccountActive()) return;
+
     const main = document.getElementById("main-content");
     if (!main) return;
-    const inp = ensureGalleryInput();
-    const currentSrc = getStoredBanner();
 
-    main.querySelectorAll('img[alt*="Banner"]').forEach(img => {
-      if (currentSrc) img.src = currentSrc;
+    main.querySelectorAll("img").forEach(img => {
+      const altTxt = String(img.getAttribute("alt") || "").toLowerCase();
+      const clsTxt = String(img.className || "").toLowerCase();
+      if (!altTxt.includes("banner") && !(clsTxt.includes("h-32") && clsTxt.includes("object-cover"))) return;
+      img.dataset.olengHomeBanner = "1";
       const box = img.parentElement;
       if (!box) return;
       box.style.cursor = "pointer";
-      box.title = "Klik untuk pilih banner dari galeri";
-      if (!box.dataset.bannerClickBound) {
-        box.dataset.bannerClickBound = "1";
-        box.addEventListener("click", function (ev) {
-          if (!isAdminContext()) return;
-          ev.preventDefault();
-          ev.stopPropagation();
-          inp.click();
-        });
-      }
-      if (!box.querySelector(".oleng-banner-tap-badge")) {
-        const badge = document.createElement("span");
-        badge.className = "oleng-banner-tap-badge absolute bottom-2 right-2 px-2.5 py-1 rounded-xl bg-[#171717]/90 text-[#FF9800] text-[10px] font-black pointer-events-none border border-[#FF7900]/60";
-        badge.innerHTML = '<i class="fa-solid fa-image mr-1"></i>Klik Ganti Banner';
-        if (getComputedStyle(box).position === "static") box.style.position = "relative";
-        box.appendChild(badge);
+      if (!box.querySelector(".oleng-admin-banner-pill")) {
+        const pill = document.createElement("button");
+        pill.type = "button";
+        pill.className = "oleng-admin-banner-pill mt-1.5 w-full py-1.5 px-3 rounded-xl bg-[#171717] text-[#FF9800] text-[10px] font-black flex items-center justify-center gap-1.5 cursor-pointer border border-[#FF7900]/50";
+        pill.innerHTML = '<i class="fa-solid fa-image"></i> Klik Banner / Pilih dari Galeri';
+        box.insertAdjacentElement("afterend", pill);
       }
     });
   }
 
-  const origRenderDash = window.renderDashboardContent;
-  if (typeof origRenderDash === "function") {
+  document.addEventListener("click", function (ev) {
+    if (!isAdminAccountActive()) return;
+    const pill = ev.target && ev.target.closest ? ev.target.closest(".oleng-admin-banner-pill") : null;
+    const bannerImg = ev.target && ev.target.closest ? ev.target.closest('img[data-oleng-home-banner="1"], img[alt*="Banner"]') : null;
+    if (!pill && !bannerImg) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    ensureBannerGalleryPicker().click();
+  }, true);
+
+  if (typeof window.getSyncedMainBanner === "function") {
+    const origGetter = window.getSyncedMainBanner;
+    window.getSyncedMainBanner = function () {
+      const loc = localStorage.getItem(BANNER_KEY);
+      if (loc && loc.trim()) return loc.trim();
+      if (typeof db !== "undefined" && db && typeof db.mainBanner === "string" && db.mainBanner.trim()) {
+        return db.mainBanner.trim();
+      }
+      return origGetter.apply(this, arguments);
+    };
+  } else {
+    window.getSyncedMainBanner = getSavedBannerUrl;
+  }
+
+  const origDash = window.renderDashboardContent;
+  if (typeof origDash === "function") {
     window.renderDashboardContent = function () {
-      const r = origRenderDash.apply(this, arguments);
-      setTimeout(bindAdminBannerClick, 80);
-      return r;
+      const res = origDash.apply(this, arguments);
+      setTimeout(decorateAdminBanner, 90);
+      return res;
     };
   }
 
@@ -4573,14 +4585,14 @@
     const fn = window[fnName];
     if (typeof fn === "function") {
       window[fnName] = function () {
-        const r = fn.apply(this, arguments);
-        setTimeout(bindAdminBannerClick, 80);
-        return r;
+        const res = fn.apply(this, arguments);
+        setTimeout(decorateAdminBanner, 90);
+        return res;
       };
     }
   }
 
-  setTimeout(bindAdminBannerClick, 100);
+  setTimeout(decorateAdminBanner, 120);
 })();
 </script>
 </body>
