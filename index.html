@@ -517,11 +517,12 @@
         </div>
 
     </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        const ADMIN_MAIN_WA = '6285624736602';
+        let ADMIN_MAIN_WA = '6285624736602';
         const ADMIN_OWN_STORE_ID = 'TOKOADM01';
 
         function getSimaduBrandFooterHTML() {
@@ -1022,6 +1023,7 @@
             pushAppNavigationState('receipt');
             modal.classList.remove('hidden');
         }
+
         function normalizePhone(rawPhone) {
             let digits = String(rawPhone || '').replace(/\D/g, '');
             if (!digits) return '';
@@ -1509,7 +1511,7 @@
             isSyncingNow = true;
             try {
                 let firstError = null;
-                const extraState = { foods: db.foods || [], notifications: db.notifications || [], chats: db.chats || [], walletMutations: db.walletMutations || [], commissionLogs: db.commissionLogs || [], authLogs: db.authLogs || [], driverChangeLogs: db.driverChangeLogs || [], reviews: db.reviews || [], updatedAt: Date.now() };
+                const extraState = { foods: db.foods || [], notifications: db.notifications || [], chats: db.chats || [], walletMutations: db.walletMutations || [], commissionLogs: db.commissionLogs || [], authLogs: db.authLogs || [], driverChangeLogs: db.driverChangeLogs || [], pricingChangeLogs: db.pricingChangeLogs || [], configChangeLogs: db.configChangeLogs || [], adminSettings: db.adminSettings || null, reviews: db.reviews || [], updatedAt: Date.now() };
                 const cfgRes = await supabaseClient.from('app_config').upsert({ id: 1, main_banner: db.mainBanner || DEFAULT_MAIN_BANNER, min_fare: Number(db.pricing?.minFare || 8000), ojek_per_km: Number(db.pricing?.ojekPerKm || 2500), food_per_km: Number(db.pricing?.foodPerKm || 2000), commission_percent: Number(db.pricing?.commissionPercent || 10), admin_whatsapp: ADMIN_MAIN_WA, state_json: extraState }, { onConflict: 'id' });
                 if (cfgRes.error && !firstError) firstError = cfgRes.error.message;
 
@@ -1694,8 +1696,12 @@
                     const nextPricing = { minFare: Number(cfg.min_fare ?? db.pricing.minFare ?? 8000), ojekPerKm: Number(cfg.ojek_per_km ?? db.pricing.ojekPerKm ?? 2500), foodPerKm: Number(cfg.food_per_km ?? db.pricing.foodPerKm ?? 2000), commissionPercent: Number(cfg.commission_percent ?? db.pricing.commissionPercent ?? 10), driverResponseTimeoutSec: Number(cfg.driver_response_timeout_sec ?? db.pricing.driverResponseTimeoutSec ?? 45), driverSearchTimeoutSec: Number(cfg.driver_search_timeout_sec ?? db.pricing.driverSearchTimeoutSec ?? 60) };
                     if (JSON.stringify(nextPricing) !== JSON.stringify(db.pricing)) { db.pricing = nextPricing; hasChanges = true; }
                     if (cfg.state_json && typeof cfg.state_json === 'object') {
-                        for (const listKey of ['foods', 'notifications', 'chats', 'walletMutations', 'commissionLogs', 'authLogs', 'driverChangeLogs', 'reviews']) {
+                        for (const listKey of ['foods', 'notifications', 'chats', 'walletMutations', 'commissionLogs', 'authLogs', 'driverChangeLogs', 'pricingChangeLogs', 'configChangeLogs', 'reviews']) {
                             if (Array.isArray(cfg.state_json[listKey]) && cfg.state_json[listKey].length > 0) db[listKey] = mergeByKey(db[listKey], cfg.state_json[listKey], item => String(item.id));
+                        }
+                        if (cfg.state_json.adminSettings && typeof cfg.state_json.adminSettings === 'object') {
+                            db.adminSettings = { ...(db.adminSettings || {}), ...cfg.state_json.adminSettings };
+                            localStorage.setItem('oleng_admin_suite_settings_v1', JSON.stringify(db.adminSettings));
                         }
                     }
                 }
@@ -2338,6 +2344,7 @@
             });
             container.innerHTML = `<div class="p-4 space-y-4 pb-28 bg-white min-h-full"><div class="flex justify-between items-center gap-2"><div><h2 class="font-extrabold text-base text-[#171717]">Pesan Makanan</h2><p class="text-[11px] text-neutral-600 font-semibold">Pilih toko & menu, lalu atur lokasi saat checkout.</p></div><button onclick="openCartModal()" class="bg-[#FF7900] hover:bg-[#FF9800] text-white px-3.5 py-2 rounded-2xl text-xs font-extrabold shadow-md flex items-center gap-1.5 cursor-pointer border-b-2 border-[#171717] shrink-0"><i class="fa-solid fa-cart-shopping"></i> Checkout <span id="cart-counter" class="bg-[#171717] text-[#FF9800] px-1.5 py-0.5 rounded-full text-[10px] font-black">${db.cart.length}</span></button></div><div class="bg-[#F3F3F3] p-3 rounded-2xl border-2 border-neutral-200 flex items-center gap-2"><i class="fa-solid fa-search text-[#FF7900] pl-1"></i><input type="text" id="search-merchant-input" value="${searchQuery}" oninput="searchQuery=this.value;renderCustomerFood(document.getElementById('main-content'), false);setTimeout(()=>{const i=document.getElementById('search-merchant-input');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},0)" placeholder="Cari nama toko atau ketik jenis makanan..." class="w-full text-xs font-semibold focus:outline-none bg-transparent text-[#171717]"></div><div class="space-y-3"><h3 class="font-extrabold text-xs text-[#171717] uppercase">Daftar Toko & Warung Pilihan</h3><div class="space-y-3">${filtered.length > 0 ? filtered.map(m => { const dist = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], m.lat, m.lng); const isOpen = m.status === 'Buka'; const isAdminStore = String(m.accountId || '').toUpperCase() === ADMIN_OWN_STORE_ID; const sampleMenus = qLow ? (db.foods || []).filter(f => Number(f.merchantId) === Number(m.id) && `${f.name || ''} ${f.category || ''} ${f.desc || ''}`.toLowerCase().includes(qLow)).map(f => f.name).slice(0, 2) : []; return `<div onclick="openMerchantDetail(${m.id})" class="bg-white p-4 rounded-3xl border-2 border-neutral-200 hover:border-[#FF7900] shadow-xs cursor-pointer transition flex items-center justify-between gap-3"><div class="flex items-start space-x-3.5 min-w-0 flex-1"><img src="${m.image || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border border-neutral-200 shrink-0" alt="Logo Toko"><div class="min-w-0 flex-1"><div class="flex justify-between items-start gap-1"><h4 class="font-bold text-sm text-[#171717] truncate">${m.name}</h4><span class="text-[10px] px-2 py-0.5 rounded-md font-extrabold shrink-0 ${isOpen ? 'bg-[#FF7900]/15 text-[#FF7900]' : 'bg-neutral-200 text-neutral-700'}">${m.status}</span></div><p class="text-[11px] text-neutral-600 mt-0.5 truncate">${m.category || 'Kuliner'}${isAdminStore ? ' • Toko Admin' : ''} • <i class="fa-solid fa-star text-[#FF7900]"></i> <b>${m.rating || 5.0}</b> • <span class="font-bold text-[#171717]">${dist} km</span></p>${sampleMenus.length > 0 ? `<p class="text-[10px] text-[#FF7900] font-bold mt-0.5 truncate"><i class="fa-solid fa-utensils"></i> Menu cocok: ${sampleMenus.join(', ')}</p>` : ''}<p class="text-[10px] text-neutral-700 font-medium mt-1 line-clamp-2"><i class="fa-solid fa-location-dot text-[#FF7900]"></i> ${m.address || 'Kecamatan Lengkong, Sukabumi'}</p></div></div><button type="button" onclick="event.stopPropagation();openMerchantDetail(${m.id})" class="px-3 py-2 bg-[#171717] hover:bg-[#FF7900] text-white rounded-xl text-[10px] font-black cursor-pointer shrink-0">BUKA</button></div>`; }).join('') : '<p class="text-center text-xs text-neutral-600 py-6">Toko atau jenis makanan tidak ditemukan.</p>'}</div></div>${getSimaduBrandFooterHTML()}</div>`;
         }
+
         function openMerchantDetail(merchantId) {
             const merchant = db.merchants.find(m => m.id === merchantId); if (!merchant) return;
             db.activeMerchant = merchant;
@@ -4075,7 +4082,6 @@
                 const waText = `Halo ${item.ownerName}, saya melihat iklan "${item.title}" (${item.offerType}) di OLENG MARKET Lengkong. Apakah masih tersedia?`;
                 const canManage = isListingOwnedByCurrentUser(item) || isCurrentUserMarketAdmin();
                 const fav = isListingFavorited(item.listingCode);
-                const safeOwner = String(item.ownerName || '').replace(/'/g, "\\'");
 
                 const card = document.getElementById('market-detail-card');
                 card.innerHTML = `
@@ -4705,6 +4711,7 @@
             });
         })();
     </script>
+
     <script id="oleng-admin-suite-addon">
         (function () {
             const SETTINGS_STORAGE_KEY = 'oleng_admin_suite_settings_v1';
@@ -4743,7 +4750,7 @@
             function loadAdminSettings() {
                 let saved = null;
                 try { saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || 'null'); } catch (e) {}
-                const cfgObj = (typeof db !== 'undefined' && db?.state_json?.adminSettings) ? db.state_json.adminSettings : null;
+                const cfgObj = (typeof db !== 'undefined' && db?.adminSettings) ? db.adminSettings : null;
                 return {
                     ...DEFAULT_ADMIN_SETTINGS,
                     ...(saved || {}),
@@ -4761,8 +4768,8 @@
                     alarmEnabled = Boolean(adminSettings.alarmOrder || adminSettings.alarmChat);
                     localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled));
                 }
-                if (adminSettings.waMain && typeof window.ADMIN_MAIN_WA !== 'undefined') {
-                    window.ADMIN_MAIN_WA = String(adminSettings.waMain).replace(/\D/g, '') || '6285624736602';
+                if (adminSettings.waMain) {
+                    ADMIN_MAIN_WA = String(adminSettings.waMain).replace(/\D/g, '') || '6285624736602';
                 }
             }
 
@@ -4797,7 +4804,7 @@
 
                 if (typeof supabaseClient !== 'undefined' && supabaseClient && navigator.onLine) {
                     try {
-                        const p = (typeof db !== 'undefined' && db.pricing) ? db.pricing : { minFare: 8000, ojekPerKm: 2500, foodPerKm: 2000, commissionPercent: 5 };
+                        const p = (typeof db !== 'undefined' && db.pricing) ? db.pricing : { minFare: 8000, ojekPerKm: 2500, foodPerKm: 2000, commissionPercent: 10 };
                         const extraState = {
                             foods: db?.foods || [],
                             notifications: db?.notifications || [],
@@ -4806,6 +4813,7 @@
                             commissionLogs: db?.commissionLogs || [],
                             authLogs: db?.authLogs || [],
                             driverChangeLogs: db?.driverChangeLogs || [],
+                            pricingChangeLogs: db?.pricingChangeLogs || [],
                             configChangeLogs: db?.configChangeLogs || [],
                             adminSettings: { ...adminSettings },
                             reviews: db?.reviews || [],
@@ -4817,7 +4825,7 @@
                             min_fare: Number(p.minFare || 8000),
                             ojek_per_km: Number(p.ojekPerKm || 2500),
                             food_per_km: Number(p.foodPerKm || 2000),
-                            commission_percent: Number(p.commissionPercent || 5),
+                            commission_percent: Number(p.commissionPercent || 10),
                             admin_whatsapp: String(adminSettings.waMain || '6285624736602'),
                             state_json: extraState
                         }, { onConflict: 'id' });
@@ -4842,41 +4850,89 @@
                 }
             }
 
-            if (typeof window.playAlarmRingtone === 'function') {
-                window.playAlarmRingtone = function () {
-                    if (!adminSettings.alarmOrder && !adminSettings.alarmChat) return;
-                    if (adminSettings.vibrationEnabled && navigator.vibrate) {
-                        try { navigator.vibrate(adminSettings.alarmTone === 'pendek' ? [120] : [250, 120, 250, 120, 250]); } catch (e) {}
-                    }
-                    try {
-                        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                        const notes = adminSettings.alarmTone === 'pendek' ? [987.77, 1318.51] : [880, 1174.66, 880, 1318.51, 1174.66];
-                        const vol = Math.min(0.4, Math.max(0.02, Number(adminSettings.alarmVolume ?? 0.8) * 0.22));
-                        notes.forEach((freq, i) => {
-                            const osc = ctx.createOscillator();
-                            const gain = ctx.createGain();
-                            osc.type = 'triangle';
-                            const start = ctx.currentTime + i * 0.14;
-                            osc.frequency.setValueAtTime(freq, start);
-                            gain.gain.setValueAtTime(vol, start);
-                            gain.gain.exponentialRampToValueAtTime(0.001, start + 0.13);
-                            osc.connect(gain);
-                            gain.connect(ctx.destination);
-                            osc.start(start);
-                            osc.stop(start + 0.13);
-                        });
-                    } catch (e) {}
-                };
-            }
+            window.playAlarmRingtone = function () {
+                if (!adminSettings.alarmOrder && !adminSettings.alarmChat) return;
+                if (adminSettings.vibrationEnabled && navigator.vibrate) {
+                    try { navigator.vibrate(adminSettings.alarmTone === 'pendek' ? [120] : [250, 120, 250, 120, 250]); } catch (e) {}
+                }
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const notes = adminSettings.alarmTone === 'pendek' ? [987.77, 1318.51] : [880, 1174.66, 880, 1318.51, 1174.66];
+                    const vol = Math.min(0.4, Math.max(0.02, Number(adminSettings.alarmVolume ?? 0.8) * 0.22));
+                    notes.forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        const start = ctx.currentTime + i * 0.14;
+                        osc.frequency.setValueAtTime(freq, start);
+                        gain.gain.setValueAtTime(vol, start);
+                        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.13);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(start);
+                        osc.stop(start + 0.13);
+                    });
+                } catch (e) {}
+            };
 
-            if (typeof window.openMainAdminWhatsApp === 'function') {
-                window.openMainAdminWhatsApp = function (customMessage = '') {
-                    const rawWa = String(adminSettings.waMain || adminSettings.waAdmin || '6285624736602').replace(/\D/g, '');
-                    const waIntl = rawWa.startsWith('0') ? '62' + rawWa.slice(1) : (rawWa || '6285624736602');
-                    const msg = customMessage || `Halo ${adminSettings.appName || 'OLENG GO'} (${waIntl}), saya ${currentUser?.name || 'Pengguna'} (${currentUser?.phone || '-'}) menghubungi terkait layanan ${adminSettings.serviceArea || 'Kecamatan Lengkong, Sukabumi'}.`;
-                    window.open(`https://wa.me/${waIntl}?text=${encodeURIComponent(msg)}`, '_blank');
+            window.openMainAdminWhatsApp = function (customMessage = '') {
+                const rawWa = String(adminSettings.waMain || adminSettings.waAdmin || '6285624736602').replace(/\D/g, '');
+                const waIntl = rawWa.startsWith('0') ? '62' + rawWa.slice(1) : (rawWa || '6285624736602');
+                const msg = customMessage || `Halo ${adminSettings.appName || 'OLENG GO'} (${waIntl}), saya ${currentUser?.name || 'Pengguna'} (${currentUser?.phone || '-'}) menghubungi terkait layanan ${adminSettings.serviceArea || 'Kecamatan Lengkong, Sukabumi'}.`;
+                window.open(`https://wa.me/${waIntl}?text=${encodeURIComponent(msg)}`, '_blank');
+            };
+
+            window.saveAdminPricingConfig = async function () {
+                if (!isAdminAuthorized()) {
+                    if (typeof showToast === 'function') showToast('Hanya Admin yang berwenang mengubah tarif.', 'error');
+                    return;
+                }
+                const prevPricing = { ...(db.pricing || defaultPricing) };
+                const nextPricing = {
+                    minFare: Math.max(1000, parseInt(document.getElementById('cfg-min-fare')?.value, 10) || 8000),
+                    ojekPerKm: Math.max(500, parseInt(document.getElementById('cfg-ojek-km')?.value, 10) || 2500),
+                    foodPerKm: Math.max(500, parseInt(document.getElementById('cfg-food-km')?.value, 10) || 2000),
+                    commissionPercent: Math.min(100, Math.max(0, parseInt(document.getElementById('cfg-commission')?.value, 10) || 0)),
+                    driverResponseTimeoutSec: Math.min(300, Math.max(10, parseInt(document.getElementById('cfg-driver-timeout')?.value, 10) || 45)),
+                    driverSearchTimeoutSec: Math.min(600, Math.max(15, parseInt(document.getElementById('cfg-search-timeout')?.value, 10) || 60))
                 };
-            }
+
+                db.pricing = nextPricing;
+                if (!Array.isArray(db.pricingChangeLogs)) db.pricingChangeLogs = [];
+                db.pricingChangeLogs.unshift({
+                    id: 'PRC-' + Date.now(),
+                    adminName: currentUser?.name || 'Admin SIMADU',
+                    adminPhone: currentUser?.phone || '085624736602',
+                    time: new Date().toLocaleString('id-ID'),
+                    from: prevPricing,
+                    to: { ...nextPricing }
+                });
+                db.pricingChangeLogs = db.pricingChangeLogs.slice(0, 50);
+                localStorage.setItem('oleng_go_db', JSON.stringify(db));
+
+                if (typeof updateOjekFareUI === 'function') updateOjekFareUI();
+                if (typeof updateCartUI === 'function' && !document.getElementById('modal-cart')?.classList.contains('hidden')) {
+                    updateCartUI();
+                }
+
+                if (supabaseClient && navigator.onLine) {
+                    const res = await syncAllToSupabase();
+                    if (!res.ok) {
+                        if (typeof enqueueOfflineSync === 'function') enqueueOfflineSync('pricing_update');
+                        if (typeof showToast === 'function') showToast('Tarif tersimpan lokal; antrean sinkronisasi aktif.', 'info');
+                    } else {
+                        lastSyncTimestamp = new Date().toLocaleString('id-ID');
+                        localStorage.setItem('oleng_last_sync_at', lastSyncTimestamp);
+                        if (typeof showToast === 'function') showToast('Tarif diperbarui & langsung tersinkron ke Supabase (untuk pesanan baru)!', 'success');
+                    }
+                } else {
+                    if (typeof enqueueOfflineSync === 'function') enqueueOfflineSync('pricing_update');
+                    if (typeof showToast === 'function') showToast('Tarif tersimpan lokal & masuk antrean sinkron otomatis.', 'info');
+                }
+
+                if (currentSubTab === 'admin-master') window.renderMasterControlPage(document.getElementById('main-content'));
+                else if (currentSubTab === 'admin-dash') window.renderAdminDash(document.getElementById('main-content'));
+            };
 
             function getActualSupabaseCounts() {
                 const usersList = Array.isArray(db?.users) ? db.users : [];
