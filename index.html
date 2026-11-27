@@ -5406,6 +5406,676 @@
                 };
             }
         })();
+
+
+    <script id="oleng-full-role-settings-and-accordion-admin">
+        (function () {
+            const ADMIN_SETTINGS_KEY = 'oleng_admin_suite_settings_v1';
+            const CUST_PREFS_PREFIX = 'oleng_customer_prefs_v1_';
+            const PARTNER_PREFS_PREFIX = 'oleng_partner_prefs_v1_';
+
+            const DEFAULT_ADMIN_CFG = {
+                alarmOrder: true,
+                alarmChat: true,
+                alarmTone: 'panjang',
+                alarmVolume: 0.8,
+                vibrationEnabled: true,
+                notifNewOrder: true,
+                notifNewChat: true,
+                notifCancelOrder: true,
+                notifPartnerActivity: true,
+                waMain: typeof ADMIN_MAIN_WA !== 'undefined' ? ADMIN_MAIN_WA : '6285624736602',
+                waSupport: typeof ADMIN_MAIN_WA !== 'undefined' ? ADMIN_MAIN_WA : '6285624736602',
+                waAdmin: '085624736602',
+                appName: 'OLENG GO',
+                serviceArea: 'Kecamatan Lengkong, Sukabumi',
+                operationalHours: '06:00 - 23:00 WIB',
+                serviceOpen: true,
+                promoInfo: 'OLENG MARKET GRATIS untuk warga Lengkong.',
+                otpEnabled: false,
+                minDeposit: 10000,
+                initialBonusBalance: 20000,
+                maintenanceLogs: []
+            };
+
+            function getEffectiveRole() {
+                if (!currentUser) return 'customer';
+                if (currentUser.role === 'admin' && typeof adminViewMode !== 'undefined' && adminViewMode) {
+                    return adminViewMode;
+                }
+                return currentUser.role;
+            }
+
+            function isRealAdminUser() {
+                if (!currentUser) return false;
+                const ph = typeof normalizePhone === 'function' ? normalizePhone(currentUser.phone) : String(currentUser.phone || '').replace(/\D/g, '');
+                return currentUser.role === 'admin' || ph === '085624736602';
+            }
+
+            function loadAdminCfg() {
+                try {
+                    const localObj = JSON.parse(localStorage.getItem(ADMIN_SETTINGS_KEY) || 'null') || {};
+                    const dbObj = (typeof db !== 'undefined' && db?.adminSettings) ? db.adminSettings : {};
+                    return {
+                        ...DEFAULT_ADMIN_CFG,
+                        ...localObj,
+                        ...dbObj,
+                        maintenanceLogs: Array.isArray(localObj.maintenanceLogs) ? localObj.maintenanceLogs : (Array.isArray(dbObj.maintenanceLogs) ? dbObj.maintenanceLogs : [])
+                    };
+                } catch (e) {
+                    return { ...DEFAULT_ADMIN_CFG };
+                }
+            }
+
+            let adminCfg = loadAdminCfg();
+            let expandedAdminSection = null;
+            let lastSyncTimeLabel = localStorage.getItem('oleng_last_sync_at') || 'Belum tercatat';
+
+            function getAccountScopedSuffix() {
+                const ph = typeof normalizePhone === 'function' ? normalizePhone(currentUser?.phone) : String(currentUser?.phone || '');
+                return ph || String(currentUser?.accountId || currentUser?.name || 'guest').toLowerCase();
+            }
+
+            function loadCustomerAccountPrefs() {
+                const base = {
+                    email: currentUser?.email || '',
+                    fontSize: 'normal',
+                    notifBannerStyle: 'ringkas',
+                    notifOrder: true,
+                    notifOrderStatus: true,
+                    notifChat: true,
+                    notifPromo: true,
+                    notifSound: true,
+                    notifVibrate: true,
+                    otpEnabled: false,
+                    addresses: [
+                        {
+                            id: 'addr-main-default',
+                            label: 'Alamat Utama',
+                            detail: currentUser?.address || 'Kecamatan Lengkong, Sukabumi',
+                            isFavorite: true,
+                            isPrimary: true
+                        }
+                    ]
+                };
+                try {
+                    const raw = JSON.parse(localStorage.getItem(CUST_PREFS_PREFIX + getAccountScopedSuffix()) || 'null');
+                    if (!raw || typeof raw !== 'object') return base;
+                    return {
+                        ...base,
+                        ...raw,
+                        addresses: Array.isArray(raw.addresses) && raw.addresses.length > 0 ? raw.addresses : base.addresses
+                    };
+                } catch (e) {
+                    return base;
+                }
+            }
+
+            function loadPartnerAccountPrefs(roleMode = 'driver') {
+                const base = {
+                    notifOrder: true,
+                    notifChat: true,
+                    notifPromo: false,
+                    notifSound: true,
+                    notifVibrate: true,
+                    otpEnabled: false,
+                    vehicleNote: currentUser?.vehicle || ''
+                };
+                try {
+                    const raw = JSON.parse(localStorage.getItem(PARTNER_PREFS_PREFIX + roleMode + '_' + getAccountScopedSuffix()) || 'null');
+                    return raw && typeof raw === 'object' ? { ...base, ...raw } : base;
+                } catch (e) {
+                    return base;
+                }
+            }
+
+            let custPrefs = loadCustomerAccountPrefs();
+            let activeCustTab = 'profile';
+            let editingAddrId = null;
+            let draftCustPhoto = null;
+            let activePartnerTab = 'profile';
+
+            function saveCustomerAccountPrefs(toastMsg = null) {
+                if (!currentUser) return;
+                localStorage.setItem(CUST_PREFS_PREFIX + getAccountScopedSuffix(), JSON.stringify(custPrefs));
+                if (typeof db !== 'undefined' && Array.isArray(db.users)) {
+                    const idx = db.users.findIndex(u =>
+                        (currentUser.id && u.id === currentUser.id) ||
+                        (typeof normalizePhone === 'function' && normalizePhone(u.phone) === normalizePhone(currentUser.phone) && u.role === currentUser.role)
+                    );
+                    if (idx !== -1) db.users[idx] = { ...db.users[idx], ...currentUser, email: custPrefs.email };
+                    localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                }
+                localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
+                if (toastMsg && typeof showToast === 'function') showToast(toastMsg, 'success');
+                if (typeof syncAllToSupabase === 'function' && navigator.onLine) syncAllToSupabase().catch(() => {});
+            }
+
+            function savePartnerAccountPrefs(roleMode, prefsObj, toastMsg = null) {
+                if (!currentUser) return;
+                localStorage.setItem(PARTNER_PREFS_PREFIX + roleMode + '_' + getAccountScopedSuffix(), JSON.stringify(prefsObj));
+                if (typeof db !== 'undefined') localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                if (toastMsg && typeof showToast === 'function') showToast(toastMsg, 'success');
+                if (typeof syncAllToSupabase === 'function' && navigator.onLine) syncAllToSupabase().catch(() => {});
+            }
+
+            function getSupportWhatsAppNumber() {
+                const raw = String(adminCfg.waSupport || adminCfg.waMain || (typeof ADMIN_MAIN_WA !== 'undefined' ? ADMIN_MAIN_WA : '6285624736602')).replace(/\D/g, '');
+                return raw.startsWith('0') ? '62' + raw.slice(1) : (raw || '6285624736602');
+            }
+
+            window.openRoleSettingsPage = function (sectionKey = null) {
+                if (!currentUser) return;
+                const eff = getEffectiveRole();
+                if (eff === 'admin') {
+                    if (sectionKey) expandedAdminSection = sectionKey;
+                    if (typeof renderDashboardContent === 'function') renderDashboardContent('admin-settings');
+                    return;
+                }
+                if (eff === 'driver') {
+                    if (sectionKey) activePartnerTab = sectionKey;
+                    if (typeof renderDashboardContent === 'function') renderDashboardContent('driver-settings');
+                    return;
+                }
+                if (eff === 'merchant') {
+                    if (sectionKey) activePartnerTab = sectionKey;
+                    if (typeof renderDashboardContent === 'function') renderDashboardContent('merchant-settings');
+                    return;
+                }
+                custPrefs = loadCustomerAccountPrefs();
+                if (sectionKey) activeCustTab = sectionKey;
+                if (typeof renderDashboardContent === 'function') renderDashboardContent('customer-settings');
+            };
+
+            window.toggleAdminAccordionItem = function (key) {
+                expandedAdminSection = expandedAdminSection === key ? null : key;
+                window.renderAdminSettingsPage(document.getElementById('main-content'));
+            };
+
+            function renderAdminAccordionBody(key) {
+                const gpsPerm = localStorage.getItem('oleng_perm_gps') || 'belum_dicek';
+                const notifPerm = ('Notification' in window) ? Notification.permission : 'unsupported';
+                const coordText = Array.isArray(userCurrentLatLng) ? `${userCurrentLatLng[0]}, ${userCurrentLatLng[1]}` : '-7.1234, 106.8456';
+                const st = typeof lastSupabaseStatus !== 'undefined' ? lastSupabaseStatus : { ok: false, label: 'Lokal' };
+                const mLogs = Array.isArray(adminCfg.maintenanceLogs) ? adminCfg.maintenanceLogs : [];
+
+                if (key === 'wa') {
+                    return `
+                        <div class="p-3.5 bg-[#F3F3F3] border-t border-neutral-200 space-y-2.5 text-xs">
+                            <div><label class="text-[10px] font-extrabold uppercase">WhatsApp Utama</label><input type="tel" id="adm-acc-wa-main" value="${adminCfg.waMain}" class="w-full mt-1 p-2.5 bg-white border-2 border-neutral-200 rounded-2xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">WhatsApp Bantuan</label><input type="tel" id="adm-acc-wa-support" value="${adminCfg.waSupport}" class="w-full mt-1 p-2.5 bg-white border-2 border-neutral-200 rounded-2xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">WhatsApp Admin</label><input type="tel" id="adm-acc-wa-admin" value="${adminCfg.waAdmin}" class="w-full mt-1 p-2.5 bg-white border-2 border-neutral-200 rounded-2xl font-bold"></div>
+                            <button type="button" onclick="window.__admSaveAccWa()" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Kontak WhatsApp</button>
+                        </div>
+                    `;
+                }
+                if (key === 'gps') {
+                    return `
+                        <div class="p-3.5 bg-[#F3F3F3] border-t border-neutral-200 space-y-2.5 text-xs">
+                            <p><b>Status Izin GPS:</b> ${gpsPerm}</p>
+                            <p><b>Status Izin Notifikasi:</b> ${notifPerm}</p>
+                            <p><b>GPS Lokasi Terkini:</b> ${coordText}</p>
+                            <p><b>Mode Peta:</b> ${typeof mapLayerMode !== 'undefined' && mapLayerMode === 'satellite' ? 'Satelit' : 'Standar'}</p>
+                            <p class="text-[10px] text-neutral-600">Jika izin belum diberikan, aktifkan Lokasi &amp; Notifikasi pada pengaturan browser/perangkat lalu tekan Tes GPS.</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" onclick="ensureWebPermissionsFlow(true)" class="py-2 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Tes GPS &amp; Izin</button>
+                                <button type="button" onclick="toggleMapLayerMode()" class="py-2 bg-[#171717] text-[#FF9800] font-black rounded-xl cursor-pointer">Standar / Satelit</button>
+                            </div>
+                            <button type="button" onclick="openFullGoogleMapsForCoords(userCurrentLatLng[0], userCurrentLatLng[1], '')" class="w-full py-2 bg-white border rounded-xl font-extrabold cursor-pointer">Buka Google Maps</button>
+                        </div>
+                    `;
+                }
+                if (key === 'db') {
+                    return `
+                        <div class="p-3.5 bg-[#F3F3F3] border-t border-neutral-200 space-y-2.5 text-xs">
+                            <p><b>Koneksi Supabase:</b> ${st.ok ? 'Terhubung' : 'Mode Lokal / Terputus'}</p>
+                            <p><b>Status Database:</b> ${st.ok ? 'Aktif & Siap' : 'Cadangan Lokal Aktif'}</p>
+                            <p><b>Status Sinkronisasi:</b> ${navigator.onLine ? 'Online' : 'Offline'}</p>
+                            <p><b>Sinkronisasi Terakhir:</b> ${lastSyncTimeLabel}</p>
+                            <p><b>Status Server:</b> ${navigator.onLine ? 'Normal' : 'Menunggu Jaringan'}</p>
+                            <button type="button" onclick="manualForceSync(true).then(() => { lastSyncTimeLabel = new Date().toLocaleString('id-ID'); localStorage.setItem('oleng_last_sync_at', lastSyncTimeLabel); renderAdminSettingsPage(document.getElementById('main-content')); })" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Uji Koneksi &amp; Sinkronkan</button>
+                        </div>
+                    `;
+                }
+                if (key === 'ops') {
+                    return `
+                        <div class="p-3.5 bg-[#F3F3F3] border-t border-neutral-200 space-y-2.5 text-xs">
+                            <div><label class="text-[10px] font-extrabold uppercase">Nama Aplikasi</label><input type="text" id="adm-acc-appname" value="${adminCfg.appName}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Wilayah Layanan</label><input type="text" id="adm-acc-area" value="${adminCfg.serviceArea}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Jam Operasional</label><input type="text" id="adm-acc-hours" value="${adminCfg.operationalHours}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl"></div>
+                            <label class="flex items-center gap-2 font-bold cursor-pointer"><input type="checkbox" id="adm-acc-open" ${adminCfg.serviceOpen ? 'checked' : ''}> Status Layanan Buka</label>
+                            <div><label class="text-[10px] font-extrabold uppercase">Informasi Promosi</label><input type="text" id="adm-acc-promo" value="${adminCfg.promoInfo}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl"></div>
+                            <button type="button" onclick="window.__admSaveAccOps()" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Operasional</button>
+                        </div>
+                    `;
+                }
+                if (key === 'sec') {
+                    return `
+                        <div class="p-3.5 bg-[#F3F3F3] border-t border-neutral-200 space-y-2.5 text-xs">
+                            <div><label class="text-[10px] font-extrabold uppercase">Ganti Password Admin</label><input type="password" id="adm-acc-newpass" placeholder="Sandi admin baru..." class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <label class="flex items-center gap-2 font-bold cursor-pointer"><input type="checkbox" id="adm-acc-otp" ${adminCfg.otpEnabled ? 'checked' : ''}> Pengaturan OTP</label>
+                            <button type="button" onclick="window.__admSaveAccSec()" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Keamanan</button>
+                        </div>
+                    `;
+                }
+                if (key === 'maint') {
+                    return `
+                        <div class="p-3.5 bg-[#F3F3F3] border-t border-neutral-200 space-y-2.5 text-xs">
+                            <p><b>Versi:</b> OLENG GO v2 • Kecamatan Lengkong, Sukabumi</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" onclick="window.__admExportBackupFile()" class="py-2 bg-[#171717] text-[#FF9800] font-black rounded-xl cursor-pointer">Ekspor JSON</button>
+                                <button type="button" onclick="window.__admLogMaintenance()" class="py-2 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Catat Pemeliharaan</button>
+                            </div>
+                            ${mLogs.length > 0 ? mLogs.slice(0, 5).map(m => `<p class="text-[10px] text-neutral-700">• ${m.note} (${m.time})</p>`).join('') : '<p class="text-[10px] text-neutral-500">Belum ada riwayat pemeliharaan.</p>'}
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="p-3.5 bg-[#F3F3F3] border-t border-neutral-200 space-y-2.5 text-xs">
+                        <label class="flex items-center justify-between font-bold cursor-pointer"><span>Alarm Pesanan Masuk</span><input type="checkbox" id="adm-acc-alarm-order" ${adminCfg.alarmOrder ? 'checked' : ''}></label>
+                        <label class="flex items-center justify-between font-bold cursor-pointer"><span>Alarm Chat Masuk</span><input type="checkbox" id="adm-acc-alarm-chat" ${adminCfg.alarmChat ? 'checked' : ''}></label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><label class="text-[10px] font-extrabold uppercase">Durasi Alarm</label><select id="adm-acc-tone" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"><option value="panjang" ${adminCfg.alarmTone === 'panjang' ? 'selected' : ''}>Panjang</option><option value="pendek" ${adminCfg.alarmTone === 'pendek' ? 'selected' : ''}>Pendek</option></select></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Volume (0.1 - 1.0)</label><input type="number" step="0.1" min="0.1" max="1" id="adm-acc-vol" value="${adminCfg.alarmVolume}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                        </div>
+                        <label class="flex items-center justify-between font-bold cursor-pointer"><span>Getaran</span><input type="checkbox" id="adm-acc-vib" ${adminCfg.vibrationEnabled ? 'checked' : ''}></label>
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <button type="button" onclick="playAlarmRingtone()" class="py-2 bg-[#171717] text-[#FF9800] font-black rounded-xl cursor-pointer">Tes Alarm</button>
+                            <button type="button" onclick="window.__admSaveAccAlarm()" class="py-2 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Alarm</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            async function commitAdminCfgConfirmed(labelText) {
+                if (!isRealAdminUser()) return showToast('Hanya Admin yang berwenang.', 'error');
+                localStorage.setItem(ADMIN_SETTINGS_KEY, JSON.stringify(adminCfg));
+                alarmEnabled = Boolean(adminCfg.alarmOrder || adminCfg.alarmChat);
+                localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled));
+                if (adminCfg.waMain) ADMIN_MAIN_WA = String(adminCfg.waMain).replace(/\D/g, '') || '6285624736602';
+                if (typeof db !== 'undefined') {
+                    db.adminSettings = { ...adminCfg };
+                    if (!Array.isArray(db.configChangeLogs)) db.configChangeLogs = [];
+                    db.configChangeLogs.unshift({ category: labelText, adminName: currentUser.name, time: new Date().toLocaleString('id-ID') });
+                    localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                }
+                if (typeof supabaseClient !== 'undefined' && supabaseClient && navigator.onLine) {
+                    const res = await syncAllToSupabase();
+                    if (!res.ok) return showToast('Gagal konfirmasi database: ' + res.error, 'error');
+                    lastSyncTimeLabel = new Date().toLocaleString('id-ID');
+                    localStorage.setItem('oleng_last_sync_at', lastSyncTimeLabel);
+                }
+                showToast(`${labelText} tersimpan!`, 'success');
+                window.renderAdminSettingsPage(document.getElementById('main-content'));
+            }
+
+            window.__admSaveAccAlarm = async function () {
+                adminCfg.alarmOrder = Boolean(document.getElementById('adm-acc-alarm-order')?.checked);
+                adminCfg.alarmChat = Boolean(document.getElementById('adm-acc-alarm-chat')?.checked);
+                adminCfg.alarmTone = document.getElementById('adm-acc-tone')?.value || 'panjang';
+                adminCfg.alarmVolume = Math.min(1, Math.max(0.1, parseFloat(document.getElementById('adm-acc-vol')?.value || '0.8') || 0.8));
+                adminCfg.vibrationEnabled = Boolean(document.getElementById('adm-acc-vib')?.checked);
+                await commitAdminCfgConfirmed('Pengaturan Alarm & Notifikasi');
+            };
+
+            window.__admSaveAccWa = async function () {
+                adminCfg.waMain = String(document.getElementById('adm-acc-wa-main')?.value || '').trim() || '6285624736602';
+                adminCfg.waSupport = String(document.getElementById('adm-acc-wa-support')?.value || '').trim() || adminCfg.waMain;
+                adminCfg.waAdmin = String(document.getElementById('adm-acc-wa-admin')?.value || '').trim() || '085624736602';
+                await commitAdminCfgConfirmed('Pengaturan WhatsApp & Kontak');
+            };
+
+            window.__admSaveAccOps = async function () {
+                adminCfg.appName = String(document.getElementById('adm-acc-appname')?.value || 'OLENG GO').trim();
+                adminCfg.serviceArea = String(document.getElementById('adm-acc-area')?.value || 'Kecamatan Lengkong, Sukabumi').trim();
+                adminCfg.operationalHours = String(document.getElementById('adm-acc-hours')?.value || '06:00 - 23:00 WIB').trim();
+                adminCfg.serviceOpen = Boolean(document.getElementById('adm-acc-open')?.checked);
+                adminCfg.promoInfo = String(document.getElementById('adm-acc-promo')?.value || '').trim();
+                await commitAdminCfgConfirmed('Pengaturan Operasional');
+            };
+
+            window.__admSaveAccSec = async function () {
+                const pw = String(document.getElementById('adm-acc-newpass')?.value || '').trim();
+                adminCfg.otpEnabled = Boolean(document.getElementById('adm-acc-otp')?.checked);
+                if (pw && typeof db !== 'undefined' && Array.isArray(db.users)) {
+                    const adm = db.users.find(u => u.role === 'admin' || (typeof normalizePhone === 'function' && normalizePhone(u.phone) === '085624736602'));
+                    if (adm) adm.password = pw;
+                    if (currentUser && currentUser.role === 'admin') currentUser.password = pw;
+                }
+                await commitAdminCfgConfirmed('Pengaturan Keamanan');
+            };
+
+            window.__admExportBackupFile = function () {
+                const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), db, adminCfg }, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `oleng-go-backup-${Date.now()}.json`;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                showToast('Backup JSON berhasil diunduh.', 'success');
+            };
+
+            window.__admLogMaintenance = async function () {
+                adminCfg.maintenanceLogs.unshift({ note: `Pemeliharaan oleh ${currentUser?.name || 'Admin SIMADU'}`, time: new Date().toLocaleString('id-ID') });
+                await commitAdminCfgConfirmed('Catatan Pemeliharaan');
+            };
+
+            window.renderAdminSettingsPage = function (container) {
+                if (!container || !isRealAdminUser()) return;
+                const listItems = [
+                    { key: 'alarm', icon: 'fa-bell', title: 'A. Alarm dan Notifikasi', sub: `Alarm: ${alarmEnabled ? 'ON' : 'OFF'} • Suara: ${adminCfg.alarmTone}` },
+                    { key: 'wa', icon: 'fa-brands fa-whatsapp', title: 'B. WhatsApp dan Kontak', sub: `WA Utama: ${adminCfg.waMain}` },
+                    { key: 'gps', icon: 'fa-location-dot', title: 'C. GPS dan Lokasi', sub: `Izin: ${localStorage.getItem('oleng_perm_gps') || 'belum_dicek'}` },
+                    { key: 'db', icon: 'fa-database', title: 'D. Database dan Server', sub: `${navigator.onLine ? 'Online' : 'Offline'} • ${lastSyncTimeLabel}` },
+                    { key: 'ops', icon: 'fa-sliders', title: 'E. Operasional Aplikasi', sub: `${adminCfg.serviceOpen ? 'BUKA' : 'TUTUP'} • ${adminCfg.serviceArea}` },
+                    { key: 'sec', icon: 'fa-shield-halved', title: 'F. Keamanan', sub: `OTP: ${adminCfg.otpEnabled ? 'ON' : 'OFF'}` },
+                    { key: 'maint', icon: 'fa-box-archive', title: 'G. Backup dan Pemeliharaan', sub: 'Ekspor data & riwayat pemeliharaan' }
+                ];
+
+                container.innerHTML = `
+                    <div class="p-4 space-y-4 pb-28 bg-white min-h-full">
+                        <div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex items-center justify-between gap-2">
+                            <div>
+                                <span class="text-[10px] text-[#FF9800] font-black uppercase block"><i class="fa-solid fa-gear mr-1"></i> PENGATURAN ADMIN</span>
+                                <h2 class="text-sm font-black">Daftar Pengaturan (Klik untuk Membuka)</h2>
+                            </div>
+                            <button type="button" onclick="renderDashboardContent('admin-dash', false)" class="text-xs font-bold text-[#FF9800] cursor-pointer"><i class="fa-solid fa-arrow-left"></i> Dashboard</button>
+                        </div>
+
+                        <div class="space-y-2.5">
+                            ${listItems.map(item => {
+                                const isOpen = expandedAdminSection === item.key;
+                                return `
+                                    <div class="bg-white rounded-2xl border-2 ${isOpen ? 'border-[#FF7900]' : 'border-neutral-200'} overflow-hidden shadow-2xs">
+                                        <button type="button" onclick="toggleAdminAccordionItem('${item.key}')" class="w-full p-3.5 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-[#F3F3F3] transition">
+                                            <div class="flex items-center gap-3 min-w-0">
+                                                <div class="w-9 h-9 rounded-xl bg-[#171717] text-[#FF9800] flex items-center justify-center shrink-0">
+                                                    <i class="${item.icon.includes('fa-brands') ? item.icon : 'fa-solid ' + item.icon} text-xs"></i>
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <span class="text-xs font-black text-[#171717] block truncate">${item.title}</span>
+                                                    <span class="text-[10px] text-neutral-500 font-semibold block truncate">${item.sub}</span>
+                                                </div>
+                                            </div>
+                                            <i class="fa-solid fa-chevron-${isOpen ? 'up text-[#FF7900]' : 'down text-neutral-400'} text-xs shrink-0"></i>
+                                        </button>
+                                        ${isOpen ? renderAdminAccordionBody(item.key) : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        ${typeof getSimaduBrandFooterHTML === 'function' ? getSimaduBrandFooterHTML() : ''}
+                    </div>
+                `;
+            };
+
+            window.renderCustomerSettingsPage = function (container) {
+                if (!container || !currentUser) return;
+                custPrefs = loadCustomerAccountPrefs();
+                const supportWa = getSupportWhatsAppNumber();
+                const primaryAddr = custPrefs.addresses.find(a => a.isPrimary) || custPrefs.addresses[0];
+                const tabs = [
+                    { key: 'profile', label: 'Profil Saya' },
+                    { key: 'address', label: 'Alamat & Lokasi' },
+                    { key: 'notif', label: 'Notifikasi' },
+                    { key: 'security', label: 'Keamanan' },
+                    { key: 'help', label: 'Bantuan' },
+                    { key: 'about', label: 'Tentang & Tampilan' }
+                ];
+
+                let bodyHtml = '';
+                if (activeCustTab === 'address') {
+                    const ed = editingAddrId ? custPrefs.addresses.find(a => a.id === editingAddrId) : null;
+                    bodyHtml = `
+                        <div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3 text-xs">
+                            <h3 class="font-black text-xs uppercase border-b pb-2">B. Alamat dan Lokasi</h3>
+                            <p class="text-[10px] text-neutral-600">Kontrol GPS, titik jemput/tujuan, satelit, dan Google Maps tetap berada di halaman peta &amp; pemesanan.</p>
+                            <input type="text" id="cust-addr-label" value="${ed?.label || ''}" placeholder="Label alamat (Rumah / Kantor)" class="w-full p-2.5 border-2 rounded-2xl font-bold">
+                            <input type="text" id="cust-addr-detail" value="${ed?.detail || ''}" placeholder="Detail alamat..." class="w-full p-2.5 border-2 rounded-2xl">
+                            <button type="button" onclick="window.__custSaveAddr()" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">${ed ? 'Simpan Perubahan Alamat' : '+ Tambah Alamat Baru'}</button>
+                            <div class="space-y-2 pt-2 border-t">
+                                ${custPrefs.addresses.map(a => `
+                                    <div class="p-3 bg-[#F3F3F3] rounded-2xl border ${a.isPrimary ? 'border-[#FF7900]' : 'border-neutral-200'} space-y-1">
+                                        <div class="flex justify-between items-center">
+                                            <b>${a.label} ${a.isPrimary ? '<span class="text-[9px] bg-[#FF7900] text-white px-2 py-0.5 rounded ml-1">Utama</span>' : ''}</b>
+                                            <button type="button" onclick="window.__custFavAddr('${a.id}')" class="cursor-pointer ${a.isFavorite ? 'text-rose-600' : 'text-neutral-400'}"><i class="fa-${a.isFavorite ? 'solid' : 'regular'} fa-heart"></i></button>
+                                        </div>
+                                        <p class="text-[11px] text-neutral-700">${a.detail}</p>
+                                        <div class="flex gap-1.5 pt-1 flex-wrap">
+                                            ${!a.isPrimary ? `<button type="button" onclick="window.__custPrimaryAddr('${a.id}')" class="px-2 py-1 bg-[#171717] text-[#FF9800] rounded-lg text-[10px] font-bold cursor-pointer">Atur Utama</button>` : ''}
+                                            <button type="button" onclick="editingAddrId='${a.id}';renderCustomerSettingsPage(document.getElementById('main-content'))" class="px-2 py-1 bg-white border rounded-lg text-[10px] cursor-pointer">Edit</button>
+                                            ${custPrefs.addresses.length > 1 ? `<button type="button" onclick="window.__custDelAddr('${a.id}')" class="px-2 py-1 bg-rose-100 text-rose-800 rounded-lg text-[10px] cursor-pointer">Hapus</button>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                } else if (activeCustTab === 'notif') {
+                    bodyHtml = `
+                        <div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3 text-xs">
+                            <h3 class="font-black text-xs uppercase border-b pb-2">C. Notifikasi</h3>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Pesanan</span><input type="checkbox" id="cset-n-order" ${custPrefs.notifOrder ? 'checked' : ''}></label>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Status Pesanan</span><input type="checkbox" id="cset-n-status" ${custPrefs.notifOrderStatus ? 'checked' : ''}></label>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Chat</span><input type="checkbox" id="cset-n-chat" ${custPrefs.notifChat ? 'checked' : ''}></label>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Promosi</span><input type="checkbox" id="cset-n-promo" ${custPrefs.notifPromo ? 'checked' : ''}></label>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Suara Notifikasi</span><input type="checkbox" id="cset-n-sound" ${custPrefs.notifSound ? 'checked' : ''}></label>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Getaran</span><input type="checkbox" id="cset-n-vib" ${custPrefs.notifVibrate ? 'checked' : ''}></label>
+                            <button type="button" onclick="window.__custSaveNotif()" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Notifikasi</button>
+                        </div>
+                    `;
+                } else if (activeCustTab === 'security') {
+                    bodyHtml = `
+                        <div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3 text-xs">
+                            <h3 class="font-black text-xs uppercase border-b pb-2">D. Keamanan Akun</h3>
+                            <input type="password" id="cset-new-pass" placeholder="Ganti password baru" class="w-full p-2.5 border-2 rounded-2xl font-bold">
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Pengaturan OTP</span><input type="checkbox" id="cset-otp" ${custPrefs.otpEnabled ? 'checked' : ''}></label>
+                            <p class="text-[11px] bg-[#F3F3F3] p-2.5 rounded-xl">Sesi login aktif: <b>${currentUser.name}</b> (${currentUser.phone || '-'})</p>
+                            <button type="button" onclick="window.__custSaveSec()" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Keamanan</button>
+                            <button type="button" onclick="handleLogout()" class="w-full py-3 bg-rose-600 text-white font-black rounded-2xl cursor-pointer">Logout Akun</button>
+                        </div>
+                    `;
+                } else if (activeCustTab === 'help') {
+                    bodyHtml = `
+                        <div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-2.5 text-xs">
+                            <h3 class="font-black text-xs uppercase border-b pb-2">E. Bantuan dan Layanan</h3>
+                            <a href="https://wa.me/${supportWa}?text=${encodeURIComponent('Halo Bantuan OLENG GO (' + supportWa + '), saya ' + currentUser.name + ' butuh bantuan.')}" target="_blank" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl block text-center">Hubungi Admin via WhatsApp</a>
+                            <button type="button" onclick="showToast('Pusat bantuan siap melayani warga Lengkong.', 'info')" class="w-full py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left font-bold cursor-pointer">Pusat Bantuan</button>
+                            <button type="button" onclick="showToast('Pilih Ojek, Makanan, atau OLENG MARKET di beranda.', 'info')" class="w-full py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left font-bold cursor-pointer">Panduan Penggunaan OLENGGO</button>
+                            <button type="button" onclick="window.__custIssue()" class="w-full py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left font-bold cursor-pointer">Laporkan Masalah</button>
+                            <button type="button" onclick="showToast('Ketentuan layanan berlaku untuk Kecamatan Lengkong.', 'info')" class="w-full py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left font-bold cursor-pointer">Ketentuan Layanan</button>
+                        </div>
+                    `;
+                } else if (activeCustTab === 'about') {
+                    bodyHtml = `
+                        <div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3 text-xs">
+                            <h3 class="font-black text-xs uppercase border-b pb-2">F. Tentang OLENGGO &amp; Tampilan</h3>
+                            <div class="bg-[#F3F3F3] p-3 rounded-2xl space-y-1">
+                                <p><b>Aplikasi:</b> ${adminCfg.appName || 'OLENG GO'}</p>
+                                <p><b>Versi:</b> OLENG GO v2</p>
+                                <p><b>Wilayah Layanan:</b> ${adminCfg.serviceArea || 'Kecamatan Lengkong, Sukabumi'}</p>
+                                <p><b>Identitas:</b> Powered by SIMADU</p>
+                            </div>
+                            <select id="cset-font-size" class="w-full p-2.5 border-2 rounded-2xl font-bold bg-white">
+                                <option value="normal" ${custPrefs.fontSize === 'normal' ? 'selected' : ''}>Ukuran Tulisan Standar</option>
+                                <option value="besar" ${custPrefs.fontSize === 'besar' ? 'selected' : ''}>Ukuran Tulisan Besar</option>
+                            </select>
+                            <button type="button" onclick="custPrefs.fontSize=document.getElementById('cset-font-size').value;saveCustomerAccountPrefs('Preferensi tampilan tersimpan!')" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Tampilan</button>
+                        </div>
+                    `;
+                } else {
+                    bodyHtml = `
+                        <div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3 text-xs">
+                            <h3 class="font-black text-xs uppercase border-b pb-2">A. Profil Saya</h3>
+                            <div class="flex items-center gap-3">
+                                <img id="cset-photo-prev" src="${draftCustPhoto || currentUser.photo || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900]">
+                                <input type="file" accept="image/*" onchange="window.__custPickPhoto(event)" class="text-[11px]">
+                            </div>
+                            <input type="text" id="cset-name" value="${currentUser.name || ''}" class="w-full p-2.5 border-2 rounded-2xl font-bold">
+                            <input type="tel" id="cset-phone" value="${currentUser.phone || ''}" class="w-full p-2.5 border-2 rounded-2xl font-bold bg-[#F3F3F3]">
+                            <input type="email" id="cset-email" value="${custPrefs.email || ''}" placeholder="Email (opsional)" class="w-full p-2.5 border-2 rounded-2xl">
+                            <p class="text-[11px] bg-[#F3F3F3] p-2.5 rounded-xl">Alamat Utama: <b>${primaryAddr?.detail || currentUser.address || 'Kecamatan Lengkong, Sukabumi'}</b></p>
+                            <button type="button" onclick="window.__custSaveProf()" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Edit Profil</button>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = `
+                    <div class="p-4 space-y-4 pb-28 bg-white min-h-full">
+                        <div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex justify-between items-center gap-2">
+                            <div>
+                                <span class="text-[10px] text-[#FF9800] font-black uppercase block"><i class="fa-solid fa-gear mr-1"></i> PENGATURAN AKUN KONSUMEN</span>
+                                <h2 class="text-sm font-black">${currentUser.name} • ${currentUser.phone || '-'}</h2>
+                            </div>
+                            <button type="button" onclick="renderDashboardContent('home', false)" class="text-xs font-bold text-[#FF9800] cursor-pointer"><i class="fa-solid fa-arrow-left"></i> Beranda</button>
+                        </div>
+                        <div class="flex gap-1.5 overflow-x-auto hide-scrollbar">
+                            ${tabs.map(t => `<button type="button" onclick="activeCustTab='${t.key}';editingAddrId=null;renderCustomerSettingsPage(document.getElementById('main-content'))" class="px-3 py-1.5 rounded-xl text-[10px] font-black cursor-pointer shrink-0 ${activeCustTab === t.key ? 'bg-[#FF7900] text-white' : 'bg-[#F3F3F3]'}">${t.label}</button>`).join('')}
+                        </div>
+                        ${bodyHtml}
+                        ${typeof getSimaduBrandFooterHTML === 'function' ? getSimaduBrandFooterHTML() : ''}
+                    </div>
+                `;
+            };
+
+            window.renderPartnerSettingsPage = function (container, roleMode = 'driver') {
+                if (!container || !currentUser) return;
+                const isDriver = roleMode === 'driver';
+                const pPrefs = loadPartnerAccountPrefs(roleMode);
+                const supportWa = getSupportWhatsAppNumber();
+                const drvObj = isDriver ? (db.drivers || []).find(d => (typeof normalizePhone === 'function' && normalizePhone(d.phone) === normalizePhone(currentUser.phone)) || normalizeMatchKey(d.name) === normalizeMatchKey(currentUser.name)) : null;
+                const mrcObj = !isDriver ? (db.merchants || []).find(m => String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID && ((typeof normalizePhone === 'function' && normalizePhone(m.whatsapp) === normalizePhone(currentUser.phone)) || normalizeMatchKey(m.name) === normalizeMatchKey(currentUser.shopName))) : null;
+
+                container.innerHTML = `
+                    <div class="p-4 space-y-4 pb-28 bg-white min-h-full">
+                        <div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex justify-between items-center gap-2">
+                            <div>
+                                <span class="text-[10px] text-[#FF9800] font-black uppercase block"><i class="fa-solid fa-gear mr-1"></i> PENGATURAN ${isDriver ? 'DRIVER' : 'TOKO'}</span>
+                                <h2 class="text-sm font-black">${currentUser.name}</h2>
+                            </div>
+                            <button type="button" onclick="renderDashboardContent('${isDriver ? 'home' : 'merchant-manage'}', false)" class="text-xs font-bold text-[#FF9800] cursor-pointer"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3 text-xs">
+                            <h3 class="font-black text-xs uppercase border-b pb-2">${isDriver ? 'Profil & Kendaraan Driver' : 'Profil & Usaha Toko'}</h3>
+                            ${isDriver ? `
+                                <div><label class="text-[10px] font-extrabold uppercase">Info Kendaraan</label><input type="text" id="pset-vehicle" value="${pPrefs.vehicleNote || drvObj?.vehicle || currentUser.vehicle || ''}" class="w-full mt-1 p-2.5 border-2 rounded-2xl font-bold"></div>
+                                <p><b>Status Operasional:</b> ${drvObj?.status || 'Online'}</p>
+                            ` : `
+                                <p><b>Nama Toko:</b> ${mrcObj?.name || currentUser.shopName || currentUser.name}</p>
+                                <p><b>Status Usaha:</b> ${mrcObj?.status || 'Buka'} • <b>Jam:</b> ${mrcObj?.operationalHours || '08:00 - 21:00 WIB'}</p>
+                            `}
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Pesanan</span><input type="checkbox" id="pset-n-order" ${pPrefs.notifOrder ? 'checked' : ''}></label>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Chat</span><input type="checkbox" id="pset-n-chat" ${pPrefs.notifChat ? 'checked' : ''}></label>
+                            <div><label class="text-[10px] font-extrabold uppercase">Ganti Password (Opsional)</label><input type="password" id="pset-pass" placeholder="Sandi baru..." class="w-full mt-1 p-2.5 border-2 rounded-2xl"></div>
+                            <button type="button" onclick="window.__savePartnerSet('${roleMode}')" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Pengaturan ${isDriver ? 'Driver' : 'Toko'}</button>
+                            <div class="grid grid-cols-2 gap-2 pt-1">
+                                <a href="https://wa.me/${supportWa}" target="_blank" class="py-2.5 bg-[#171717] text-[#FF9800] font-black rounded-2xl text-center">Bantuan WA</a>
+                                <button type="button" onclick="handleLogout()" class="py-2.5 bg-rose-600 text-white font-black rounded-2xl cursor-pointer">Logout</button>
+                            </div>
+                        </div>
+                        ${typeof getSimaduBrandFooterHTML === 'function' ? getSimaduBrandFooterHTML() : ''}
+                    </div>
+                `;
+            };
+
+            window.__savePartnerSet = function (roleMode) {
+                const cur = loadPartnerAccountPrefs(roleMode);
+                cur.notifOrder = Boolean(document.getElementById('pset-n-order')?.checked);
+                cur.notifChat = Boolean(document.getElementById('pset-n-chat')?.checked);
+                const vehEl = document.getElementById('pset-vehicle');
+                if (vehEl) {
+                    cur.vehicleNote = String(vehEl.value || '').trim();
+                    const drv = (db.drivers || []).find(d => (typeof normalizePhone === 'function' && normalizePhone(d.phone) === normalizePhone(currentUser.phone)) || normalizeMatchKey(d.name) === normalizeMatchKey(currentUser.name));
+                    if (drv && cur.vehicleNote) drv.vehicle = cur.vehicleNote;
+                    if (currentUser) currentUser.vehicle = cur.vehicleNote;
+                }
+                const pw = String(document.getElementById('pset-pass')?.value || '').trim();
+                if (pw && currentUser) currentUser.password = pw;
+                savePartnerAccountPrefs(roleMode, cur, 'Pengaturan mitra tersimpan!');
+            };
+
+            window.__custPickPhoto = async function (e) { const f = e.target.files?.[0]; if (!f) return; draftCustPhoto = await compressImageFileToDataUrl(f, 320, 0.72); const p = document.getElementById('cset-photo-prev'); if (p) p.src = draftCustPhoto; };
+            window.__custSaveProf = function () { const n = String(document.getElementById('cset-name')?.value || '').trim(); const ph = normalizePhone(document.getElementById('cset-phone')?.value || ''); if (!n || ph.length < 9) return showToast('Nama & nomor WA wajib diisi.', 'error'); currentUser.name = n; currentUser.phone = ph; if (draftCustPhoto) currentUser.photo = draftCustPhoto; draftCustPhoto = null; custPrefs.email = String(document.getElementById('cset-email')?.value || '').trim(); saveCustomerAccountPrefs('Profil tersimpan!'); window.renderCustomerSettingsPage(document.getElementById('main-content')); };
+            window.__custSaveAddr = function () { const lbl = String(document.getElementById('cust-addr-label')?.value || '').trim() || 'Alamat'; const det = String(document.getElementById('cust-addr-detail')?.value || '').trim(); if (!det) return showToast('Alamat wajib diisi.', 'error'); if (editingAddrId) { const t = custPrefs.addresses.find(a => a.id === editingAddrId); if (t) { t.label = lbl; t.detail = det; if (t.isPrimary) currentUser.address = det; } editingAddrId = null; } else { const hasP = custPrefs.addresses.some(a => a.isPrimary); custPrefs.addresses.push({ id: 'addr-' + Date.now(), label: lbl, detail: det, isFavorite: false, isPrimary: !hasP }); if (!hasP) currentUser.address = det; } saveCustomerAccountPrefs('Alamat tersimpan!'); window.renderCustomerSettingsPage(document.getElementById('main-content')); };
+            window.__custFavAddr = function (id) { const a = custPrefs.addresses.find(x => x.id === id); if (a) { a.isFavorite = !a.isFavorite; saveCustomerAccountPrefs('Favorit diperbarui.'); window.renderCustomerSettingsPage(document.getElementById('main-content')); } };
+            window.__custPrimaryAddr = function (id) { custPrefs.addresses.forEach(a => { a.isPrimary = a.id === id; if (a.isPrimary) currentUser.address = a.detail; }); saveCustomerAccountPrefs('Alamat utama diperbarui!'); window.renderCustomerSettingsPage(document.getElementById('main-content')); };
+            window.__custDelAddr = function (id) { custPrefs.addresses = custPrefs.addresses.filter(a => a.id !== id); if (!custPrefs.addresses.some(a => a.isPrimary) && custPrefs.addresses[0]) { custPrefs.addresses[0].isPrimary = true; currentUser.address = custPrefs.addresses[0].detail; } saveCustomerAccountPrefs('Alamat dihapus.'); window.renderCustomerSettingsPage(document.getElementById('main-content')); };
+            window.__custSaveNotif = function () { custPrefs.notifOrder = Boolean(document.getElementById('cset-n-order')?.checked); custPrefs.notifOrderStatus = Boolean(document.getElementById('cset-n-status')?.checked); custPrefs.notifChat = Boolean(document.getElementById('cset-n-chat')?.checked); custPrefs.notifPromo = Boolean(document.getElementById('cset-n-promo')?.checked); custPrefs.notifSound = Boolean(document.getElementById('cset-n-sound')?.checked); custPrefs.notifVibrate = Boolean(document.getElementById('cset-n-vib')?.checked); saveCustomerAccountPrefs('Preferensi notifikasi tersimpan!'); };
+            window.__custSaveSec = function () { const pw = String(document.getElementById('cset-new-pass')?.value || '').trim(); custPrefs.otpEnabled = Boolean(document.getElementById('cset-otp')?.checked); if (pw) currentUser.password = pw; saveCustomerAccountPrefs('Keamanan akun diperbarui!'); };
+            window.__custIssue = function () { const txt = (prompt('Tuliskan masalah Anda:') || '').trim(); if (txt && typeof addAccountNotification === 'function') { addAccountNotification('Laporan Masalah Konsumen', `${currentUser.name}: ${txt}`, 'Admin SIMADU', 'issue-' + Date.now()); showToast('Laporan terkirim.', 'success'); } };
+
+            function syncHeaderGearButton() {
+                if (!currentUser) return;
+                const mainEl = document.getElementById('main-content');
+                if (!mainEl) return;
+                const logoutBtn = mainEl.querySelector('button[onclick="handleLogout()"]');
+                if (!logoutBtn || !logoutBtn.parentElement) return;
+                const eff = getEffectiveRole();
+                const tabName = eff === 'admin' ? 'admin-settings' : eff === 'driver' ? 'driver-settings' : eff === 'merchant' ? 'merchant-settings' : 'customer-settings';
+                const btnTitle = eff === 'admin' ? 'Pengaturan Admin' : eff === 'driver' ? 'Pengaturan Driver' : eff === 'merchant' ? 'Pengaturan Toko' : 'Pengaturan Akun';
+                let btn = document.getElementById('role-header-settings-btn');
+                if (btn) {
+                    btn.setAttribute('onclick', `openRoleSettingsPage()`);
+                    btn.setAttribute('title', btnTitle);
+                    return;
+                }
+                logoutBtn.insertAdjacentHTML('beforebegin', `
+                    <button id="role-header-settings-btn" type="button" onclick="openRoleSettingsPage()" title="${btnTitle}" class="p-2.5 bg-[#292929] hover:bg-[#FF7900] text-[#FF9800] hover:text-white rounded-2xl cursor-pointer border border-[#FF7900]/60 transition shrink-0">
+                        <i class="fa-solid fa-gear text-sm"></i>
+                    </button>
+                `);
+            }
+
+            const origCustHome = window.renderCustomerHome;
+            if (typeof origCustHome === 'function') {
+                window.renderCustomerHome = function (c) { origCustHome(c); setTimeout(syncHeaderGearButton, 45); };
+            }
+
+            const origAdminDash = window.renderAdminDash;
+            if (typeof origAdminDash === 'function') {
+                window.renderAdminDash = function (c) { origAdminDash(c); setTimeout(syncHeaderGearButton, 45); };
+            }
+
+            const origMerchantManage = window.renderMerchantManage;
+            if (typeof origMerchantManage === 'function') {
+                window.renderMerchantManage = function (c) { origMerchantManage(c); setTimeout(syncHeaderGearButton, 45); };
+            }
+
+            const origDashContent = window.renderDashboardContent;
+            if (typeof origDashContent === 'function') {
+                window.renderDashboardContent = function (tab, recordHistory = true) {
+                    if (tab === 'admin-settings') {
+                        if (!isRealAdminUser()) return origDashContent('home', recordHistory);
+                        if (typeof currentSubTab !== 'undefined' && currentSubTab !== tab && recordHistory && Array.isArray(tabNavigationHistory) && tabNavigationHistory[tabNavigationHistory.length - 1] !== tab) tabNavigationHistory.push(tab);
+                        currentSubTab = tab;
+                        localStorage.setItem('oleng_last_tab', tab);
+                        document.getElementById('view-merchant-detail')?.classList.add('hidden');
+                        window.renderAdminSettingsPage(document.getElementById('main-content'));
+                        return;
+                    }
+                    if (tab === 'customer-settings' || tab === 'driver-settings' || tab === 'merchant-settings') {
+                        if (!currentUser) return;
+                        if (typeof currentSubTab !== 'undefined' && currentSubTab !== tab && recordHistory && Array.isArray(tabNavigationHistory) && tabNavigationHistory[tabNavigationHistory.length - 1] !== tab) tabNavigationHistory.push(tab);
+                        currentSubTab = tab;
+                        localStorage.setItem('oleng_last_tab', tab);
+                        document.getElementById('view-merchant-detail')?.classList.add('hidden');
+                        const target = document.getElementById('main-content');
+                        if (tab === 'driver-settings') window.renderPartnerSettingsPage(target, 'driver');
+                        else if (tab === 'merchant-settings') window.renderPartnerSettingsPage(target, 'merchant');
+                        else window.renderCustomerSettingsPage(target);
+                        return;
+                    }
+                    origDashContent(tab, recordHistory);
+                    setTimeout(syncHeaderGearButton, 60);
+                };
+            }
+
+            if (typeof currentUser !== 'undefined' && currentUser) setTimeout(syncHeaderGearButton, 60);
+        })();
+    </script>
     </script>
 </body>
 </html>
