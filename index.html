@@ -5383,7 +5383,7 @@
   setTimeout(hookOrdersRealtime, 500);
 })();
 </script>
-<script id="oleng-tariff-commission-panel-v4">
+<script id="oleng-e-tariff-card-v5">
 (function () {
   const AUTO_CFG_KEY = "oleng_admin_auto_ops_v1";
   let debounceTimer = null;
@@ -5394,8 +5394,8 @@
       unacceptedTimeoutSec: 120,
       autoReassignOnReject: true,
       autoCompleteDelivered: false,
-      commissionPercent: 5,
-      baseFareRp: 8000,
+      commissionPercent: 10,
+      baseFareRp: 5000,
       perKmFareRp: 2500
     };
   }
@@ -5444,38 +5444,18 @@
     return isAdminAcc && viewMode === "admin";
   }
 
-  function isElementVisible(el) {
-    if (!el || !el.getBoundingClientRect) return false;
-    const rect = el.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return false;
-    const st = typeof getComputedStyle === "function" ? getComputedStyle(el) : null;
-    if (st && (st.display === "none" || st.visibility === "hidden")) return false;
-    return true;
-  }
-
-  function findTariffCommissionPanel(main) {
-    // Cari elemen paling spesifik yang berkaitan dengan Tarif dan/atau Komisi dan sedang terlihat
-    const all = Array.from(main.querySelectorAll("div, section, form"));
-    let best = null;
-    let bestLen = Infinity;
-
-    for (const el of all) {
-      if (!el || el.id === "main-content" || el.id === "oleng-tariff-auto-section") continue;
-      if (el.closest && el.closest("#oleng-tariff-auto-section")) continue;
-      const txt = String(el.textContent || "");
-      const hasTariff = /tarif/i.test(txt);
-      const hasCommission = /komisi/i.test(txt);
-      if (!hasTariff && !hasCommission) continue;
-      if (!isElementVisible(el)) continue;
-
-      const len = txt.trim().length;
-      // Hindari pembungkus seluruh halaman yang terlalu besar
-      if (len >= 20 && len < 1400 && len < bestLen) {
-        best = el;
-        bestLen = len;
+  function findSaveTariffButton(main) {
+    const btns = Array.from(main.querySelectorAll("button"));
+    for (const btn of btns) {
+      const txt = String(btn.textContent || "").trim();
+      if (/simpans+tarifs*(&|dan)?s*komisi/i.test(txt)) {
+        const rect = btn.getBoundingClientRect ? btn.getBoundingClientRect() : null;
+        if (rect && rect.width > 0 && rect.height > 0) {
+          return btn;
+        }
       }
     }
-    return best;
+    return null;
   }
 
   function syncInputsIfNotFocused(section, cfg) {
@@ -5484,8 +5464,8 @@
       "#op-auto-cancel": { type: "checkbox", val: Boolean(cfg.autoCancelUnaccepted) },
       "#op-auto-reassign": { type: "checkbox", val: Boolean(cfg.autoReassignOnReject) },
       "#op-timeout-sec": { type: "number", val: Number(cfg.unacceptedTimeoutSec || 120) },
-      "#op-commission-pct": { type: "number", val: Number(cfg.commissionPercent || 5) },
-      "#op-base-fare": { type: "number", val: Number(cfg.baseFareRp || 8000) },
+      "#op-commission-pct": { type: "number", val: Number(cfg.commissionPercent || 10) },
+      "#op-base-fare": { type: "number", val: Number(cfg.baseFareRp || 5000) },
       "#op-per-km": { type: "number", val: Number(cfg.perKmFareRp || 2500) }
     };
 
@@ -5500,10 +5480,12 @@
     });
   }
 
-  function placeInsideTariffCommissionPanel() {
-    document.querySelectorAll("#oleng-admin-auto-ops-card").forEach(el => el.remove());
+  function mountInsideETariffCard() {
+    document.querySelectorAll("#oleng-admin-auto-ops-card, #oleng-tariff-auto-section").forEach(el => {
+      if (el.id !== "oleng-e-tariff-auto-block") el.remove();
+    });
 
-    const existing = document.getElementById("oleng-tariff-auto-section");
+    const existing = document.getElementById("oleng-e-tariff-auto-block");
     if (!isAdminNow()) {
       if (existing) existing.remove();
       return;
@@ -5515,25 +5497,24 @@
       return;
     }
 
-    const targetPanel = findTariffCommissionPanel(main);
-    if (!targetPanel) {
-      // Jangan diletakkan di bawah footer SIMADU jika panel tarif & komisi belum terbuka/tampil
+    const saveBtn = findSaveTariffButton(main);
+    if (!saveBtn || !saveBtn.parentElement) {
       if (existing) existing.remove();
       return;
     }
 
-    let section = existing;
-    if (!section) {
-      section = document.createElement("div");
-      section.id = "oleng-tariff-auto-section";
-      section.className = "mt-3 pt-3 border-t border-[#E5E5E5] space-y-2.5";
-      section.innerHTML =
+    let block = existing;
+    if (!block) {
+      block = document.createElement("div");
+      block.id = "oleng-e-tariff-auto-block";
+      block.className = "mt-3 pt-3 mb-3 border-t border-[#E5E5E5] space-y-2.5";
+      block.innerHTML =
         '<div class="flex items-center justify-between gap-2">' +
           '<div>' +
-            '<div class="text-xs font-black text-[#191919]">Pembatalan Otomatis & Aturan Dispatch</div>' +
-            '<div class="text-[11px] text-[#777777]">Batas waktu respon ojek, pengalihan otomatis, dan tarif/komisi</div>' +
+            '<div class="text-xs font-black text-[#191919]">Pembatalan Otomatis & Batas Respon</div>' +
+            '<div class="text-[11px] text-[#777777]">Atur pembatalan otomatis tanpa respon ojek dan waktu tunggu</div>' +
           '</div>' +
-          '<span class="px-2 py-0.5 rounded-lg bg-[#191919] text-white text-[10px] font-bold">TARIF & KOMISI</span>' +
+          '<span class="px-2 py-0.5 rounded-lg bg-[#F5F5F5] text-[#191919] text-[10px] font-bold">OTOMATIS</span>' +
         '</div>' +
         '<label class="flex items-center justify-between gap-3 py-1 text-xs font-bold text-[#191919]">' +
           '<span class="leading-snug">Batalkan otomatis jika tidak ada ojek merespon</span>' +
@@ -5543,66 +5524,50 @@
           '<span class="leading-snug">Alihkan otomatis jika driver menolak/menghilang</span>' +
           '<input id="op-auto-reassign" type="checkbox" class="w-4 h-4 shrink-0 accent-[#F58220]">' +
         '</label>' +
-        '<div class="grid grid-cols-2 gap-2">' +
-          '<div>' +
-            '<label class="block text-[11px] font-bold text-[#777777] mb-1">Batas Respon (detik)</label>' +
-            '<input id="op-timeout-sec" type="number" min="15" max="900" class="w-full px-2.5 py-2 rounded-xl border border-[#E5E5E5] text-xs font-bold text-[#191919] bg-white">' +
-          '</div>' +
-          '<div>' +
-            '<label class="block text-[11px] font-bold text-[#777777] mb-1">Komisi Sistem (%)</label>' +
-            '<input id="op-commission-pct" type="number" min="0" max="50" step="0.5" class="w-full px-2.5 py-2 rounded-xl border border-[#E5E5E5] text-xs font-bold text-[#191919] bg-white">' +
-          '</div>' +
+        '<div>' +
+          '<label class="block text-[11px] font-bold text-[#777777] mb-1">Batas Waktu Respon Ojek (detik)</label>' +
+          '<input id="op-timeout-sec" type="number" min="15" max="900" class="w-full px-2.5 py-2 rounded-xl border border-[#E5E5E5] text-xs font-bold text-[#191919] bg-white">' +
         '</div>' +
-        '<div class="grid grid-cols-2 gap-2">' +
-          '<div>' +
-            '<label class="block text-[11px] font-bold text-[#777777] mb-1">Tarif Dasar (Rp)</label>' +
-            '<input id="op-base-fare" type="number" min="0" step="500" class="w-full px-2.5 py-2 rounded-xl border border-[#E5E5E5] text-xs font-bold text-[#191919] bg-white">' +
-          '</div>' +
-          '<div>' +
-            '<label class="block text-[11px] font-bold text-[#777777] mb-1">Tarif per KM (Rp)</label>' +
-            '<input id="op-per-km" type="number" min="0" step="500" class="w-full px-2.5 py-2 rounded-xl border border-[#E5E5E5] text-xs font-bold text-[#191919] bg-white">' +
-          '</div>' +
-        '</div>' +
-        '<button type="button" id="op-save-auto-btn" class="w-full py-2.5 px-4 rounded-xl bg-[#F58220] text-white text-xs font-black cursor-pointer">Simpan Tarif & Pengaturan Otomatis</button>';
+        '<button type="button" id="op-save-auto-btn" class="w-full py-2 py-2.5 px-4 rounded-xl bg-[#191919] text-white text-xs font-black cursor-pointer">Simpan Pengaturan Otomatis</button>';
 
-      section.querySelector("#op-save-auto-btn")?.addEventListener("click", async () => {
-        const currentSaved = loadAutoConfig();
+      block.querySelector("#op-save-auto-btn")?.addEventListener("click", async () => {
+        const prev = loadAutoConfig();
         const nextCfg = {
-          autoCancelUnaccepted: Boolean(section.querySelector("#op-auto-cancel")?.checked),
-          unacceptedTimeoutSec: Math.max(15, Number(section.querySelector("#op-timeout-sec")?.value || 120)),
-          autoReassignOnReject: Boolean(section.querySelector("#op-auto-reassign")?.checked),
-          autoCompleteDelivered: Boolean(currentSaved.autoCompleteDelivered),
-          commissionPercent: Math.max(0, Number(section.querySelector("#op-commission-pct")?.value || 5)),
-          baseFareRp: Math.max(0, Number(section.querySelector("#op-base-fare")?.value || 8000)),
-          perKmFareRp: Math.max(0, Number(section.querySelector("#op-per-km")?.value || 2500))
+          autoCancelUnaccepted: Boolean(block.querySelector("#op-auto-cancel")?.checked),
+          unacceptedTimeoutSec: Math.max(15, Number(block.querySelector("#op-timeout-sec")?.value || 120)),
+          autoReassignOnReject: Boolean(block.querySelector("#op-auto-reassign")?.checked),
+          autoCompleteDelivered: Boolean(prev.autoCompleteDelivered),
+          commissionPercent: Number(prev.commissionPercent || 10),
+          baseFareRp: Number(prev.baseFareRp || 5000),
+          perKmFareRp: Number(prev.perKmFareRp || 2500)
         };
         await saveAutoConfig(nextCfg);
       });
     }
 
-    if (section.parentElement !== targetPanel) {
-      targetPanel.appendChild(section);
+    if (block.nextElementSibling !== saveBtn || block.parentElement !== saveBtn.parentElement) {
+      saveBtn.parentElement.insertBefore(block, saveBtn);
     }
 
-    syncInputsIfNotFocused(section, loadAutoConfig());
+    syncInputsIfNotFocused(block, loadAutoConfig());
   }
 
-  function schedulePlacement() {
+  function scheduleMount() {
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(placeInsideTariffCommissionPanel, 150);
+    debounceTimer = setTimeout(mountInsideETariffCard, 120);
   }
 
   const origDash = window.renderDashboardContent;
   if (typeof origDash === "function") {
     window.renderDashboardContent = function () {
       const r = origDash.apply(this, arguments);
-      schedulePlacement();
+      scheduleMount();
       return r;
     };
   }
 
-  document.addEventListener("click", schedulePlacement, { passive: true });
-  schedulePlacement();
+  document.addEventListener("click", scheduleMount, { passive: true });
+  scheduleMount();
 })();
 </script>
 </body>
