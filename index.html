@@ -66,7 +66,7 @@
   .oleng-card-orange { background: #FFFFFF; border: 2px solid #FF7900; border-radius: 22px; padding: 12px; box-shadow: 0 4px 14px rgba(255,121,0,0.10); }
   .oleng-sq-ico { width: 34px; height: 34px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; }
 </style>
-</head>
+
 <body class="h-full flex flex-col items-center justify-center bg-[#171717]">
 
     <div id="oleng-splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-[#171717] via-[#292929] to-[#FF7900] text-white transition-opacity duration-500">
@@ -4411,17 +4411,25 @@
   }
 })();
 </script>
-<script id="oleng-admin-banner-gallery-v4">
+<script id="oleng-strict-admin-mode-banner-v5">
 (function () {
   const BANNER_KEY = "oleng_global_main_banner_v1";
 
-  function isStrictAdmin() {
+  function isAdminAccount() {
     if (typeof currentUser === "undefined" || !currentUser) return false;
     const digits = String(currentUser.phone || "").replace(/D/g, "");
     const norm = typeof normalizePhone === "function"
       ? normalizePhone(currentUser.phone)
       : (digits.startsWith("62") ? "0" + digits.slice(2) : digits);
     return currentUser.role === "admin" || norm === "085624736602";
+  }
+
+  function isActiveAdminMode() {
+    if (!isAdminAccount()) return false;
+    if (typeof adminViewMode !== "undefined" && adminViewMode) {
+      return adminViewMode === "admin";
+    }
+    return currentUser.role === "admin";
   }
 
   function getSavedBannerUrl() {
@@ -4473,7 +4481,7 @@
   }
 
   async function saveBannerPermanent(dataUrl) {
-    if (!isStrictAdmin() || !dataUrl) return;
+    if (!isActiveAdminMode() || !dataUrl) return;
     localStorage.setItem(BANNER_KEY, dataUrl);
     if (typeof db !== "undefined" && db) {
       db.mainBanner = dataUrl;
@@ -4511,7 +4519,7 @@
       document.body.appendChild(input);
 
       input.addEventListener("change", function () {
-        if (!isStrictAdmin()) {
+        if (!isActiveAdminMode()) {
           input.value = "";
           return;
         }
@@ -4526,7 +4534,7 @@
     return input;
   }
 
-  function syncAdminOnlyBannerControl() {
+  function syncBannerByActiveMode() {
     const saved = getSavedBannerUrl();
     applyBannerToDom(saved);
 
@@ -4548,7 +4556,7 @@
     const box = targetImg.parentElement;
     if (!box) return;
 
-    if (!isStrictAdmin()) {
+    if (!isActiveAdminMode()) {
       box.style.cursor = "default";
       return;
     }
@@ -4565,7 +4573,7 @@
     const pill = ev.target && ev.target.closest ? ev.target.closest(".oleng-admin-banner-pill") : null;
     const bannerImg = ev.target && ev.target.closest ? ev.target.closest('img[data-oleng-home-banner="1"], img[alt*="Banner"]') : null;
     if (!pill && !bannerImg) return;
-    if (!isStrictAdmin()) {
+    if (!isActiveAdminMode()) {
       if (pill) pill.remove();
       return;
     }
@@ -4592,23 +4600,23 @@
   if (typeof origDash === "function") {
     window.renderDashboardContent = function () {
       const res = origDash.apply(this, arguments);
-      setTimeout(syncAdminOnlyBannerControl, 90);
+      setTimeout(syncBannerByActiveMode, 90);
       return res;
     };
   }
 
-  for (const fnName of ["renderCustomerHome", "renderAdminDash"]) {
+  for (const fnName of ["renderCustomerHome", "renderAdminDash", "renderDashboardNavigation"]) {
     const fn = window[fnName];
     if (typeof fn === "function") {
       window[fnName] = function () {
         const res = fn.apply(this, arguments);
-        setTimeout(syncAdminOnlyBannerControl, 90);
+        setTimeout(syncBannerByActiveMode, 90);
         return res;
       };
     }
   }
 
-  setTimeout(syncAdminOnlyBannerControl, 120);
+  setTimeout(syncBannerByActiveMode, 120);
 })();
 </script>
 </body>
