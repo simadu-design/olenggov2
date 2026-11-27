@@ -4220,69 +4220,193 @@
   }, 100);
 })();
 </script>
-<script id="oleng-admin-gear-fix-v1">
+<script id="oleng-admin-gear-fix-v2">
 (function () {
-  function isCurrentAdmin() {
+  let activeAdminAccSection = null;
+
+  function isAdminAccount() {
     if (typeof currentUser === "undefined" || !currentUser) return false;
-    const rawPh = String(currentUser.phone || "").replace(/D/g, "");
-    const normPh = typeof normalizePhone === "function"
+    const digits = String(currentUser.phone || "").replace(/D/g, "");
+    const norm = typeof normalizePhone === "function"
       ? normalizePhone(currentUser.phone)
-      : (rawPh.startsWith("62") ? "0" + rawPh.slice(2) : rawPh);
-    return currentUser.role === "admin" || normPh === "085624736602";
+      : (digits.startsWith("62") ? "0" + digits.slice(2) : digits);
+    return currentUser.role === "admin" || norm === "085624736602";
   }
 
-  function openAdminSettingsDirectly() {
-    if (!isCurrentAdmin()) return false;
+  function buildAccordionItem(key, iconClass, labelText, contentHtml) {
+    const isOpen = activeAdminAccSection === key;
+    return (
+      '<div class="w-full bg-white rounded-2xl border-2 ' + (isOpen ? "border-[#FF7900]" : "border-neutral-200") + ' overflow-hidden">' +
+        '<button type="button" data-adm-sec="' + key + '" class="adm-gear-acc-btn w-full min-h-[54px] px-4 py-3 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-[#F3F3F3]">' +
+          '<div class="flex items-center gap-3 min-w-0">' +
+            '<div class="w-9 h-9 rounded-xl bg-[#171717] text-[#FF9800] flex items-center justify-center shrink-0"><i class="' + iconClass + ' text-sm"></i></div>' +
+            '<span class="text-xs font-black text-[#171717] truncate">' + labelText + '</span>' +
+          '</div>' +
+          '<i class="fa-solid ' + (isOpen ? "fa-chevron-up text-[#FF7900]" : "fa-chevron-down text-neutral-500") + ' text-xs shrink-0"></i>' +
+        '</button>' +
+        (isOpen ? '<div class="px-4 py-3.5 bg-[#F3F3F3] border-t border-neutral-200 space-y-2.5 text-xs text-[#171717]">' + contentHtml + '</div>' : '') +
+      '</div>'
+    );
+  }
+
+  function renderDirectAdminSettingsPanel() {
     const main = document.getElementById("main-content");
-    if (!main) return false;
+    if (!main || !isAdminAccount()) return false;
 
     if (typeof currentSubTab !== "undefined") currentSubTab = "admin-settings";
     localStorage.setItem("oleng_last_tab", "admin-settings");
     document.getElementById("view-merchant-detail")?.classList.add("hidden");
 
     if (typeof renderRoleSettingsView === "function") {
-      renderRoleSettingsView("admin-settings");
-      return true;
+      try {
+        renderRoleSettingsView("admin-settings");
+        if (main.textContent && main.textContent.includes("PENGATURAN ADMIN")) return true;
+      } catch (e) {}
     }
 
-    if (typeof renderAdminSettings === "function") {
-      renderAdminSettings(main);
-      return true;
-    }
+    let cfg = {};
+    try { cfg = JSON.parse(localStorage.getItem("oleng_admin_suite_settings_v1") || "{}") || {}; } catch (e) {}
+    const pr = (typeof db !== "undefined" && db && db.pricing) ? db.pricing : { minFare: 8000, ojekPerKm: 2500, foodPerKm: 2000, commissionPercent: 5, driverResponseTimeoutSec: 45, driverSearchTimeoutSec: 60 };
+    const waMain = cfg.waMain || (typeof ADMIN_MAIN_WA !== "undefined" ? ADMIN_MAIN_WA : "6285624736602");
+    const waSupp = cfg.waSupport || waMain;
+    const waAdm = cfg.waAdmin || "085624736602";
+    const areaTxt = cfg.serviceArea || "Kecamatan Lengkong, Sukabumi";
+    const hoursTxt = cfg.operationalHours || "06:00 - 23:00 WIB";
+    const alarmFlag = typeof alarmEnabled !== "undefined" ? Boolean(alarmEnabled) : (cfg.alarmOrder !== false);
+    const sbConnected = typeof lastSupabaseStatus !== "undefined" && Boolean(lastSupabaseStatus.ok);
 
-    return false;
+    const items = [
+      buildAccordionItem("alarm", "fa-solid fa-bell", "A. ALARM & NOTIFIKASI",
+        '<p>Alarm Pesanan &amp; Chat: <b>' + (alarmFlag ? "Aktif" : "Nonaktif") + '</b></p>' +
+        '<button type="button" id="adm-g-toggle-alarm" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">' + (alarmFlag ? "Matikan Alarm" : "Aktifkan Alarm") + '</button>'
+      ),
+      buildAccordionItem("wa", "fa-brands fa-whatsapp", "B. WHATSAPP & KONTAK",
+        '<p>WA Utama: <b>' + waMain + '</b></p>' +
+        '<p>WA Bantuan: <b>' + waSupp + '</b></p>' +
+        '<p>WA Admin: <b>' + waAdm + '</b></p>' +
+        '<a href="https://wa.me/' + String(waMain).replace(/D/g, "") + '" target="_blank" class="w-full py-2.5 bg-[#171717] text-[#FF9800] font-black rounded-xl block text-center">Buka WhatsApp Utama</a>'
+      ),
+      buildAccordionItem("gps", "fa-solid fa-location-dot", "C. GPS & LAYANAN PETA",
+        '<p>Status Izin GPS: <b>' + (localStorage.getItem("oleng_perm_gps") || "belum_dicek") + '</b></p>' +
+        '<button type="button" id="adm-g-check-gps" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Periksa Izin GPS &amp; Notifikasi</button>'
+      ),
+      buildAccordionItem("db", "fa-solid fa-database", "D. DATABASE & SERVER",
+        '<p>Supabase: <b>' + (sbConnected ? "Terhubung" : "Lokal") + '</b> • Jaringan: <b>' + (navigator.onLine ? "Online" : "Offline") + '</b></p>' +
+        '<p class="text-[11px] text-neutral-600">Sinkronisasi terakhir: ' + (localStorage.getItem("oleng_last_sync_at") || "-") + '</p>' +
+        '<button type="button" id="adm-g-sync-now" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Sinkronkan Sekarang</button>'
+      ),
+      buildAccordionItem("pricing", "fa-solid fa-coins", "E. TARIF & KOMISI",
+        '<label class="text-[10px] font-extrabold block">Tarif Dasar / Minimum (Rp)</label>' +
+        '<input type="number" id="cfg-min-fare" value="' + pr.minFare + '" class="w-full p-2 bg-white border-2 rounded-xl font-bold">' +
+        '<label class="text-[10px] font-extrabold block">Tarif per Km Ojek</label>' +
+        '<input type="number" id="cfg-ojek-km" value="' + pr.ojekPerKm + '" class="w-full p-2 bg-white border-2 rounded-xl font-bold">' +
+        '<label class="text-[10px] font-extrabold block">Tarif Makanan per Km</label>' +
+        '<input type="number" id="cfg-food-km" value="' + pr.foodPerKm + '" class="w-full p-2 bg-white border-2 rounded-xl font-bold">' +
+        '<label class="text-[10px] font-extrabold block">Komisi (%)</label>' +
+        '<input type="number" id="cfg-commission" value="' + pr.commissionPercent + '" class="w-full p-2 bg-white border-2 rounded-xl font-bold">' +
+        '<input type="hidden" id="cfg-driver-timeout" value="' + (pr.driverResponseTimeoutSec || 45) + '">' +
+        '<input type="hidden" id="cfg-search-timeout" value="' + (pr.driverSearchTimeoutSec || 60) + '">' +
+        '<button type="button" id="adm-g-save-pricing" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Tarif &amp; Komisi</button>'
+      ),
+      buildAccordionItem("ops", "fa-solid fa-store", "F. OPERASIONAL APLIKASI",
+        '<p>Wilayah Layanan: <b>' + areaTxt + '</b></p>' +
+        '<p>Jam Operasional: <b>' + hoursTxt + '</b></p>' +
+        '<button type="button" id="adm-g-open-master" class="w-full py-2.5 bg-[#171717] text-[#FF9800] font-black rounded-xl cursor-pointer">Buka Master Control</button>'
+      ),
+      buildAccordionItem("sec", "fa-solid fa-shield-halved", "G. KEAMANAN ADMIN",
+        '<p>Akun Aktif: <b>' + (currentUser.name || "Admin") + '</b> (' + (currentUser.phone || "-") + ')</p>' +
+        '<p class="text-[11px] text-neutral-600">Akses Master Control &amp; Pengaturan Admin hanya untuk akun berwenang.</p>'
+      ),
+      buildAccordionItem("backup", "fa-solid fa-floppy-disk", "H. BACKUP & SISTEM",
+        '<p>Versi: <b>OLENG GO v2</b> • Lengkong, Sukabumi</p>' +
+        '<button type="button" id="adm-g-export" class="w-full py-2.5 bg-[#171717] text-[#FF9800] font-black rounded-xl cursor-pointer">Unduh Backup JSON</button>'
+      )
+    ];
+
+    const footerHtml = typeof getSimaduBrandFooterHTML === "function" ? getSimaduBrandFooterHTML() : "";
+    main.innerHTML =
+      '<div class="p-4 space-y-3 pb-28 bg-white min-h-full">' +
+        '<div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex items-center justify-between gap-2">' +
+          '<div><span class="text-[10px] font-black text-[#FF9800] uppercase block">ADMIN • MULTI-ROLE</span><h2 class="text-sm font-black text-[#FF9800]">PENGATURAN ADMIN</h2></div>' +
+          '<button type="button" id="adm-g-back-home" class="px-3 py-1.5 rounded-xl bg-[#292929] text-[#FF9800] text-xs font-bold cursor-pointer">Kembali</button>' +
+        '</div>' +
+        '<div class="space-y-2.5">' + items.join("") + '</div>' +
+        footerHtml +
+      '</div>';
+
+    main.querySelectorAll(".adm-gear-acc-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const k = btn.getAttribute("data-adm-sec");
+        activeAdminAccSection = activeAdminAccSection === k ? null : k;
+        renderDirectAdminSettingsPanel();
+      });
+    });
+
+    main.querySelector("#adm-g-back-home")?.addEventListener("click", () => {
+      if (typeof renderDashboardContent === "function") renderDashboardContent("home", false);
+    });
+
+    main.querySelector("#adm-g-toggle-alarm")?.addEventListener("click", () => {
+      if (typeof toggleNotificationAlarm === "function") toggleNotificationAlarm();
+      renderDirectAdminSettingsPanel();
+    });
+
+    main.querySelector("#adm-g-check-gps")?.addEventListener("click", async () => {
+      if (typeof ensureWebPermissionsFlow === "function") await ensureWebPermissionsFlow(true);
+      renderDirectAdminSettingsPanel();
+    });
+
+    main.querySelector("#adm-g-sync-now")?.addEventListener("click", async () => {
+      if (typeof manualForceSync === "function") await manualForceSync(true);
+      renderDirectAdminSettingsPanel();
+    });
+
+    main.querySelector("#adm-g-save-pricing")?.addEventListener("click", () => {
+      if (typeof saveAdminPricingConfig === "function") saveAdminPricingConfig();
+    });
+
+    main.querySelector("#adm-g-open-master")?.addEventListener("click", () => {
+      if (typeof renderDashboardContent === "function") renderDashboardContent("admin-master", true);
+    });
+
+    main.querySelector("#adm-g-export")?.addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify({ db: typeof db !== "undefined" ? db : {}, adminSettings: cfg }, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "oleng-go-admin-backup.json";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (typeof showToast === "function") showToast("Backup data diunduh.", "success");
+    });
+
+    return true;
   }
 
-  // Tangkap klik tombol gerigi pada header / beranda admin di level dokumen
   document.addEventListener("click", function (ev) {
-    const btn = ev.target && ev.target.closest
-      ? ev.target.closest("#fn-btn-gear, #rh-btn-gear, [data-gtab='admin-settings'], [data-gear-tab='admin-settings']")
+    if (!isAdminAccount()) return;
+    const gearBtn = ev.target && ev.target.closest
+      ? ev.target.closest('button[title="Pengaturan"], #fn-btn-gear, #rh-btn-gear, [data-gtab="admin-settings"], [data-gear-tab="admin-settings"], button[onclick*="admin-settings"]')
       : null;
-    if (!btn) return;
-    if (!isCurrentAdmin()) return;
-
-    const gTab = btn.getAttribute("data-gtab") || btn.getAttribute("data-gear-tab") || "admin-settings";
-    if (gTab === "admin-settings") {
-      ev.preventDefault();
-      ev.stopImmediatePropagation();
-      openAdminSettingsDirectly();
-    }
+    if (!gearBtn) return;
+    ev.preventDefault();
+    ev.stopImmediatePropagation();
+    renderDirectAdminSettingsPanel();
   }, true);
 
-  // Pastikan renderDashboardContent("admin-settings") tidak terlempar ke home untuk admin
-  const currentRenderDash = window.renderDashboardContent;
-  if (typeof currentRenderDash === "function") {
+  const prevDash = window.renderDashboardContent;
+  if (typeof prevDash === "function") {
     window.renderDashboardContent = function (tab, recordHistory = true) {
-      if (tab === "admin-settings" && isCurrentAdmin()) {
+      if (tab === "admin-settings" && isAdminAccount()) {
         if (typeof currentSubTab !== "undefined" && currentSubTab !== "admin-settings" && recordHistory && Array.isArray(tabNavigationHistory)) {
           if (tabNavigationHistory[tabNavigationHistory.length - 1] !== "admin-settings") {
             tabNavigationHistory.push("admin-settings");
           }
         }
-        openAdminSettingsDirectly();
+        renderDirectAdminSettingsPanel();
         return;
       }
-      return currentRenderDash.apply(this, arguments);
+      return prevDash.apply(this, arguments);
     };
   }
 })();
