@@ -5827,5 +5827,90 @@
   }
 })();
 </script>
+<script id="oleng-no-flicker-core-v4">
+(function () {
+  if (window.__olengNoFlickerCoreV4) return;
+  window.__olengNoFlickerCoreV4 = true;
+
+  function isTypingNow() {
+    if (typeof window.isUserCurrentlyTypingOrEditing === "function") {
+      try { if (window.isUserCurrentlyTypingOrEditing()) return true; } catch (e) {}
+    }
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = String(el.tagName || "").toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || Boolean(el.isContentEditable);
+  }
+
+  // Debounce pullInitialFromSupabase agar event realtime beruntun tidak memicu render berkedip
+  if (typeof window.pullInitialFromSupabase === "function") {
+    const origPull = window.pullInitialFromSupabase;
+    let pullTimer = null;
+    let pendingForceUI = false;
+
+    window.pullInitialFromSupabase = function (forceUI) {
+      pendingForceUI = Boolean(pendingForceUI || forceUI);
+      if (isTypingNow() && !pendingForceUI) {
+        return Promise.resolve();
+      }
+      if (pullTimer) clearTimeout(pullTimer);
+      return new Promise(resolve => {
+        pullTimer = setTimeout(async () => {
+          pullTimer = null;
+          const useForce = pendingForceUI;
+          pendingForceUI = false;
+          try {
+            const out = await origPull.call(window, useForce);
+            resolve(out);
+          } catch (e) {
+            resolve();
+          }
+        }, 1200);
+      });
+    };
+  }
+
+  // Cegah re-render beruntun cepat pada renderDashboardContent
+  if (typeof window.renderDashboardContent === "function") {
+    const origRenderDash = window.renderDashboardContent;
+    let lastDashAt = 0;
+    let lastDashKey = "";
+    let dashTimer = null;
+    let dashArgs = null;
+
+    window.renderDashboardContent = function (tab, recordHistory) {
+      dashArgs = arguments;
+      const now = Date.now();
+      const mode = (typeof adminViewMode !== "undefined" && adminViewMode) ? String(adminViewMode) : "";
+      const role = (typeof currentUser !== "undefined" && currentUser && currentUser.role) ? String(currentUser.role) : "";
+      const key = String(tab || "") + "|" + mode + "|" + role;
+
+      if (isTypingNow() && (now - lastDashAt) < 4500) {
+        return;
+      }
+
+      if (key === lastDashKey && (now - lastDashAt) < 700) {
+        if (!dashTimer) {
+          dashTimer = setTimeout(() => {
+            dashTimer = null;
+            lastDashAt = Date.now();
+            lastDashKey = key;
+            origRenderDash.apply(window, dashArgs || []);
+          }, 720);
+        }
+        return;
+      }
+
+      if (dashTimer) {
+        clearTimeout(dashTimer);
+        dashTimer = null;
+      }
+      lastDashAt = now;
+      lastDashKey = key;
+      return origRenderDash.apply(this, arguments);
+    };
+  }
+})();
+</script>
 </body>
 </html>
