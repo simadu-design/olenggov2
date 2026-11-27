@@ -248,7 +248,6 @@
 
         <div id="view-merchant-detail" class="absolute inset-0 bg-white z-40 hidden flex flex-col overflow-y-auto"></div>
 
-        <!-- MODAL PETA FULL LAYAR -->
         <div id="modal-fullscreen-map" class="fixed inset-0 bg-[#171717] z-[80] hidden flex flex-col">
             <div class="bg-[#171717] text-white px-4 py-3 flex items-center justify-between border-b-2 border-[#FF7900] gap-2">
                 <button type="button" onclick="closeFullscreenMap()" class="px-3 py-1.5 bg-[#FF7900] text-white rounded-xl text-xs font-black cursor-pointer shrink-0">
@@ -2371,7 +2370,7 @@
             const processingOrdersCount = storeOrders.filter(o => ['merchant_accepted', 'preparing', 'driver_arriving', 'picked_up', 'delivering'].includes(normalizeOrderStatusCode(o.status))).length;
             const completedOrders = storeOrders.filter(o => normalizeOrderStatusCode(o.status) === 'completed');
             const totalOmzet = completedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
-            container.innerHTML = `<div class="p-4 space-y-5 pb-28 bg-white min-h-full"><div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden shadow-lg border-2 border-[#FF7900]"><div onclick="triggerDirectStoreMediaPicker(${merchant.id}, 'banner')" title="Klik untuk ganti sampul banner toko" class="relative cursor-pointer group"><img src="${tempStoreBanner || merchant.banner || './olengorange2.png'}" class="w-full h-36 object-cover opacity-85 group-hover:opacity-75 transition" alt="Banner Toko"><span class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/70 text-[#FF9800] text-[10px] font-black"><i class="fa-solid fa-camera mr-1"></i> Ubah Sampul</span></div><div class="p-4 pt-10 bg-gradient-to-t from-[#171717] via-[#292929]/95 to-[#171717]/80 relative flex items-end justify-between gap-2"><div class="flex items-center space-x-3 min-w-0"><div onclick="triggerDirectStoreMediaPicker(${merchant.id}, 'photo')" title="Klik untuk ganti foto profil toko" class="relative -mt-12 shrink-0 cursor-pointer group"><img src="${tempStorePhoto || merchant.image || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] bg-white group-hover:opacity-80 transition" alt="Profil Toko"><span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#FF7900] text-white text-[10px] flex items-center justify-center border border-[#171717] shadow"><i class="fa-solid fa-camera"></i></span></div><div class="min-w-0"><span class="text-[10px] text-[#FF9800] font-extrabold uppercase block truncate">KELOLA TOKO (${merchant.whatsapp || currentUser.phone})</span><h2 class="text-base font-black truncate">${merchant.name || 'Nama Toko Belum Diisi'}</h2><p class="text-[11px] text-neutral-300 truncate"><i class="fa-solid fa-star text-[#FF7900]"></i> ${merchant.rating || 5.0} • ${merchant.operationalHours || '08:00 - 21:00 WIB'}</p></div></div><button onclick="toggleMerchantStatus(${merchant.id})" class="px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer shrink-0 ${isOpen ? 'bg-[#FF7900] text-white' : 'bg-[#292929] text-neutral-300'}">${merchant.status}</button></div></div><div class="bg-[#F3F3F3] p-4 rounded-3xl border-2 border-neutral-200 space-y-2.5"><h3 class="font-black text-xs text-[#171717] uppercase">Dashboard Penjualan Toko</h3><div class="grid grid-cols-3 gap-2 text-center"><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Produk</span><b class="text-sm font-black">${foods.length}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Pesanan</span><b class="text-sm font-black">${storeOrders.length}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Baru</span><b class="text-sm font-black text-[#FF7900]">${newOrdersCount}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Diproses</span><b class="text-sm font-black">${processingOrdersCount}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Selesai</span><b class="text-sm font-black">${completedOrders.length}</b></div><div class="bg-white p-2.5 rounded-2xl border border-[#FF7900]"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Omzet</span><b class="text-xs font-black text-[#FF7900]">Rp ${totalOmzet.toLocaleString()}</b></div></div></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><h3 class="font-extrabold text-xs text-[#171717] uppercase border-b pb-2">Profil Toko</h3><input type="text" id="edit-m-name" value="${merchant.name || ''}" placeholder="Nama Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-bold"><div class="grid grid-cols-2 gap-2"><input type="text" id="edit-m-category" value="${merchant.category || 'Kuliner & Oleh-Oleh'}" placeholder="Kategori Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="tel" id="edit-m-wa" value="${merchant.whatsapp || currentUser.phone || ''}" placeholder="Nomor WA Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"></div><input type="text" id="edit-m-desc" value="${merchant.description || ''}" placeholder="Deskripsi toko..." class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="text" id="edit-m-address" value="${merchant.address || ''}" placeholder="Alamat Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="text" id="edit-m-hours" value="${merchant.operationalHours || ''}" placeholder="Jam Operasional" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><button onclick="saveMerchantSettings(${merchant.id})" class="w-full py-3.5 bg-[#FF7900] text-white font-extrabold rounded-2xl text-xs cursor-pointer border-b-2 border-[#171717]">Simpan Perubahan Toko</button></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><div class="flex justify-between items-center border-b pb-2"><h3 class="font-extrabold text-xs text-[#171717] uppercase">Kelola Produk Toko</h3><button onclick="openMerchantAddMenuModal(${merchant.id})" class="px-3 py-1.5 bg-[#FF7900] text-white rounded-xl text-[11px] font-extrabold cursor-pointer">+ Tambah Produk</button></div>${foods.map(f => { const stokVal = Number(f.stock ?? 20), isAvail = stokVal > 0 && f.available !== false; return `<div class="flex items-center justify-between gap-2 p-2.5 bg-[#F3F3F3] rounded-2xl"><div class="flex items-center space-x-3 min-w-0"><img src="${f.image || './olengorange2.png'}" class="w-12 h-12 rounded-xl object-cover bg-[#171717] shrink-0"><div class="min-w-0"><h4 class="font-bold text-xs truncate">${f.name}</h4><span class="text-xs font-black text-[#FF7900]">Rp ${Number(f.price || 0).toLocaleString()}</span><span class="text-[10px] font-bold ml-1.5 px-1.5 py-0.5 rounded ${isAvail ? 'bg-white' : 'bg-rose-100 text-rose-800'}">${isAvail ? 'Tersedia (' + stokVal + ')' : 'Habis'}</span></div></div><div class="flex items-center gap-1 shrink-0"><button onclick="openEditFoodModal(${f.id})" class="px-2 py-1 bg-[#171717] text-white rounded-lg text-[10px] font-bold cursor-pointer">Edit</button><button onclick="deleteMenuFood(${f.id})" class="text-rose-600 p-2 cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button></div></div>`; }).join('')}</div>${getSimaduBrandFooterHTML()}</div>`;
+            container.innerHTML = `<div class="p-4 space-y-5 pb-28 bg-white min-h-full"><div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden shadow-lg border-2 border-[#FF7900]"><div onclick="triggerDirectStoreMediaPicker(${merchant.id}, 'banner')" title="Klik untuk ganti sampul banner toko" class="relative cursor-pointer group"><img src="${tempStoreBanner || merchant.banner || './olengorange2.png'}" class="w-full h-36 object-cover opacity-85 group-hover:opacity-75 transition" alt="Banner Toko"><span class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/70 text-[#FF9800] text-[10px] font-black"><i class="fa-solid fa-camera mr-1"></i> Ubah Sampul</span></div><div class="p-4 pt-10 bg-gradient-to-t from-[#171717] via-[#292929]/95 to-[#171717]/80 relative flex items-end justify-between gap-2"><div class="flex items-center space-x-3 min-w-0"><div onclick="triggerDirectStoreMediaPicker(${merchant.id}, 'photo')" title="Klik untuk ganti foto profil toko" class="relative -mt-12 shrink-0 cursor-pointer group"><img src="${tempStorePhoto || merchant.image || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] bg-white group-hover:opacity-80 transition" alt="Profil Toko"><span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#FF7900] text-white text-[10px] flex items-center justify-center border border-[#171717] shadow"><i class="fa-solid fa-camera"></i></span></div><div class="min-w-0"><span class="text-[10px] text-[#FF9800] font-extrabold uppercase block truncate">KELOLA TOKO (${merchant.whatsapp || currentUser.phone})</span><h2 class="text-base font-black truncate">${merchant.name || 'Nama Toko Belum Diisi'}</h2><p class="text-[11px] text-neutral-300 truncate"><i class="fa-solid fa-star text-[#FF9800]"></i> ${merchant.rating || 5.0} • ${merchant.operationalHours || '08:00 - 21:00 WIB'}</p></div></div><button onclick="toggleMerchantStatus(${merchant.id})" class="px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer shrink-0 ${isOpen ? 'bg-[#FF7900] text-white' : 'bg-[#292929] text-neutral-300'}">${merchant.status}</button></div></div><div class="bg-[#F3F3F3] p-4 rounded-3xl border-2 border-neutral-200 space-y-2.5"><h3 class="font-black text-xs text-[#171717] uppercase">Dashboard Penjualan Toko</h3><div class="grid grid-cols-3 gap-2 text-center"><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Produk</span><b class="text-sm font-black">${foods.length}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Pesanan</span><b class="text-sm font-black">${storeOrders.length}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Baru</span><b class="text-sm font-black text-[#FF7900]">${newOrdersCount}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Diproses</span><b class="text-sm font-black">${processingOrdersCount}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Selesai</span><b class="text-sm font-black">${completedOrders.length}</b></div><div class="bg-white p-2.5 rounded-2xl border border-[#FF7900]"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Omzet</span><b class="text-xs font-black text-[#FF7900]">Rp ${totalOmzet.toLocaleString()}</b></div></div></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><h3 class="font-extrabold text-xs text-[#171717] uppercase border-b pb-2">Profil Toko</h3><input type="text" id="edit-m-name" value="${merchant.name || ''}" placeholder="Nama Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-bold"><div class="grid grid-cols-2 gap-2"><input type="text" id="edit-m-category" value="${merchant.category || 'Kuliner & Oleh-Oleh'}" placeholder="Kategori Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="tel" id="edit-m-wa" value="${merchant.whatsapp || currentUser.phone || ''}" placeholder="Nomor WA Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"></div><input type="text" id="edit-m-desc" value="${merchant.description || ''}" placeholder="Deskripsi toko..." class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="text" id="edit-m-address" value="${merchant.address || ''}" placeholder="Alamat Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="text" id="edit-m-hours" value="${merchant.operationalHours || ''}" placeholder="Jam Operasional" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><button onclick="saveMerchantSettings(${merchant.id})" class="w-full py-3.5 bg-[#FF7900] text-white font-extrabold rounded-2xl text-xs cursor-pointer border-b-2 border-[#171717]">Simpan Perubahan Toko</button></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><div class="flex justify-between items-center border-b pb-2"><h3 class="font-extrabold text-xs text-[#171717] uppercase">Kelola Produk Toko</h3><button onclick="openMerchantAddMenuModal(${merchant.id})" class="px-3 py-1.5 bg-[#FF7900] text-white rounded-xl text-[11px] font-extrabold cursor-pointer">+ Tambah Produk</button></div>${foods.map(f => { const stokVal = Number(f.stock ?? 20), isAvail = stokVal > 0 && f.available !== false; return `<div class="flex items-center justify-between gap-2 p-2.5 bg-[#F3F3F3] rounded-2xl"><div class="flex items-center space-x-3 min-w-0"><img src="${f.image || './olengorange2.png'}" class="w-12 h-12 rounded-xl object-cover bg-[#171717] shrink-0"><div class="min-w-0"><h4 class="font-bold text-xs truncate">${f.name}</h4><span class="text-xs font-black text-[#FF7900]">Rp ${Number(f.price || 0).toLocaleString()}</span><span class="text-[10px] font-bold ml-1.5 px-1.5 py-0.5 rounded ${isAvail ? 'bg-white' : 'bg-rose-100 text-rose-800'}">${isAvail ? 'Tersedia (' + stokVal + ')' : 'Habis'}</span></div></div><div class="flex items-center gap-1 shrink-0"><button onclick="openEditFoodModal(${f.id})" class="px-2 py-1 bg-[#171717] text-white rounded-lg text-[10px] font-bold cursor-pointer">Edit</button><button onclick="deleteMenuFood(${f.id})" class="text-rose-600 p-2 cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button></div></div>`; }).join('')}</div>${getSimaduBrandFooterHTML()}</div>`;
         }
 
         function renderAdminOwnStoreManage(container) {
@@ -2381,7 +2380,7 @@
             const processingOrdersCount = storeOrders.filter(o => ['merchant_accepted', 'preparing', 'driver_arriving', 'picked_up', 'delivering'].includes(normalizeOrderStatusCode(o.status))).length;
             const completedOrders = storeOrders.filter(o => normalizeOrderStatusCode(o.status) === 'completed');
             const totalOmzet = completedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
-            container.innerHTML = `<div class="p-4 space-y-5 pb-28 bg-white min-h-full"><div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden shadow-lg border-2 border-[#FF7900]"><div onclick="triggerDirectStoreMediaPicker(${adminStore.id}, 'banner')" title="Klik untuk ganti sampul banner toko" class="relative cursor-pointer group"><img src="${tempStoreBanner || adminStore.banner || './olengorange2.png'}" class="w-full h-36 object-cover opacity-85 group-hover:opacity-75 transition" alt="Banner Toko Admin"><span class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/70 text-[#FF9800] text-[10px] font-black"><i class="fa-solid fa-camera mr-1"></i> Ubah Sampul</span></div><div class="p-4 pt-10 bg-gradient-to-t from-[#171717] via-[#292929]/95 to-[#171717]/80 relative flex items-end justify-between"><div class="flex items-center space-x-3"><div onclick="triggerDirectStoreMediaPicker(${adminStore.id}, 'photo')" title="Klik untuk ganti foto profil toko" class="relative -mt-12 shrink-0 cursor-pointer group"><img src="${tempStorePhoto || adminStore.image || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] bg-white group-hover:opacity-80 transition" alt="Foto Toko Admin"><span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#FF7900] text-white text-[10px] flex items-center justify-center border border-[#171717] shadow"><i class="fa-solid fa-camera"></i></span></div><div><span class="text-[10px] text-[#FF9800] font-extrabold uppercase block">KELOLA TOKO ADMIN</span><h2 class="text-base font-black">${adminStore.name}</h2><p class="text-[11px] text-neutral-300"><i class="fa-solid fa-star text-[#FF7900]"></i> ${adminStore.rating || 5.0} • ${adminStore.operationalHours}</p></div></div><button onclick="toggleAdminOwnStoreStatus(${adminStore.id})" class="px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer ${isOpen ? 'bg-[#FF7900] text-white' : 'bg-[#292929] text-neutral-300'}">${adminStore.status}</button></div></div><div class="bg-[#F3F3F3] p-4 rounded-3xl border-2 border-neutral-200 space-y-2.5"><h3 class="font-black text-xs text-[#171717] uppercase">Dashboard Penjualan Toko Admin</h3><div class="grid grid-cols-3 gap-2 text-center"><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Produk</span><b class="text-sm font-black">${foods.length}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Pesanan</span><b class="text-sm font-black">${storeOrders.length}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Baru</span><b class="text-sm font-black text-[#FF7900]">${newOrdersCount}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Diproses</span><b class="text-sm font-black">${processingOrdersCount}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Selesai</span><b class="text-sm font-black">${completedOrders.length}</b></div><div class="bg-white p-2.5 rounded-2xl border border-[#FF7900]"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Omzet</span><b class="text-xs font-black text-[#FF7900]">Rp ${totalOmzet.toLocaleString()}</b></div></div></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><h3 class="font-extrabold text-xs text-[#171717] uppercase border-b pb-2">Profil Toko Admin</h3><input type="text" id="adm-store-name" value="${adminStore.name}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-bold"><div class="grid grid-cols-2 gap-2"><input type="text" id="adm-store-category" value="${adminStore.category || 'Kuliner & Oleh-Oleh'}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="tel" id="adm-store-wa" value="${adminStore.whatsapp || ADMIN_MAIN_WA}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"></div><input type="text" id="adm-store-desc" value="${adminStore.description || ''}" placeholder="Deskripsi toko Admin..." class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="text" id="adm-store-address" value="${adminStore.address}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="text" id="adm-store-hours" value="${adminStore.operationalHours}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><button onclick="saveAdminOwnStoreSettings(${adminStore.id})" class="w-full py-3.5 bg-[#FF7900] text-white font-extrabold rounded-2xl text-xs cursor-pointer border-b-2 border-[#171717]">Simpan Toko Admin Permanen</button></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><div class="flex justify-between items-center border-b pb-2"><h3 class="font-extrabold text-xs text-[#171717] uppercase">Kelola Produk Toko Admin</h3><button onclick="openMerchantAddMenuModal(${adminStore.id})" class="px-3 py-1.5 bg-[#FF7900] text-white rounded-xl text-[11px] font-extrabold cursor-pointer">+ Tambah Produk</button></div>${foods.map(f => { const stokVal = Number(f.stock ?? 20), isAvail = stokVal > 0 && f.available !== false; return `<div class="flex items-center justify-between gap-2 p-2.5 bg-[#F3F3F3] rounded-2xl"><div class="flex items-center space-x-3 min-w-0"><img src="${f.image || './olengorange2.png'}" class="w-12 h-12 rounded-xl object-cover bg-[#171717] shrink-0"><div class="min-w-0"><h4 class="font-bold text-xs truncate">${f.name}</h4><span class="text-xs font-black text-[#FF7900]">Rp ${Number(f.price || 0).toLocaleString()}</span><span class="text-[10px] font-bold ml-1.5 px-1.5 py-0.5 rounded ${isAvail ? 'bg-white' : 'bg-rose-100 text-rose-800'}">${isAvail ? 'Tersedia (' + stokVal + ')' : 'Habis'}</span></div></div><div class="flex items-center gap-1 shrink-0"><button onclick="openEditFoodModal(${f.id})" class="px-2 py-1 bg-[#171717] text-white rounded-lg text-[10px] font-bold cursor-pointer">Edit</button><button onclick="deleteMenuFood(${f.id})" class="text-rose-600 p-2 cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button></div></div>`; }).join('')}</div>${getSimaduBrandFooterHTML()}</div>`;
+            container.innerHTML = `<div class="p-4 space-y-5 pb-28 bg-white min-h-full"><div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden shadow-lg border-2 border-[#FF7900]"><div onclick="triggerDirectStoreMediaPicker(${adminStore.id}, 'banner')" title="Klik untuk ganti sampul banner toko" class="relative cursor-pointer group"><img src="${tempStoreBanner || adminStore.banner || './olengorange2.png'}" class="w-full h-36 object-cover opacity-85 group-hover:opacity-75 transition" alt="Banner Toko Admin"><span class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/70 text-[#FF9800] text-[10px] font-black"><i class="fa-solid fa-camera mr-1"></i> Ubah Sampul</span></div><div class="p-4 pt-10 bg-gradient-to-t from-[#171717] via-[#292929]/95 to-[#171717]/80 relative flex items-end justify-between"><div class="flex items-center space-x-3"><div onclick="triggerDirectStoreMediaPicker(${adminStore.id}, 'photo')" title="Klik untuk ganti foto profil toko" class="relative -mt-12 shrink-0 cursor-pointer group"><img src="${tempStorePhoto || adminStore.image || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] bg-white group-hover:opacity-80 transition" alt="Foto Toko Admin"><span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#FF7900] text-white text-[10px] flex items-center justify-center border border-[#171717] shadow"><i class="fa-solid fa-camera"></i></span></div><div><span class="text-[10px] text-[#FF9800] font-extrabold uppercase block">KELOLA TOKO ADMIN</span><h2 class="text-base font-black">${adminStore.name}</h2><p class="text-[11px] text-neutral-300"><i class="fa-solid fa-star text-[#FF9800]"></i> ${adminStore.rating || 5.0} • ${adminStore.operationalHours}</p></div></div><button onclick="toggleAdminOwnStoreStatus(${adminStore.id})" class="px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer ${isOpen ? 'bg-[#FF7900] text-white' : 'bg-[#292929] text-neutral-300'}">${adminStore.status}</button></div></div><div class="bg-[#F3F3F3] p-4 rounded-3xl border-2 border-neutral-200 space-y-2.5"><h3 class="font-black text-xs text-[#171717] uppercase">Dashboard Penjualan Toko Admin</h3><div class="grid grid-cols-3 gap-2 text-center"><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Produk</span><b class="text-sm font-black">${foods.length}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Pesanan</span><b class="text-sm font-black">${storeOrders.length}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Baru</span><b class="text-sm font-black text-[#FF7900]">${newOrdersCount}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Diproses</span><b class="text-sm font-black">${processingOrdersCount}</b></div><div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Selesai</span><b class="text-sm font-black">${completedOrders.length}</b></div><div class="bg-white p-2.5 rounded-2xl border border-[#FF7900]"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Omzet</span><b class="text-xs font-black text-[#FF7900]">Rp ${totalOmzet.toLocaleString()}</b></div></div></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><h3 class="font-extrabold text-xs text-[#171717] uppercase border-b pb-2">Profil Toko Admin</h3><input type="text" id="adm-store-name" value="${adminStore.name}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-bold"><div class="grid grid-cols-2 gap-2"><input type="text" id="adm-store-category" value="${adminStore.category || 'Kuliner & Oleh-Oleh'}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="tel" id="adm-store-wa" value="${adminStore.whatsapp || ADMIN_MAIN_WA}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"></div><input type="text" id="adm-store-desc" value="${adminStore.description || ''}" placeholder="Deskripsi toko Admin..." class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="text" id="adm-store-address" value="${adminStore.address}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="text" id="adm-store-hours" value="${adminStore.operationalHours}" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><button onclick="saveAdminOwnStoreSettings(${adminStore.id})" class="w-full py-3.5 bg-[#FF7900] text-white font-extrabold rounded-2xl text-xs cursor-pointer border-b-2 border-[#171717]">Simpan Toko Admin Permanen</button></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><div class="flex justify-between items-center border-b pb-2"><h3 class="font-extrabold text-xs text-[#171717] uppercase">Kelola Produk Toko Admin</h3><button onclick="openMerchantAddMenuModal(${adminStore.id})" class="px-3 py-1.5 bg-[#FF7900] text-white rounded-xl text-[11px] font-extrabold cursor-pointer">+ Tambah Produk</button></div>${foods.map(f => { const stokVal = Number(f.stock ?? 20), isAvail = stokVal > 0 && f.available !== false; return `<div class="flex items-center justify-between gap-2 p-2.5 bg-[#F3F3F3] rounded-2xl"><div class="flex items-center space-x-3 min-w-0"><img src="${f.image || './olengorange2.png'}" class="w-12 h-12 rounded-xl object-cover bg-[#171717] shrink-0"><div class="min-w-0"><h4 class="font-bold text-xs truncate">${f.name}</h4><span class="text-xs font-black text-[#FF7900]">Rp ${Number(f.price || 0).toLocaleString()}</span><span class="text-[10px] font-bold ml-1.5 px-1.5 py-0.5 rounded ${isAvail ? 'bg-white' : 'bg-rose-100 text-rose-800'}">${isAvail ? 'Tersedia (' + stokVal + ')' : 'Habis'}</span></div></div><div class="flex items-center gap-1 shrink-0"><button onclick="openEditFoodModal(${f.id})" class="px-2 py-1 bg-[#171717] text-white rounded-lg text-[10px] font-bold cursor-pointer">Edit</button><button onclick="deleteMenuFood(${f.id})" class="text-rose-600 p-2 cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button></div></div>`; }).join('')}</div>${getSimaduBrandFooterHTML()}</div>`;
         }
 
         function toggleAdminOwnStoreStatus(storeId) { const m = db.merchants.find(x => Number(x.id) === Number(storeId)); if (m) { m.status = m.status === 'Buka' ? 'Tutup' : 'Buka'; saveDB(`Status toko Admin (${m.name}) menjadi ${m.status}!`); renderAdminOwnStoreManage(document.getElementById('main-content')); } }
@@ -2817,16 +2816,6 @@
             const MARKET_MAX_PHOTOS = 4;
             const MARKET_OFFER_TYPES = ['JUAL', 'SEWA', 'CARI', 'JASA'];
 
-            const MARKET_STATUS_META = {
-                pending_moderation: { label: 'Menunggu moderasi', badge: 'bg-amber-100 text-amber-900' },
-                active: { label: 'Aktif', badge: 'bg-emerald-100 text-emerald-900' },
-                rejected: { label: 'Ditolak', badge: 'bg-rose-100 text-rose-800' },
-                sold: { label: 'Terjual', badge: 'bg-neutral-200 text-neutral-800' },
-                rented: { label: 'Disewakan', badge: 'bg-sky-100 text-sky-900' },
-                expired: { label: 'Kedaluwarsa', badge: 'bg-stone-200 text-stone-700' },
-                disabled: { label: 'Dinonaktifkan', badge: 'bg-rose-200 text-rose-950' }
-            };
-
             const DEFAULT_MARKET_CATEGORIES = [
                 { id: 1, slug: 'elektronik', name: 'Elektronik', icon: 'fa-laptop', subcategories: ['HP', 'Laptop', 'Televisi', 'Kulkas', 'Lainnya'], requiresCondition: true, active: true },
                 { id: 2, slug: 'rumah-tanah', name: 'Rumah dan Tanah', icon: 'fa-house-chimney', subcategories: ['Rumah Dijual', 'Tanah Dijual', 'Kontrakan', 'Properti'], requiresCondition: false, active: true },
@@ -3114,163 +3103,978 @@
         })();
     </script>
 
-    <!-- MODUL ADMIN SUITE + PENGATURAN KHUSUS KONSUMEN/DRIVER/TOKO -->
-    <script id="oleng-role-settings-and-admin-addon">
+    <!-- MODUL PENGATURAN SEMUA ROLE (ADMIN ACCORDION VERTIKAL, KONSUMEN/USER, DRIVER, TOKO) -->
+    <script id="oleng-complete-role-settings-v3">
         (function () {
-            const SETTINGS_STORAGE_KEY = 'oleng_admin_suite_settings_v1';
-            const CUST_PREFS_PREFIX = 'oleng_customer_prefs_v1_';
-            const DEFAULT_ADMIN_SETTINGS = { alarmOrder: true, alarmChat: true, alarmTone: 'panjang', alarmVolume: 0.8, vibrationEnabled: true, waMain: '6285624736602', waSupport: '6285624736602', waAdmin: '085624736602', appName: 'OLENG GO', serviceArea: 'Kecamatan Lengkong, Sukabumi', operationalHours: '06:00 - 23:00 WIB', serviceOpen: true, promoInfo: 'OLENG MARKET GRATIS untuk warga Lengkong.', otpEnabled: false, minDeposit: 10000, initialBonusBalance: 20000, maintenanceLogs: [] };
+            const ADMIN_STORE_KEY = 'oleng_admin_suite_settings_v1';
+            const CUST_PREF_PREFIX = 'oleng_customer_prefs_v1_';
+            const DRV_PREF_PREFIX = 'oleng_driver_prefs_v1_';
+            const MRC_PREF_PREFIX = 'oleng_merchant_prefs_v1_';
 
-            function getActiveRoleSafe() { return !currentUser ? 'customer' : (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role; }
-            function isAdminAuthorized() { return Boolean(currentUser && (currentUser.role === 'admin' || normalizePhone(currentUser.phone) === '085624736602')); }
-            function loadAdminSettings() { try { return { ...DEFAULT_ADMIN_SETTINGS, ...(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || 'null') || {}) }; } catch (e) { return { ...DEFAULT_ADMIN_SETTINGS }; } }
-            let adminSettings = loadAdminSettings(), activeSettingsSection = 'alarm';
+            const DEFAULT_ADMIN_PREFS = {
+                alarmOrder: true,
+                alarmChat: true,
+                alarmTone: 'panjang',
+                alarmVolume: 0.8,
+                alarmDurationSec: 15,
+                vibrationEnabled: true,
+                notifUserReg: true,
+                notifDriverReg: true,
+                notifMerchantReg: true,
+                notifTransaction: true,
+                waMain: typeof ADMIN_MAIN_WA !== 'undefined' ? ADMIN_MAIN_WA : '6285624736602',
+                waSupport: typeof ADMIN_MAIN_WA !== 'undefined' ? ADMIN_MAIN_WA : '6285624736602',
+                waAdmin: '085624736602',
+                appName: 'OLENG GO',
+                serviceArea: 'Kecamatan Lengkong, Sukabumi',
+                operationalHours: '06:00 - 23:00 WIB',
+                serviceOpen: true,
+                otpEnabled: false,
+                minDeposit: 10000,
+                initialBonusBalance: 20000,
+                marketFeeNote: 'Gratis pasang iklan untuk warga Lengkong',
+                maintenanceLogs: []
+            };
 
-            function getCustKey() { const p = normalizePhone(currentUser?.phone); return CUST_PREFS_PREFIX + (p || String(currentUser?.accountId || 'guest').toLowerCase()); }
-            function loadCustPrefs() {
-                const base = { email: currentUser?.email || '', fontSize: 'normal', notifBannerStyle: 'ringkas', notifOrder: true, notifOrderStatus: true, notifChat: true, notifPromo: true, notifSound: true, notifVibrate: true, otpEnabled: false, addresses: [{ id: 'addr-default', label: 'Alamat Utama', detail: currentUser?.address || 'Kecamatan Lengkong, Sukabumi', isFavorite: true, isPrimary: true }] };
-                try { const parsed = JSON.parse(localStorage.getItem(getCustKey()) || 'null'); return parsed ? { ...base, ...parsed, addresses: Array.isArray(parsed.addresses) && parsed.addresses.length > 0 ? parsed.addresses : base.addresses } : base; } catch (e) { return base; }
+            let openSectionByScope = {
+                admin: null,
+                customer: null,
+                driver: null,
+                merchant: null
+            };
+
+            function getEffectiveRole() {
+                if (typeof currentUser === 'undefined' || !currentUser) return 'customer';
+                if (currentUser.role === 'admin' && typeof adminViewMode !== 'undefined' && adminViewMode) {
+                    return adminViewMode;
+                }
+                return currentUser.role;
             }
-            let custPrefs = loadCustPrefs(), activeCustTab = 'profile', editingAddrId = null, draftCustPhoto = null;
-            function saveCustPrefs(msg = null) {
-                if (!currentUser) return;
-                localStorage.setItem(getCustKey(), JSON.stringify(custPrefs));
-                const idx = (db.users || []).findIndex(u => u.id === currentUser.id || (normalizePhone(u.phone) === normalizePhone(currentUser.phone) && u.role === currentUser.role));
-                if (idx !== -1) db.users[idx] = { ...db.users[idx], ...currentUser };
-                localStorage.setItem('oleng_go_db', JSON.stringify(db));
-                localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
-                if (msg) showToast(msg, 'success');
-                if (navigator.onLine) syncAllToSupabase().catch(() => {});
+
+            function isAuthorizedAdmin() {
+                if (typeof currentUser === 'undefined' || !currentUser) return false;
+                const ph = typeof normalizePhone === 'function'
+                    ? normalizePhone(currentUser.phone)
+                    : String(currentUser.phone || '').replace(/\D/g, '');
+                return currentUser.role === 'admin' || ph === '085624736602';
             }
 
-            window.openRoleSettingsPage = function (sec = null) {
-                if (!currentUser) return;
-                const r = getActiveRoleSafe();
-                if (r === 'admin') { activeSettingsSection = sec || 'alarm'; renderDashboardContent('admin-settings'); return; }
-                if (sec && r === 'customer') activeCustTab = sec;
-                renderDashboardContent(r === 'driver' ? 'driver-settings' : r === 'merchant' ? 'merchant-settings' : 'customer-settings');
-            };
+            function getAccountScopeId() {
+                if (typeof currentUser === 'undefined' || !currentUser) return 'guest';
+                const ph = typeof normalizePhone === 'function' ? normalizePhone(currentUser.phone) : String(currentUser.phone || '');
+                return String(currentUser.accountId || ph || currentUser.name || 'guest').toLowerCase();
+            }
 
-            window.saveAdminPricingConfig = async function () {
-                if (!isAdminAuthorized()) return showToast('Hanya Admin yang berwenang.', 'error');
-                const prev = { ...(db.pricing || defaultPricing) };
-                db.pricing = { minFare: Math.max(1000, parseInt(document.getElementById('cfg-min-fare')?.value, 10) || 8000), commissionPercent: Math.min(100, Math.max(0, parseInt(document.getElementById('cfg-commission')?.value, 10) || 5)), ojekPerKm: Math.max(500, parseInt(document.getElementById('cfg-ojek-km')?.value, 10) || 2500), foodPerKm: Math.max(500, parseInt(document.getElementById('cfg-food-km')?.value, 10) || 2000), driverResponseTimeoutSec: Math.min(300, Math.max(10, parseInt(document.getElementById('cfg-driver-timeout')?.value, 10) || 45)), driverSearchTimeoutSec: Math.min(600, Math.max(15, parseInt(document.getElementById('cfg-search-timeout')?.value, 10) || 60)) };
-                if (!Array.isArray(db.pricingChangeLogs)) db.pricingChangeLogs = [];
-                db.pricingChangeLogs.unshift({ adminName: currentUser.name, time: new Date().toLocaleString('id-ID'), from: prev, to: { ...db.pricing } });
-                localStorage.setItem('oleng_go_db', JSON.stringify(db));
-                if (typeof updateOjekFareUI === 'function') updateOjekFareUI();
-                if (supabaseClient && navigator.onLine) {
+            function toWaInternational(raw) {
+                const digits = String(raw || '').replace(/\D/g, '');
+                if (!digits) return '6285624736602';
+                return digits.startsWith('0') ? '62' + digits.slice(1) : digits;
+            }
+
+            function loadAdminPrefs() {
+                let saved = {};
+                try { saved = JSON.parse(localStorage.getItem(ADMIN_STORE_KEY) || 'null') || {}; } catch (e) {}
+                const dbCfg = (typeof db !== 'undefined' && db && db.adminSettings && typeof db.adminSettings === 'object') ? db.adminSettings : {};
+                return {
+                    ...DEFAULT_ADMIN_PREFS,
+                    ...saved,
+                    ...dbCfg,
+                    maintenanceLogs: Array.isArray(saved.maintenanceLogs)
+                        ? saved.maintenanceLogs
+                        : (Array.isArray(dbCfg.maintenanceLogs) ? dbCfg.maintenanceLogs : [])
+                };
+            }
+
+            function loadCustomerPrefs() {
+                const base = {
+                    email: currentUser?.email || '',
+                    notifOrder: true,
+                    notifOrderStatus: true,
+                    notifDriver: true,
+                    notifChat: true,
+                    notifPromo: true,
+                    notifSound: true,
+                    notifVibrate: true,
+                    otpEnabled: false,
+                    addresses: [
+                        {
+                            id: 'addr-main',
+                            label: 'Alamat Utama',
+                            detail: currentUser?.address || 'Kecamatan Lengkong, Sukabumi',
+                            kind: 'Rumah',
+                            isPrimary: true,
+                            isFavorite: true
+                        }
+                    ]
+                };
+                try {
+                    const raw = JSON.parse(localStorage.getItem(CUST_PREF_PREFIX + getAccountScopeId()) || 'null');
+                    if (!raw || typeof raw !== 'object') return base;
+                    return {
+                        ...base,
+                        ...raw,
+                        addresses: Array.isArray(raw.addresses) && raw.addresses.length > 0 ? raw.addresses : base.addresses
+                    };
+                } catch (e) {
+                    return base;
+                }
+            }
+
+            function loadDriverPrefs() {
+                const drv = (typeof db !== 'undefined' && Array.isArray(db.drivers))
+                    ? db.drivers.find(d =>
+                        (typeof normalizePhone === 'function' && normalizePhone(d.phone) === normalizePhone(currentUser?.phone)) ||
+                        (typeof normalizeMatchKey === 'function' && normalizeMatchKey(d.name) === normalizeMatchKey(currentUser?.name))
+                    )
+                    : null;
+                const base = {
+                    vehicleType: drv?.bikeType || currentUser?.bikeType || 'Motor',
+                    vehicleBrandModel: drv?.vehicle || currentUser?.vehicle || '',
+                    vehiclePlate: drv?.plate || currentUser?.plate || '',
+                    vehiclePhoto: drv?.photo || './olengorange2.png',
+                    alarmOrder: true,
+                    notifChat: true,
+                    alarmTone: 'panjang',
+                    alarmVolume: 0.8,
+                    vibrationEnabled: true,
+                    serviceArea: 'Kecamatan Lengkong, Sukabumi',
+                    workHoursPref: '06:00 - 22:00 WIB',
+                    otpEnabled: false
+                };
+                try {
+                    const raw = JSON.parse(localStorage.getItem(DRV_PREF_PREFIX + getAccountScopeId()) || 'null');
+                    return raw && typeof raw === 'object' ? { ...base, ...raw } : base;
+                } catch (e) {
+                    return base;
+                }
+            }
+
+            function loadMerchantPrefs() {
+                const mrc = (typeof db !== 'undefined' && Array.isArray(db.merchants))
+                    ? db.merchants.find(m =>
+                        String(m.accountId || '').toUpperCase() !== 'TOKOADM01' &&
+                        ((typeof normalizePhone === 'function' && normalizePhone(m.whatsapp) === normalizePhone(currentUser?.phone)) ||
+                        (typeof normalizeMatchKey === 'function' && normalizeMatchKey(m.name) === normalizeMatchKey(currentUser?.shopName)))
+                    )
+                    : null;
+                const base = {
+                    storeName: mrc?.name || currentUser?.shopName || currentUser?.name || '',
+                    storeDesc: mrc?.description || '',
+                    openHour: '08:00',
+                    closeHour: '21:00',
+                    opDays: 'Senin - Minggu',
+                    holidayNote: 'Tidak ada hari libur rutin',
+                    alarmOrder: true,
+                    notifChat: true,
+                    alarmTone: 'panjang',
+                    alarmVolume: 0.8,
+                    vibrationEnabled: true,
+                    otpEnabled: false
+                };
+                try {
+                    const raw = JSON.parse(localStorage.getItem(MRC_PREF_PREFIX + getAccountScopeId()) || 'null');
+                    return raw && typeof raw === 'object' ? { ...base, ...raw } : base;
+                } catch (e) {
+                    return base;
+                }
+            }
+
+            async function persistToStorageAndSupabase(successText, failureText) {
+                if (typeof db !== 'undefined') {
+                    localStorage.setItem('oleng_go_db', JSON.stringify(db));
+                }
+                if (typeof currentUser !== 'undefined' && currentUser) {
+                    localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
+                }
+                if (typeof supabaseClient !== 'undefined' && supabaseClient && navigator.onLine && typeof syncAllToSupabase === 'function') {
                     const res = await syncAllToSupabase();
-                    if (!res.ok) return showToast('Gagal konfirmasi database: ' + res.error, 'error');
+                    if (!res || !res.ok) {
+                        if (typeof showToast === 'function') {
+                            showToast((failureText || 'Gagal menyimpan ke database') + (res?.error ? `: ${res.error}` : ''), 'error');
+                        }
+                        return false;
+                    }
+                    localStorage.setItem('oleng_last_sync_at', new Date().toLocaleString('id-ID'));
                 }
-                showToast('Tarif diperbarui & langsung tersinkron (berlaku untuk pesanan baru)!', 'success');
-            };
-
-            window.renderAdminSettingsPage = function (c) {
-                if (!isAdminAuthorized()) return;
-                const cats = [{ key: 'alarm', label: 'Alarm & Notif' }, { key: 'wa', label: 'WhatsApp' }, { key: 'gps', label: 'GPS & Lokasi' }, { key: 'db', label: 'DB & Server' }, { key: 'ops', label: 'Operasional' }, { key: 'sec', label: 'Keamanan' }, { key: 'maint', label: 'Backup' }];
-                c.innerHTML = `<div class="p-4 space-y-4 pb-28 bg-white min-h-full"><div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex justify-between items-center"><h2 class="text-sm font-black text-[#FF9800]">PENGATURAN ADMIN</h2><button onclick="renderDashboardContent('admin-dash', false)" class="text-xs font-bold cursor-pointer">Dashboard</button></div><div class="flex gap-1.5 overflow-x-auto hide-scrollbar">${cats.map(x => `<button onclick="window.__admSetTab('${x.key}')" class="px-3 py-1.5 rounded-xl text-[10px] font-black cursor-pointer shrink-0 ${activeSettingsSection === x.key ? 'bg-[#FF7900] text-white' : 'bg-[#F3F3F3]'}">${x.label}</button>`).join('')}</div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3 text-xs"><label class="flex justify-between font-bold"><span>Alarm Pesanan Masuk</span><input type="checkbox" id="set-alarm-order" ${adminSettings.alarmOrder ? 'checked' : ''}></label><label class="flex justify-between font-bold"><span>Alarm Chat Masuk</span><input type="checkbox" id="set-alarm-chat" ${adminSettings.alarmChat ? 'checked' : ''}></label><label class="block font-bold"><span>WhatsApp Utama</span><input type="tel" id="set-wa-main" value="${adminSettings.waMain}" class="w-full mt-1 p-2 border-2 rounded-xl font-bold"></label><label class="block font-bold"><span>WhatsApp Bantuan</span><input type="tel" id="set-wa-support" value="${adminSettings.waSupport}" class="w-full mt-1 p-2 border-2 rounded-xl font-bold"></label><button onclick="window.__admSaveAllSettings()" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Pengaturan Admin</button></div>${getSimaduBrandFooterHTML()}</div>`;
-            };
-            window.__admSetTab = function (k) { activeSettingsSection = k; window.renderAdminSettingsPage(document.getElementById('main-content')); };
-            window.__admSaveAllSettings = async function () {
-                if (!isAdminAuthorized()) return;
-                adminSettings.alarmOrder = Boolean(document.getElementById('set-alarm-order')?.checked);
-                adminSettings.alarmChat = Boolean(document.getElementById('set-alarm-chat')?.checked);
-                adminSettings.waMain = String(document.getElementById('set-wa-main')?.value || ADMIN_MAIN_WA).trim();
-                adminSettings.waSupport = String(document.getElementById('set-wa-support')?.value || adminSettings.waMain).trim();
-                ADMIN_MAIN_WA = adminSettings.waMain;
-                alarmEnabled = Boolean(adminSettings.alarmOrder || adminSettings.alarmChat);
-                localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(adminSettings));
-                localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled));
-                db.adminSettings = { ...adminSettings };
-                if (supabaseClient && navigator.onLine) {
-                    const res = await syncAllToSupabase();
-                    if (!res.ok) return showToast('Gagal menyimpan ke database: ' + res.error, 'error');
+                if (successText && typeof showToast === 'function') {
+                    showToast(successText, 'success');
                 }
-                showToast('Pengaturan Admin tersimpan permanen!', 'success');
-            };
+                return true;
+            }
 
-            window.renderMasterControlPage = function (c) {
-                if (!isAdminAuthorized()) return;
-                const p = db.pricing || defaultPricing;
-                c.innerHTML = `<div class="p-4 space-y-4 pb-28 bg-white min-h-full"><div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex justify-between items-center"><h2 class="text-sm font-black text-[#FF9800]">MASTER CONTROL &amp; TARIF</h2><button onclick="renderDashboardContent('admin-dash', false)" class="text-xs font-bold cursor-pointer">Dashboard</button></div><div class="grid grid-cols-3 gap-2 text-xs font-extrabold"><button onclick="renderDashboardContent('admin-users')" class="p-3 bg-[#F3F3F3] rounded-2xl cursor-pointer">User &amp; Saldo</button><button onclick="renderDashboardContent('admin-stores')" class="p-3 bg-[#F3F3F3] rounded-2xl cursor-pointer">Toko</button><button onclick="renderDashboardContent('admin-drivers')" class="p-3 bg-[#F3F3F3] rounded-2xl cursor-pointer">Driver</button><button onclick="renderDashboardContent('admin-own-store')" class="p-3 bg-[#F3F3F3] rounded-2xl cursor-pointer">Toko Admin</button><button onclick="renderDashboardContent('admin-banner')" class="p-3 bg-[#F3F3F3] rounded-2xl cursor-pointer">Banner</button><button onclick="renderDashboardContent('admin-market')" class="p-3 bg-[#171717] text-[#FF9800] rounded-2xl cursor-pointer">Market</button></div><div class="bg-[#F3F3F3] p-3 rounded-2xl text-[11px]">Deposit minimum: <b>Rp10.000</b> • Saldo bonus awal: <b>Rp20.000</b> (tidak dapat ditarik tunai)</div><div class="bg-white p-4 rounded-3xl border-2 border-[#FF7900] space-y-2.5 text-xs"><label class="text-[10px] font-black">Tarif Dasar / Min (minFare - Rp)</label><input type="number" id="cfg-min-fare" value="${p.minFare}" class="w-full p-2 border-2 rounded-xl font-bold"><label class="text-[10px] font-black">Komisi OLENGGO (commissionPercent - %)</label><input type="number" id="cfg-commission" value="${p.commissionPercent}" class="w-full p-2 border-2 rounded-xl font-bold"><label class="text-[10px] font-black">Tarif Ojek per Km (ojekPerKm - Rp/km)</label><input type="number" id="cfg-ojek-km" value="${p.ojekPerKm}" class="w-full p-2 border-2 rounded-xl font-bold"><label class="text-[10px] font-black">Tarif Makanan per Km (foodPerKm - Rp/km)</label><input type="number" id="cfg-food-km" value="${p.foodPerKm}" class="w-full p-2 border-2 rounded-xl font-bold"><label class="text-[10px] font-black">Batas Respons Driver (detik)</label><input type="number" id="cfg-driver-timeout" value="${p.driverResponseTimeoutSec || 45}" class="w-full p-2 border-2 rounded-xl font-bold"><label class="text-[10px] font-black">Batas Pencarian Driver (detik)</label><input type="number" id="cfg-search-timeout" value="${p.driverSearchTimeoutSec || 60}" class="w-full p-2 border-2 rounded-xl font-bold"><button onclick="saveAdminPricingConfig()" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan &amp; Sinkronkan Tarif</button></div>${getSimaduBrandFooterHTML()}</div>`;
-            };
+            function renderVerticalAccordionRow(scope, key, iconClass, title, subtitle, contentHtml) {
+                const expanded = openSectionByScope[scope] === key;
+                return `
+                    <div class="w-full bg-white rounded-2xl border-2 ${expanded ? 'border-[#FF7900]' : 'border-neutral-200'} overflow-hidden shadow-2xs">
+                        <button type="button" data-scope="${scope}" data-key="${key}" class="oleng-v-acc-btn w-full min-h-[54px] px-4 py-3 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-[#F3F3F3] transition">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-9 h-9 rounded-xl bg-[#171717] text-[#FF9800] flex items-center justify-center shrink-0">
+                                    <i class="${iconClass} text-sm"></i>
+                                </div>
+                                <span class="text-xs font-black text-[#171717] truncate">${title}</span>
+                            </div>
+                            <i class="fa-solid ${expanded ? 'fa-chevron-up text-[#FF7900]' : 'fa-chevron-down text-neutral-500'} text-xs shrink-0"></i>
+                        </button>
+                        ${expanded ? `<div class="px-4 py-3.5 bg-[#F3F3F3] border-t border-neutral-200 space-y-2.5 text-xs text-[#171717]"><p class="text-[10px] font-bold text-neutral-500">${subtitle}</p>${contentHtml}</div>` : ''}
+                    </div>
+                `;
+            }
 
-            const origRenderAdminDash = window.renderAdminDash;
-            window.renderAdminDash = function (c) {
-                if (!c || !isAdminAuthorized()) return origRenderAdminDash?.(c);
-                const custCount = (db.users || []).filter(u => u.role === 'customer').length;
-                const totalStores = (db.merchants || []).length, activeStores = (db.merchants || []).filter(m => m.status === 'Buka').length;
-                const onlineDrivers = (db.drivers || []).filter(d => d.status === 'Online').length, availDrivers = getAvailableOnlineDriversSorted(userCurrentLatLng[0], userCurrentLatLng[1]).length;
-                const totalOrders = (db.orders || []).length, totalComm = (db.commissionLogs || []).reduce((s, x) => s + Number(x.amount || 0), 0);
-                c.innerHTML = `<div class="p-4 space-y-4 pb-28 bg-white min-h-full"><div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex items-center justify-between gap-2"><div class="flex items-center gap-2.5 min-w-0"><img src="${currentUser.photo || './olengorange2.png'}" class="w-11 h-11 rounded-2xl object-cover border-2 border-[#FF7900] shrink-0"><div class="min-w-0"><span class="text-[10px] text-[#FF9800] font-extrabold uppercase block">Halo, Admin SIMADU</span><h2 class="text-xs font-black truncate">DASHBOARD ADMIN OLENGGO • ${currentUser.accountId || 'ADM01'}</h2></div></div><div class="flex gap-1.5 shrink-0"><button onclick="openNotificationModal()" class="p-2 bg-[#292929] rounded-xl text-white cursor-pointer"><i class="fa-solid fa-bell text-xs"></i></button><button onclick="switchView('chat')" class="p-2 bg-[#292929] rounded-xl text-white cursor-pointer"><i class="fa-solid fa-comments text-xs"></i></button><button onclick="openRoleSettingsPage('alarm')" class="p-2 bg-[#292929] text-[#FF9800] rounded-xl cursor-pointer" title="Pengaturan"><i class="fa-solid fa-gear text-xs"></i></button><button onclick="handleLogout()" class="p-2 bg-rose-600 text-white rounded-xl cursor-pointer"><i class="fa-solid fa-power-off text-xs"></i></button></div></div><div class="bg-[#F3F3F3] p-3.5 rounded-3xl border-2 border-neutral-200 space-y-2"><b class="text-[10px] uppercase">STATUS SISTEM</b><div class="grid grid-cols-2 gap-1.5 text-[10px] font-bold"><button onclick="openRoleSettingsPage('alarm')" class="p-2 bg-white rounded-xl border text-left cursor-pointer">Alarm: ${alarmEnabled ? 'ON' : 'OFF'}</button><button onclick="openRoleSettingsPage('gps')" class="p-2 bg-white rounded-xl border text-left cursor-pointer">GPS: ${localStorage.getItem('oleng_perm_gps') || 'belum_dicek'}</button><button onclick="openRoleSettingsPage('wa')" class="p-2 bg-white rounded-xl border text-left cursor-pointer">WA: ${adminSettings.waMain}</button><button onclick="openRoleSettingsPage('db')" class="p-2 bg-white rounded-xl border text-left cursor-pointer">Supabase: ${lastSupabaseStatus.ok ? 'Terhubung' : 'Lokal'}</button></div></div><div class="grid grid-cols-2 gap-2.5 text-center text-xs"><div onclick="renderDashboardContent('admin-users')" class="p-3.5 bg-white rounded-3xl border-2 cursor-pointer"><span>Konsumen</span><b class="block text-base font-black">${custCount} Akun</b></div><div onclick="renderDashboardContent('admin-stores')" class="p-3.5 bg-white rounded-3xl border-2 cursor-pointer"><span>Toko / Aktif</span><b class="block text-sm font-black text-[#FF7900]">${totalStores} / ${activeStores} Buka</b></div><div onclick="renderDashboardContent('admin-drivers')" class="p-3.5 bg-white rounded-3xl border-2 cursor-pointer"><span>Driver Aktif / Siap</span><b class="block text-sm font-black">${onlineDrivers} / ${availDrivers}</b></div><div onclick="renderDashboardContent('history')" class="p-3.5 bg-white rounded-3xl border-2 cursor-pointer"><span>Order &amp; Komisi</span><b class="block text-xs font-black text-[#FF7900]">${totalOrders} • Rp ${totalComm.toLocaleString('id-ID')}</b></div></div><div class="grid grid-cols-2 gap-2 text-xs font-extrabold"><button onclick="renderDashboardContent('history')" class="py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left cursor-pointer">Kelola Pesanan</button><button onclick="renderDashboardContent('admin-users')" class="py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left cursor-pointer">Kelola Konsumen</button><button onclick="renderDashboardContent('admin-drivers')" class="py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left cursor-pointer">Kelola Driver</button><button onclick="renderDashboardContent('admin-stores')" class="py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left cursor-pointer">Kelola Toko</button><button onclick="renderDashboardContent('admin-master')" class="py-2.5 px-3 bg-[#171717] text-[#FF9800] rounded-2xl text-left cursor-pointer">Master Control &amp; Saldo</button><button onclick="renderDashboardContent('admin-market')" class="py-2.5 px-3 bg-[#FF7900] text-white rounded-2xl text-left cursor-pointer">OLENG MARKET</button><button onclick="openRoleSettingsPage('alarm')" class="col-span-2 py-2.5 px-3 bg-[#F3F3F3] border-2 border-[#FF7900] rounded-2xl text-center cursor-pointer"><i class="fa-solid fa-gear text-[#FF7900] mr-1"></i> Pengaturan</button></div><div class="bg-white p-3.5 rounded-3xl border-2 border-neutral-200 space-y-2"><h3 class="text-[10px] font-black uppercase">Peta Operasional Lengkong</h3><div id="map" class="map-container border" style="height: 175px;"></div></div><div class="rounded-2xl overflow-hidden border-2 border-[#FF7900]"><img src="${getSyncedMainBanner()}" class="w-full h-24 object-cover" alt="Banner OLENG GO"></div>${getSimaduBrandFooterHTML()}</div>`;
-                setTimeout(initHomeMap, 180);
-            };
+            function bindVerticalAccordion(container, scope, tabRoute) {
+                container.querySelectorAll('.oleng-v-acc-btn').forEach(btn => {
+                    btn.addEventListener('click', function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        const key = this.getAttribute('data-key');
+                        openSectionByScope[scope] = openSectionByScope[scope] === key ? null : key;
+                        renderRoleSettingsView(tabRoute);
+                    });
+                });
+            }
 
-            window.renderCustomerSettingsPage = function (c) {
-                if (!c || !currentUser) return;
-                custPrefs = loadCustPrefs();
-                const supportWa = String(adminSettings.waSupport || adminSettings.waMain || '6285624736602').replace(/\D/g, '');
-                const tabs = [{ key: 'profile', label: 'Profil Saya' }, { key: 'address', label: 'Alamat & Lokasi' }, { key: 'notif', label: 'Notifikasi' }, { key: 'security', label: 'Keamanan' }, { key: 'help', label: 'Bantuan' }, { key: 'about', label: 'Tentang & Tampilan' }];
-                let body = '';
-                if (activeCustTab === 'address') {
-                    const ed = editingAddrId ? custPrefs.addresses.find(a => a.id === editingAddrId) : null;
-                    body = `<div class="bg-white p-4 rounded-3xl border-2 space-y-3 text-xs"><h3 class="font-black uppercase border-b pb-2">B. Alamat dan Lokasi</h3><p class="text-[10px] text-neutral-600">Kontrol GPS, titik jemput/tujuan, satelit, dan Google Maps tetap berada di halaman peta &amp; pemesanan.</p><input type="text" id="cust-addr-label" value="${ed?.label || ''}" placeholder="Label alamat (Rumah / Kantor)" class="w-full p-2.5 border-2 rounded-2xl font-bold"><input type="text" id="cust-addr-detail" value="${ed?.detail || ''}" placeholder="Detail alamat..." class="w-full p-2.5 border-2 rounded-2xl"><button onclick="window.__custSaveAddr()" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">${ed ? 'Simpan Perubahan Alamat' : '+ Tambah Alamat Baru'}</button>${custPrefs.addresses.map(a => `<div class="p-3 bg-[#F3F3F3] rounded-2xl border ${a.isPrimary ? 'border-[#FF7900]' : 'border-neutral-200'} space-y-1"><div class="flex justify-between"><b>${a.label} ${a.isPrimary ? '(Utama)' : ''}</b><button onclick="window.__custFavAddr('${a.id}')" class="cursor-pointer ${a.isFavorite ? 'text-rose-600' : 'text-neutral-400'}"><i class="fa-${a.isFavorite ? 'solid' : 'regular'} fa-heart"></i></button></div><p class="text-[11px]">${a.detail}</p><div class="flex gap-1.5 pt-1">${!a.isPrimary ? `<button onclick="window.__custPrimaryAddr('${a.id}')" class="px-2 py-1 bg-[#171717] text-[#FF9800] rounded-lg text-[10px] font-bold cursor-pointer">Atur Utama</button>` : ''}<button onclick="editingAddrId='${a.id}';renderCustomerSettingsPage(document.getElementById('main-content'))" class="px-2 py-1 bg-white border rounded-lg text-[10px] cursor-pointer">Edit</button>${custPrefs.addresses.length > 1 ? `<button onclick="window.__custDelAddr('${a.id}')" class="px-2 py-1 bg-rose-100 text-rose-800 rounded-lg text-[10px] cursor-pointer">Hapus</button>` : ''}</div></div>`).join('')}</div>`;
-                } else if (activeCustTab === 'notif') {
-                    body = `<div class="bg-white p-4 rounded-3xl border-2 space-y-3 text-xs"><h3 class="font-black uppercase border-b pb-2">C. Notifikasi</h3><label class="flex justify-between font-bold"><span>Notifikasi Pesanan</span><input type="checkbox" id="cset-n-order" ${custPrefs.notifOrder ? 'checked' : ''}></label><label class="flex justify-between font-bold"><span>Notifikasi Status Pesanan</span><input type="checkbox" id="cset-n-status" ${custPrefs.notifOrderStatus ? 'checked' : ''}></label><label class="flex justify-between font-bold"><span>Notifikasi Chat</span><input type="checkbox" id="cset-n-chat" ${custPrefs.notifChat ? 'checked' : ''}></label><label class="flex justify-between font-bold"><span>Notifikasi Promosi</span><input type="checkbox" id="cset-n-promo" ${custPrefs.notifPromo ? 'checked' : ''}></label><label class="flex justify-between font-bold"><span>Suara Notifikasi</span><input type="checkbox" id="cset-n-sound" ${custPrefs.notifSound ? 'checked' : ''}></label><label class="flex justify-between font-bold"><span>Getaran</span><input type="checkbox" id="cset-n-vib" ${custPrefs.notifVibrate ? 'checked' : ''}></label><button onclick="window.__custSaveNotif()" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Notifikasi</button></div>`;
-                } else if (activeCustTab === 'security') {
-                    body = `<div class="bg-white p-4 rounded-3xl border-2 space-y-3 text-xs"><h3 class="font-black uppercase border-b pb-2">D. Keamanan Akun</h3><input type="password" id="cset-new-pass" placeholder="Ganti password baru" class="w-full p-2.5 border-2 rounded-2xl font-bold"><label class="flex justify-between font-bold"><span>Pengaturan OTP</span><input type="checkbox" id="cset-otp" ${custPrefs.otpEnabled ? 'checked' : ''}></label><p class="text-[11px] bg-[#F3F3F3] p-2.5 rounded-xl">Sesi aktif: <b>${currentUser.name}</b></p><button onclick="window.__custSaveSec()" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Keamanan</button><button onclick="handleLogout()" class="w-full py-3 bg-rose-600 text-white font-black rounded-2xl cursor-pointer">Logout Akun</button></div>`;
-                } else if (activeCustTab === 'help') {
-                    body = `<div class="bg-white p-4 rounded-3xl border-2 space-y-2.5 text-xs"><h3 class="font-black uppercase border-b pb-2">E. Bantuan dan Layanan</h3><a href="https://wa.me/${supportWa}" target="_blank" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl block text-center">Hubungi Admin via WhatsApp</a><button onclick="showToast('Pusat bantuan siap melayani warga Lengkong.', 'info')" class="w-full py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left font-bold cursor-pointer">Pusat Bantuan</button><button onclick="showToast('Pilih Ojek, Makanan, atau OLENG MARKET di beranda.', 'info')" class="w-full py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left font-bold cursor-pointer">Panduan Penggunaan OLENGGO</button><button onclick="window.__custIssue()" class="w-full py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left font-bold cursor-pointer">Laporkan Masalah</button><button onclick="showToast('Ketentuan layanan berlaku untuk Kecamatan Lengkong.', 'info')" class="w-full py-2.5 px-3 bg-[#F3F3F3] rounded-2xl text-left font-bold cursor-pointer">Ketentuan Layanan</button></div>`;
-                } else if (activeCustTab === 'about') {
-                    body = `<div class="bg-white p-4 rounded-3xl border-2 space-y-3 text-xs"><h3 class="font-black uppercase border-b pb-2">F. Tentang OLENGGO &amp; Tampilan</h3><p><b>Versi:</b> OLENG GO v2 • Kecamatan Lengkong, Sukabumi • Powered by SIMADU</p><select id="cset-font-size" class="w-full p-2.5 border-2 rounded-2xl font-bold bg-white"><option value="normal" ${custPrefs.fontSize === 'normal' ? 'selected' : ''}>Ukuran Tulisan Standar</option><option value="besar" ${custPrefs.fontSize === 'besar' ? 'selected' : ''}>Ukuran Tulisan Besar</option></select><button onclick="custPrefs.fontSize=document.getElementById('cset-font-size').value;saveCustPrefs('Preferensi tampilan tersimpan!')" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Tampilan</button></div>`;
-                } else {
-                    body = `<div class="bg-white p-4 rounded-3xl border-2 space-y-3 text-xs"><h3 class="font-black uppercase border-b pb-2">A. Profil Saya</h3><div class="flex items-center gap-3"><img id="cset-photo-prev" src="${draftCustPhoto || currentUser.photo || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900]"><input type="file" accept="image/*" onchange="window.__custPickPhoto(event)" class="text-[11px]"></div><input type="text" id="cset-name" value="${currentUser.name || ''}" class="w-full p-2.5 border-2 rounded-2xl font-bold"><input type="tel" id="cset-phone" value="${currentUser.phone || ''}" class="w-full p-2.5 border-2 rounded-2xl font-bold bg-[#F3F3F3]"><input type="email" id="cset-email" value="${custPrefs.email || ''}" placeholder="Email (opsional)" class="w-full p-2.5 border-2 rounded-2xl"><button onclick="window.__custSaveProf()" class="w-full py-3 bg-[#FF7900] text-white font-black rounded-2xl cursor-pointer">Simpan Edit Profil</button></div>`;
-                }
-                c.innerHTML = `<div class="p-4 space-y-4 pb-28 bg-white min-h-full"><div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex justify-between items-center"><h2 class="text-sm font-black text-[#FF9800]">PENGATURAN AKUN</h2><button onclick="renderDashboardContent('home', false)" class="text-xs font-bold cursor-pointer">Beranda</button></div><div class="flex gap-1.5 overflow-x-auto hide-scrollbar">${tabs.map(t => `<button onclick="activeCustTab='${t.key}';editingAddrId=null;renderCustomerSettingsPage(document.getElementById('main-content'))" class="px-3 py-1.5 rounded-xl text-[10px] font-black cursor-pointer shrink-0 ${activeCustTab === t.key ? 'bg-[#FF7900] text-white' : 'bg-[#F3F3F3]'}">${t.label}</button>`).join('')}</div>${body}${getSimaduBrandFooterHTML()}</div>`;
-            };
-
-            window.__custPickPhoto = async function (e) { const f = e.target.files?.[0]; if (!f) return; draftCustPhoto = await compressImageFileToDataUrl(f, 320, 0.72); const p = document.getElementById('cset-photo-prev'); if (p) p.src = draftCustPhoto; };
-            window.__custSaveProf = function () { const n = String(document.getElementById('cset-name')?.value || '').trim(); const ph = normalizePhone(document.getElementById('cset-phone')?.value || ''); if (!n || ph.length < 9) return showToast('Nama & nomor WA wajib diisi.', 'error'); currentUser.name = n; currentUser.phone = ph; if (draftCustPhoto) currentUser.photo = draftCustPhoto; draftCustPhoto = null; custPrefs.email = String(document.getElementById('cset-email')?.value || '').trim(); saveCustPrefs('Profil tersimpan!'); window.renderCustomerSettingsPage(document.getElementById('main-content')); };
-            window.__custSaveAddr = function () { const lbl = String(document.getElementById('cust-addr-label')?.value || '').trim() || 'Alamat'; const det = String(document.getElementById('cust-addr-detail')?.value || '').trim(); if (!det) return showToast('Alamat wajib diisi.', 'error'); if (editingAddrId) { const t = custPrefs.addresses.find(a => a.id === editingAddrId); if (t) { t.label = lbl; t.detail = det; if (t.isPrimary) currentUser.address = det; } editingAddrId = null; } else { const hasP = custPrefs.addresses.some(a => a.isPrimary); custPrefs.addresses.push({ id: 'addr-' + Date.now(), label: lbl, detail: det, isFavorite: false, isPrimary: !hasP }); if (!hasP) currentUser.address = det; } saveCustPrefs('Alamat tersimpan!'); window.renderCustomerSettingsPage(document.getElementById('main-content')); };
-            window.__custFavAddr = function (id) { const a = custPrefs.addresses.find(x => x.id === id); if (a) { a.isFavorite = !a.isFavorite; saveCustPrefs('Favorit diperbarui.'); window.renderCustomerSettingsPage(document.getElementById('main-content')); } };
-            window.__custPrimaryAddr = function (id) { custPrefs.addresses.forEach(a => { a.isPrimary = a.id === id; if (a.isPrimary) currentUser.address = a.detail; }); saveCustPrefs('Alamat utama diperbarui!'); window.renderCustomerSettingsPage(document.getElementById('main-content')); };
-            window.__custDelAddr = function (id) { custPrefs.addresses = custPrefs.addresses.filter(a => a.id !== id); if (!custPrefs.addresses.some(a => a.isPrimary) && custPrefs.addresses[0]) { custPrefs.addresses[0].isPrimary = true; currentUser.address = custPrefs.addresses[0].detail; } saveCustPrefs('Alamat dihapus.'); window.renderCustomerSettingsPage(document.getElementById('main-content')); };
-            window.__custSaveNotif = function () { custPrefs.notifOrder = Boolean(document.getElementById('cset-n-order')?.checked); custPrefs.notifOrderStatus = Boolean(document.getElementById('cset-n-status')?.checked); custPrefs.notifChat = Boolean(document.getElementById('cset-n-chat')?.checked); custPrefs.notifPromo = Boolean(document.getElementById('cset-n-promo')?.checked); custPrefs.notifSound = Boolean(document.getElementById('cset-n-sound')?.checked); custPrefs.notifVibrate = Boolean(document.getElementById('cset-n-vib')?.checked); saveCustPrefs('Preferensi notifikasi tersimpan!'); };
-            window.__custSaveSec = function () { const pw = String(document.getElementById('cset-new-pass')?.value || '').trim(); custPrefs.otpEnabled = Boolean(document.getElementById('cset-otp')?.checked); if (pw) currentUser.password = pw; saveCustPrefs('Keamanan akun diperbarui!'); };
-            window.__custIssue = function () { const txt = (prompt('Tuliskan masalah Anda:') || '').trim(); if (txt) { addAccountNotification('Laporan Masalah Konsumen', `${currentUser.name}: ${txt}`, 'Admin SIMADU', 'issue-' + Date.now()); showToast('Laporan terkirim.', 'success'); } };
-
-            function injectCustSettingsBtn() {
-                if (!currentUser || getActiveRoleSafe() !== 'customer') return;
+            function ensureSingleRoleGearInHeader() {
+                if (typeof currentUser === 'undefined' || !currentUser) return;
                 const mainEl = document.getElementById('main-content');
-                if (!mainEl || document.getElementById('customer-header-settings-btn')) return;
-                const logoutBtn = mainEl.querySelector('button[onclick="handleLogout()"]');
-                if (logoutBtn && logoutBtn.parentElement) {
-                    logoutBtn.insertAdjacentHTML('beforebegin', `<button id="customer-header-settings-btn" type="button" onclick="openRoleSettingsPage('profile')" title="Pengaturan Akun" class="p-2.5 bg-[#292929] hover:bg-[#FF7900] text-[#FF9800] hover:text-white rounded-2xl cursor-pointer border border-[#FF7900]/50 transition"><i class="fa-solid fa-gear text-sm"></i></button>`);
+                if (!mainEl) return;
+                const logoutBtn = mainEl.querySelector('button[onclick*="handleLogout"]');
+                if (!logoutBtn || !logoutBtn.parentElement) return;
+
+                const allGears = mainEl.querySelectorAll('[id*="settings-btn"], [id*="gear-btn"]');
+                allGears.forEach((el, idx) => { if (idx > 0) el.remove(); });
+
+                const role = getEffRole();
+                const routeMap = {
+                    admin: 'admin-settings',
+                    driver: 'driver-settings',
+                    merchant: 'merchant-settings',
+                    customer: 'customer-settings'
+                };
+                const titleMap = {
+                    admin: 'Pengaturan Admin',
+                    driver: 'Pengaturan Driver',
+                    merchant: 'Pengaturan Toko',
+                    customer: 'Pengaturan Akun'
+                };
+                const targetRoute = routeMap[role] || 'customer-settings';
+                const labelTitle = titleMap[role] || 'Pengaturan';
+
+                let gearBtn = document.getElementById('oleng-single-role-gear');
+                if (!gearBtn) {
+                    gearBtn = document.createElement('button');
+                    gearBtn.id = 'oleng-single-role-gear';
+                    gearBtn.type = 'button';
+                    gearBtn.className = 'w-10 h-10 bg-[#292929] hover:bg-[#FF7900] text-[#FF9800] hover:text-white rounded-2xl flex items-center justify-center cursor-pointer border border-[#FF7900]/60 transition shrink-0';
+                    gearBtn.innerHTML = '<i class="fa-solid fa-gear text-sm"></i>';
+                    logoutBtn.parentElement.insertBefore(gearBtn, logoutBtn);
+                }
+                gearBtn.setAttribute('title', labelTitle);
+                gearBtn.setAttribute('aria-label', labelTitle);
+                gearBtn.onclick = function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (typeof renderDashboardContent === 'function') {
+                        renderDashboardContent(targetRoute, true);
+                    } else {
+                        renderRoleSettingsView(targetRoute);
+                    }
+                };
+            }
+
+            function renderRoleSettingsView(tabRoute) {
+                const container = document.getElementById('main-content');
+                if (!container || typeof currentUser === 'undefined' || !currentUser) return;
+                if (typeof currentSubTab !== 'undefined') currentSubTab = tabRoute;
+                localStorage.setItem('oleng_last_tab', tabRoute);
+                document.getElementById('view-merchant-detail')?.classList.add('hidden');
+
+                const footer = typeof getSimaduBrandFooterHTML === 'function' ? getSimaduBrandFooterHTML() : '';
+                const admCfg = loadAdminPrefs();
+                const lastSync = localStorage.getItem('oleng_last_sync_at') || 'Belum tercatat';
+
+                if (tabRoute === 'admin-settings') {
+                    if (!isAuthorizedAdmin()) {
+                        if (typeof showToast === 'function') showToast('Akses Pengaturan Admin khusus Admin berwenang.', 'error');
+                        return;
+                    }
+                    const pricing = (typeof db !== 'undefined' && db && db.pricing)
+                        ? db.pricing
+                        : { minFare: 8000, ojekPerKm: 2500, foodPerKm: 2000, commissionPercent: 5, driverResponseTimeoutSec: 45, driverSearchTimeoutSec: 60 };
+                    const isSbOk = typeof lastSupabaseStatus !== 'undefined' && Boolean(lastSupabaseStatus.ok);
+                    const authLogs = (typeof db !== 'undefined' && Array.isArray(db.authLogs)) ? db.authLogs.slice(0, 5) : [];
+                    const mLogs = Array.isArray(admCfg.maintenanceLogs) ? admCfg.maintenanceLogs.slice(0, 5) : [];
+
+                    const adminList = [
+                        renderVerticalAccordionRow('admin', 'alarm', 'fa-solid fa-bell', 'A. ALARM & NOTIFIKASI', 'Alarm pesanan, chat, notifikasi pendaftaran & transaksi, suara, volume, durasi & getaran', `
+                            <label class="flex justify-between items-center font-bold cursor-pointer"><span>Alarm Pesanan Masuk</span><input type="checkbox" id="adm-s-ao" ${admCfg.alarmOrder ? 'checked' : ''}></label>
+                            <label class="flex justify-between items-center font-bold cursor-pointer"><span>Alarm Chat Masuk</span><input type="checkbox" id="adm-s-ac" ${admCfg.alarmChat ? 'checked' : ''}></label>
+                            <label class="flex justify-between items-center font-bold cursor-pointer"><span>Notifikasi Pendaftaran User</span><input type="checkbox" id="adm-s-nu" ${admCfg.notifUserReg ? 'checked' : ''}></label>
+                            <label class="flex justify-between items-center font-bold cursor-pointer"><span>Notifikasi Pendaftaran Driver</span><input type="checkbox" id="adm-s-nd" ${admCfg.notifDriverReg ? 'checked' : ''}></label>
+                            <label class="flex justify-between items-center font-bold cursor-pointer"><span>Notifikasi Pendaftaran Toko</span><input type="checkbox" id="adm-s-nm" ${admCfg.notifMerchantReg ? 'checked' : ''}></label>
+                            <label class="flex justify-between items-center font-bold cursor-pointer"><span>Notifikasi Transaksi</span><input type="checkbox" id="adm-s-nt" ${admCfg.notifTransaction ? 'checked' : ''}></label>
+                            <div><label class="text-[10px] font-extrabold uppercase">Jenis Suara Alarm</label><select id="adm-s-tone" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"><option value="panjang" ${admCfg.alarmTone === 'panjang' ? 'selected' : ''}>Panjang</option><option value="pendek" ${admCfg.alarmTone === 'pendek' ? 'selected' : ''}>Pendek</option></select></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Volume Alarm (0.1 - 1.0)</label><input type="number" step="0.1" min="0.1" max="1" id="adm-s-vol" value="${admCfg.alarmVolume}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Durasi Alarm (Detik)</label><input type="number" min="3" max="120" id="adm-s-dur" value="${admCfg.alarmDurationSec || 15}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <label class="flex justify-between items-center font-bold cursor-pointer"><span>Getaran</span><input type="checkbox" id="adm-s-vib" ${admCfg.vibrationEnabled ? 'checked' : ''}></label>
+                            <button type="button" id="adm-save-alarm" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Alarm &amp; Notifikasi</button>
+                        `),
+                        renderVerticalAccordionRow('admin', 'wa', 'fa-brands fa-whatsapp', 'B. WHATSAPP & KONTAK', `Utama: ${admCfg.waMain}`, `
+                            <div><label class="text-[10px] font-extrabold uppercase">Nomor WhatsApp Utama</label><input type="tel" id="adm-s-wam" value="${admCfg.waMain}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Nomor WhatsApp Bantuan</label><input type="tel" id="adm-s-was" value="${admCfg.waSupport}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Nomor WhatsApp Admin</label><input type="tel" id="adm-s-waa" value="${admCfg.waAdmin}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" id="adm-save-wa" class="py-2 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Perubahan</button>
+                                <a href="https://wa.me/${toWaInternational(admCfg.waMain)}" target="_blank" class="py-2 bg-[#171717] text-[#FF9800] font-black rounded-xl text-center">Tes WhatsApp</a>
+                            </div>
+                        `),
+                        renderVerticalAccordionRow('admin', 'gps', 'fa-solid fa-location-dot', 'C. GPS & LOKASI', `Izin: ${localStorage.getItem('oleng_perm_gps') || 'belum_dicek'}`, `
+                            <p><b>Status Izin GPS:</b> ${localStorage.getItem('oleng_perm_gps') || 'belum_dicek'}</p>
+                            <p><b>Status Layanan Lokasi:</b> ${navigator.geolocation ? 'Tersedia di Perangkat' : 'Tidak Didukung'}</p>
+                            <p><b>Status Konfigurasi Peta:</b> Leaflet Aktif (${typeof mapLayerMode !== 'undefined' && mapLayerMode === 'satellite' ? 'Satelit' : 'Peta Jalan'})</p>
+                            <p><b>Informasi Konfigurasi Google Maps:</b> Tautan arah/lokasi Google Maps aktif dari halaman peta &amp; pesanan.</p>
+                            <p class="text-[10px] text-neutral-600">GPS lokasi terkini dan seluruh tombol kontrol peta tetap berada di halaman peta masing-masing.</p>
+                            <button type="button" id="adm-check-gps" class="w-full py-2 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Pemeriksaan Lokasi</button>
+                        `),
+                        renderVerticalAccordionRow('admin', 'db', 'fa-solid fa-database', 'D. DATABASE & SERVER', isSbOk ? 'Supabase Terhubung' : 'Mode Lokal', `
+                            <p><b>Status Supabase:</b> ${isSbOk ? 'Terhubung' : 'Belum Terhubung / Lokal'}</p>
+                            <p><b>Status Database:</b> ${isSbOk ? 'Aktif' : 'Penyimpanan Lokal'}</p>
+                            <p><b>Status Sinkronisasi:</b> ${navigator.onLine ? 'Online' : 'Offline'}</p>
+                            <p><b>Waktu Sinkronisasi Terakhir:</b> ${lastSync}</p>
+                            <p><b>Status Server:</b> ${navigator.onLine ? 'Normal' : 'Gangguan Jaringan'}</p>
+                            ${!isSbOk && typeof lastSupabaseStatus !== 'undefined' && lastSupabaseStatus.detail ? `<p class="text-rose-700 font-semibold"><b>Info Gangguan:</b> ${lastSupabaseStatus.detail}</p>` : ''}
+                            <button type="button" id="adm-test-db" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Tombol Uji Koneksi</button>
+                        `),
+                        renderVerticalAccordionRow('admin', 'pricing', 'fa-solid fa-coins', 'E. TARIF & KOMISI', `Min Rp${pricing.minFare} • Komisi ${pricing.commissionPercent}%`, `
+                            <p class="text-[10px] text-neutral-600">Terhubung langsung dengan Master Control (tidak ada pengaturan tarif ganda).</p>
+                            <div><label class="text-[10px] font-extrabold uppercase">Tarif Dasar Ojek / Minimum (Rp)</label><input type="number" id="cfg-min-fare" value="${pricing.minFare}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Tarif per Kilometer Ojek (Rp/km)</label><input type="number" id="cfg-ojek-km" value="${pricing.ojekPerKm}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Tarif Pengantaran Makanan per Km (Rp/km)</label><input type="number" id="cfg-food-km" value="${pricing.foodPerKm}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Komisi Transaksi (%)</label><input type="number" id="cfg-commission" value="${pricing.commissionPercent}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <input type="hidden" id="cfg-driver-timeout" value="${pricing.driverResponseTimeoutSec || 45}">
+                            <input type="hidden" id="cfg-search-timeout" value="${pricing.driverSearchTimeoutSec || 60}">
+                            <p><b>Biaya Layanan:</b> Mengikuti tarif dasar &amp; jarak aktif</p>
+                            <p><b>Deposit Minimum Mitra:</b> Rp ${Number(admCfg.minDeposit || 10000).toLocaleString('id-ID')}</p>
+                            <p><b>Saldo Bonus Awal Mitra:</b> Rp ${Number(admCfg.initialBonusBalance || 20000).toLocaleString('id-ID')} (tidak dapat ditarik tunai)</p>
+                            <p><b>Tarif OLENG MARKET:</b> ${admCfg.marketFeeNote}</p>
+                            <button type="button" id="adm-save-pricing" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Tarif &amp; Komisi</button>
+                        `),
+                        renderVerticalAccordionRow('admin', 'ops', 'fa-solid fa-store', 'F. OPERASIONAL', `${admCfg.serviceArea} • ${admCfg.serviceOpen ? 'Buka' : 'Tutup'}`, `
+                            <div><label class="text-[10px] font-extrabold uppercase">Wilayah Layanan</label><input type="text" id="adm-o-area" value="${admCfg.serviceArea}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Jam Operasional</label><input type="text" id="adm-o-hours" value="${admCfg.operationalHours}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Status Layanan Buka</span><input type="checkbox" id="adm-o-open" ${admCfg.serviceOpen ? 'checked' : ''}></label>
+                            <p><b>Informasi Aplikasi:</b> ${admCfg.appName} • Kecamatan Lengkong, Sukabumi</p>
+                            <button type="button" id="adm-open-banner" class="w-full py-2 bg-[#171717] text-[#FF9800] font-black rounded-xl cursor-pointer">Kelola Banner Utama</button>
+                            <button type="button" id="adm-save-ops" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Operasional</button>
+                        `),
+                        renderVerticalAccordionRow('admin', 'sec', 'fa-solid fa-shield-halved', 'G. KEAMANAN', 'Password admin, OTP, hak akses, sesi & aktivitas', `
+                            <div><label class="text-[10px] font-extrabold uppercase">Ganti Password Admin</label><input type="password" id="adm-g-pass" placeholder="Sandi baru..." class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>OTP</span><input type="checkbox" id="adm-g-otp" ${admCfg.otpEnabled ? 'checked' : ''}></label>
+                            <p><b>Pengaturan Hak Akses:</b> Admin penuh; Konsumen, Driver &amp; Toko sesuai peran.</p>
+                            <p><b>Kelola Sesi Login:</b> ${currentUser.name} (${currentUser.phone || '-'})</p>
+                            <div class="space-y-1 pt-1 border-t"><span class="text-[10px] font-black uppercase block">Riwayat Aktivitas Admin</span>${authLogs.length ? authLogs.map(l => `<p class="text-[10px]">• ${l.action} ${l.name} (${l.time})</p>`).join('') : '<p class="text-[10px] text-neutral-500">Belum ada log.</p>'}</div>
+                            <button type="button" id="adm-save-sec" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Keamanan</button>
+                        `),
+                        renderVerticalAccordionRow('admin', 'backup', 'fa-solid fa-floppy-disk', 'H. BACKUP & SISTEM', 'Ekspor data, backup, versi & pemeliharaan', `
+                            <p><b>Informasi Versi Aplikasi:</b> OLENG GO v2</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" id="adm-exp-json" class="py-2 bg-[#171717] text-[#FF9800] font-black rounded-xl cursor-pointer">Ekspor Data</button>
+                                <button type="button" id="adm-run-bkp" class="py-2 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Backup</button>
+                            </div>
+                            <div class="space-y-1 pt-1 border-t"><span class="text-[10px] font-black uppercase block">Riwayat Pemeliharaan</span>${mLogs.length ? mLogs.map(m => `<p class="text-[10px]">• ${m.note} (${m.time})</p>`).join('') : '<p class="text-[10px] text-neutral-500">Belum ada catatan pemeliharaan.</p>'}</div>
+                        `)
+                    ];
+
+                    container.innerHTML = `<div class="p-4 space-y-3 pb-28 bg-white min-h-full"><div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex items-center justify-between gap-2"><div><span class="text-[10px] text-[#FF9800] font-black uppercase block">PENGATURAN ADMIN</span><h2 class="text-sm font-black">Daftar Kategori Pengaturan</h2></div><button type="button" id="adm-back-home" class="px-3 py-1.5 bg-[#292929] text-[#FF9800] rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button></div><div class="space-y-2.5">${adminList.join('')}</div>${footer}</div>`;
+                    bindVerticalAccordion(container, 'admin', tabRoute);
+
+                    container.querySelector('#adm-back-home')?.addEventListener('click', () => renderDashboardContent('admin-dash', false));
+                    container.querySelector('#adm-save-alarm')?.addEventListener('click', async () => {
+                        const next = {
+                            ...admCfg,
+                            alarmOrder: Boolean(container.querySelector('#adm-s-ao')?.checked),
+                            alarmChat: Boolean(container.querySelector('#adm-s-ac')?.checked),
+                            notifUserReg: Boolean(container.querySelector('#adm-s-nu')?.checked),
+                            notifDriverReg: Boolean(container.querySelector('#adm-s-nd')?.checked),
+                            notifMerchantReg: Boolean(container.querySelector('#adm-s-nm')?.checked),
+                            notifTransaction: Boolean(container.querySelector('#adm-s-nt')?.checked),
+                            alarmTone: container.querySelector('#adm-s-tone')?.value || 'panjang',
+                            alarmVolume: Math.min(1, Math.max(0.1, parseFloat(container.querySelector('#adm-s-vol')?.value || '0.8') || 0.8)),
+                            alarmDurationSec: Math.min(120, Math.max(3, parseInt(container.querySelector('#adm-s-dur')?.value || '15', 10) || 15)),
+                            vibrationEnabled: Boolean(container.querySelector('#adm-s-vib')?.checked)
+                        };
+                        localStorage.setItem(ADMIN_STORE_KEY, JSON.stringify(next));
+                        if (typeof alarmEnabled !== 'undefined') { alarmEnabled = Boolean(next.alarmOrder || next.alarmChat); localStorage.setItem('oleng_alarm_enabled', String(alarmEnabled)); }
+                        if (typeof db !== 'undefined') db.adminSettings = next;
+                        await persistToStorageAndSupabase('Alarm & notifikasi tersimpan!', 'Gagal menyimpan alarm & notifikasi.');
+                    });
+                    container.querySelector('#adm-save-wa')?.addEventListener('click', async () => {
+                        const next = {
+                            ...admCfg,
+                            waMain: (container.querySelector('#adm-s-wam')?.value || admCfg.waMain).trim(),
+                            waSupport: (container.querySelector('#adm-s-was')?.value || admCfg.waSupport).trim(),
+                            waAdmin: (container.querySelector('#adm-s-waa')?.value || admCfg.waAdmin).trim()
+                        };
+                        localStorage.setItem(ADMIN_STORE_KEY, JSON.stringify(next));
+                        if (typeof ADMIN_MAIN_WA !== 'undefined') ADMIN_MAIN_WA = toWaInternational(next.waMain);
+                        if (typeof db !== 'undefined') db.adminSettings = next;
+                        await persistToStorageAndSupabase('Kontak WhatsApp tersimpan!', 'Gagal menyimpan kontak WhatsApp.');
+                        renderRoleSettingsView(tabRoute);
+                    });
+                    container.querySelector('#adm-check-gps')?.addEventListener('click', async () => {
+                        if (typeof ensureWebPermissionsFlow === 'function') await ensureWebPermissionsFlow(true);
+                        renderRoleSettingsView(tabRoute);
+                    });
+                    container.querySelector('#adm-test-db')?.addEventListener('click', async () => {
+                        if (typeof manualForceSync === 'function') await manualForceSync(true);
+                        renderRoleSettingsView(tabRoute);
+                    });
+                    container.querySelector('#adm-save-pricing')?.addEventListener('click', () => {
+                        if (typeof saveAdminPricingConfig === 'function') saveAdminPricingConfig();
+                    });
+                    container.querySelector('#adm-open-banner')?.addEventListener('click', () => renderDashboardContent('admin-banner', true));
+                    container.querySelector('#adm-save-ops')?.addEventListener('click', async () => {
+                        const next = {
+                            ...admCfg,
+                            serviceArea: (container.querySelector('#adm-o-area')?.value || admCfg.serviceArea).trim(),
+                            operationalHours: (container.querySelector('#adm-o-hours')?.value || admCfg.operationalHours).trim(),
+                            serviceOpen: Boolean(container.querySelector('#adm-o-open')?.checked)
+                        };
+                        localStorage.setItem(ADMIN_STORE_KEY, JSON.stringify(next));
+                        if (typeof db !== 'undefined') db.adminSettings = next;
+                        await persistToStorageAndSupabase('Pengaturan operasional tersimpan!', 'Gagal menyimpan operasional.');
+                        renderRoleSettingsView(tabRoute);
+                    });
+                    container.querySelector('#adm-save-sec')?.addEventListener('click', async () => {
+                        const pw = (container.querySelector('#adm-g-pass')?.value || '').trim();
+                        const next = { ...admCfg, otpEnabled: Boolean(container.querySelector('#adm-g-otp')?.checked) };
+                        localStorage.setItem(ADMIN_STORE_KEY, JSON.stringify(next));
+                        if (pw && typeof db !== 'undefined' && Array.isArray(db.users)) {
+                            const admAcc = db.users.find(u => u.role === 'admin');
+                            if (admAcc) admAcc.password = pw;
+                            currentUser.password = pw;
+                        }
+                        if (typeof db !== 'undefined') db.adminSettings = next;
+                        await persistToStorageAndSupabase('Keamanan admin tersimpan!', 'Gagal menyimpan keamanan.');
+                    });
+                    container.querySelector('#adm-exp-json')?.addEventListener('click', () => {
+                        const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), db, adminSettings: admCfg }, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `oleng-go-backup-${Date.now()}.json`;
+                        a.click();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        if (typeof showToast === 'function') showToast('Data berhasil diekspor.', 'success');
+                    });
+                    container.querySelector('#adm-run-bkp')?.addEventListener('click', async () => {
+                        const logs = Array.isArray(admCfg.maintenanceLogs) ? admCfg.maintenanceLogs : [];
+                        logs.unshift({ note: `Backup data oleh ${currentUser.name}`, time: new Date().toLocaleString('id-ID') });
+                        const next = { ...admCfg, maintenanceLogs: logs };
+                        localStorage.setItem(ADMIN_STORE_KEY, JSON.stringify(next));
+                        if (typeof db !== 'undefined') db.adminSettings = next;
+                        await persistToStorageAndSupabase('Backup berhasil dicatat!', 'Gagal menyimpan backup.');
+                        renderRoleSettingsView(tabRoute);
+                    });
+                    return;
+                }
+
+                if (tabRoute === 'driver-settings') {
+                    const dc = loadDriverPrefs();
+                    const waAdm = toWaInternational(admCfg.waAdmin);
+                    const bal = typeof getProfileSyncedBalance === 'function' ? getProfileSyncedBalance() : 0;
+                    const drvObj = (typeof db !== 'undefined' && Array.isArray(db.drivers))
+                        ? db.drivers.find(d => normalizePhone(d.phone) === normalizePhone(currentUser.phone) || normalizeMatchKey(d.name) === normalizeMatchKey(currentUser.name))
+                        : null;
+                    const mutCount = (typeof getAccountMutations === 'function') ? getAccountMutations().length : 0;
+                    const commCount = (typeof db !== 'undefined' && Array.isArray(db.commissionLogs)) ? db.commissionLogs.length : 0;
+                    const ordCount = (typeof getAccountOrders === 'function') ? getAccountOrders().length : 0;
+
+                    const driverList = [
+                        renderVerticalAccordionRow('driver', 'profile', 'fa-solid fa-id-badge', 'A. PROFIL DRIVER', `${currentUser.name} • ${currentUser.phone || '-'}`, `
+                            <img src="${currentUser.photo || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900]">
+                            <p><b>Nama:</b> ${currentUser.name}</p>
+                            <p><b>Nomor WhatsApp:</b> ${currentUser.phone || '-'}</p>
+                            <p><b>Informasi Identitas:</b> ID ${currentUser.accountId || '-'} ${currentUser.ktp ? `• KTP ${currentUser.ktp}` : ''}</p>
+                        `),
+                        renderVerticalAccordionRow('driver', 'vehicle', 'fa-solid fa-motorcycle', 'B. KENDARAAN', `${dc.vehicleType} • ${dc.vehiclePlate || '-'}`, `
+                            <div><label class="text-[10px] font-extrabold uppercase">Jenis Kendaraan</label><input type="text" id="dv-s-type" value="${dc.vehicleType}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Merek dan Tipe</label><input type="text" id="dv-s-brand" value="${dc.vehicleBrandModel}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Nomor Polisi</label><input type="text" id="dv-s-plate" value="${dc.vehiclePlate}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl uppercase font-bold"></div>
+                            <img src="${dc.vehiclePhoto || './olengorange2.png'}" class="w-16 h-16 rounded-xl object-cover border">
+                            <button type="button" id="dv-save-veh" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Kendaraan</button>
+                        `),
+                        renderVerticalAccordionRow('driver', 'notif', 'fa-solid fa-bell', 'C. NOTIFIKASI & ALARM', 'Alarm pesanan baru, chat, suara, volume & getaran', `
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Alarm Pesanan Baru</span><input type="checkbox" id="dv-n-ord" ${dc.alarmOrder ? 'checked' : ''}></label>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Chat</span><input type="checkbox" id="dv-n-chat" ${dc.notifChat ? 'checked' : ''}></label>
+                            <div><label class="text-[10px] font-extrabold uppercase">Suara Alarm</label><select id="dv-n-tone" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"><option value="panjang" ${dc.alarmTone === 'panjang' ? 'selected' : ''}>Panjang</option><option value="pendek" ${dc.alarmTone === 'pendek' ? 'selected' : ''}>Pendek</option></select></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Volume (0.1 - 1.0)</label><input type="number" step="0.1" min="0.1" max="1" id="dv-n-vol" value="${dc.alarmVolume}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Getaran</span><input type="checkbox" id="dv-n-vib" ${dc.vibrationEnabled ? 'checked' : ''}></label>
+                            <button type="button" id="dv-save-notif" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Notifikasi &amp; Alarm</button>
+                        `),
+                        renderVerticalAccordionRow('driver', 'wallet', 'fa-solid fa-wallet', 'D. SALDO & DEPOSIT', `Saldo tersedia: Rp ${Number(bal || 0).toLocaleString('id-ID')}`, `
+                            <p><b>Saldo Tersedia:</b> Rp ${Number(bal || 0).toLocaleString('id-ID')}</p>
+                            <p><b>Deposit Minimum:</b> Rp ${Number(admCfg.minDeposit || 10000).toLocaleString('id-ID')}</p>
+                            <p><b>Informasi Saldo Bonus:</b> Rp ${Number(admCfg.initialBonusBalance || 20000).toLocaleString('id-ID')} (tidak dapat ditarik tunai)</p>
+                            <p><b>Riwayat Pengisian Deposit &amp; Transaksi:</b> ${mutCount} mutasi, ${ordCount} order</p>
+                            <p><b>Riwayat Pemotongan Komisi:</b> ${commCount} catatan komisi</p>
+                            <button type="button" id="dv-req-deposit" class="w-full py-2 bg-[#171717] text-[#FF9800] font-black rounded-xl cursor-pointer">Deposit / Ajukan ke Admin</button>
+                        `),
+                        renderVerticalAccordionRow('driver', 'ops', 'fa-solid fa-clock', 'E. OPERASIONAL', `Status: ${drvObj?.status || 'Online'} • ${dc.workHoursPref}`, `
+                            <p><b>Informasi Status Akun:</b> ${drvObj?.status || 'Online'}</p>
+                            <p class="text-[10px] text-neutral-600">Tombol ONLINE/OFFLINE tetap berada di halaman utama driver.</p>
+                            <div><label class="text-[10px] font-extrabold uppercase">Wilayah Layanan</label><input type="text" id="dv-o-area" value="${dc.serviceArea}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Preferensi Jam Kerja</label><input type="text" id="dv-o-hours" value="${dc.workHoursPref}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <button type="button" id="dv-save-ops" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Operasional</button>
+                        `),
+                        renderVerticalAccordionRow('driver', 'sec', 'fa-solid fa-lock', 'F. KEAMANAN', 'Ganti password, OTP & sesi login', `
+                            <div><label class="text-[10px] font-extrabold uppercase">Ganti Password</label><input type="password" id="dv-s-pass" placeholder="Password baru..." class="w-full mt-1 p-2 bg-white border-2 rounded-xl"></div>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>OTP</span><input type="checkbox" id="dv-s-otp" ${dc.otpEnabled ? 'checked' : ''}></label>
+                            <p><b>Kelola Sesi Login:</b> ${currentUser.name} (${currentUser.phone || '-'})</p>
+                            <button type="button" id="dv-save-sec" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Keamanan</button>
+                        `),
+                        renderVerticalAccordionRow('driver', 'help', 'fa-solid fa-headset', 'G. BANTUAN MITRA', 'WhatsApp admin, panduan driver & laporkan masalah', `
+                            <a href="https://wa.me/${waAdm}" target="_blank" class="w-full py-2 bg-[#FF7900] text-white font-black rounded-xl block text-center">WhatsApp Admin</a>
+                            <button type="button" id="dv-guide" class="w-full py-2 bg-white border rounded-xl font-bold cursor-pointer">Panduan Driver</button>
+                            <button type="button" id="dv-report" class="w-full py-2 bg-white border rounded-xl font-bold cursor-pointer">Laporkan Masalah</button>
+                        `),
+                        renderVerticalAccordionRow('driver', 'about', 'fa-solid fa-circle-info', 'H. TENTANG OLENGGO', 'OLENG GO v2 • Powered by SIMADU', `
+                            <p><b>Versi Aplikasi:</b> OLENG GO v2</p>
+                            <p><b>Wilayah:</b> ${admCfg.serviceArea} • <b>Powered by SIMADU</b></p>
+                        `)
+                    ];
+
+                    container.innerHTML = `<div class="p-4 space-y-3 pb-28 bg-white min-h-full"><div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex items-center justify-between gap-2"><div><span class="text-[10px] text-[#FF9800] font-black uppercase block">PENGATURAN DRIVER</span><h2 class="text-sm font-black">${currentUser.name}</h2></div><button type="button" id="dv-back-home" class="px-3 py-1.5 bg-[#292929] text-[#FF9800] rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button></div><div class="space-y-2.5">${driverList.join('')}</div>${footer}</div>`;
+                    bindVerticalAccordion(container, 'driver', tabRoute);
+
+                    container.querySelector('#dv-back-home')?.addEventListener('click', () => renderDashboardContent('home', false));
+                    container.querySelector('#dv-save-veh')?.addEventListener('click', async () => {
+                        const next = {
+                            ...dc,
+                            vehicleType: (container.querySelector('#dv-s-type')?.value || dc.vehicleType).trim(),
+                            vehicleBrandModel: (container.querySelector('#dv-s-brand')?.value || '').trim(),
+                            vehiclePlate: (container.querySelector('#dv-s-plate')?.value || '').trim().toUpperCase()
+                        };
+                        localStorage.setItem(DRV_PREF_PREFIX + getAccSuffix(), JSON.stringify(next));
+                        if (drvObj) {
+                            drvObj.bikeType = next.vehicleType;
+                            drvObj.plate = next.vehiclePlate;
+                            if (next.vehicleBrandModel) drvObj.vehicle = next.vehicleBrandModel;
+                        }
+                        currentUser.vehicle = next.vehicleBrandModel || currentUser.vehicle;
+                        await persistToStorageAndSupabase('Data kendaraan driver tersimpan!', 'Gagal menyimpan kendaraan.');
+                        renderRoleSettingsView(tabRoute);
+                    });
+                    container.querySelector('#dv-save-notif')?.addEventListener('click', async () => {
+                        const next = {
+                            ...dc,
+                            alarmOrder: Boolean(container.querySelector('#dv-n-ord')?.checked),
+                            notifChat: Boolean(container.querySelector('#dv-n-chat')?.checked),
+                            alarmTone: container.querySelector('#dv-n-tone')?.value || 'panjang',
+                            alarmVolume: Math.min(1, Math.max(0.1, parseFloat(container.querySelector('#dv-n-vol')?.value || '0.8') || 0.8)),
+                            vibrationEnabled: Boolean(container.querySelector('#dv-n-vib')?.checked)
+                        };
+                        localStorage.setItem(DRV_PREF_PREFIX + getAccSuffix(), JSON.stringify(next));
+                        await persistToStorageAndSupabase('Notifikasi & alarm driver tersimpan!', 'Gagal menyimpan notifikasi.');
+                    });
+                    container.querySelector('#dv-req-deposit')?.addEventListener('click', () => {
+                        if (typeof goToAdminTopUpChat === 'function') goToAdminTopUpChat();
+                    });
+                    container.querySelector('#dv-save-ops')?.addEventListener('click', async () => {
+                        const next = {
+                            ...dc,
+                            serviceArea: (container.querySelector('#dv-o-area')?.value || dc.serviceArea).trim(),
+                            workHoursPref: (container.querySelector('#dv-o-hours')?.value || dc.workHoursPref).trim()
+                        };
+                        localStorage.setItem(DRV_PREF_PREFIX + getAccSuffix(), JSON.stringify(next));
+                        await persistToStorageAndSupabase('Operasional driver tersimpan!', 'Gagal menyimpan operasional.');
+                        renderRoleSettingsView(tabRoute);
+                    });
+                    container.querySelector('#dv-save-sec')?.addEventListener('click', async () => {
+                        const pw = (container.querySelector('#dv-s-pass')?.value || '').trim();
+                        const next = { ...dc, otpEnabled: Boolean(container.querySelector('#dv-s-otp')?.checked) };
+                        if (pw) currentUser.password = pw;
+                        localStorage.setItem(DRV_PREF_PREFIX + getAccSuffix(), JSON.stringify(next));
+                        await persistToStorageAndSupabase('Keamanan akun driver tersimpan!', 'Gagal menyimpan keamanan.');
+                    });
+                    container.querySelector('#dv-guide')?.addEventListener('click', () => {
+                        if (typeof showToast === 'function') showToast('Panduan Driver: Pantau pesanan masuk, konfirmasi pengantaran & cek riwayat.', 'info');
+                    });
+                    container.querySelector('#dv-report')?.addEventListener('click', () => {
+                        const txt = (prompt('Tuliskan laporan masalah driver:') || '').trim();
+                        if (txt && typeof addAccountNotification === 'function') {
+                            addAccountNotification('Laporan Driver', `${currentUser.name}: ${txt}`, 'Admin SIMADU', 'drv-rep-' + Date.now());
+                            if (typeof showToast === 'function') showToast('Laporan masalah terkirim.', 'success');
+                        }
+                    });
+                    return;
+                }
+
+                if (tabRoute === 'merchant-settings') {
+                    const mc = loadMerchantPrefs();
+                    const waAdm = toWaInternational(admCfg.waAdmin);
+                    const mrcObj = (typeof db !== 'undefined' && Array.isArray(db.merchants))
+                        ? db.merchants.find(m =>
+                            String(m.accountId || '').toUpperCase() !== 'TOKOADM01' &&
+                            (normalizePhone(m.whatsapp) === normalizePhone(currentUser.phone) || normalizeMatchKey(m.name) === normalizeMatchKey(currentUser.shopName))
+                        )
+                        : null;
+                    const foods = (typeof db !== 'undefined' && Array.isArray(db.foods) && mrcObj)
+                        ? db.foods.filter(f => Number(f.merchantId) === Number(mrcObj.id))
+                        : [];
+                    const bal = typeof getProfileSyncedBalance === 'function' ? getProfileSyncedBalance() : 0;
+                    const mutCount = (typeof getAccountMutations === 'function') ? getAccountMutations().length : 0;
+                    const commCount = (typeof db !== 'undefined' && Array.isArray(db.commissionLogs)) ? db.commissionLogs.length : 0;
+
+                    const merchantList = [
+                        renderVerticalAccordionRow('merchant', 'profile', 'fa-solid fa-store', 'A. PROFIL TOKO', mrcObj?.name || mc.storeName || currentUser.name, `
+                            <div class="flex items-center gap-3">
+                                <img src="${mrcObj?.image || './olengorange2.png'}" class="w-14 h-14 rounded-2xl object-cover border-2 border-[#FF7900]">
+                                <img src="${mrcObj?.banner || './olengorange2.png'}" class="w-24 h-14 rounded-2xl object-cover border">
+                            </div>
+                            <p><b>Nama Toko:</b> ${mrcObj?.name || mc.storeName || currentUser.name}</p>
+                            <p><b>Deskripsi Toko:</b> ${mrcObj?.description || mc.storeDesc || '-'}</p>
+                            <p><b>Nomor WhatsApp:</b> ${mrcObj?.whatsapp || currentUser.phone || '-'}</p>
+                            <p><b>Informasi Pemilik:</b> ${mrcObj?.ownerName || currentUser.name}</p>
+                            <button type="button" id="mc-go-manage-1" class="w-full py-2 bg-[#171717] text-[#FF9800] font-black rounded-xl cursor-pointer">Kelola Nama, Logo, Foto &amp; Deskripsi Toko</button>
+                        `),
+                        renderVerticalAccordionRow('merchant', 'loc', 'fa-solid fa-location-dot', 'B. ALAMAT & LOKASI', mrcObj?.address || currentUser.address || 'Kecamatan Lengkong, Sukabumi', `
+                            <p><b>Alamat Toko:</b> ${mrcObj?.address || currentUser.address || '-'}</p>
+                            <p><b>Titik Koordinat:</b> ${mrcObj?.lat ?? '-'}, ${mrcObj?.lng ?? '-'}</p>
+                            <button type="button" id="mc-go-manage-2" class="w-full py-2 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Perbarui Lokasi Toko</button>
+                        `),
+                        renderVerticalAccordionRow('merchant', 'menu', 'fa-solid fa-utensils', 'C. MENU & PRODUK', `${foods.length} produk terdaftar`, `
+                            ${foods.length ? foods.map(f => `<div class="p-2 bg-white rounded-xl border flex justify-between items-center"><b>${f.name}</b><span class="text-[#FF7900] font-bold">Rp ${Number(f.price || 0).toLocaleString('id-ID')} • Stok: ${Number(f.stock ?? 20)}</span></div>`).join('') : '<p class="text-neutral-500">Belum ada produk.</p>'}
+                            <button type="button" id="mc-go-manage-3" class="w-full py-2 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Tambah / Edit / Atur Produk &amp; Stok</button>
+                        `),
+                        renderVerticalAccordionRow('merchant', 'hours', 'fa-solid fa-clock', 'D. JAM OPERASIONAL', `${mrcObj?.status || 'Buka'} • ${mc.opDays}`, `
+                            <p><b>Status Toko:</b> ${mrcObj?.status || 'Buka'}</p>
+                            <div><label class="text-[10px] font-extrabold uppercase">Jam Buka</label><input type="text" id="mc-h-open" value="${mc.openHour}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Jam Tutup</label><input type="text" id="mc-h-close" value="${mc.closeHour}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Hari Operasional</label><input type="text" id="mc-h-days" value="${mc.opDays}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Hari Libur</label><input type="text" id="mc-h-hol" value="${mc.holidayNote}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl"></div>
+                            <button type="button" id="mc-save-hours" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Jam Operasional</button>
+                        `),
+                        renderVerticalAccordionRow('merchant', 'notif', 'fa-solid fa-bell', 'E. NOTIFIKASI & ALARM', 'Alarm pesanan baru, chat, suara, volume & getaran', `
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Alarm Pesanan Baru</span><input type="checkbox" id="mc-n-ord" ${mc.alarmOrder ? 'checked' : ''}></label>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Chat</span><input type="checkbox" id="mc-n-chat" ${mc.notifChat ? 'checked' : ''}></label>
+                            <div><label class="text-[10px] font-extrabold uppercase">Suara Alarm</label><select id="mc-n-tone" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"><option value="panjang" ${mc.alarmTone === 'panjang' ? 'selected' : ''}>Panjang</option><option value="pendek" ${mc.alarmTone === 'pendek' ? 'selected' : ''}>Pendek</option></select></div>
+                            <div><label class="text-[10px] font-extrabold uppercase">Volume (0.1 - 1.0)</label><input type="number" step="0.1" min="0.1" max="1" id="mc-n-vol" value="${mc.alarmVolume}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>Getaran</span><input type="checkbox" id="mc-n-vib" ${mc.vibrationEnabled ? 'checked' : ''}></label>
+                            <button type="button" id="mc-save-notif" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Notifikasi &amp; Alarm</button>
+                        `),
+                        renderVerticalAccordionRow('merchant', 'finance', 'fa-solid fa-coins', 'F. SALDO & KEUANGAN', `Saldo toko: Rp ${Number(bal || 0).toLocaleString('id-ID')}`, `
+                            <p><b>Saldo Toko:</b> Rp ${Number(bal || 0).toLocaleString('id-ID')}</p>
+                            <p><b>Deposit Minimum:</b> Rp ${Number(admCfg.minDeposit || 10000).toLocaleString('id-ID')}</p>
+                            <p><b>Saldo Bonus:</b> Rp ${Number(admCfg.initialBonusBalance || 20000).toLocaleString('id-ID')} (tidak dapat ditarik tunai)</p>
+                            <p><b>Riwayat Deposit, Transaksi &amp; Komisi:</b> ${mutCount} mutasi, ${commCount} komisi</p>
+                            <button type="button" id="mc-req-topup" class="w-full py-2 bg-[#171717] text-[#FF9800] font-black rounded-xl cursor-pointer">Deposit / Tambah Saldo via Admin</button>
+                        `),
+                        renderVerticalAccordionRow('merchant', 'sec', 'fa-solid fa-lock', 'G. KEAMANAN', 'Password, OTP & sesi login', `
+                            <div><label class="text-[10px] font-extrabold uppercase">Ganti Password</label><input type="password" id="mc-s-pass" placeholder="Password baru..." class="w-full mt-1 p-2 bg-white border-2 rounded-xl"></div>
+                            <label class="flex justify-between font-bold cursor-pointer"><span>OTP</span><input type="checkbox" id="mc-s-otp" ${mc.otpEnabled ? 'checked' : ''}></label>
+                            <p><b>Kelola Sesi Login:</b> ${currentUser.name} (${currentUser.phone || '-'})</p>
+                            <button type="button" id="mc-save-sec" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Keamanan</button>
+                        `),
+                        renderVerticalAccordionRow('merchant', 'help', 'fa-solid fa-headset', 'H. BANTUAN MITRA', 'WhatsApp admin, panduan toko & laporkan masalah', `
+                            <a href="https://wa.me/${waAdm}" target="_blank" class="w-full py-2 bg-[#FF7900] text-white font-black rounded-xl block text-center">WhatsApp Admin</a>
+                            <button type="button" id="mc-guide" class="w-full py-2 bg-white border rounded-xl font-bold cursor-pointer">Panduan Toko</button>
+                            <button type="button" id="mc-report" class="w-full py-2 bg-white border rounded-xl font-bold cursor-pointer">Laporkan Masalah</button>
+                        `),
+                        renderVerticalAccordionRow('merchant', 'about', 'fa-solid fa-circle-info', 'I. TENTANG OLENGGO', 'OLENG GO v2 • Powered by SIMADU', `
+                            <p><b>Versi Aplikasi:</b> OLENG GO v2</p>
+                            <p><b>Wilayah:</b> ${admCfg.serviceArea} • <b>Powered by SIMADU</b></p>
+                        `)
+                    ];
+
+                    container.innerHTML = `<div class="p-4 space-y-3 pb-28 bg-white min-h-full"><div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex items-center justify-between gap-2"><div><span class="text-[10px] text-[#FF9800] font-black uppercase block">PENGATURAN TOKO</span><h2 class="text-sm font-black">${mrcObj?.name || currentUser.shopName || currentUser.name}</h2></div><button type="button" id="mc-back-manage" class="px-3 py-1.5 bg-[#292929] text-[#FF9800] rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button></div><div class="space-y-2.5">${merchantList.join('')}</div>${footer}</div>`;
+                    bindVerticalAccordion(container, 'merchant', tabRoute);
+
+                    container.querySelector('#mc-back-manage')?.addEventListener('click', () => renderDashboardContent('merchant-manage', false));
+                    ['#mc-go-manage-1', '#mc-go-manage-2', '#mc-go-manage-3'].forEach(sel => {
+                        container.querySelector(sel)?.addEventListener('click', () => renderDashboardContent('merchant-manage', true));
+                    });
+                    container.querySelector('#mc-save-hours')?.addEventListener('click', async () => {
+                        const oh = (container.querySelector('#mc-h-open')?.value || mc.openHour).trim();
+                        const ch = (container.querySelector('#mc-h-close')?.value || mc.closeHour).trim();
+                        const next = {
+                            ...mc,
+                            openHour: oh,
+                            closeHour: ch,
+                            opDays: (container.querySelector('#mc-h-days')?.value || mc.opDays).trim(),
+                            holidayNote: (container.querySelector('#mc-h-hol')?.value || mc.holidayNote).trim()
+                        };
+                        localStorage.setItem(MRC_PREF_PREFIX + getAccSuffix(), JSON.stringify(next));
+                        if (mrcObj) mrcObj.operationalHours = `${oh} - ${ch} WIB (${next.opDays})`;
+                        await persistToStorageAndSupabase('Jam operasional toko tersimpan!', 'Gagal menyimpan jam operasional.');
+                        renderRoleSettingsView(tabRoute);
+                    });
+                    container.querySelector('#mc-save-notif')?.addEventListener('click', async () => {
+                        const next = {
+                            ...mc,
+                            alarmOrder: Boolean(container.querySelector('#mc-n-ord')?.checked),
+                            notifChat: Boolean(container.querySelector('#mc-n-chat')?.checked),
+                            alarmTone: container.querySelector('#mc-n-tone')?.value || 'panjang',
+                            alarmVolume: Math.min(1, Math.max(0.1, parseFloat(container.querySelector('#mc-n-vol')?.value || '0.8') || 0.8)),
+                            vibrationEnabled: Boolean(container.querySelector('#mc-n-vib')?.checked)
+                        };
+                        localStorage.setItem(MRC_PREF_PREFIX + getAccSuffix(), JSON.stringify(next));
+                        await persistToStorageAndSupabase('Notifikasi & alarm toko tersimpan!', 'Gagal menyimpan notifikasi.');
+                    });
+                    container.querySelector('#mc-req-topup')?.addEventListener('click', () => {
+                        if (typeof goToAdminTopUpChat === 'function') goToAdminTopUpChat();
+                    });
+                    container.querySelector('#mc-save-sec')?.addEventListener('click', async () => {
+                        const pw = (container.querySelector('#mc-s-pass')?.value || '').trim();
+                        const next = { ...mc, otpEnabled: Boolean(container.querySelector('#mc-s-otp')?.checked) };
+                        if (pw) currentUser.password = pw;
+                        localStorage.setItem(MRC_PREF_PREFIX + getAccSuffix(), JSON.stringify(next));
+                        await persistToStorageAndSupabase('Keamanan akun toko tersimpan!', 'Gagal menyimpan keamanan.');
+                    });
+                    container.querySelector('#mc-guide')?.addEventListener('click', () => {
+                        if (typeof showToast === 'function') showToast('Panduan Toko: Atur profil & produk, lalu konfirmasi pesanan masuk di riwayat.', 'info');
+                    });
+                    container.querySelector('#mc-report')?.addEventListener('click', () => {
+                        const txt = (prompt('Tuliskan laporan masalah toko:') || '').trim();
+                        if (txt && typeof addAccountNotification === 'function') {
+                            addAccountNotification('Laporan Toko', `${currentUser.name}: ${txt}`, 'Admin SIMADU', 'mrc-rep-' + Date.now());
+                            if (typeof showToast === 'function') showToast('Laporan masalah terkirim.', 'success');
+                        }
+                    });
+                    return;
+                }
+
+                const cc = loadCustomerPrefs();
+                const waAdm = toWaInternational(admCfg.waAdmin);
+                const bal = typeof getProfileSyncedBalance === 'function' ? getProfileSyncedBalance() : 0;
+                const ordList = typeof getAccountOrders === 'function' ? getAccountOrders() : [];
+                const mutList = typeof getAccountMutations === 'function' ? getAccountMutations() : [];
+
+                const customerList = [
+                    renderVerticalAccordionRow('customer', 'profile', 'fa-solid fa-user', 'A. PROFIL SAYA', `${currentUser.name} • ${currentUser.phone || '-'}`, `
+                        <img src="${currentUser.photo || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900]">
+                        <div><label class="text-[10px] font-extrabold uppercase">Nama Lengkap</label><input type="text" id="cu-p-name" value="${currentUser.name || ''}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                        <div><label class="text-[10px] font-extrabold uppercase">Nomor WhatsApp</label><input type="tel" id="cu-p-phone" value="${currentUser.phone || ''}" class="w-full mt-1 p-2 bg-white border-2 rounded-xl font-bold"></div>
+                        <div><label class="text-[10px] font-extrabold uppercase">Email</label><input type="email" id="cu-p-email" value="${cc.email || ''}" placeholder="email@contoh.com" class="w-full mt-1 p-2 bg-white border-2 rounded-xl"></div>
+                        <button type="button" id="cu-save-profile" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Edit Profil</button>
+                    `),
+                    renderVerticalAccordionRow('customer', 'address', 'fa-solid fa-location-dot', 'B. ALAMAT SAYA', `${cc.addresses.length} alamat tersimpan`, `
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="cu-a-label" placeholder="Label (Rumah / Kantor)" class="p-2 bg-white border-2 rounded-xl font-bold">
+                            <select id="cu-a-kind" class="p-2 bg-white border-2 rounded-xl font-bold bg-white"><option value="Rumah">Rumah</option><option value="Kantor">Kantor</option><option value="Lainnya">Lainnya</option></select>
+                        </div>
+                        <input type="text" id="cu-a-detail" placeholder="Detail alamat..." class="w-full p-2 bg-white border-2 rounded-xl">
+                        <button type="button" id="cu-add-addr" class="w-full py-2 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Tambah Alamat</button>
+                        <div class="space-y-2 pt-1">
+                            ${cc.addresses.map(a => `
+                                <div class="p-2.5 bg-white rounded-xl border space-y-1">
+                                    <div class="flex justify-between items-center">
+                                        <b>${a.label} (${a.kind || 'Alamat'}) ${a.isPrimary ? '<span class="text-[9px] bg-[#FF7900] text-white px-1.5 py-0.5 rounded ml-1">Utama</span>' : ''}</b>
+                                        <button type="button" data-fav-id="${a.id}" class="cu-addr-fav cursor-pointer ${a.isFavorite ? 'text-rose-600' : 'text-neutral-400'}" title="Alamat Favorit"><i class="fa-${a.isFavorite ? 'solid' : 'regular'} fa-heart"></i></button>
+                                    </div>
+                                    <p class="text-[11px]">${a.detail}</p>
+                                    <div class="flex gap-1.5 pt-1 flex-wrap">
+                                        ${!a.isPrimary ? `<button type="button" data-prim-id="${a.id}" class="cu-addr-prim px-2 py-1 bg-[#171717] text-[#FF9800] rounded text-[10px] font-bold cursor-pointer">Alamat Utama</button>` : ''}
+                                        <button type="button" data-edit-id="${a.id}" class="cu-addr-edit px-2 py-1 bg-[#F3F3F3] border rounded text-[10px] cursor-pointer">Edit Alamat</button>
+                                        ${cc.addresses.length > 1 ? `<button type="button" data-del-id="${a.id}" class="cu-addr-del px-2 py-1 bg-rose-100 text-rose-800 rounded text-[10px] cursor-pointer">Hapus Alamat</button>` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `),
+                    renderVerticalAccordionRow('customer', 'notif', 'fa-solid fa-bell', 'C. NOTIFIKASI', 'Pesanan, perubahan status, driver, chat, promosi, suara & getaran', `
+                        <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Pesanan</span><input type="checkbox" id="cu-n-ord" ${cc.notifOrder ? 'checked' : ''}></label>
+                        <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Perubahan Status</span><input type="checkbox" id="cu-n-st" ${cc.notifOrderStatus ? 'checked' : ''}></label>
+                        <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Driver</span><input type="checkbox" id="cu-n-drv" ${cc.notifDriver ? 'checked' : ''}></label>
+                        <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Chat</span><input type="checkbox" id="cu-n-chat" ${cc.notifChat ? 'checked' : ''}></label>
+                        <label class="flex justify-between font-bold cursor-pointer"><span>Notifikasi Promosi</span><input type="checkbox" id="cu-n-prm" ${cc.notifPromo ? 'checked' : ''}></label>
+                        <label class="flex justify-between font-bold cursor-pointer"><span>Suara Notifikasi</span><input type="checkbox" id="cu-n-snd" ${cc.notifSound ? 'checked' : ''}></label>
+                        <label class="flex justify-between font-bold cursor-pointer"><span>Getaran</span><input type="checkbox" id="cu-n-vib" ${cc.notifVibrate ? 'checked' : ''}></label>
+                        <button type="button" id="cu-save-notif" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Notifikasi</button>
+                    `),
+                    renderVerticalAccordionRow('customer', 'wallet', 'fa-solid fa-wallet', 'D. SALDO & TRANSAKSI', `Saldo: Rp ${Number(bal || 0).toLocaleString('id-ID')} • ${ordList.length} transaksi`, `
+                        <p><b>Informasi Saldo:</b> Rp ${Number(bal || 0).toLocaleString('id-ID')}</p>
+                        <p><b>Riwayat Pembayaran &amp; Transaksi:</b> ${ordList.length} pesanan, ${mutList.length} mutasi tercatat.</p>
+                        <button type="button" id="cu-go-history" class="w-full py-2 bg-[#171717] text-[#FF9800] font-black rounded-xl cursor-pointer">Lihat Riwayat Pembayaran &amp; Transaksi</button>
+                    `),
+                    renderVerticalAccordionRow('customer', 'security', 'fa-solid fa-lock', 'E. KEAMANAN AKUN', 'Ganti password, OTP & kelola sesi login', `
+                        <div><label class="text-[10px] font-extrabold uppercase">Ganti Password</label><input type="password" id="cu-s-pass" placeholder="Password baru..." class="w-full mt-1 p-2 bg-white border-2 rounded-xl"></div>
+                        <label class="flex justify-between font-bold cursor-pointer"><span>OTP</span><input type="checkbox" id="cu-s-otp" ${cc.otpEnabled ? 'checked' : ''}></label>
+                        <p><b>Kelola Sesi Login:</b> ${currentUser.name} (${currentUser.phone || '-'})</p>
+                        <button type="button" id="cu-save-sec" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-xl cursor-pointer">Simpan Keamanan Akun</button>
+                    `),
+                    renderVerticalAccordionRow('customer', 'help', 'fa-solid fa-headset', 'F. PUSAT BANTUAN', 'WhatsApp admin, panduan, laporkan masalah & ketentuan layanan', `
+                        <a href="https://wa.me/${waAdm}" target="_blank" class="w-full py-2 bg-[#FF7900] text-white font-black rounded-xl block text-center">WhatsApp Admin</a>
+                        <button type="button" id="cu-guide" class="w-full py-2 bg-white border rounded-xl font-bold cursor-pointer">Panduan Aplikasi</button>
+                        <button type="button" id="cu-report" class="w-full py-2 bg-white border rounded-xl font-bold cursor-pointer">Laporkan Masalah</button>
+                        <button type="button" id="cu-terms" class="w-full py-2 bg-white border rounded-xl font-bold cursor-pointer">Ketentuan Layanan</button>
+                    `),
+                    renderVerticalAccordionRow('customer', 'about', 'fa-solid fa-circle-info', 'G. TENTANG OLENGGO', 'Versi aplikasi, informasi aplikasi & Powered by SIMADU', `
+                        <p><b>Versi Aplikasi:</b> OLENG GO v2</p>
+                        <p><b>Informasi Aplikasi:</b> Layanan ojek, makanan &amp; pasar warga Kecamatan Lengkong, Sukabumi.</p>
+                        <p><b>Powered by SIMADU</b></p>
+                    `)
+                ];
+
+                container.innerHTML = `<div class="p-4 space-y-3 pb-28 bg-white min-h-full"><div class="bg-[#171717] text-white p-4 rounded-3xl border-2 border-[#FF7900] flex items-center justify-between gap-2"><div><span class="text-[10px] text-[#FF9800] font-black uppercase block">PENGATURAN AKUN USER</span><h2 class="text-sm font-black">${currentUser.name}</h2></div><button type="button" id="cu-back-home" class="px-3 py-1.5 bg-[#292929] text-[#FF9800] rounded-xl text-xs font-bold cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button></div><div class="space-y-2.5">${customerList.join('')}</div>${footer}</div>`;
+                bindVerticalAccordion(container, 'customer', tabRoute);
+
+                container.querySelector('#cu-back-home')?.addEventListener('click', () => renderDashboardContent('home', false));
+                container.querySelector('#cu-save-profile')?.addEventListener('click', async () => {
+                    const cur = loadCustomerPrefs();
+                    const nm = (container.querySelector('#cu-p-name')?.value || '').trim();
+                    const ph = typeof normalizePhone === 'function' ? normalizePhone(container.querySelector('#cu-p-phone')?.value || '') : (container.querySelector('#cu-p-phone')?.value || '').trim();
+                    if (!nm || ph.length < 9) {
+                        if (typeof showToast === 'function') showToast('Nama lengkap dan nomor WhatsApp wajib diisi.', 'error');
+                        return;
+                    }
+                    currentUser.name = nm;
+                    currentUser.phone = ph;
+                    cur.email = (container.querySelector('#cu-p-email')?.value || '').trim();
+                    localStorage.setItem(CUST_PREF_PREFIX + getAccSuffix(), JSON.stringify(cur));
+                    await persistToStorageAndSupabase('Profil user tersimpan!', 'Gagal menyimpan profil user.');
+                    renderRoleSettingsView(tabRoute);
+                });
+                container.querySelector('#cu-add-addr')?.addEventListener('click', async () => {
+                    const cur = loadCustomerPrefs();
+                    const lbl = (container.querySelector('#cu-a-label')?.value || '').trim() || 'Alamat';
+                    const kind = container.querySelector('#cu-a-kind')?.value || 'Rumah';
+                    const det = (container.querySelector('#cu-a-detail')?.value || '').trim();
+                    if (!det) {
+                        if (typeof showToast === 'function') showToast('Detail alamat wajib diisi.', 'error');
+                        return;
+                    }
+                    cur.addresses.push({ id: 'addr-' + Date.now(), label: lbl, kind, detail: det, isPrimary: false, isFavorite: false });
+                    localStorage.setItem(CUST_PREF_PREFIX + getAccSuffix(), JSON.stringify(cur));
+                    await persistToStorageAndSupabase('Alamat baru ditambahkan!', 'Gagal menyimpan alamat.');
+                    renderRoleSettingsView(tabRoute);
+                });
+                container.querySelectorAll('.cu-addr-prim').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const cur = loadCustomerPrefs();
+                        const id = btn.getAttribute('data-prim-id');
+                        cur.addresses.forEach(a => { a.isPrimary = a.id === id; if (a.isPrimary) currentUser.address = a.detail; });
+                        localStorage.setItem(CUST_PREF_PREFIX + getAccSuffix(), JSON.stringify(cur));
+                        await persistToStorageAndSupabase('Alamat utama diperbarui!', 'Gagal mengatur alamat utama.');
+                        renderRoleSettingsView(tabRoute);
+                    });
+                });
+                container.querySelectorAll('.cu-addr-edit').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const cur = loadCustomerPrefs();
+                        const id = btn.getAttribute('data-edit-id');
+                        const target = cur.addresses.find(a => a.id === id);
+                        if (!target) return;
+                        const updated = (prompt('Edit detail alamat:', target.detail) || '').trim();
+                        if (!updated) return;
+                        target.detail = updated;
+                        if (target.isPrimary) currentUser.address = updated;
+                        localStorage.setItem(CUST_PREF_PREFIX + getAccSuffix(), JSON.stringify(cur));
+                        await persistToStorageAndSupabase('Alamat diperbarui!', 'Gagal memperbarui alamat.');
+                        renderRoleSettingsView(tabRoute);
+                    });
+                });
+                container.querySelectorAll('.cu-addr-del').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const cur = loadCustomerPrefs();
+                        if (cur.addresses.length <= 1) return;
+                        const id = btn.getAttribute('data-del-id');
+                        cur.addresses = cur.addresses.filter(a => a.id !== id);
+                        if (!cur.addresses.some(a => a.isPrimary) && cur.addresses[0]) cur.addresses[0].isPrimary = true;
+                        localStorage.setItem(CUST_PREF_PREFIX + getAccSuffix(), JSON.stringify(cur));
+                        await persistToStorageAndSupabase('Alamat dihapus!', 'Gagal menghapus alamat.');
+                        renderRoleSettingsView(tabRoute);
+                    });
+                });
+                container.querySelectorAll('.cu-addr-fav').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const cur = loadCustomerPrefs();
+                        const id = btn.getAttribute('data-fav-id');
+                        const target = cur.addresses.find(a => a.id === id);
+                        if (!target) return;
+                        target.isFavorite = !target.isFavorite;
+                        localStorage.setItem(CUST_PREF_PREFIX + getAccSuffix(), JSON.stringify(cur));
+                        await persistToStorageAndSupabase('Alamat favorit diperbarui!', 'Gagal memperbarui favorit.');
+                        renderRoleSettingsView(tabRoute);
+                    });
+                });
+                container.querySelector('#cu-save-notif')?.addEventListener('click', async () => {
+                    const cur = loadCustomerPrefs();
+                    cur.notifOrder = Boolean(container.querySelector('#cu-n-ord')?.checked);
+                    cur.notifOrderStatus = Boolean(container.querySelector('#cu-n-st')?.checked);
+                    cur.notifDriver = Boolean(container.querySelector('#cu-n-drv')?.checked);
+                    cur.notifChat = Boolean(container.querySelector('#cu-n-chat')?.checked);
+                    cur.notifPromo = Boolean(container.querySelector('#cu-n-prm')?.checked);
+                    cur.notifSound = Boolean(container.querySelector('#cu-n-snd')?.checked);
+                    cur.notifVibrate = Boolean(container.querySelector('#cu-n-vib')?.checked);
+                    localStorage.setItem(CUST_PREF_PREFIX + getAccSuffix(), JSON.stringify(cur));
+                    await persistToStorageAndSupabase('Preferensi notifikasi tersimpan!', 'Gagal menyimpan notifikasi.');
+                });
+                container.querySelector('#cu-go-history')?.addEventListener('click', () => renderDashboardContent('history', true));
+                container.querySelector('#cu-save-sec')?.addEventListener('click', async () => {
+                    const cur = loadCustomerPrefs();
+                    const pw = (container.querySelector('#cu-s-pass')?.value || '').trim();
+                    cur.otpEnabled = Boolean(container.querySelector('#cu-s-otp')?.checked);
+                    if (pw) currentUser.password = pw;
+                    localStorage.setItem(CUST_PREF_PREFIX + getAccSuffix(), JSON.stringify(cur));
+                    await persistToStorageAndSupabase('Keamanan akun tersimpan!', 'Gagal menyimpan keamanan.');
+                });
+                container.querySelector('#cu-guide')?.addEventListener('click', () => {
+                    if (typeof showToast === 'function') showToast('Panduan: Pilih Pesan Ojek, Pesan Makanan, atau OLENG MARKET di beranda.', 'info');
+                });
+                container.querySelector('#cu-terms')?.addEventListener('click', () => {
+                    if (typeof showToast === 'function') showToast('Ketentuan layanan berlaku untuk warga Kecamatan Lengkong, Sukabumi.', 'info');
+                });
+                container.querySelector('#cu-report')?.addEventListener('click', () => {
+                    const txt = (prompt('Laporkan masalah:') || '').trim();
+                    if (txt && typeof addAccountNotification === 'function') {
+                        addAccountNotification('Laporan User', `${currentUser.name}: ${txt}`, 'Admin SIMADU', 'cu-rep-' + Date.now());
+                        if (typeof showToast === 'function') showToast('Laporan masalah terkirim.', 'success');
+                    }
+                });
+            }
+
+            window.openRoleSettingsPage = function (sec) {
+                if (typeof currentUser === 'undefined' || !currentUser) return;
+                const role = getEffRole();
+                const routeMap = {
+                    admin: 'admin-settings',
+                    driver: 'driver-settings',
+                    merchant: 'merchant-settings',
+                    customer: 'customer-settings'
+                };
+                if (sec) openSectionByScope[role] = sec;
+                renderRoleSettingsView(routeMap[role] || 'customer-settings');
+            };
+
+            const origRenderDash = window.renderDashboardContent;
+            if (typeof origRenderDash === 'function') {
+                window.renderDashboardContent = function (tab, recordHistory = true) {
+                    if (tab === 'admin-settings' || tab === 'customer-settings' || tab === 'driver-settings' || tab === 'merchant-settings') {
+                        if (typeof currentUser === 'undefined' || !currentUser) return;
+                        if (tab === 'admin-settings' && !isAuthorizedAdmin()) return origRenderDash('home', recordHistory);
+                        if (typeof currentSubTab !== 'undefined' && currentSubTab !== tab && recordHistory && Array.isArray(tabNavigationHistory) && tabNavigationHistory[tabNavigationHistory.length - 1] !== tab) {
+                            tabNavigationHistory.push(tab);
+                        }
+                        renderRoleSettingsView(tab);
+                        return;
+                    }
+                    origRenderDash(tab, recordHistory);
+                    setTimeout(ensureSingleRoleGearInHeader, 50);
+                };
+            }
+
+            for (const fnName of ['renderCustomerHome', 'renderAdminDash', 'renderMerchantManage']) {
+                const origFn = window[fnName];
+                if (typeof origFn === 'function') {
+                    window[fnName] = function (c) {
+                        origFn(c);
+                        setTimeout(ensureSingleRoleGearInHeader, 45);
+                    };
                 }
             }
 
-            const origCustHome = window.renderCustomerHome;
-            window.renderCustomerHome = function (c) { origCustHome(c); setTimeout(injectCustSettingsBtn, 50); };
-
-            const origDashContent = window.renderDashboardContent;
-            window.renderDashboardContent = function (tab, recordHistory = true) {
-                if (tab === 'admin-settings' || tab === 'admin-master') {
-                    if (!isAdminAuthorized()) return origDashContent('home', recordHistory);
-                    currentSubTab = tab; localStorage.setItem('oleng_last_tab', tab);
-                    const target = document.getElementById('main-content');
-                    if (tab === 'admin-settings') window.renderAdminSettingsPage(target); else window.renderMasterControlPage(target);
-                    return;
-                }
-                if (tab === 'customer-settings' || tab === 'driver-settings' || tab === 'merchant-settings') {
-                    if (!currentUser) return;
-                    currentSubTab = tab; localStorage.setItem('oleng_last_tab', tab);
-                    window.renderCustomerSettingsPage(document.getElementById('main-content'));
-                    return;
-                }
-                origDashContent(tab, recordHistory);
-                if (tab === 'home') setTimeout(injectCustSettingsBtn, 80);
-            };
+            if (typeof currentUser !== 'undefined' && currentUser) {
+                setTimeout(ensureSingleRoleGearInHeader, 60);
+            }
         })();
     </script>
 </body>
