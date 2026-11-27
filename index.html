@@ -5964,5 +5964,147 @@
   }
 })();
 </script>
+<script id="oleng-realtime-user-delete-sync-v1">
+(function () {
+  if (window.__olengRealtimeUserDeleteSyncV1) return;
+  window.__olengRealtimeUserDeleteSyncV1 = true;
+
+  function normPhone(val) {
+    return String(val || "").replace(/D/g, "");
+  }
+
+  function isProtectedAdmin(acc) {
+    if (!acc) return false;
+    const d = normPhone(acc.phone || acc.id || "");
+    return d === "085624736602" || d === "6285624736602";
+  }
+
+  function removeAccountFromLocalState(targetId, targetPhone) {
+    const tId = String(targetId || "");
+    const tPhone = normPhone(targetPhone);
+    let changed = false;
+
+    try {
+      if (typeof db !== "undefined" && db && Array.isArray(db.accounts)) {
+        const before = db.accounts.length;
+        db.accounts = db.accounts.filter((u) => {
+          if (!u) return false;
+          if (isProtectedAdmin(u)) return true;
+          const sameId = tId && String(u.id || "") === tId;
+          const samePhone = tPhone && normPhone(u.phone) === tPhone;
+          return !(sameId || samePhone);
+        });
+        if (db.accounts.length !== before) changed = true;
+      }
+
+      const raw = localStorage.getItem("oleng_go_db");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.accounts)) {
+          const beforeRaw = parsed.accounts.length;
+          parsed.accounts = parsed.accounts.filter((u) => {
+            if (!u) return false;
+            if (isProtectedAdmin(u)) return true;
+            const sameId = tId && String(u.id || "") === tId;
+            const samePhone = tPhone && normPhone(u.phone) === tPhone;
+            return !(sameId || samePhone);
+          });
+          if (parsed.accounts.length !== beforeRaw) {
+            changed = true;
+            localStorage.setItem("oleng_go_db", JSON.stringify(parsed));
+          }
+        }
+      }
+
+      // Jika perangkat ini sedang login sebagai akun yang dihapus admin, bersihkan sesi aktifnya
+      if (typeof currentUser !== "undefined" && currentUser && !isProtectedAdmin(currentUser)) {
+        const curId = String(currentUser.id || "");
+        const curPhone = normPhone(currentUser.phone);
+        if ((tId && curId === tId) || (tPhone && curPhone === tPhone)) {
+          try { localStorage.removeItem("oleng_go_session"); } catch (e) {}
+          try { localStorage.removeItem("currentUser"); } catch (e) {}
+          if (typeof logoutUser === "function") {
+            setTimeout(() => { try { logoutUser(); } catch (e) {} }, 100);
+          }
+        }
+      }
+
+      if (changed) {
+        if (typeof saveDB === "function") {
+          try { saveDB("Akun diperbarui dari sinkronisasi"); } catch (e) {}
+        }
+        if (typeof renderDashboardContent === "function") {
+          setTimeout(() => {
+            try {
+              const tab = (typeof currentSubTab !== "undefined" && currentSubTab) ? currentSubTab : undefined;
+              renderDashboardContent(tab, false);
+            } catch (e) {}
+          }, 120);
+        }
+      }
+    } catch (e) {}
+    return changed;
+  }
+
+  // Expose helper hapus user ke Supabase + semua perangkat
+  window.olengDeleteUserEverywhere = async function (accountId, accountPhone) {
+    const tId = String(accountId || "");
+    const tPhone = normPhone(accountPhone);
+
+    let candidate = null;
+    try {
+      if (typeof db !== "undefined" && db && Array.isArray(db.accounts)) {
+        candidate = db.accounts.find((u) =>
+          (tId && String(u.id || "") === tId) ||
+          (tPhone && normPhone(u.phone) === tPhone)
+        ) || null;
+      }
+    } catch (e) {}
+
+    if (isProtectedAdmin(candidate) || (!tId && (!tPhone || tPhone === "085624736602" || tPhone === "6285624736602"))) {
+      if (typeof showToast === "function") showToast("Akun admin utama tidak dapat dihapus.", "error");
+      return false;
+    }
+
+    if (typeof supabaseClient !== "undefined" && supabaseClient && navigator.onLine) {
+      try {
+        if (tId) {
+          await supabaseClient.from("accounts").delete().eq("id", accountId);
+        }
+        if (tPhone) {
+          await supabaseClient.from("accounts").delete().eq("phone", accountPhone);
+        }
+      } catch (e) {}
+    }
+
+    removeAccountFromLocalState(tId, tPhone);
+    if (typeof showToast === "function") showToast("User dihapus & disinkronkan ke perangkat.", "success");
+    return true;
+  };
+
+  // Pasang channel realtime khusus memantau penghapusan (DELETE) di tabel accounts
+  function attachAccountsDeleteListener() {
+    if (window.__olengAccountsDeleteChannelAttached) return;
+    if (typeof supabaseClient === "undefined" || !supabaseClient || typeof supabaseClient.channel !== "function") return;
+    window.__olengAccountsDeleteChannelAttached = true;
+
+    try {
+      supabaseClient
+        .channel("oleng-accounts-delete-sync")
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: "accounts" }, (payload) => {
+          const oldRow = (payload && payload.old) ? payload.old : {};
+          removeAccountFromLocalState(oldRow.id, oldRow.phone);
+          if (typeof pullInitialFromSupabase === "function") {
+            setTimeout(() => { try { pullInitialFromSupabase(false); } catch (e) {} }, 250);
+          }
+        })
+        .subscribe();
+    } catch (e) {}
+  }
+
+  setTimeout(attachAccountsDeleteListener, 900);
+  window.addEventListener("online", () => setTimeout(attachAccountsDeleteListener, 500));
+})();
+</script>
 </body>
 </html>
