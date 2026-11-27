@@ -5383,7 +5383,7 @@
   setTimeout(hookOrdersRealtime, 500);
 })();
 </script>
-<script id="oleng-e-tariff-card-v5">
+<script id="oleng-e-tariff-card-v6">
 (function () {
   const AUTO_CFG_KEY = "oleng_admin_auto_ops_v1";
   let debounceTimer = null;
@@ -5395,7 +5395,7 @@
       autoReassignOnReject: true,
       autoCompleteDelivered: false,
       commissionPercent: 10,
-      baseFareRp: 5000,
+      baseFareRp: 8000,
       perKmFareRp: 2500
     };
   }
@@ -5447,8 +5447,9 @@
   function findSaveTariffButton(main) {
     const btns = Array.from(main.querySelectorAll("button"));
     for (const btn of btns) {
-      const txt = String(btn.textContent || "").trim();
-      if (/simpans+tarifs*(&|dan)?s*komisi/i.test(txt)) {
+      if (btn.closest && btn.closest("#oleng-e-tariff-auto-block")) continue;
+      const txt = String(btn.textContent || "").trim().toLowerCase();
+      if (txt.includes("simpan") && txt.includes("tarif")) {
         const rect = btn.getBoundingClientRect ? btn.getBoundingClientRect() : null;
         if (rect && rect.width > 0 && rect.height > 0) {
           return btn;
@@ -5465,7 +5466,7 @@
       "#op-auto-reassign": { type: "checkbox", val: Boolean(cfg.autoReassignOnReject) },
       "#op-timeout-sec": { type: "number", val: Number(cfg.unacceptedTimeoutSec || 120) },
       "#op-commission-pct": { type: "number", val: Number(cfg.commissionPercent || 10) },
-      "#op-base-fare": { type: "number", val: Number(cfg.baseFareRp || 5000) },
+      "#op-base-fare": { type: "number", val: Number(cfg.baseFareRp || 8000) },
       "#op-per-km": { type: "number", val: Number(cfg.perKmFareRp || 2500) }
     };
 
@@ -5481,9 +5482,7 @@
   }
 
   function mountInsideETariffCard() {
-    document.querySelectorAll("#oleng-admin-auto-ops-card, #oleng-tariff-auto-section").forEach(el => {
-      if (el.id !== "oleng-e-tariff-auto-block") el.remove();
-    });
+    document.querySelectorAll("#oleng-admin-auto-ops-card, #oleng-tariff-auto-section").forEach(el => el.remove());
 
     const existing = document.getElementById("oleng-e-tariff-auto-block");
     if (!isAdminNow()) {
@@ -5512,7 +5511,7 @@
         '<div class="flex items-center justify-between gap-2">' +
           '<div>' +
             '<div class="text-xs font-black text-[#191919]">Pembatalan Otomatis & Batas Respon</div>' +
-            '<div class="text-[11px] text-[#777777]">Atur pembatalan otomatis tanpa respon ojek dan waktu tunggu</div>' +
+            '<div class="text-[11px] text-[#777777]">Batalkan otomatis bila tidak ada respon ojek dan atur batas waktu</div>' +
           '</div>' +
           '<span class="px-2 py-0.5 rounded-lg bg-[#F5F5F5] text-[#191919] text-[10px] font-bold">OTOMATIS</span>' +
         '</div>' +
@@ -5528,7 +5527,7 @@
           '<label class="block text-[11px] font-bold text-[#777777] mb-1">Batas Waktu Respon Ojek (detik)</label>' +
           '<input id="op-timeout-sec" type="number" min="15" max="900" class="w-full px-2.5 py-2 rounded-xl border border-[#E5E5E5] text-xs font-bold text-[#191919] bg-white">' +
         '</div>' +
-        '<button type="button" id="op-save-auto-btn" class="w-full py-2 py-2.5 px-4 rounded-xl bg-[#191919] text-white text-xs font-black cursor-pointer">Simpan Pengaturan Otomatis</button>';
+        '<button type="button" id="op-save-auto-btn" class="w-full py-2.5 px-4 rounded-xl bg-[#191919] text-white text-xs font-black cursor-pointer">Simpan Pengaturan Otomatis</button>';
 
       block.querySelector("#op-save-auto-btn")?.addEventListener("click", async () => {
         const prev = loadAutoConfig();
@@ -5538,7 +5537,7 @@
           autoReassignOnReject: Boolean(block.querySelector("#op-auto-reassign")?.checked),
           autoCompleteDelivered: Boolean(prev.autoCompleteDelivered),
           commissionPercent: Number(prev.commissionPercent || 10),
-          baseFareRp: Number(prev.baseFareRp || 5000),
+          baseFareRp: Number(prev.baseFareRp || 8000),
           perKmFareRp: Number(prev.perKmFareRp || 2500)
         };
         await saveAutoConfig(nextCfg);
@@ -5554,7 +5553,7 @@
 
   function scheduleMount() {
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(mountInsideETariffCard, 120);
+    debounceTimer = setTimeout(mountInsideETariffCard, 90);
   }
 
   const origDash = window.renderDashboardContent;
@@ -5567,6 +5566,10 @@
   }
 
   document.addEventListener("click", scheduleMount, { passive: true });
+  const mainEl = document.getElementById("main-content");
+  if (mainEl && typeof MutationObserver !== "undefined") {
+    new MutationObserver(scheduleMount).observe(mainEl, { childList: true, subtree: true });
+  }
   scheduleMount();
 })();
 </script>
