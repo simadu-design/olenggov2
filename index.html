@@ -5383,5 +5383,149 @@
   setTimeout(hookOrdersRealtime, 500);
 })();
 </script>
+<script id="oleng-admin-auto-settings-v1">
+(function () {
+  const AUTO_CFG_KEY = "oleng_admin_auto_ops_v1";
+
+  function defaultAutoConfig() {
+    return {
+      autoCancelUnaccepted: true,
+      unacceptedTimeoutSec: 120,
+      autoReassignOnReject: true,
+      autoCompleteDelivered: false,
+      commissionPercent: 5,
+      baseFareRp: 8000,
+      perKmFareRp: 2500
+    };
+  }
+
+  function loadAutoConfig() {
+    const base = defaultAutoConfig();
+    try {
+      const saved = JSON.parse(localStorage.getItem(AUTO_CFG_KEY) || "{}");
+      return Object.assign(base, saved || {});
+    } catch (e) {
+      return base;
+    }
+  }
+
+  async function saveAutoConfig(cfg) {
+    localStorage.setItem(AUTO_CFG_KEY, JSON.stringify(cfg));
+    if (typeof db !== "undefined" && db) {
+      db.config = Object.assign({}, db.config || {}, { autoOps: cfg });
+      localStorage.setItem("oleng_go_db", JSON.stringify(db));
+    }
+    if (typeof supabaseClient !== "undefined" && supabaseClient && navigator.onLine) {
+      try {
+        await supabaseClient
+          .from("app_config")
+          .upsert({ key: "auto_ops_settings", value: cfg, updated_at: new Date().toISOString() }, { onConflict: "key" });
+      } catch (e) {}
+    }
+    if (typeof showToast === "function") {
+      showToast("Pengaturan otomatis admin berhasil disimpan!", "success");
+    }
+  }
+
+  function isAdminNow() {
+    if (typeof currentUser === "undefined" || !currentUser) return false;
+    const d = String(currentUser.phone || "").replace(/D/g, "");
+    const norm = typeof normalizePhone === "function"
+      ? normalizePhone(currentUser.phone)
+      : (d.startsWith("62") ? "0" + d.slice(2) : d);
+    return currentUser.role === "admin" || norm === "085624736602";
+  }
+
+  function renderAutoSettingsCard() {
+    if (!isAdminNow()) return;
+    const main = document.getElementById("main-content");
+    if (!main) return;
+
+    // Pasang pada halaman pengaturan/master-control atau di bagian bawah beranda admin jika belum ada
+    if (document.getElementById("oleng-admin-auto-ops-card")) return;
+
+    const htmlText = String(main.innerHTML || "");
+    const isSettingsOrMaster =
+      htmlText.includes("PENGATURAN ADMIN") ||
+      htmlText.includes("Master Control") ||
+      htmlText.includes("Pengaturan Tarif");
+
+    const isAdminHome =
+      htmlText.includes("Kelola Pesanan") &&
+      htmlText.includes("Kelola Driver") &&
+      !isSettingsOrMaster;
+
+    if (!isSettingsOrMaster && !isAdminHome) return;
+
+    const cfg = loadAutoConfig();
+    const card = document.createElement("div");
+    card.id = "oleng-admin-auto-ops-card";
+    card.className = "mt-3 bg-white border border-[#E5E5E5] rounded-2xl p-4 space-y-3";
+    card.innerHTML =
+      '<div class="flex items-center justify-between gap-2">' +
+        '<div>' +
+          '<h3 class="text-sm font-black text-[#191919]">Pengaturan Otomatis & Operasional Admin</h3>' +
+          '<p class="text-[11px] text-[#777777]">Atur pembatalan otomatis tanpa respon ojek, waktu tunggu, dan tarif/komisi</p>' +
+        '</div>' +
+        '<span class="px-2 py-0.5 rounded-lg bg-[#F5F5F5] text-[#191919] text-[10px] font-bold">ADMIN</span>' +
+      '</div>' +
+      '<label class="flex items-center justify-between gap-3 py-1.5 border-t border-[#E5E5E5] text-xs font-bold text-[#191919]">' +
+        '<span>Batalkan pesanan otomatis jika tidak ada ojek merespon</span>' +
+        '<input id="op-auto-cancel" type="checkbox" ' + (cfg.autoCancelUnaccepted ? "checked" : "") + ' class="w-4 h-4 accent-[#F58220]">' +
+      '</label>' +
+      '<label class="flex items-center justify-between gap-3 py-1.5 border-t border-[#E5E5E5] text-xs font-bold text-[#191919]">' +
+        '<span>Alihkan otomatis jika driver menolak/menghilang</span>' +
+        '<input id="op-auto-reassign" type="checkbox" ' + (cfg.autoReassignOnReject ? "checked" : "") + ' class="w-4 h-4 accent-[#F58220]">' +
+      '</label>' +
+      '<div class="grid grid-cols-2 gap-2 pt-1 border-t border-[#E5E5E5]">' +
+        '<div>' +
+          '<label class="block text-[11px] font-bold text-[#777777] mb-1">Batas Waktu Respon (detik)</label>' +
+          '<input id="op-timeout-sec" type="number" min="15" max="900" value="' + Number(cfg.unacceptedTimeoutSec || 120) + '" class="w-full px-3 py-2 rounded-xl border border-[#E5E5E5] text-xs font-bold text-[#191919] bg-white">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block text-[11px] font-bold text-[#777777] mb-1">Komisi Sistem (%)</label>' +
+          '<input id="op-commission-pct" type="number" min="0" max="50" step="0.5" value="' + Number(cfg.commissionPercent || 5) + '" class="w-full px-3 py-2 rounded-xl border border-[#E5E5E5] text-xs font-bold text-[#191919] bg-white">' +
+        '</div>' +
+      '</div>' +
+      '<div class="grid grid-cols-2 gap-2">' +
+        '<div>' +
+          '<label class="block text-[11px] font-bold text-[#777777] mb-1">Tarif Dasar (Rp)</label>' +
+          '<input id="op-base-fare" type="number" min="0" step="500" value="' + Number(cfg.baseFareRp || 8000) + '" class="w-full px-3 py-2 rounded-xl border border-[#E5E5E5] text-xs font-bold text-[#191919] bg-white">' +
+        '</div>' +
+        '<div>' +
+          '<label class="block text-[11px] font-bold text-[#777777] mb-1">Tarif per KM (Rp)</label>' +
+          '<input id="op-per-km" type="number" min="0" step="500" value="' + Number(cfg.perKmFareRp || 2500) + '" class="w-full px-3 py-2 rounded-xl border border-[#E5E5E5] text-xs font-bold text-[#191919] bg-white">' +
+        '</div>' +
+      '</div>' +
+      '<button type="button" id="op-save-auto-btn" class="w-full py-2.5 px-4 rounded-xl bg-[#F58220] text-white text-xs font-black cursor-pointer">Simpan Pengaturan Otomatis</button>';
+
+    main.appendChild(card);
+
+    card.querySelector("#op-save-auto-btn")?.addEventListener("click", async () => {
+      const nextCfg = {
+        autoCancelUnaccepted: Boolean(card.querySelector("#op-auto-cancel")?.checked),
+        unacceptedTimeoutSec: Math.max(15, Number(card.querySelector("#op-timeout-sec")?.value || 120)),
+        autoReassignOnReject: Boolean(card.querySelector("#op-auto-reassign")?.checked),
+        autoCompleteDelivered: Boolean(cfg.autoCompleteDelivered),
+        commissionPercent: Math.max(0, Number(card.querySelector("#op-commission-pct")?.value || 5)),
+        baseFareRp: Math.max(0, Number(card.querySelector("#op-base-fare")?.value || 8000)),
+        perKmFareRp: Math.max(0, Number(card.querySelector("#op-per-km")?.value || 2500))
+      };
+      await saveAutoConfig(nextCfg);
+    });
+  }
+
+  const origDash = window.renderDashboardContent;
+  if (typeof origDash === "function") {
+    window.renderDashboardContent = function () {
+      const r = origDash.apply(this, arguments);
+      setTimeout(renderAutoSettingsCard, 120);
+      return r;
+    };
+  }
+
+  setTimeout(renderAutoSettingsCard, 160);
+})();
+</script>
 </body>
 </html>
