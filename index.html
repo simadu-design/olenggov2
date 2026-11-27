@@ -3666,5 +3666,339 @@
   }
 })();
 </script>
+<script id="oleng-one-account-multi-role-v1">
+(function () {
+  const MODE_STORAGE_KEY = "oleng_active_multi_mode_v1";
+  const ROLE_BAL_PREFIX = "oleng_role_balance_v1_";
+
+  function normPh(raw) {
+    if (typeof normalizePhone === "function") return normalizePhone(raw);
+    let d = String(raw || "").replace(/\D/g, "");
+    if (!d) return "";
+    if (d.startsWith("62")) d = "0" + d.slice(2);
+    else if (d.startsWith("8")) d = "0" + d;
+    return d;
+  }
+
+  function normKey(v) {
+    if (typeof normalizeMatchKey === "function") return normalizeMatchKey(v);
+    return String(v || "").trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  function isAdminUser(u) {
+    if (!u) return false;
+    const ph = normPh(u.phone);
+    return u.role === "admin" || ph === "085624736602";
+  }
+
+  function getRoleBalancesStore(accKey) {
+    const fallback = { customer: 0, driver: 0, merchant: 0 };
+    try {
+      const parsed = JSON.parse(localStorage.getItem(ROLE_BAL_PREFIX + accKey) || "null");
+      return parsed && typeof parsed === "object" ? { ...fallback, ...parsed } : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function saveRoleBalancesStore(accKey, mapObj) {
+    localStorage.setItem(ROLE_BAL_PREFIX + accKey, JSON.stringify(mapObj));
+  }
+
+  function syncIsolatedRoleBalancesForAccount(userObj) {
+    if (!userObj || typeof db === "undefined") return { customer: 0, driver: 0, merchant: 0 };
+    const ph = normPh(userObj.phone);
+    const accKey = String(userObj.accountId || ph || userObj.name || "default").toLowerCase();
+    const store = getRoleBalancesStore(accKey);
+
+    if (typeof userObj.balance === "number") {
+      const rKey = userObj.role === "driver" ? "driver" : userObj.role === "merchant" ? "merchant" : "customer";
+      store[rKey] = Math.max(Number(store[rKey] || 0), Number(userObj.balance || 0));
+    }
+
+    const drvRec = Array.isArray(db.drivers)
+      ? db.drivers.find(d => (ph && normPh(d.phone) === ph) || (userObj.name && normKey(d.name) === normKey(userObj.name)))
+      : null;
+    if (drvRec && typeof drvRec.balance === "number") {
+      store.driver = Math.max(Number(store.driver || 0), Number(drvRec.balance || 0));
+      drvRec.balance = store.driver;
+    }
+
+    const mrcRec = Array.isArray(db.merchants)
+      ? db.merchants.find(m => String(m.accountId || "").toUpperCase() !== "TOKOADM01" && ((ph && normPh(m.whatsapp) === ph) || (userObj.shopName && normKey(m.name) === normKey(userObj.shopName))))
+      : null;
+    if (mrcRec && typeof mrcRec.balance === "number") {
+      store.merchant = Math.max(Number(store.merchant || 0), Number(mrcRec.balance || 0));
+      mrcRec.balance = store.merchant;
+    }
+
+    saveRoleBalancesStore(accKey, store);
+    return store;
+  }
+
+  function resolveAccountRoles(userObj) {
+    if (!userObj || typeof db === "undefined") return ["customer"];
+    if (isAdminUser(userObj)) return ["admin", "customer", "driver", "merchant"];
+
+    const ph = normPh(userObj.phone);
+    const nm = normKey(userObj.name);
+    const roles = new Set(["customer"]);
+
+    const samePhoneUsers = Array.isArray(db.users)
+      ? db.users.filter(u => ph && normPh(u.phone) === ph)
+      : [];
+    samePhoneUsers.forEach(u => {
+      if (u.role && u.role !== "admin") roles.add(u.role);
+    });
+
+    const hasDriverData = Array.isArray(db.drivers) && db.drivers.some(d =>
+      (ph && normPh(d.phone) === ph) || (nm && normKey(d.name) === nm)
+    );
+    const hasMerchantData = Array.isArray(db.merchants) && db.merchants.some(m =>
+      String(m.accountId || "").toUpperCase() !== "TOKOADM01" &&
+      ((ph && normPh(m.whatsapp) === ph) || (userObj.shopName && normKey(m.name) === normKey(userObj.shopName)))
+    );
+
+    if (hasDriverData || Boolean(userObj.plate || userObj.bikeType)) roles.add("driver");
+    if (hasMerchantData || Boolean(userObj.shopName)) roles.add("merchant");
+
+    return Array.from(roles);
+  }
+
+  function isRoleApprovedForUser(userObj, roleName) {
+    if (!userObj) return false;
+    if (roleName === "customer") return String(userObj.status || "Aktif").toLowerCase() !== "nonaktif";
+    if (roleName === "admin") return isAdminUser(userObj);
+    if (isAdminUser(userObj)) return true;
+
+    const ph = normPh(userObj.phone);
+    const nm = normKey(userObj.name);
+    const sameRoleAcc = Array.isArray(db.users)
+      ? db.users.find(u => ph && normPh(u.phone) === ph && u.role === roleName)
+      : null;
+
+    if (sameRoleAcc && String(sameRoleAcc.status || "Aktif").toLowerCase() === "nonaktif") {
+      return false;
+    }
+
+    if (roleName === "driver") {
+      const drv = Array.isArray(db.drivers)
+        ? db.drivers.find(d => (ph && normPh(d.phone) === ph) || (nm && normKey(d.name) === nm))
+        : null;
+      return Boolean(drv || sameRoleAcc || userObj.role === "driver");
+    }
+
+    if (roleName === "merchant") {
+      const mrc = Array.isArray(db.merchants)
+        ? db.merchants.find(m => String(m.accountId || "").toUpperCase() !== "TOKOADM01" && ((ph && normPh(m.whatsapp) === ph) || (userObj.shopName && normKey(m.name) === normKey(userObj.shopName))))
+        : null;
+      return Boolean(mrc || sameRoleAcc || userObj.role === "merchant");
+    }
+
+    return false;
+  }
+
+  function hasActiveOrderInCurrentRole() {
+    if (!currentUser || typeof db === "undefined" || !Array.isArray(db.orders)) return false;
+    const activeRole = (currentUser.role === "admin" && typeof adminViewMode !== "undefined" && adminViewMode)
+      ? adminViewMode
+      : currentUser.role;
+    if (!["driver", "merchant"].includes(activeRole)) return false;
+
+    const busyCodes = ["driver_assigned", "merchant_confirmation", "merchant_accepted", "preparing", "driver_arriving", "picked_up", "delivering"];
+    const myPh = normPh(currentUser.phone);
+    const myNm = normKey(currentUser.name);
+    const myShop = normKey(currentUser.shopName);
+
+    return db.orders.some(o => {
+      const st = typeof normalizeOrderStatusCode === "function" ? normalizeOrderStatusCode(o.status) : String(o.status || "");
+      if (!busyCodes.includes(st)) return false;
+      if (activeRole === "driver") {
+        return (myNm && normKey(o.driver) === myNm) || (myPh && normPh(o.assignedDriverPhone) === myPh);
+      }
+      if (activeRole === "merchant") {
+        return (myShop && normKey(o.merchant) === myShop) || (myNm && normKey(o.merchant) === myNm);
+      }
+      return false;
+    });
+  }
+
+  function ensureModeSwitcherModal() {
+    if (document.getElementById("modal-oleng-mode-switcher")) return;
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<div id="modal-oleng-mode-switcher" class="fixed inset-0 bg-black/70 z-[90] hidden flex flex-col justify-end">' +
+        '<div id="oleng-mode-switcher-card" class="bg-white rounded-t-3xl p-5 max-w-md w-full mx-auto space-y-3 border-t-4 border-[#FF7900] shadow-2xl"></div>' +
+      '</div>'
+    );
+  }
+
+  function openMultiRoleSwitcher() {
+    if (!currentUser) return;
+    ensureModeSwitcherModal();
+    const roles = resolveAccountRoles(currentUser).filter(r => r !== "admin");
+    if (roles.length <= 1 && !isAdminUser(currentUser)) return;
+
+    const activeRole = (currentUser.role === "admin" && typeof adminViewMode !== "undefined" && adminViewMode)
+      ? adminViewMode
+      : currentUser.role;
+
+    const meta = {
+      customer: { title: "KONSUMEN", desc: "Gunakan layanan pesan ojek, makanan, dan OLENG MARKET.", icon: "fa-user" },
+      driver: { title: "DRIVER", desc: "Kelola pekerjaan, terima pesanan, dan lihat pendapatan.", icon: "fa-motorcycle" },
+      merchant: { title: "MITRA TOKO", desc: "Kelola toko, menu, pesanan, dan transaksi.", icon: "fa-store" }
+    };
+
+    const listToShow = isAdminUser(currentUser) ? ["customer", "driver", "merchant", "admin"] : roles;
+    const card = document.getElementById("oleng-mode-switcher-card");
+    if (!card) return;
+
+    card.innerHTML =
+      '<div class="flex items-center justify-between border-b pb-2.5">' +
+        '<div><span class="text-[10px] font-black text-[#FF7900] uppercase block">SATU AKUN • MULTI-ROLE</span><h3 class="text-sm font-black text-[#171717]">Ganti Mode Aktif</h3></div>' +
+        '<button type="button" id="mr-close-btn" class="text-neutral-400 text-2xl font-bold cursor-pointer">&times;</button>' +
+      '</div>' +
+      (hasActiveOrderInCurrentRole()
+        ? '<div class="p-2.5 rounded-2xl bg-amber-50 border border-amber-300 text-[11px] font-bold text-amber-900">Pesanan aktif tetap berjalan aman di latar belakang saat Anda berpindah mode.</div>'
+        : '') +
+      '<div class="space-y-2">' +
+      listToShow.map(rKey => {
+        const info = meta[rKey] || { title: "ADMIN", desc: "Kelola seluruh sistem dan konfigurasi OLENGGO.", icon: "fa-shield-halved" };
+        const isCurrent = activeRole === rKey;
+        const approved = isRoleApprovedForUser(currentUser, rKey);
+        return (
+          '<button type="button" data-pick-role="' + rKey + '" class="mr-pick-item w-full p-3 rounded-2xl border-2 flex items-center justify-between gap-3 text-left cursor-pointer transition ' +
+            (isCurrent ? "border-[#FF7900] bg-[#FFF7ED]" : "border-neutral-200 bg-white hover:border-[#FF7900]") + '">' +
+            '<div class="flex items-center gap-3 min-w-0">' +
+              '<div class="w-10 h-10 rounded-2xl ' + (isCurrent ? "bg-[#FF7900] text-white" : "bg-[#171717] text-[#FF9800]") + ' flex items-center justify-center shrink-0"><i class="fa-solid ' + info.icon + ' text-sm"></i></div>' +
+              '<div class="min-w-0">' +
+                '<span class="text-xs font-black text-[#171717] block">' + info.title + '</span>' +
+                '<span class="text-[10px] text-neutral-600 font-semibold block truncate">' + info.desc + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<span class="px-2.5 py-1 rounded-xl text-[10px] font-black shrink-0 ' +
+              (isCurrent ? "bg-[#171717] text-[#FF9800]" : approved ? "bg-neutral-100 text-[#171717]" : "bg-rose-100 text-rose-700") + '">' +
+              (isCurrent ? "Aktif" : approved ? "Pilih" : "Perlu Persetujuan") +
+            '</span>' +
+          '</button>'
+        );
+      }).join("") +
+      '</div>';
+
+    card.querySelector("#mr-close-btn")?.addEventListener("click", () => {
+      document.getElementById("modal-oleng-mode-switcher")?.classList.add("hidden");
+    });
+
+    card.querySelectorAll(".mr-pick-item").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetRole = btn.getAttribute("data-pick-role");
+        if (!targetRole || !currentUser) return;
+        if (!isRoleApprovedForUser(currentUser, targetRole)) {
+          if (typeof showToast === "function") showToast("Peran " + targetRole.toUpperCase() + " belum disetujui Admin.", "error");
+          return;
+        }
+        if (hasActiveOrderInCurrentRole() && typeof showToast === "function") {
+          showToast("Pekerjaan/pesanan aktif tetap berjalan di latar belakang.", "info");
+        }
+        if (isAdminUser(currentUser)) {
+          adminViewMode = targetRole;
+          localStorage.setItem("oleng_admin_view_mode", targetRole);
+        } else {
+          currentUser.role = targetRole;
+          localStorage.setItem("oleng_user_session", JSON.stringify(currentUser));
+        }
+        localStorage.setItem(MODE_STORAGE_KEY + "_" + normPh(currentUser.phone), targetRole);
+        document.getElementById("modal-oleng-mode-switcher")?.classList.add("hidden");
+
+        if (typeof renderDashboardNavigation === "function") {
+          const eff = isAdminUser(currentUser) ? adminViewMode : currentUser.role;
+          renderDashboardNavigation(eff);
+        }
+        const homeTab = targetRole === "admin" ? "admin-dash" : "home";
+        if (typeof renderDashboardContent === "function") renderDashboardContent(homeTab, false);
+        if (typeof showToast === "function") showToast("Mode aktif: " + targetRole.toUpperCase(), "success");
+      });
+    });
+
+    document.getElementById("modal-oleng-mode-switcher")?.classList.remove("hidden");
+  }
+
+  function injectSwitchModeButtonIfMultiRole() {
+    if (!currentUser) return;
+    const roles = resolveAccountRoles(currentUser).filter(r => r !== "admin");
+    if (roles.length <= 1 && !isAdminUser(currentUser)) return;
+
+    const main = document.getElementById("main-content");
+    if (!main || main.querySelector("#oleng-multi-role-switch-btn")) return;
+
+    const logoutBtn = main.querySelector('button[onclick*="handleLogout"], #fn-btn-logout');
+    if (logoutBtn && logoutBtn.parentElement) {
+      const btn = document.createElement("button");
+      btn.id = "oleng-multi-role-switch-btn";
+      btn.type = "button";
+      btn.className = "w-9 h-9 bg-[#FF7900] hover:bg-[#FF9800] text-white rounded-xl flex items-center justify-center cursor-pointer border border-white/40 shrink-0";
+      btn.title = "Ganti Mode";
+      btn.setAttribute("aria-label", "Ganti Mode");
+      btn.innerHTML = '<i class="fa-solid fa-repeat text-xs"></i>';
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openMultiRoleSwitcher();
+      });
+      logoutBtn.parentElement.insertBefore(btn, logoutBtn);
+    }
+  }
+
+  const origGetBal = window.getProfileSyncedBalance;
+  if (typeof origGetBal === "function") {
+    window.getProfileSyncedBalance = function () {
+      if (!currentUser) return 0;
+      const store = syncIsolatedRoleBalancesForAccount(currentUser);
+      const r = (currentUser.role === "admin" && typeof adminViewMode !== "undefined" && adminViewMode)
+        ? adminViewMode
+        : currentUser.role;
+      if (r === "driver") return Number(store.driver || 0);
+      if (r === "merchant") return Number(store.merchant || 0);
+      if (r === "customer") return Number(store.customer || 0);
+      return origGetBal();
+    };
+  }
+
+  const origRenderDash = window.renderDashboardContent;
+  if (typeof origRenderDash === "function") {
+    window.renderDashboardContent = function (tab, recordHistory = true) {
+      if (currentUser) {
+        syncIsolatedRoleBalancesForAccount(currentUser);
+        const r = (currentUser.role === "admin" && typeof adminViewMode !== "undefined" && adminViewMode)
+          ? adminViewMode
+          : currentUser.role;
+        if (["driver", "merchant"].includes(r) && !isRoleApprovedForUser(currentUser, r)) {
+          if (typeof showToast === "function") showToast("Peran " + r.toUpperCase() + " belum disetujui Admin.", "error");
+          currentUser.role = "customer";
+          localStorage.setItem("oleng_user_session", JSON.stringify(currentUser));
+          return origRenderDash("home", false);
+        }
+      }
+      origRenderDash(tab, recordHistory);
+      setTimeout(injectSwitchModeButtonIfMultiRole, 60);
+    };
+  }
+
+  for (const fnName of ["renderCustomerHome", "renderAdminDash", "renderMerchantManage"]) {
+    const fn = window[fnName];
+    if (typeof fn === "function") {
+      window[fnName] = function (c) {
+        fn(c);
+        setTimeout(injectSwitchModeButtonIfMultiRole, 50);
+      };
+    }
+  }
+
+  if (currentUser) {
+    syncIsolatedRoleBalancesForAccount(currentUser);
+    setTimeout(injectSwitchModeButtonIfMultiRole, 70);
+  }
+})();
+</script>
 </body>
 </html>
