@@ -1,4 +1,4 @@
-<style id="oleng-driver-online-label-v2-css">
+<style id="oleng-clean-ui-stabilizer-css">
   .oleng-banner-status-white,
   .oleng-banner-status-white * {
     color: #FFFFFF !important;
@@ -5090,92 +5090,6 @@
   setTimeout(refreshMapsSafely, 120);
 })();
 </script>
-<script id="oleng-driver-online-label-v2-js">
-(function () {
-  function isInsideColoredStatusBanner(el) {
-    let cur = el;
-    for (let i = 0; i < 8 && cur; i++) {
-      const cls = String(cur.className || "");
-      const styleAttr = cur.getAttribute ? String(cur.getAttribute("style") || "") : "";
-      const bgStyle = cur.style && cur.style.backgroundColor ? String(cur.style.backgroundColor) : "";
-      const compBg = typeof getComputedStyle === "function" ? String(getComputedStyle(cur).backgroundColor || "") : "";
-
-      if (
-        cls.includes("emerald") ||
-        cls.includes("green") ||
-        cls.includes("red") ||
-        cls.includes("rose") ||
-        cls.includes("16A36A") ||
-        cls.includes("16a36a") ||
-        cls.includes("DC3545") ||
-        cls.includes("dc3545") ||
-        styleAttr.includes("16A36A") ||
-        styleAttr.includes("16a36a") ||
-        styleAttr.includes("DC3545") ||
-        styleAttr.includes("dc3545") ||
-        bgStyle.includes("22, 163, 106") ||
-        bgStyle.includes("220, 53, 69") ||
-        compBg.includes("22, 163, 106") ||
-        compBg.includes("220, 53, 69")
-      ) {
-        return true;
-      }
-      cur = cur.parentElement;
-    }
-    return false;
-  }
-
-  function forceStatusLabelContrast() {
-    const main = document.getElementById("main-content");
-    if (!main) return;
-
-    main.querySelectorAll("p, span, div, h1, h2, h3, h4, strong, b, button").forEach(el => {
-      if (el.closest(".leaflet-container")) return;
-      const raw = String(el.textContent || "").trim();
-      const lower = raw.toLowerCase();
-
-      if (lower === "anda online" || lower === "anda offline" || lower === "online" || lower === "offline") {
-        if (isInsideColoredStatusBanner(el)) {
-          el.classList.add("oleng-banner-status-white");
-          el.style.setProperty("color", "#FFFFFF", "important");
-          el.style.setProperty("-webkit-text-fill-color", "#FFFFFF", "important");
-          el.style.setProperty("opacity", "1", "important");
-          el.style.setProperty("font-weight", "800", "important");
-        } else if (lower.startsWith("anda ") || lower === "online" || lower === "offline") {
-          el.classList.remove("oleng-banner-status-white");
-          el.style.setProperty("color", lower.includes("offline") ? "#DC3545" : "#16A36A", "important");
-          el.style.setProperty("-webkit-text-fill-color", lower.includes("offline") ? "#DC3545" : "#16A36A", "important");
-        }
-      }
-    });
-  }
-
-  const origDash = window.renderDashboardContent;
-  if (typeof origDash === "function") {
-    window.renderDashboardContent = function () {
-      const r = origDash.apply(this, arguments);
-      setTimeout(forceStatusLabelContrast, 60);
-      setTimeout(forceStatusLabelContrast, 220);
-      return r;
-    };
-  }
-
-  for (const fnName of ["renderCustomerHome", "renderAdminDash", "renderDashboardNavigation"]) {
-    const fn = window[fnName];
-    if (typeof fn === "function") {
-      window[fnName] = function () {
-        const r = fn.apply(this, arguments);
-        setTimeout(forceStatusLabelContrast, 60);
-        setTimeout(forceStatusLabelContrast, 220);
-        return r;
-      };
-    }
-  }
-
-  setTimeout(forceStatusLabelContrast, 100);
-  setTimeout(forceStatusLabelContrast, 350);
-})();
-</script>
 <script id="oleng-order-popup-alarm-v1">
 (function () {
   const NOTIFIED_KEY = "oleng_notified_order_keys_v1";
@@ -5381,196 +5295,6 @@
   }
 
   setTimeout(hookOrdersRealtime, 500);
-})();
-</script>
-<script id="oleng-e-tariff-card-v6">
-(function () {
-  const AUTO_CFG_KEY = "oleng_admin_auto_ops_v1";
-  let debounceTimer = null;
-
-  function defaultAutoConfig() {
-    return {
-      autoCancelUnaccepted: true,
-      unacceptedTimeoutSec: 120,
-      autoReassignOnReject: true,
-      autoCompleteDelivered: false,
-      commissionPercent: 10,
-      baseFareRp: 8000,
-      perKmFareRp: 2500
-    };
-  }
-
-  function loadAutoConfig() {
-    const base = defaultAutoConfig();
-    try {
-      const saved = JSON.parse(localStorage.getItem(AUTO_CFG_KEY) || "{}");
-      return Object.assign(base, saved || {});
-    } catch (e) {
-      return base;
-    }
-  }
-
-  async function saveAutoConfig(cfg) {
-    localStorage.setItem(AUTO_CFG_KEY, JSON.stringify(cfg));
-    if (typeof db !== "undefined" && db) {
-      db.config = Object.assign({}, db.config || {}, {
-        autoOps: cfg,
-        commissionPercent: cfg.commissionPercent,
-        baseFareRp: cfg.baseFareRp,
-        perKmFareRp: cfg.perKmFareRp
-      });
-      localStorage.setItem("oleng_go_db", JSON.stringify(db));
-    }
-    if (typeof supabaseClient !== "undefined" && supabaseClient && navigator.onLine) {
-      try {
-        await supabaseClient
-          .from("app_config")
-          .upsert({ key: "auto_ops_settings", value: cfg, updated_at: new Date().toISOString() }, { onConflict: "key" });
-      } catch (e) {}
-    }
-    if (typeof showToast === "function") {
-      showToast("Pengaturan tarif, komisi & pembatalan otomatis tersimpan!", "success");
-    }
-  }
-
-  function isAdminNow() {
-    if (typeof currentUser === "undefined" || !currentUser) return false;
-    const d = String(currentUser.phone || "").replace(/D/g, "");
-    const norm = typeof normalizePhone === "function"
-      ? normalizePhone(currentUser.phone)
-      : (d.startsWith("62") ? "0" + d.slice(2) : d);
-    const isAdminAcc = currentUser.role === "admin" || norm === "085624736602";
-    const viewMode = (typeof adminViewMode !== "undefined" && adminViewMode) ? String(adminViewMode) : "admin";
-    return isAdminAcc && viewMode === "admin";
-  }
-
-  function findSaveTariffButton(main) {
-    const btns = Array.from(main.querySelectorAll("button"));
-    for (const btn of btns) {
-      if (btn.closest && btn.closest("#oleng-e-tariff-auto-block")) continue;
-      const txt = String(btn.textContent || "").trim().toLowerCase();
-      if (txt.includes("simpan") && txt.includes("tarif")) {
-        const rect = btn.getBoundingClientRect ? btn.getBoundingClientRect() : null;
-        if (rect && rect.width > 0 && rect.height > 0) {
-          return btn;
-        }
-      }
-    }
-    return null;
-  }
-
-  function syncInputsIfNotFocused(section, cfg) {
-    const active = document.activeElement;
-    const map = {
-      "#op-auto-cancel": { type: "checkbox", val: Boolean(cfg.autoCancelUnaccepted) },
-      "#op-auto-reassign": { type: "checkbox", val: Boolean(cfg.autoReassignOnReject) },
-      "#op-timeout-sec": { type: "number", val: Number(cfg.unacceptedTimeoutSec || 120) },
-      "#op-commission-pct": { type: "number", val: Number(cfg.commissionPercent || 10) },
-      "#op-base-fare": { type: "number", val: Number(cfg.baseFareRp || 8000) },
-      "#op-per-km": { type: "number", val: Number(cfg.perKmFareRp || 2500) }
-    };
-
-    Object.entries(map).forEach(([sel, spec]) => {
-      const inp = section.querySelector(sel);
-      if (!inp || inp === active) return;
-      if (spec.type === "checkbox") {
-        if (inp.checked !== spec.val) inp.checked = spec.val;
-      } else {
-        if (String(inp.value) !== String(spec.val)) inp.value = String(spec.val);
-      }
-    });
-  }
-
-  function mountInsideETariffCard() {
-    document.querySelectorAll("#oleng-admin-auto-ops-card, #oleng-tariff-auto-section").forEach(el => el.remove());
-
-    const existing = document.getElementById("oleng-e-tariff-auto-block");
-    if (!isAdminNow()) {
-      if (existing) existing.remove();
-      return;
-    }
-
-    const main = document.getElementById("main-content");
-    if (!main) {
-      if (existing) existing.remove();
-      return;
-    }
-
-    const saveBtn = findSaveTariffButton(main);
-    if (!saveBtn || !saveBtn.parentElement) {
-      if (existing) existing.remove();
-      return;
-    }
-
-    let block = existing;
-    if (!block) {
-      block = document.createElement("div");
-      block.id = "oleng-e-tariff-auto-block";
-      block.className = "mt-3 pt-3 mb-3 border-t border-[#E5E5E5] space-y-2.5";
-      block.innerHTML =
-        '<div class="flex items-center justify-between gap-2">' +
-          '<div>' +
-            '<div class="text-xs font-black text-[#191919]">Pembatalan Otomatis & Batas Respon</div>' +
-            '<div class="text-[11px] text-[#777777]">Batalkan otomatis bila tidak ada respon ojek dan atur batas waktu</div>' +
-          '</div>' +
-          '<span class="px-2 py-0.5 rounded-lg bg-[#F5F5F5] text-[#191919] text-[10px] font-bold">OTOMATIS</span>' +
-        '</div>' +
-        '<label class="flex items-center justify-between gap-3 py-1 text-xs font-bold text-[#191919]">' +
-          '<span class="leading-snug">Batalkan otomatis jika tidak ada ojek merespon</span>' +
-          '<input id="op-auto-cancel" type="checkbox" class="w-4 h-4 shrink-0 accent-[#F58220]">' +
-        '</label>' +
-        '<label class="flex items-center justify-between gap-3 py-1 text-xs font-bold text-[#191919]">' +
-          '<span class="leading-snug">Alihkan otomatis jika driver menolak/menghilang</span>' +
-          '<input id="op-auto-reassign" type="checkbox" class="w-4 h-4 shrink-0 accent-[#F58220]">' +
-        '</label>' +
-        '<div>' +
-          '<label class="block text-[11px] font-bold text-[#777777] mb-1">Batas Waktu Respon Ojek (detik)</label>' +
-          '<input id="op-timeout-sec" type="number" min="15" max="900" class="w-full px-2.5 py-2 rounded-xl border border-[#E5E5E5] text-xs font-bold text-[#191919] bg-white">' +
-        '</div>' +
-        '<button type="button" id="op-save-auto-btn" class="w-full py-2.5 px-4 rounded-xl bg-[#191919] text-white text-xs font-black cursor-pointer">Simpan Pengaturan Otomatis</button>';
-
-      block.querySelector("#op-save-auto-btn")?.addEventListener("click", async () => {
-        const prev = loadAutoConfig();
-        const nextCfg = {
-          autoCancelUnaccepted: Boolean(block.querySelector("#op-auto-cancel")?.checked),
-          unacceptedTimeoutSec: Math.max(15, Number(block.querySelector("#op-timeout-sec")?.value || 120)),
-          autoReassignOnReject: Boolean(block.querySelector("#op-auto-reassign")?.checked),
-          autoCompleteDelivered: Boolean(prev.autoCompleteDelivered),
-          commissionPercent: Number(prev.commissionPercent || 10),
-          baseFareRp: Number(prev.baseFareRp || 8000),
-          perKmFareRp: Number(prev.perKmFareRp || 2500)
-        };
-        await saveAutoConfig(nextCfg);
-      });
-    }
-
-    if (block.nextElementSibling !== saveBtn || block.parentElement !== saveBtn.parentElement) {
-      saveBtn.parentElement.insertBefore(block, saveBtn);
-    }
-
-    syncInputsIfNotFocused(block, loadAutoConfig());
-  }
-
-  function scheduleMount() {
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(mountInsideETariffCard, 90);
-  }
-
-  const origDash = window.renderDashboardContent;
-  if (typeof origDash === "function") {
-    window.renderDashboardContent = function () {
-      const r = origDash.apply(this, arguments);
-      scheduleMount();
-      return r;
-    };
-  }
-
-  document.addEventListener("click", scheduleMount, { passive: true });
-  const mainEl = document.getElementById("main-content");
-  if (mainEl && typeof MutationObserver !== "undefined") {
-    new MutationObserver(scheduleMount).observe(mainEl, { childList: true, subtree: true });
-  }
-  scheduleMount();
 })();
 </script>
 <script id="oleng-full-supabase-ops-v1">
@@ -5950,25 +5674,17 @@
   window.addEventListener("online", () => setTimeout(runProductionHealthAndSync, 300));
 })();
 </script>
-<script id="oleng-global-anti-flicker-v2">
+<script id="oleng-clean-ui-stabilizer-js">
 (function () {
-  if (window.__olengGlobalAntiFlickerV2) return;
-  window.__olengGlobalAntiFlickerV2 = true;
+  if (window.__olengCleanUiStabilizerV1) return;
+  window.__olengCleanUiStabilizerV1 = true;
 
-  let polishTimer = null;
-
-  function applyTargetedVisualPolishOnce() {
-    if (document.body && !document.body.classList.contains("oleng-op-ready")) {
-      document.body.classList.add("oleng-op-ready");
-    }
-
+  function fixOnlineLabelOnce() {
     const main = document.getElementById("main-content");
     if (!main) return;
-
-    // 1. Pastikan kontras teks "Anda Online" / "Anda Offline" pada banner berwarna selalu jelas
     main.querySelectorAll("p, span, div, strong, b").forEach(el => {
       if (el.closest(".leaflet-container")) return;
-      if (el.children && el.children.length > 0 && String(el.textContent || "").trim().length > 30) return;
+      if (el.children && el.children.length > 0 && String(el.textContent || "").trim().length > 25) return;
       const txt = String(el.textContent || "").trim().toLowerCase();
       if (txt === "anda online" || txt === "anda offline" || txt === "online" || txt === "offline") {
         let cur = el;
@@ -5990,71 +5706,58 @@
           }
           cur = cur.parentElement;
         }
-
         if (coloredBg) {
-          if (el.style.color !== "rgb(255, 255, 255)" && el.style.color !== "#FFFFFF") {
-            el.style.setProperty("color", "#FFFFFF", "important");
-            el.style.setProperty("-webkit-text-fill-color", "#FFFFFF", "important");
-            el.style.setProperty("opacity", "1", "important");
-            el.style.setProperty("font-weight", "800", "important");
-          }
-        } else {
-          const targetCol = txt.includes("offline") ? "#DC3545" : "#16A36A";
-          if (el.style.color !== targetCol) {
-            el.style.setProperty("color", targetCol, "important");
-          }
+          el.classList.add("oleng-banner-status-white");
+          el.style.setProperty("color", "#FFFFFF", "important");
+          el.style.setProperty("-webkit-text-fill-color", "#FFFFFF", "important");
+          el.style.setProperty("opacity", "1", "important");
         }
       }
     });
   }
 
-  function scheduleTargetedPolish() {
-    if (polishTimer) clearTimeout(polishTimer);
-    polishTimer = setTimeout(applyTargetedVisualPolishOnce, 220);
-  }
-
-  // Stabilkan panggilan renderDashboardContent agar tidak berkedip karena pemicu beruntun
+  // Cegah re-render beruntun di bawah 450ms dan cegah re-render saat pengguna sedang mengetik
   if (typeof window.renderDashboardContent === "function") {
     const baseRender = window.renderDashboardContent;
-    let lastRun = 0;
-    let pendingArgs = null;
-    let pendingTimer = null;
+    let lastRenderAt = 0;
+    let timer = null;
+    let latestArgs = null;
 
     window.renderDashboardContent = function () {
-      pendingArgs = arguments;
-      const now = Date.now();
-      const diff = now - lastRun;
-
+      latestArgs = arguments;
       const active = document.activeElement;
-      const isEditingInput = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
-      if (isEditingInput && diff < 3000) {
+      const typing = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
+      const now = Date.now();
+      const diff = now - lastRenderAt;
+
+      if (typing && diff < 4000) {
         return;
       }
 
-      if (diff < 280) {
-        if (!pendingTimer) {
-          pendingTimer = setTimeout(() => {
-            pendingTimer = null;
-            lastRun = Date.now();
-            baseRender.apply(window, pendingArgs || []);
-            scheduleTargetedPolish();
-          }, 300 - diff);
+      if (diff < 450) {
+        if (!timer) {
+          timer = setTimeout(() => {
+            timer = null;
+            lastRenderAt = Date.now();
+            baseRender.apply(window, latestArgs || []);
+            setTimeout(fixOnlineLabelOnce, 80);
+          }, 460 - diff);
         }
         return;
       }
 
-      if (pendingTimer) {
-        clearTimeout(pendingTimer);
-        pendingTimer = null;
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
       }
-      lastRun = now;
-      const res = baseRender.apply(this, arguments);
-      scheduleTargetedPolish();
-      return res;
+      lastRenderAt = now;
+      const out = baseRender.apply(this, arguments);
+      setTimeout(fixOnlineLabelOnce, 80);
+      return out;
     };
   }
 
-  scheduleTargetedPolish();
+  setTimeout(fixOnlineLabelOnce, 120);
 })();
 </script>
 </body>
