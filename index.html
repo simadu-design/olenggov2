@@ -5383,10 +5383,10 @@
   setTimeout(hookOrdersRealtime, 500);
 })();
 </script>
-<script id="oleng-tariff-auto-panel-v3">
+<script id="oleng-tariff-commission-panel-v4">
 (function () {
   const AUTO_CFG_KEY = "oleng_admin_auto_ops_v1";
-  let renderDebounceTimer = null;
+  let debounceTimer = null;
 
   function defaultAutoConfig() {
     return {
@@ -5413,7 +5413,12 @@
   async function saveAutoConfig(cfg) {
     localStorage.setItem(AUTO_CFG_KEY, JSON.stringify(cfg));
     if (typeof db !== "undefined" && db) {
-      db.config = Object.assign({}, db.config || {}, { autoOps: cfg, commissionPercent: cfg.commissionPercent, baseFareRp: cfg.baseFareRp, perKmFareRp: cfg.perKmFareRp });
+      db.config = Object.assign({}, db.config || {}, {
+        autoOps: cfg,
+        commissionPercent: cfg.commissionPercent,
+        baseFareRp: cfg.baseFareRp,
+        perKmFareRp: cfg.perKmFareRp
+      });
       localStorage.setItem("oleng_go_db", JSON.stringify(db));
     }
     if (typeof supabaseClient !== "undefined" && supabaseClient && navigator.onLine) {
@@ -5424,7 +5429,7 @@
       } catch (e) {}
     }
     if (typeof showToast === "function") {
-      showToast("Pengaturan tarif & pembatalan otomatis tersimpan!", "success");
+      showToast("Pengaturan tarif, komisi & pembatalan otomatis tersimpan!", "success");
     }
   }
 
@@ -5439,24 +5444,41 @@
     return isAdminAcc && viewMode === "admin";
   }
 
-  function findTariffOrSettingsContainer(main) {
-    // Cari wadah yang memuat istilah tarif / komisi / pengaturan admin
-    const candidates = Array.from(main.querySelectorAll("div, section"));
-    for (const el of candidates) {
-      if (el.id === "main-content") continue;
-      if (el.querySelector && el.querySelector("#oleng-tariff-auto-section")) return el;
-      const txt = String(el.textContent || "");
-      const hasTariff = txt.includes("Tarif") || txt.includes("Komisi") || txt.includes("PENGATURAN ADMIN");
-      const reasonableSize = txt.length > 15 && txt.length < 2200;
-      if (hasTariff && reasonableSize && el.children && el.children.length > 0) {
-        return el;
-      }
-    }
-    return null;
+  function isElementVisible(el) {
+    if (!el || !el.getBoundingClientRect) return false;
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return false;
+    const st = typeof getComputedStyle === "function" ? getComputedStyle(el) : null;
+    if (st && (st.display === "none" || st.visibility === "hidden")) return false;
+    return true;
   }
 
-  function syncInputsIfNotFocused(container, cfg) {
-    if (!container) return;
+  function findTariffCommissionPanel(main) {
+    // Cari elemen paling spesifik yang berkaitan dengan Tarif dan/atau Komisi dan sedang terlihat
+    const all = Array.from(main.querySelectorAll("div, section, form"));
+    let best = null;
+    let bestLen = Infinity;
+
+    for (const el of all) {
+      if (!el || el.id === "main-content" || el.id === "oleng-tariff-auto-section") continue;
+      if (el.closest && el.closest("#oleng-tariff-auto-section")) continue;
+      const txt = String(el.textContent || "");
+      const hasTariff = /tarif/i.test(txt);
+      const hasCommission = /komisi/i.test(txt);
+      if (!hasTariff && !hasCommission) continue;
+      if (!isElementVisible(el)) continue;
+
+      const len = txt.trim().length;
+      // Hindari pembungkus seluruh halaman yang terlalu besar
+      if (len >= 20 && len < 1400 && len < bestLen) {
+        best = el;
+        bestLen = len;
+      }
+    }
+    return best;
+  }
+
+  function syncInputsIfNotFocused(section, cfg) {
     const active = document.activeElement;
     const map = {
       "#op-auto-cancel": { type: "checkbox", val: Boolean(cfg.autoCancelUnaccepted) },
@@ -5468,7 +5490,7 @@
     };
 
     Object.entries(map).forEach(([sel, spec]) => {
-      const inp = container.querySelector(sel);
+      const inp = section.querySelector(sel);
       if (!inp || inp === active) return;
       if (spec.type === "checkbox") {
         if (inp.checked !== spec.val) inp.checked = spec.val;
@@ -5478,30 +5500,29 @@
     });
   }
 
-  function mountInsideTariffPanel() {
+  function placeInsideTariffCommissionPanel() {
+    document.querySelectorAll("#oleng-admin-auto-ops-card").forEach(el => el.remove());
+
+    const existing = document.getElementById("oleng-tariff-auto-section");
     if (!isAdminNow()) {
-      document.querySelectorAll("#oleng-tariff-auto-section, #oleng-admin-auto-ops-card").forEach(el => el.remove());
+      if (existing) existing.remove();
       return;
     }
 
     const main = document.getElementById("main-content");
-    if (!main) return;
-
-    const htmlText = String(main.innerHTML || "");
-    const relevantPage =
-      htmlText.includes("PENGATURAN ADMIN") ||
-      htmlText.includes("Master Control") ||
-      htmlText.includes("Tarif") ||
-      htmlText.includes("Komisi");
-
-    if (!relevantPage) {
-      document.querySelectorAll("#oleng-tariff-auto-section, #oleng-admin-auto-ops-card").forEach(el => el.remove());
+    if (!main) {
+      if (existing) existing.remove();
       return;
     }
 
-    const cfg = loadAutoConfig();
-    let section = document.getElementById("oleng-tariff-auto-section");
+    const targetPanel = findTariffCommissionPanel(main);
+    if (!targetPanel) {
+      // Jangan diletakkan di bawah footer SIMADU jika panel tarif & komisi belum terbuka/tampil
+      if (existing) existing.remove();
+      return;
+    }
 
+    let section = existing;
     if (!section) {
       section = document.createElement("div");
       section.id = "oleng-tariff-auto-section";
@@ -5509,10 +5530,10 @@
       section.innerHTML =
         '<div class="flex items-center justify-between gap-2">' +
           '<div>' +
-            '<div class="text-xs font-black text-[#191919]">Aturan Dispatch & Pembatalan Otomatis</div>' +
+            '<div class="text-xs font-black text-[#191919]">Pembatalan Otomatis & Aturan Dispatch</div>' +
             '<div class="text-[11px] text-[#777777]">Batas waktu respon ojek, pengalihan otomatis, dan tarif/komisi</div>' +
           '</div>' +
-          '<span class="px-2 py-0.5 rounded-lg bg-[#F5F5F5] text-[#191919] text-[10px] font-bold">TARIF & OPS</span>' +
+          '<span class="px-2 py-0.5 rounded-lg bg-[#191919] text-white text-[10px] font-bold">TARIF & KOMISI</span>' +
         '</div>' +
         '<label class="flex items-center justify-between gap-3 py-1 text-xs font-bold text-[#191919]">' +
           '<span class="leading-snug">Batalkan otomatis jika tidak ada ojek merespon</span>' +
@@ -5559,31 +5580,29 @@
       });
     }
 
-    const targetContainer = findTariffOrSettingsContainer(main);
-    if (targetContainer && section.parentElement !== targetContainer) {
-      targetContainer.appendChild(section);
-    } else if (!targetContainer && section.parentElement !== main) {
-      main.appendChild(section);
+    if (section.parentElement !== targetPanel) {
+      targetPanel.appendChild(section);
     }
 
-    syncInputsIfNotFocused(section, cfg);
+    syncInputsIfNotFocused(section, loadAutoConfig());
   }
 
-  function scheduleStableMount() {
-    if (renderDebounceTimer) clearTimeout(renderDebounceTimer);
-    renderDebounceTimer = setTimeout(mountInsideTariffPanel, 140);
+  function schedulePlacement() {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(placeInsideTariffCommissionPanel, 150);
   }
 
   const origDash = window.renderDashboardContent;
   if (typeof origDash === "function") {
     window.renderDashboardContent = function () {
       const r = origDash.apply(this, arguments);
-      scheduleStableMount();
+      schedulePlacement();
       return r;
     };
   }
 
-  scheduleStableMount();
+  document.addEventListener("click", schedulePlacement, { passive: true });
+  schedulePlacement();
 })();
 </script>
 </body>
