@@ -61,14 +61,17 @@
         .auth-panel-slide-left { animation: panelSlideBack 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
     </style>
 <style id="oleng-home-layout-css">
-  #main-content > div > div.bg-\[\#171717\].rounded-3xl { gap: 8px; }
-  #main-content > div > div.bg-\[\#171717\].rounded-3xl > div:first-child { min-width: 0; flex: 1 1 0%; }
-  #main-content > div > div.bg-\[\#171717\].rounded-3xl > div:first-child h3 { font-size: 11px !important; white-space: nowrap; }
-  #main-content > div > div.bg-\[\#171717\].rounded-3xl > div:last-child { flex-shrink: 0; gap: 5px; }
-  #main-content > div > div.bg-white.rounded-2xl > div:first-child { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px !important; width: 100%; }
-  #main-content > div > div.bg-white.rounded-2xl > div:first-child > i { display: none; }
-  #main-content > div > div.bg-white.rounded-2xl > div:first-child button { width: 100%; justify-content: center; }
-  #map { margin-top: 6px; }
+  #main-content .bg-\[#171717\].rounded-3xl { gap: 6px; padding: 12px !important; }
+  #main-content .bg-\[#171717\].rounded-3xl > div:first-child { min-width: 0; flex: 1 1 auto; gap: 8px; }
+  #main-content .bg-\[#171717\].rounded-3xl > div:first-child > div { min-width: 0; flex: 1 1 auto; }
+  #main-content .bg-\[#171717\].rounded-3xl span,
+  #main-content .bg-\[#171717\].rounded-3xl h3 { font-size: 10px !important; line-height: 1.25 !important; white-space: normal !important; word-break: break-word; }
+  #main-content .bg-\[#171717\].rounded-3xl > div:last-child { flex-shrink: 0; gap: 4px !important; }
+  #main-content .bg-\[#171717\].rounded-3xl > div:last-child button { width: 32px !important; height: 32px !important; padding: 0 !important; }
+  #main-content .bg-white.rounded-2xl.border-2 { padding: 10px !important; }
+  #main-content .bg-white.rounded-2xl.border-2 > div:first-child { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; width: 100% !important; }
+  #main-content .bg-white.rounded-2xl.border-2 > div:first-child > i { display: none !important; }
+  #main-content .bg-white.rounded-2xl.border-2 button { width: 100% !important; justify-content: center !important; }
 </style>
 </head>
 <body class="h-full flex flex-col items-center justify-center bg-[#171717]">
@@ -4071,33 +4074,28 @@
     </script>
 <script id="oleng-simple-home-polish-v1">
 (function () {
-  function syncCompactHome() {
+  function fixHomeStatusGrid() {
     const main = document.getElementById("main-content");
     if (!main) return;
-    const wrap = main.firstElementChild;
-    if (!wrap) return;
-    wrap.classList.add("pb-28");
-    const statusCard = Array.from(wrap.children).find(el => el.classList && el.classList.contains("bg-white") && el.classList.contains("rounded-2xl"));
-    if (statusCard && !document.getElementById("home-supabase-badge")) {
-      const badge = document.createElement("button");
-      badge.type = "button";
-      badge.id = "home-supabase-badge";
-      badge.className = "px-2.5 py-1 rounded-full text-[10px] font-black bg-white text-[#171717] border border-neutral-200 shadow cursor-pointer w-full text-center";
-      badge.textContent = (typeof lastSupabaseStatus !== "undefined" && lastSupabaseStatus.label) ? lastSupabaseStatus.label : "Supabase: Lokal Aktif";
-      badge.onclick = function () { if (typeof manualForceSync === "function") manualForceSync(true); };
-      const row = statusCard.firstElementChild;
-      if (row) row.appendChild(badge);
+    const statusCard = Array.from(main.querySelectorAll("div.bg-white.rounded-2xl.border-2")).find(el =>
+      el.textContent && el.textContent.includes("Alarm:") && el.textContent.includes("WA Utama")
+    );
+    if (!statusCard) return;
+    const sbBadge = document.getElementById("home-supabase-badge");
+    if (sbBadge && sbBadge.parentElement !== statusCard.firstElementChild) {
+      const targetRow = statusCard.firstElementChild;
+      if (targetRow) targetRow.appendChild(sbBadge);
     }
   }
   const origHome = window.renderCustomerHome;
   if (typeof origHome === "function") {
-    window.renderCustomerHome = function (c) { origHome(c); setTimeout(syncCompactHome, 60); };
+    window.renderCustomerHome = function (c) { origHome(c); setTimeout(fixHomeStatusGrid, 60); };
   }
   const origDash = window.renderDashboardContent;
   if (typeof origDash === "function") {
-    window.renderDashboardContent = function (tab, rec = true) { origDash(tab, rec); if (tab === "home") setTimeout(syncCompactHome, 80); };
+    window.renderDashboardContent = function (tab, rec = true) { origDash(tab, rec); if (tab === "home") setTimeout(fixHomeStatusGrid, 80); };
   }
-  setTimeout(syncCompactHome, 80);
+  setTimeout(fixHomeStatusGrid, 80);
 })();
 </script>
 </body>
