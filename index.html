@@ -1,3 +1,93 @@
+<style id="oleng-orange-premium-tokens">
+  :root {
+    --op-orange: #F58220;
+    --op-orange-hover: #E07112;
+    --op-black: #191919;
+    --op-white: #FFFFFF;
+    --op-surface-alt: #F5F5F5;
+    --op-text-muted: #777777;
+    --op-border: #E5E5E5;
+    --op-success: #16A36A;
+    --op-danger: #DC3545;
+  }
+
+  body.oleng-op-ready {
+    background-color: var(--op-surface-alt) !important;
+    color: var(--op-black) !important;
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  }
+
+  body.oleng-op-ready #main-content {
+    background-color: var(--op-surface-alt) !important;
+  }
+
+  body.oleng-op-ready .bg-white {
+    background-color: var(--op-white) !important;
+  }
+
+  body.oleng-op-ready .bg-\[\#F3F3F3\],
+  body.oleng-op-ready .bg-neutral-50,
+  body.oleng-op-ready .bg-neutral-100 {
+    background-color: var(--op-surface-alt) !important;
+  }
+
+  body.oleng-op-ready .bg-\[\#171717\],
+  body.oleng-op-ready .bg-\[\#292929\] {
+    background-color: var(--op-black) !important;
+  }
+
+  body.oleng-op-ready .bg-\[\#FF7900\],
+  body.oleng-op-ready .bg-\[\#FF9800\] {
+    background-color: var(--op-orange) !important;
+  }
+
+  body.oleng-op-ready .hover\:bg-\[\#FF9800\]:hover,
+  body.oleng-op-ready .hover\:bg-\[\#FF7900\]:hover {
+    background-color: var(--op-orange-hover) !important;
+  }
+
+  body.oleng-op-ready .text-\[\#FF7900\],
+  body.oleng-op-ready .text-\[\#FF9800\] {
+    color: var(--op-orange) !important;
+  }
+
+  body.oleng-op-ready .text-\[\#171717\] {
+    color: var(--op-black) !important;
+  }
+
+  body.oleng-op-ready .border-\[\#FF7900\],
+  body.oleng-op-ready .border-\[\#FF9800\] {
+    border-color: var(--op-orange) !important;
+  }
+
+  body.oleng-op-ready .border-neutral-200,
+  body.oleng-op-ready .border-neutral-100 {
+    border-color: var(--op-border) !important;
+  }
+
+  body.oleng-op-ready .shadow-xl,
+  body.oleng-op-ready .shadow-2xl,
+  body.oleng-op-ready .shadow-lg {
+    box-shadow: 0 2px 10px rgba(25, 25, 25, 0.06) !important;
+  }
+
+  body.oleng-op-ready button,
+  body.oleng-op-ready [role="button"] {
+    border-radius: 0.875rem;
+  }
+
+  body.oleng-op-ready #main-content .rounded-2xl,
+  body.oleng-op-ready #main-content .rounded-3xl {
+    border-color: var(--op-border);
+  }
+
+  /* Lindungi peta Leaflet & elemen peta agar tidak terganggu */
+  body.oleng-op-ready .leaflet-container,
+  body.oleng-op-ready .leaflet-pane,
+  body.oleng-op-ready .leaflet-control {
+    box-shadow: none !important;
+  }
+</style>
 <!DOCTYPE html>
 <html lang="id" class="h-full">
 <head>
@@ -4819,6 +4909,102 @@
       await runSafeInitialAndPendingSync();
     }
   }, 400);
+})();
+</script>
+<script id="oleng-orange-premium-theme-v1">
+(function () {
+  function applyOrangePremiumPolish() {
+    if (document.body && !document.body.classList.contains("oleng-op-ready")) {
+      document.body.classList.add("oleng-op-ready");
+    }
+
+    const main = document.getElementById("main-content");
+    if (!main) return;
+
+    // Rapikan teks sekunder dan status warna secara konsisten tanpa mengubah konten atau angka
+    main.querySelectorAll("p, span, div").forEach(el => {
+      if (el.closest(".leaflet-container")) return;
+      const cls = String(el.className || "");
+      if (cls.includes("text-neutral-500") || cls.includes("text-neutral-600")) {
+        el.style.color = "#777777";
+      }
+      const txt = String(el.textContent || "").trim();
+      if (
+        txt === "Online" ||
+        txt === "Anda Online" ||
+        txt === "Terhubung" ||
+        txt === "Aktif" ||
+        txt === "diizinkan" ||
+        txt === "Buka"
+      ) {
+        if (cls.includes("text-") || el.tagName === "SPAN" || el.tagName === "P") {
+          el.style.color = "#16A36A";
+        }
+      } else if (
+        txt === "Offline" ||
+        txt === "Anda Offline" ||
+        txt === "Tutup" ||
+        txt === "Gagal" ||
+        txt === "Diblokir"
+      ) {
+        if (cls.includes("text-") || el.tagName === "SPAN" || el.tagName === "P") {
+          el.style.color = "#DC3545";
+        }
+      }
+    });
+
+    // Pastikan tombol di area konten utama nyaman disentuh di layar Android
+    main.querySelectorAll("button").forEach(btn => {
+      if (btn.closest(".leaflet-control")) return;
+      const rect = btn.getBoundingClientRect ? btn.getBoundingClientRect() : null;
+      if (rect && rect.width > 0 && rect.height > 0 && rect.height < 34 && !btn.closest("table")) {
+        btn.style.minHeight = "36px";
+      }
+    });
+
+    // Segarkan ukuran peta jika sedang tampil di halaman aktif
+    setTimeout(() => {
+      try {
+        if (typeof homeMapInstance !== "undefined" && homeMapInstance) homeMapInstance.invalidateSize();
+        if (typeof ojekMapInstance !== "undefined" && ojekMapInstance) ojekMapInstance.invalidateSize();
+        if (typeof checkoutMapInstance !== "undefined" && checkoutMapInstance) checkoutMapInstance.invalidateSize();
+      } catch (e) {}
+    }, 120);
+  }
+
+  const origRenderDash = window.renderDashboardContent;
+  if (typeof origRenderDash === "function") {
+    window.renderDashboardContent = function () {
+      const r = origRenderDash.apply(this, arguments);
+      setTimeout(applyOrangePremiumPolish, 70);
+      return r;
+    };
+  }
+
+  for (const fnName of [
+    "renderCustomerHome",
+    "renderAdminDash",
+    "renderMerchantManage",
+    "renderCustomerOjek",
+    "renderDashboardNavigation",
+    "openCartModal",
+    "updateCartUI"
+  ]) {
+    const fn = window[fnName];
+    if (typeof fn === "function") {
+      window[fnName] = function () {
+        const r = fn.apply(this, arguments);
+        setTimeout(applyOrangePremiumPolish, 70);
+        return r;
+      };
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => setTimeout(applyOrangePremiumPolish, 80));
+  } else {
+    setTimeout(applyOrangePremiumPolish, 80);
+  }
 })();
 </script>
 </body>
