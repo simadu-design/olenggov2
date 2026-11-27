@@ -5573,5 +5573,243 @@
   scheduleMount();
 })();
 </script>
+<script id="oleng-full-supabase-ops-v1">
+(function () {
+  const BANNER_KEY = "oleng_global_main_banner_v1";
+  const AUTO_CFG_KEY = "oleng_admin_auto_ops_v1";
+  const SYNC_TIME_KEY = "oleng_last_sync_at";
+  const CANCELLED_GUARD_KEY = "oleng_auto_cancelled_ids_v1";
+
+  function normPhone(val) {
+    const d = String(val || "").replace(/D/g, "");
+    if (!d) return "";
+    if (d.startsWith("62")) return "0" + d.slice(2);
+    return d;
+  }
+
+  function isAdminAccount() {
+    if (typeof currentUser === "undefined" || !currentUser) return false;
+    const norm = normPhone(currentUser.phone);
+    const viewMode = (typeof adminViewMode !== "undefined" && adminViewMode) ? String(adminViewMode) : "admin";
+    return (currentUser.role === "admin" || norm === "085624736602") && viewMode === "admin";
+  }
+
+  function loadAutoOpsConfig() {
+    const def = {
+      autoCancelUnaccepted: true,
+      unacceptedTimeoutSec: 120,
+      autoReassignOnReject: true,
+      commissionPercent: 10,
+      baseFareRp: 8000,
+      perKmFareRp: 2500
+    };
+    try {
+      const saved = JSON.parse(localStorage.getItem(AUTO_CFG_KEY) || "{}");
+      return Object.assign(def, saved || {});
+    } catch (e) {
+      return def;
+    }
+  }
+
+  function getCancelledSet() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(CANCELLED_GUARD_KEY) || "[]");
+      return new Set(Array.isArray(arr) ? arr.slice(-200) : []);
+    } catch (e) {
+      return new Set();
+    }
+  }
+
+  function markCancelledId(id) {
+    if (!id) return;
+    const s = getCancelledSet();
+    s.add(String(id));
+    localStorage.setItem(CANCELLED_GUARD_KEY, JSON.stringify(Array.from(s).slice(-200)));
+  }
+
+  async function uploadBannerToStorageOrFallback(file) {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = ev => resolve(String(ev.target && ev.target.result ? ev.target.result : ""));
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    if (typeof supabaseClient !== "undefined" && supabaseClient && supabaseClient.storage && navigator.onLine) {
+      const buckets = ["oleng-media", "banners", "public"];
+      const ext = (file.name && file.name.split(".").pop()) ? file.name.split(".").pop().toLowerCase() : "jpg";
+      const filePath = "banners/main-banner-" + Date.now() + "." + ext;
+
+      for (const bucket of buckets) {
+        try {
+          const { error: upErr } = await supabaseClient.storage.from(bucket).upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: true
+          });
+          if (!upErr) {
+            const { data: pubData } = supabaseClient.storage.from(bucket).getPublicUrl(filePath);
+            if (pubData && pubData.publicUrl) {
+              return { url: pubData.publicUrl, uploadedToStorage: true, bucket };
+            }
+          }
+        } catch (e) {}
+      }
+    }
+
+    return { url: dataUrl, uploadedToStorage: false, bucket: "" };
+  }
+
+  async function persistMainBannerEverywhere(url, uploadedToStorage) {
+    if (!url) return;
+    localStorage.setItem(BANNER_KEY, url);
+    if (typeof db !== "undefined" && db) {
+      db.mainBanner = url;
+      db.config = Object.assign({}, db.config || {}, { mainBanner: url });
+      localStorage.setItem("oleng_go_db", JSON.stringify(db));
+    }
+
+    document.querySelectorAll('#main-content img[data-oleng-home-banner="1"], #main-content img[alt*="Banner"]').forEach(img => {
+      const parent = img.parentElement;
+      const inStore = img.closest('[data-store-cover-box="1"], #view-merchant-detail, [id*="merchant-cover"]') ||
+        (parent && String(parent.textContent || "").includes("Ubah Sampul"));
+      if (!inStore) {
+        img.src = url;
+      }
+    });
+
+    if (typeof supabaseClient !== "undefined" && supabaseClient && navigator.onLine) {
+      try {
+        await supabaseClient
+          .from("app_config")
+          .upsert({ key: "main_banner", value: { mainBanner: url }, updated_at: new Date().toISOString() }, { onConflict: "key" });
+        const nowStr = new Date().toLocaleString("id-ID");
+        localStorage.setItem(SYNC_TIME_KEY, nowStr);
+        if (window.olengSyncDiagnostics) {
+          window.olengSyncDiagnostics.lastSyncAt = nowStr;
+          window.olengSyncDiagnostics.supabaseReachable = true;
+          window.olengSyncDiagnostics.pendingSync = false;
+        }
+      } catch (e) {}
+    }
+
+    if (typeof showToast === "function") {
+      showToast(
+        uploadedToStorage
+          ? "Banner diunggah ke Supabase Storage & tersinkron ke semua perangkat!"
+          : "Banner tersimpan & disinkronkan ke perangkat!",
+        "success"
+      );
+    }
+  }
+
+  document.addEventListener("change", async function (ev) {
+    const inp = ev.target;
+    if (!inp || inp.id !== "oleng-home-banner-file") return;
+    if (!isAdminAccount()) return;
+    const file = inp.files && inp.files[0];
+    if (!file) return;
+    try {
+      const res = await uploadBannerToStorageOrFallback(file);
+      if (res && res.url) {
+        await persistMainBannerEverywhere(res.url, res.uploadedToStorage);
+      }
+    } catch (e) {}
+  }, true);
+
+  async function runAutoCancelExpiredOrders() {
+    if (!isAdminAccount()) return;
+    const cfg = loadAutoOpsConfig();
+    if (!cfg.autoCancelUnaccepted) return;
+
+    const timeoutMs = Math.max(15, Number(cfg.unacceptedTimeoutSec || 120)) * 1000;
+    const nowMs = Date.now();
+    const cancelledSet = getCancelledSet();
+
+    if (typeof db === "undefined" || !db || !Array.isArray(db.orders)) return;
+
+    let changedLocal = false;
+    for (const ord of db.orders) {
+      if (!ord) continue;
+      const oid = String(ord.id || ord.order_id || "");
+      if (!oid || cancelledSet.has(oid)) continue;
+
+      const status = String(ord.status || ord.state || "").toLowerCase();
+      const isWaitingDriver = ["pending", "baru", "menunggu", "searching", "new", "created"].some(k => status.includes(k));
+      const hasDriver = Boolean(ord.driverId || ord.driver_id || ord.driverPhone || ord.driver_phone);
+      if (!isWaitingDriver || hasDriver) continue;
+
+      const createdRaw = ord.createdAt || ord.created_at || ord.timestamp || ord.time;
+      const createdMs = createdRaw ? new Date(createdRaw).getTime() : NaN;
+      if (!Number.isFinite(createdMs)) continue;
+
+      if (nowMs - createdMs >= timeoutMs) {
+        ord.status = "cancelled";
+        ord.cancelReason = "Dibatalkan otomatis karena tidak ada ojek merespon dalam " + Math.round(timeoutMs / 1000) + " detik";
+        markCancelledId(oid);
+        changedLocal = true;
+
+        if (typeof supabaseClient !== "undefined" && supabaseClient && navigator.onLine) {
+          try {
+            await supabaseClient
+              .from("orders")
+              .update({ status: "cancelled" })
+              .eq("id", ord.id);
+          } catch (e) {}
+        }
+      }
+    }
+
+    if (changedLocal) {
+      localStorage.setItem("oleng_go_db", JSON.stringify(db));
+      if (typeof renderDashboardContent === "function") {
+        const tab = (typeof currentSubTab !== "undefined" && currentSubTab) ? currentSubTab : "home";
+        renderDashboardContent(tab, false);
+      }
+    }
+  }
+
+  async function pullLatestSupabaseSnapshots() {
+    if (typeof supabaseClient === "undefined" || !supabaseClient || !navigator.onLine) return;
+    try {
+      const { data: cfgRows, error: cfgErr } = await supabaseClient.from("app_config").select("key,value").limit(100);
+      if (!cfgErr && Array.isArray(cfgRows)) {
+        cfgRows.forEach(row => {
+          if (!row || !row.key) return;
+          if (row.key === "main_banner" || row.key === "oleng_global_main_banner_v1") {
+            const v = row.value;
+            const bUrl = (typeof v === "object" && v && v.mainBanner) ? v.mainBanner : (typeof v === "string" ? v : "");
+            if (bUrl) {
+              localStorage.setItem(BANNER_KEY, bUrl);
+              if (typeof db !== "undefined" && db) db.mainBanner = bUrl;
+            }
+          }
+          if (row.key === "auto_ops_settings" && row.value && typeof row.value === "object") {
+            localStorage.setItem(AUTO_CFG_KEY, JSON.stringify(row.value));
+          }
+        });
+      }
+
+      const nowStr = new Date().toLocaleString("id-ID");
+      localStorage.setItem(SYNC_TIME_KEY, nowStr);
+      if (window.olengSyncDiagnostics) {
+        window.olengSyncDiagnostics.lastSyncAt = nowStr;
+        window.olengSyncDiagnostics.supabaseReachable = true;
+        window.olengSyncDiagnostics.pendingSync = false;
+      }
+    } catch (e) {}
+  }
+
+  setInterval(runAutoCancelExpiredOrders, 15000);
+  setTimeout(() => {
+    pullLatestSupabaseSnapshots();
+    runAutoCancelExpiredOrders();
+  }, 900);
+
+  window.addEventListener("online", () => {
+    pullLatestSupabaseSnapshots();
+    runAutoCancelExpiredOrders();
+  });
+})();
+</script>
 </body>
 </html>
