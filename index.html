@@ -4411,7 +4411,7 @@
   }
 })();
 </script>
-<script id="oleng-admin-banner-gallery-v2">
+<script id="oleng-admin-banner-gallery-v3">
 (function () {
   const BANNER_KEY = "oleng_global_main_banner_v1";
 
@@ -4525,27 +4525,34 @@
   function decorateAdminBanner() {
     const saved = getSavedBannerUrl();
     applyBannerToDom(saved);
-    if (!isAdminAccountActive()) return;
 
     const main = document.getElementById("main-content");
     if (!main) return;
 
-    main.querySelectorAll("img").forEach(img => {
+    // Bersihkan semua pill lama agar tidak pernah double
+    main.querySelectorAll(".oleng-admin-banner-pill").forEach(el => el.remove());
+
+    if (!isAdminAccountActive()) return;
+
+    const bannerImgs = Array.from(main.querySelectorAll("img")).filter(img => {
       const altTxt = String(img.getAttribute("alt") || "").toLowerCase();
       const clsTxt = String(img.className || "").toLowerCase();
-      if (!altTxt.includes("banner") && !(clsTxt.includes("h-32") && clsTxt.includes("object-cover"))) return;
-      img.dataset.olengHomeBanner = "1";
-      const box = img.parentElement;
-      if (!box) return;
-      box.style.cursor = "pointer";
-      if (!box.querySelector(".oleng-admin-banner-pill")) {
-        const pill = document.createElement("button");
-        pill.type = "button";
-        pill.className = "oleng-admin-banner-pill mt-1.5 w-full py-1.5 px-3 rounded-xl bg-[#171717] text-[#FF9800] text-[10px] font-black flex items-center justify-center gap-1.5 cursor-pointer border border-[#FF7900]/50";
-        pill.innerHTML = '<i class="fa-solid fa-image"></i> Klik Banner / Pilih dari Galeri';
-        box.insertAdjacentElement("afterend", pill);
-      }
+      return altTxt.includes("banner") || (clsTxt.includes("h-32") && clsTxt.includes("object-cover"));
     });
+
+    if (bannerImgs.length === 0) return;
+
+    const targetImg = bannerImgs[0];
+    targetImg.dataset.olengHomeBanner = "1";
+    const box = targetImg.parentElement;
+    if (!box) return;
+    box.style.cursor = "pointer";
+
+    const pill = document.createElement("button");
+    pill.type = "button";
+    pill.className = "oleng-admin-banner-pill mt-1.5 w-full py-1.5 px-3 rounded-xl bg-[#171717] text-[#FF9800] text-[10px] font-black flex items-center justify-center gap-1.5 cursor-pointer border border-[#FF7900]/50";
+    pill.innerHTML = '<i class="fa-solid fa-image"></i> Klik Banner / Pilih dari Galeri';
+    box.insertAdjacentElement("afterend", pill);
   }
 
   document.addEventListener("click", function (ev) {
