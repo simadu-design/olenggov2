@@ -4411,7 +4411,7 @@
   }
 })();
 </script>
-<script id="oleng-strict-admin-mode-banner-v5">
+<script id="oleng-banner-admin-only-v6">
 (function () {
   const BANNER_KEY = "oleng_global_main_banner_v1";
 
@@ -4424,12 +4424,17 @@
     return currentUser.role === "admin" || norm === "085624736602";
   }
 
-  function isActiveAdminMode() {
-    if (!isAdminAccount()) return false;
-    if (typeof adminViewMode !== "undefined" && adminViewMode) {
-      return adminViewMode === "admin";
+  function activeRoleNow() {
+    if (typeof currentUser === "undefined" || !currentUser) return "customer";
+    if (isAdminAccount()) {
+      if (typeof adminViewMode !== "undefined" && adminViewMode) return String(adminViewMode);
+      return "admin";
     }
-    return currentUser.role === "admin";
+    return String(currentUser.role || "customer");
+  }
+
+  function canEditBannerRightNow() {
+    return isAdminAccount() && activeRoleNow() === "admin";
   }
 
   function getSavedBannerUrl() {
@@ -4441,7 +4446,7 @@
     return "./olengorange2.png";
   }
 
-  function applyBannerToDom(url) {
+  function applyBannerImageSrc(url) {
     if (!url) return;
     document.querySelectorAll("#main-content img").forEach(img => {
       const altTxt = String(img.getAttribute("alt") || "").toLowerCase();
@@ -4451,6 +4456,10 @@
         img.dataset.olengHomeBanner = "1";
       }
     });
+  }
+
+  function removeAllBannerEditPills() {
+    document.querySelectorAll(".oleng-admin-banner-pill").forEach(el => el.remove());
   }
 
   function compressImageFile(file, done) {
@@ -4481,14 +4490,14 @@
   }
 
   async function saveBannerPermanent(dataUrl) {
-    if (!isActiveAdminMode() || !dataUrl) return;
+    if (!canEditBannerRightNow() || !dataUrl) return;
     localStorage.setItem(BANNER_KEY, dataUrl);
     if (typeof db !== "undefined" && db) {
       db.mainBanner = dataUrl;
       if (db.config && typeof db.config === "object") db.config.mainBanner = dataUrl;
       localStorage.setItem("oleng_go_db", JSON.stringify(db));
     }
-    applyBannerToDom(dataUrl);
+    applyBannerImageSrc(dataUrl);
 
     if (typeof supabaseClient !== "undefined" && supabaseClient && navigator.onLine && typeof syncAllToSupabase === "function") {
       try {
@@ -4519,7 +4528,7 @@
       document.body.appendChild(input);
 
       input.addEventListener("change", function () {
-        if (!isActiveAdminMode()) {
+        if (!canEditBannerRightNow()) {
           input.value = "";
           return;
         }
@@ -4534,11 +4543,9 @@
     return input;
   }
 
-  function syncBannerByActiveMode() {
-    const saved = getSavedBannerUrl();
-    applyBannerToDom(saved);
-
-    document.querySelectorAll(".oleng-admin-banner-pill").forEach(el => el.remove());
+  function refreshBannerControl() {
+    applyBannerImageSrc(getSavedBannerUrl());
+    removeAllBannerEditPills();
 
     const main = document.getElementById("main-content");
     if (!main) return;
@@ -4556,7 +4563,7 @@
     const box = targetImg.parentElement;
     if (!box) return;
 
-    if (!isActiveAdminMode()) {
+    if (!canEditBannerRightNow()) {
       box.style.cursor = "default";
       return;
     }
@@ -4573,8 +4580,8 @@
     const pill = ev.target && ev.target.closest ? ev.target.closest(".oleng-admin-banner-pill") : null;
     const bannerImg = ev.target && ev.target.closest ? ev.target.closest('img[data-oleng-home-banner="1"], img[alt*="Banner"]') : null;
     if (!pill && !bannerImg) return;
-    if (!isActiveAdminMode()) {
-      if (pill) pill.remove();
+    if (!canEditBannerRightNow()) {
+      removeAllBannerEditPills();
       return;
     }
     ev.preventDefault();
@@ -4599,8 +4606,9 @@
   const origDash = window.renderDashboardContent;
   if (typeof origDash === "function") {
     window.renderDashboardContent = function () {
+      removeAllBannerEditPills();
       const res = origDash.apply(this, arguments);
-      setTimeout(syncBannerByActiveMode, 90);
+      setTimeout(refreshBannerControl, 90);
       return res;
     };
   }
@@ -4609,14 +4617,15 @@
     const fn = window[fnName];
     if (typeof fn === "function") {
       window[fnName] = function () {
+        removeAllBannerEditPills();
         const res = fn.apply(this, arguments);
-        setTimeout(syncBannerByActiveMode, 90);
+        setTimeout(refreshBannerControl, 90);
         return res;
       };
     }
   }
 
-  setTimeout(syncBannerByActiveMode, 120);
+  setTimeout(refreshBannerControl, 120);
 })();
 </script>
 </body>
