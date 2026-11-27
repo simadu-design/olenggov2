@@ -1,3 +1,12 @@
+<style id="oleng-dom-flicker-shield-css-v5">
+  #main-content,
+  #main-content > div,
+  #view-dashboard,
+  #view-dashboard > div {
+    animation-name: none !important;
+    transition-property: none !important;
+  }
+</style>
 <style id="oleng-stable-layout-css">
   .oleng-banner-status-white,
   .oleng-banner-status-white * {
@@ -5908,6 +5917,49 @@
       lastDashAt = now;
       lastDashKey = key;
       return origRenderDash.apply(this, arguments);
+    };
+  }
+})();
+</script>
+<script id="oleng-dom-flicker-shield-js-v5">
+(function () {
+  if (window.__olengDomFlickerShieldV5) return;
+  window.__olengDomFlickerShieldV5 = true;
+
+  function isFormFocused() {
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = String(el.tagName || "").toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || Boolean(el.isContentEditable);
+  }
+
+  // Cegah re-render beruntun cepat pada renderDashboardContent saat tidak ada perubahan tab/mode
+  if (typeof window.renderDashboardContent === "function") {
+    const prevRender = window.renderDashboardContent;
+    let lastAt = 0;
+    let lastState = "";
+
+    window.renderDashboardContent = function (tab, recordHistory) {
+      const now = Date.now();
+      const mode = (typeof adminViewMode !== "undefined" && adminViewMode) ? String(adminViewMode) : "";
+      const role = (typeof currentUser !== "undefined" && currentUser && currentUser.role) ? String(currentUser.role) : "";
+      const sub = (typeof currentSubTab !== "undefined" && currentSubTab) ? String(currentSubTab) : "";
+      const targetTab = tab !== undefined ? String(tab) : sub;
+      const stateKey = targetTab + "|" + mode + "|" + role;
+
+      // Jika sedang fokus di form/input, jangan render ulang kecuali dipicu perubahan tab/mode eksplisit
+      if (isFormFocused() && stateKey === lastState && (now - lastAt) < 8000) {
+        return;
+      }
+
+      // Cegah panggilan berulang terlalu rapat (< 1200ms) pada layar yang sama
+      if (stateKey === lastState && (now - lastAt) < 1200) {
+        return;
+      }
+
+      lastAt = now;
+      lastState = stateKey;
+      return prevRender.apply(this, arguments);
     };
   }
 })();
