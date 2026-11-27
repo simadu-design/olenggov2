@@ -1,10 +1,14 @@
-<style id="oleng-clean-ui-stabilizer-css">
+<style id="oleng-stable-layout-css">
   .oleng-banner-status-white,
   .oleng-banner-status-white * {
     color: #FFFFFF !important;
     -webkit-text-fill-color: #FFFFFF !important;
     opacity: 1 !important;
     font-weight: 800 !important;
+  }
+  #main-content {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
   }
 </style>
 <style id="oleng-map-zindex-fix-css">
@@ -5674,22 +5678,24 @@
   window.addEventListener("online", () => setTimeout(runProductionHealthAndSync, 300));
 })();
 </script>
-<script id="oleng-clean-ui-stabilizer-js">
+<script id="oleng-stable-render-guard-v3">
 (function () {
-  if (window.__olengCleanUiStabilizerV1) return;
-  window.__olengCleanUiStabilizerV1 = true;
+  if (window.__olengStableRenderGuardV3) return;
+  window.__olengStableRenderGuardV3 = true;
 
-  function fixOnlineLabelOnce() {
+  function applySafeContrastOnce() {
     const main = document.getElementById("main-content");
     if (!main) return;
-    main.querySelectorAll("p, span, div, strong, b").forEach(el => {
-      if (el.closest(".leaflet-container")) return;
-      if (el.children && el.children.length > 0 && String(el.textContent || "").trim().length > 25) return;
-      const txt = String(el.textContent || "").trim().toLowerCase();
-      if (txt === "anda online" || txt === "anda offline" || txt === "online" || txt === "offline") {
+    const nodes = main.querySelectorAll("p, span, div, strong, b");
+    for (let i = 0; i < nodes.length; i++) {
+      const el = nodes[i];
+      if (!el || el.closest(".leaflet-container")) continue;
+      if (el.children && el.children.length > 0 && String(el.textContent || "").trim().length > 25) continue;
+      const lower = String(el.textContent || "").trim().toLowerCase();
+      if (lower === "anda online" || lower === "anda offline" || lower === "online" || lower === "offline") {
         let cur = el;
-        let coloredBg = false;
-        for (let i = 0; i < 8 && cur; i++) {
+        let isColoredBanner = false;
+        for (let d = 0; d < 8 && cur; d++) {
           const cls = String(cur.className || "");
           const bg = cur.style && cur.style.backgroundColor ? String(cur.style.backgroundColor) : "";
           const comp = typeof getComputedStyle === "function" ? String(getComputedStyle(cur).backgroundColor || "") : "";
@@ -5701,47 +5707,60 @@
             bg.includes("22, 163, 106") || bg.includes("220, 53, 69") ||
             comp.includes("22, 163, 106") || comp.includes("220, 53, 69")
           ) {
-            coloredBg = true;
+            isColoredBanner = true;
             break;
           }
           cur = cur.parentElement;
         }
-        if (coloredBg) {
+        if (isColoredBanner && el.style.color !== "rgb(255, 255, 255)") {
           el.classList.add("oleng-banner-status-white");
           el.style.setProperty("color", "#FFFFFF", "important");
           el.style.setProperty("-webkit-text-fill-color", "#FFFFFF", "important");
           el.style.setProperty("opacity", "1", "important");
         }
       }
-    });
+    }
   }
 
-  // Cegah re-render beruntun di bawah 450ms dan cegah re-render saat pengguna sedang mengetik
+  // Lindungi renderDashboardContent dari panggilan beruntun & saat input sedang diketik
   if (typeof window.renderDashboardContent === "function") {
-    const baseRender = window.renderDashboardContent;
-    let lastRenderAt = 0;
+    const orig = window.renderDashboardContent;
+    let lastExec = 0;
     let timer = null;
-    let latestArgs = null;
+    let pendingArgs = null;
+    let contrastTimer = null;
+
+    function scheduleContrast() {
+      if (contrastTimer) clearTimeout(contrastTimer);
+      contrastTimer = setTimeout(applySafeContrastOnce, 120);
+    }
 
     window.renderDashboardContent = function () {
-      latestArgs = arguments;
+      pendingArgs = arguments;
       const active = document.activeElement;
-      const typing = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
-      const now = Date.now();
-      const diff = now - lastRenderAt;
+      const isTyping = active && (
+        active.tagName === "INPUT" ||
+        active.tagName === "TEXTAREA" ||
+        active.tagName === "SELECT" ||
+        active.isContentEditable
+      );
 
-      if (typing && diff < 4000) {
+      const now = Date.now();
+      const gap = now - lastExec;
+
+      // Jika sedang mengetik/memilih input dan pemicu datang cepat (< 5 detik), abaikan agar tidak berkedip & tidak lepas fokus
+      if (isTyping && gap < 5000) {
         return;
       }
 
-      if (diff < 450) {
+      if (gap < 500) {
         if (!timer) {
           timer = setTimeout(() => {
             timer = null;
-            lastRenderAt = Date.now();
-            baseRender.apply(window, latestArgs || []);
-            setTimeout(fixOnlineLabelOnce, 80);
-          }, 460 - diff);
+            lastExec = Date.now();
+            orig.apply(window, pendingArgs || []);
+            scheduleContrast();
+          }, 520 - gap);
         }
         return;
       }
@@ -5750,14 +5769,14 @@
         clearTimeout(timer);
         timer = null;
       }
-      lastRenderAt = now;
-      const out = baseRender.apply(this, arguments);
-      setTimeout(fixOnlineLabelOnce, 80);
-      return out;
+      lastExec = now;
+      const res = orig.apply(this, arguments);
+      scheduleContrast();
+      return res;
     };
   }
 
-  setTimeout(fixOnlineLabelOnce, 120);
+  setTimeout(applySafeContrastOnce, 150);
 })();
 </script>
 </body>
