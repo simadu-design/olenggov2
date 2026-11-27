@@ -66,6 +66,12 @@
   .oleng-card-orange { background: #FFFFFF; border: 2px solid #FF7900; border-radius: 22px; padding: 12px; box-shadow: 0 4px 14px rgba(255,121,0,0.10); }
   .oleng-sq-ico { width: 34px; height: 34px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; }
 </style>
+<style id="oleng-ojek-clean-css">
+  .oleng-ojek-compact-wrap #ojek-map,
+  .oleng-ojek-compact-wrap [id^="route-outside-panel-"] {
+    display: none !important;
+  }
+</style>
 </head>
 <body class="h-full flex flex-col items-center justify-center bg-[#171717]">
 
@@ -3998,6 +4004,74 @@
     syncIsolatedRoleBalancesForAccount(currentUser);
     setTimeout(injectSwitchModeButtonIfMultiRole, 70);
   }
+})();
+</script>
+<script id="oleng-ojek-clean-v1">
+(function () {
+  function simplifyOjekScreen() {
+    if (typeof currentSubTab === "undefined" || currentSubTab !== "ojek") return;
+    const main = document.getElementById("main-content");
+    if (!main) return;
+    const root = main.firstElementChild;
+    if (!root) return;
+    root.classList.add("oleng-ojek-compact-wrap");
+
+    const fromInput = document.getElementById("ojek-from");
+    if (fromInput && fromInput.parentElement && !document.getElementById("ojek-open-map-pick-btn")) {
+      const actionBar = document.createElement("div");
+      actionBar.id = "ojek-open-map-pick-btn";
+      actionBar.className = "flex items-center justify-between gap-2 mt-2 mb-1";
+      actionBar.innerHTML =
+        '<span class="text-[10px] font-bold text-neutral-600 truncate">Atur jemput &amp; tujuan lewat peta layar penuh</span>' +
+        '<div class="flex gap-1.5 shrink-0">' +
+          '<button type="button" id="ojek-btn-pick-map" class="px-3 py-1.5 bg-[#171717] hover:bg-[#292929] text-[#FF9800] rounded-xl text-[10px] font-black cursor-pointer flex items-center gap-1">' +
+            '<i class="fa-solid fa-map-location-dot"></i> Pilih di Peta' +
+          '</button>' +
+          '<button type="button" id="ojek-btn-gps-now" class="px-2.5 py-1.5 bg-[#FF7900] hover:bg-[#FF9800] text-white rounded-xl text-[10px] font-black cursor-pointer flex items-center gap-1">' +
+            '<i class="fa-solid fa-crosshairs"></i> GPS' +
+          '</button>' +
+        '</div>';
+      fromInput.insertAdjacentElement("afterend", actionBar);
+
+      actionBar.querySelector("#ojek-btn-pick-map")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (typeof persistOjekRouteDraft === "function") persistOjekRouteDraft();
+        if (typeof openFullscreenMap === "function") openFullscreenMap("ojek");
+      });
+
+      actionBar.querySelector("#ojek-btn-gps-now")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (typeof useCurrentGPSLocation === "function") useCurrentGPSLocation("ojek");
+      });
+    }
+
+    const oldMapLabel = Array.from(root.querySelectorAll("span")).find(sp =>
+      String(sp.textContent || "").toUpperCase().includes("KLIK PETA TITIK AWAL")
+    );
+    if (oldMapLabel && oldMapLabel.parentElement) {
+      oldMapLabel.parentElement.classList.add("hidden");
+    }
+
+    if (typeof updateOjekFareUI === "function") updateOjekFareUI();
+  }
+
+  const origOjek = window.renderCustomerOjek;
+  if (typeof origOjek === "function") {
+    window.renderCustomerOjek = function (c, ...rest) {
+      origOjek(c, ...rest);
+      setTimeout(simplifyOjekScreen, 50);
+    };
+  }
+
+  const origDash = window.renderDashboardContent;
+  if (typeof origDash === "function") {
+    window.renderDashboardContent = function (tab, rec = true) {
+      origDash(tab, rec);
+      if (tab === "ojek") setTimeout(simplifyOjekScreen, 80);
+    };
+  }
+
+  setTimeout(simplifyOjekScreen, 70);
 })();
 </script>
 </body>
