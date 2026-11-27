@@ -5779,5 +5779,53 @@
   setTimeout(applySafeContrastOnce, 150);
 })();
 </script>
+<script id="oleng-root-flicker-stopper-v1">
+(function () {
+  if (window.__olengRootFlickerStopperV1) return;
+  window.__olengRootFlickerStopperV1 = true;
+
+  let lastUserActionAt = Date.now();
+  ["click", "change", "input", "keydown", "touchstart"].forEach(evName => {
+    document.addEventListener(evName, () => {
+      lastUserActionAt = Date.now();
+    }, { passive: true, capture: true });
+  });
+
+  if (typeof window.renderDashboardContent === "function") {
+    const origFn = window.renderDashboardContent;
+    let lastExecAt = 0;
+    let lastSig = "";
+
+    window.renderDashboardContent = function (subTab, force) {
+      const now = Date.now();
+      const active = document.activeElement;
+      const typing = active && (
+        active.tagName === "INPUT" ||
+        active.tagName === "TEXTAREA" ||
+        active.tagName === "SELECT" ||
+        active.isContentEditable
+      );
+
+      const modeVal = (typeof adminViewMode !== "undefined" && adminViewMode) ? String(adminViewMode) : "";
+      const roleVal = (typeof currentUser !== "undefined" && currentUser && currentUser.role) ? String(currentUser.role) : "";
+      const sig = String(subTab || "") + "|" + modeVal + "|" + roleVal;
+
+      // Jika sedang mengetik dan bukan klik/aksi eksplisit baru, tahan render ulang agar tidak berkedip
+      if (typing && !force && (now - lastUserActionAt) > 1200) {
+        return;
+      }
+
+      // Jika signature layar sama dan render dipanggil berulang terlalu cepat (< 900ms) tanpa force, abaikan
+      if (!force && sig === lastSig && (now - lastExecAt) < 900) {
+        return;
+      }
+
+      lastExecAt = now;
+      lastSig = sig;
+      return origFn.apply(this, arguments);
+    };
+  }
+})();
+</script>
 </body>
 </html>
