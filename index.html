@@ -2889,7 +2889,7 @@
                 else { applyCoordinateToRole('dest', e.latlng.lat, e.latlng.lng); refreshRouteModePanel(mapId); showToast('Titik tujuan tersimpan!', 'success'); }
             });
             pickupMarker.on('dragend', () => { applyCoordinateToRole('pickup', pickupMarker.getLatLng().lat, pickupMarker.getLatLng().lng); });
-            destMarker.on('dragend', () => applyCoordinateToRole('dest', destMarker.getLatLng().lat, destMarker.getLatLng().lng));
+            destMarker.on('dragend', () => { applyCoordinateToRole('dest', destMarker.getLatLng().lat, destMarker.getLatLng().lng); });
             if (mapId === 'checkout-map') checkoutMapInstance = map; else if (mapId === 'ojek-map') ojekMapInstance = map;
             const panelId = `route-outside-panel-${mapId}`; let panel = document.getElementById(panelId);
             if (!panel) { panel = document.createElement('div'); panel.id = panelId; panel.className = 'mt-2 p-3 rounded-2xl bg-[#F3F3F3] border-2 border-neutral-200 space-y-2 text-[10px]'; mapEl.insertAdjacentElement('afterend', panel); }
@@ -3168,6 +3168,7 @@
     <script id="oleng-market-addon-script">
         (function () {
             const MARKET_STORAGE_KEY = 'oleng_market_addon_db_v1';
+            const MARKET_DELETED_CODES_KEY = 'oleng_market_deleted_codes_v1';
             const MARKET_PAGE_SIZE = 6;
             const MARKET_MAX_PHOTOS = 4;
             const MARKET_OFFER_TYPES = ['JUAL', 'SEWA', 'CARI', 'JASA'];
@@ -3200,6 +3201,9 @@
                 { code: 'premium_store_30d', label: 'Toko premium 30 hari', days: 30, billingEnabled: false, readyNote: 'Struktur siap; pembayaran promosi belum diaktifkan.' }
             ];
 
+            let marketDeletedCodes = [];
+            try { marketDeletedCodes = JSON.parse(localStorage.getItem(MARKET_DELETED_CODES_KEY) || '[]'); } catch (e) {}
+
             function loadMarketDB() {
                 let parsed = null;
                 try { parsed = JSON.parse(localStorage.getItem(MARKET_STORAGE_KEY) || 'null'); } catch (e) {}
@@ -3212,11 +3216,12 @@
                     promotions: []
                 };
                 if (!parsed || typeof parsed !== 'object') return base;
+                const delSet = new Set(marketDeletedCodes.map(String));
                 return {
                     ...base,
                     ...parsed,
                     categories: Array.isArray(parsed.categories) && parsed.categories.length > 0 ? parsed.categories : base.categories,
-                    listings: Array.isArray(parsed.listings) ? parsed.listings : [],
+                    listings: Array.isArray(parsed.listings) ? parsed.listings.filter(x => !delSet.has(String(x.listingCode))) : [],
                     reports: Array.isArray(parsed.reports) ? parsed.reports : [],
                     promoPlans: Array.isArray(parsed.promoPlans) && parsed.promoPlans.length > 0 ? parsed.promoPlans : base.promoPlans,
                     promotions: Array.isArray(parsed.promotions) ? parsed.promotions : []
@@ -3235,9 +3240,11 @@
             };
             let marketFormDraftPhotos = [];
             let marketEditingId = null;
+            let marketDetailActivePhotoIdx = 0;
 
             function saveMarketDB(toastMsg = null) {
                 localStorage.setItem(MARKET_STORAGE_KEY, JSON.stringify(marketDB));
+                localStorage.setItem(MARKET_DELETED_CODES_KEY, JSON.stringify(marketDeletedCodes.slice(-300)));
                 if (toastMsg && typeof showToast === 'function') showToast(toastMsg, 'success');
                 syncMarketToSupabaseSafe().catch(() => {});
             }
@@ -3339,12 +3346,36 @@
                     if (listRows.length > 0) {
                         await supabaseClient.from('market_listings').upsert(listRows, { onConflict: 'listing_code' });
                     }
+                    if (marketDB.reports.length > 0) {
+                        const repRows = marketDB.reports.slice(0, 50).map(r => ({
+                            listing_code: r.listingCode,
+                            reporter_account_id: r.reporterAccountId || 'USER',
+                            reporter_name: r.reporterName || 'Warga Lengkong',
+                            reason: r.reason || '',
+                            status: r.status || 'open',
+                            admin_note: r.adminNote || ''
+                        }));
+                        await supabaseClient.from('market_reports').upsert(repRows, { onConflict: 'id' }).catch(() => {});
+                    }
+                    if (marketDB.promotions.length > 0) {
+                        const promoRows = marketDB.promotions.slice(0, 50).map(p => ({
+                            listing_code: p.listingCode || null,
+                            owner_account_id: p.ownerAccountId || 'ADMIN',
+                            plan_code: p.planCode,
+                            plan_label: p.planLabel,
+                            duration_days: Number(p.durationDays || 3),
+                            status: p.status || 'draft_prepared',
+                            billing_enabled: false
+                        }));
+                        await supabaseClient.from('market_promotions').upsert(promoRows, { onConflict: 'id' }).catch(() => {});
+                    }
                 } catch (err) {}
             }
 
             async function pullMarketFromSupabaseSafe() {
                 if (!supabaseClient || !navigator.onLine) return;
                 try {
+                    const delSet = new Set(marketDeletedCodes.map(String));
                     const { data: cData, error: cErr } = await supabaseClient.from('market_categories').select('*').order('sort_order', { ascending: true });
                     if (!cErr && Array.isArray(cData) && cData.length > 0) {
                         marketDB.categories = cData.map((r, i) => ({
@@ -3359,37 +3390,53 @@
                     }
                     const { data: lData, error: lErr } = await supabaseClient.from('market_listings').select('*').order('created_at', { ascending: false });
                     if (!lErr && Array.isArray(lData) && lData.length > 0) {
-                        const remoteMapped = lData.map(r => ({
-                            id: r.id || r.listing_code,
-                            listingCode: r.listing_code,
-                            ownerAccountId: r.owner_account_id,
-                            ownerPhone: r.owner_phone,
-                            ownerName: r.owner_name,
-                            title: r.title,
-                            offerType: r.offer_type,
-                            categorySlug: r.category_slug,
-                            subcategory: r.subcategory || '',
-                            price: Number(r.price || 0),
-                            isNegotiable: Boolean(r.is_negotiable),
-                            contactForPrice: Boolean(r.contact_for_price),
-                            itemCondition: r.item_condition || 'Bekas',
-                            description: r.description || '',
-                            locationLabel: r.location_label || 'Lengkong, Sukabumi',
-                            whatsappPhone: r.whatsapp_phone || r.owner_phone || '',
-                            photos: Array.isArray(r.photos) ? r.photos.slice(0, MARKET_MAX_PHOTOS) : [],
-                            status: r.status || 'active',
-                            rejectionReason: r.rejection_reason || '',
-                            viewsCount: Number(r.views_count || 0),
-                            isFeatured: Boolean(r.is_featured),
-                            featuredPlan: r.featured_plan || 'none',
-                            expiresAt: r.expires_at ? new Date(r.expires_at).getTime() : (Date.now() + 30 * 86400000),
-                            expiryNotified: Boolean(r.expiry_notified),
-                            createdAt: r.created_at || new Date().toISOString()
-                        }));
+                        const remoteMapped = lData
+                            .filter(r => !delSet.has(String(r.listing_code)))
+                            .map(r => ({
+                                id: r.id || r.listing_code,
+                                listingCode: r.listing_code,
+                                ownerAccountId: r.owner_account_id,
+                                ownerPhone: r.owner_phone,
+                                ownerName: r.owner_name,
+                                title: r.title,
+                                offerType: r.offer_type,
+                                categorySlug: r.category_slug,
+                                subcategory: r.subcategory || '',
+                                price: Number(r.price || 0),
+                                isNegotiable: Boolean(r.is_negotiable),
+                                contactForPrice: Boolean(r.contact_for_price),
+                                itemCondition: r.item_condition || 'Bekas',
+                                description: r.description || '',
+                                locationLabel: r.location_label || 'Lengkong, Sukabumi',
+                                whatsappPhone: r.whatsapp_phone || r.owner_phone || '',
+                                photos: Array.isArray(r.photos) ? r.photos.slice(0, MARKET_MAX_PHOTOS) : [],
+                                status: r.status || 'active',
+                                rejectionReason: r.rejection_reason || '',
+                                viewsCount: Number(r.views_count || 0),
+                                isFeatured: Boolean(r.is_featured),
+                                featuredPlan: r.featured_plan || 'none',
+                                expiresAt: r.expires_at ? new Date(r.expires_at).getTime() : (Date.now() + 30 * 86400000),
+                                expiryNotified: Boolean(r.expiry_notified),
+                                createdAt: r.created_at || new Date().toISOString()
+                            }));
                         const mapByCode = new Map();
-                        marketDB.listings.forEach(item => mapByCode.set(String(item.listingCode), item));
+                        marketDB.listings.filter(x => !delSet.has(String(x.listingCode))).forEach(item => mapByCode.set(String(item.listingCode), item));
                         remoteMapped.forEach(item => mapByCode.set(String(item.listingCode), { ...mapByCode.get(String(item.listingCode)), ...item }));
                         marketDB.listings = Array.from(mapByCode.values());
+                    }
+                    const { data: rData, error: rErr } = await supabaseClient.from('market_reports').select('*').order('created_at', { ascending: false });
+                    if (!rErr && Array.isArray(rData) && rData.length > 0) {
+                        marketDB.reports = rData.map(r => ({
+                            id: 'RPT-' + r.id,
+                            listingCode: r.listing_code,
+                            listingTitle: r.listing_code,
+                            reporterAccountId: r.reporter_account_id,
+                            reporterName: r.reporter_name,
+                            reason: r.reason,
+                            status: r.status || 'open',
+                            adminNote: r.admin_note || '',
+                            time: r.created_at ? new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+                        }));
                     }
                     localStorage.setItem(MARKET_STORAGE_KEY, JSON.stringify(marketDB));
                 } catch (err) {}
@@ -3426,9 +3473,11 @@
                 refreshMarketExpiryAndReminders();
                 const q = String(marketFilterState.search || '').trim().toLowerCase();
                 const locQ = String(marketFilterState.locationFilter || '').trim().toLowerCase();
+                const activeCatSlugs = new Set(marketDB.categories.filter(c => c.active !== false).map(c => c.slug));
 
                 let list = marketDB.listings.filter(item => {
                     if (item.status !== 'active') return false;
+                    if (!activeCatSlugs.has(item.categorySlug)) return false;
                     if (marketFilterState.category !== 'all' && item.categorySlug !== marketFilterState.category) return false;
                     if (marketFilterState.offerType !== 'all' && item.offerType !== marketFilterState.offerType) return false;
                     if (locQ && !String(item.locationLabel || '').toLowerCase().includes(locQ)) return false;
@@ -3890,6 +3939,7 @@
                     saveMarketDB('Iklan Market berhasil diperbarui!');
                 } else {
                     const code = 'MKT-' + Math.floor(10000 + Math.random() * 90000);
+                    marketDeletedCodes = marketDeletedCodes.filter(c => String(c) !== code);
                     const initialStatus = (marketDB.moderationRequired && !isCurrentUserMarketAdmin()) ? 'pending_moderation' : 'active';
                     const newItem = {
                         id: Date.now(),
@@ -3932,19 +3982,11 @@
                 }
             };
 
-            window.__mktOpenDetail = function (listingCode) {
-                const item = marketDB.listings.find(x => x.listingCode === listingCode);
-                if (!item) return;
-                ensureMarketModalsExist();
-                if (typeof pushAppNavigationState === 'function') pushAppNavigationState('market-detail');
-
-                if (!isListingOwnedByCurrentUser(item)) {
-                    item.viewsCount = Number(item.viewsCount || 0) + 1;
-                    localStorage.setItem(MARKET_STORAGE_KEY, JSON.stringify(marketDB));
-                }
-
+            function renderMarketDetailContent(item) {
                 const catObj = getCategoryObj(item.categorySlug);
                 const photos = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos.slice(0, MARKET_MAX_PHOTOS) : ['./olengorange2.png'];
+                const safeIdx = Math.min(Math.max(0, marketDetailActivePhotoIdx), photos.length - 1);
+                const activePhoto = photos[safeIdx] || './olengorange2.png';
                 const cleanWa = String(item.whatsappPhone || item.ownerPhone || '').replace(/\D/g, '');
                 const waIntl = cleanWa.startsWith('0') ? '62' + cleanWa.slice(1) : cleanWa;
                 const waText = `Halo ${item.ownerName}, saya melihat iklan "${item.title}" (${item.offerType}) di OLENG MARKET Lengkong. Apakah masih tersedia?`;
@@ -3957,10 +3999,17 @@
                         <button type="button" onclick="document.getElementById('modal-market-detail').classList.add('hidden')" class="text-neutral-400 text-2xl font-bold cursor-pointer">&times;</button>
                     </div>
 
-                    <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-                        ${photos.map((p, idx) => `
-                            <img src="${p}" class="w-48 h-40 rounded-2xl object-cover border-2 border-[#FF7900] bg-[#171717] shrink-0" alt="Foto ${idx + 1}">
-                        `).join('')}
+                    <div class="space-y-2">
+                        <img src="${activePhoto}" class="w-full h-48 rounded-2xl object-cover border-2 border-[#FF7900] bg-[#171717]" alt="Foto Utama ${item.title}">
+                        ${photos.length > 1 ? `
+                            <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                                ${photos.map((p, idx) => `
+                                    <button type="button" onclick="window.__mktSelectDetailPhoto('${item.listingCode}', ${idx})" class="w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 cursor-pointer ${idx === safeIdx ? 'border-[#FF7900]' : 'border-neutral-200 opacity-75'}">
+                                        <img src="${p}" class="w-full h-full object-cover" alt="Foto ${idx + 1}">
+                                    </button>
+                                `).join('')}
+                            </div>
+                        ` : ''}
                     </div>
 
                     <div class="space-y-1.5">
@@ -4000,6 +4049,28 @@
                         ` : ''}
                     </div>
                 `;
+            }
+
+            window.__mktSelectDetailPhoto = function (listingCode, idx) {
+                const item = marketDB.listings.find(x => x.listingCode === listingCode);
+                if (!item) return;
+                marketDetailActivePhotoIdx = Number(idx || 0);
+                renderMarketDetailContent(item);
+            };
+
+            window.__mktOpenDetail = function (listingCode) {
+                const item = marketDB.listings.find(x => x.listingCode === listingCode);
+                if (!item) return;
+                ensureMarketModalsExist();
+                if (typeof pushAppNavigationState === 'function') pushAppNavigationState('market-detail');
+
+                marketDetailActivePhotoIdx = 0;
+                if (!isListingOwnedByCurrentUser(item)) {
+                    item.viewsCount = Number(item.viewsCount || 0) + 1;
+                    localStorage.setItem(MARKET_STORAGE_KEY, JSON.stringify(marketDB));
+                }
+
+                renderMarketDetailContent(item);
                 document.getElementById('modal-market-detail').classList.remove('hidden');
             };
 
@@ -4029,7 +4100,7 @@
                 if (!reason) return;
 
                 const rep = {
-                    id: 'RPT-' + Date.now(),
+                    id: Date.now(),
                     listingCode: item.listingCode,
                     listingTitle: item.title,
                     reporterAccountId: getCurrentAccountKey(),
@@ -4060,6 +4131,7 @@
                 }
                 if (!confirm(`Hapus iklan "${item.title}"?`)) return;
 
+                marketDeletedCodes = Array.from(new Set([...marketDeletedCodes.map(String), String(listingCode)]));
                 marketDB.listings = marketDB.listings.filter(x => x.listingCode !== listingCode);
                 document.getElementById('modal-market-detail')?.classList.add('hidden');
                 saveMarketDB('Iklan berhasil dihapus.');
@@ -4201,11 +4273,18 @@
                             <button type="button" onclick="window.__mktAdminAddCategory()" class="w-full py-2.5 bg-[#FF7900] text-white font-black rounded-2xl text-xs cursor-pointer">+ Simpan Kategori</button>
                         </div>
                         ${marketDB.categories.map(c => `
-                            <div class="bg-white p-3.5 rounded-2xl border border-neutral-200 flex items-center justify-between gap-2 text-xs">
-                                <div>
-                                    <b>${c.name}</b> <span class="text-[10px] text-neutral-500">(${(c.subcategories || []).join(', ')})</span>
+                            <div class="bg-white p-3.5 rounded-2xl border border-neutral-200 space-y-2 text-xs">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <b>${c.name}</b> <span class="text-[10px] text-neutral-500">(${(c.subcategories || []).join(', ')})</span>
+                                    </div>
+                                    <span class="text-[10px] font-black px-2 py-0.5 rounded shrink-0 ${c.active !== false ? 'bg-emerald-100 text-emerald-900' : 'bg-neutral-200 text-neutral-600'}">${c.active !== false ? 'Aktif' : 'Nonaktif'}</span>
                                 </div>
-                                <span class="text-[10px] font-black px-2 py-0.5 rounded ${c.active !== false ? 'bg-emerald-100 text-emerald-900' : 'bg-neutral-200 text-neutral-600'}">${c.active !== false ? 'Aktif' : 'Nonaktif'}</span>
+                                <div class="flex gap-1.5 flex-wrap pt-1 border-t border-neutral-100">
+                                    <button type="button" onclick="window.__mktAdminEditCategory('${c.slug}')" class="px-2.5 py-1 bg-[#F3F3F3] text-[#171717] border rounded-xl text-[10px] font-bold cursor-pointer">Edit</button>
+                                    <button type="button" onclick="window.__mktAdminToggleCategory('${c.slug}')" class="px-2.5 py-1 bg-[#171717] text-[#FF9800] rounded-xl text-[10px] font-black cursor-pointer">${c.active !== false ? 'Nonaktifkan' : 'Aktifkan'}</button>
+                                    ${Number(c.id) > 9 ? `<button type="button" onclick="window.__mktAdminDeleteCategory('${c.slug}')" class="px-2.5 py-1 bg-rose-100 text-rose-800 rounded-xl text-[10px] font-bold cursor-pointer">Hapus</button>` : ''}
+                                </div>
                             </div>
                         `).join('')}
                     `;
@@ -4218,9 +4297,20 @@
                         </div>
                     `).join('') : '<p class="text-xs text-neutral-500 text-center py-4">Belum ada laporan iklan.</p>';
                 } else if (sec === 'promo') {
+                    const listingOpts = marketDB.listings.map(l => `<option value="${l.listingCode}">${l.listingCode} - ${l.title}</option>`).join('');
                     body.innerHTML = `
                         <div class="bg-[#F3F3F3] p-3.5 rounded-2xl border border-neutral-200 text-[11px] text-neutral-700 font-semibold">
-                            Pasang iklan reguler tetap <b>GRATIS</b> tanpa potongan komisi. Paket promosi di bawah disiapkan strukturnya saja (pembayaran promosi belum aktif).
+                            Pasang iklan reguler tetap <b>GRATIS</b> tanpa potongan komisi. Paket promosi di bawah disiapkan strukturnya saja (penagihan/pembayaran promosi nonaktif).
+                        </div>
+                        <div class="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 space-y-2 text-xs">
+                            <h4 class="font-black text-xs uppercase">Siapkan Struktur Promosi (Tanpa Tagihan)</h4>
+                            <select id="adm-promo-listing" class="w-full p-2 border border-neutral-300 rounded-xl text-xs bg-white font-semibold">
+                                ${listingOpts || '<option value="">Belum ada iklan</option>'}
+                            </select>
+                            <select id="adm-promo-plan" class="w-full p-2 border border-neutral-300 rounded-xl text-xs bg-white font-bold">
+                                ${marketDB.promoPlans.map(p => `<option value="${p.code}">${p.label} (${p.days} hari)</option>`).join('')}
+                            </select>
+                            <button type="button" onclick="window.__mktAdminPreparePromo()" class="w-full py-2 bg-[#171717] text-[#FF9800] font-black rounded-xl text-xs cursor-pointer">Terapkan Struktur Promosi</button>
                         </div>
                         ${marketDB.promoPlans.map(p => `
                             <div class="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 space-y-1 text-xs">
@@ -4228,6 +4318,12 @@
                                 <p class="text-[10px] text-neutral-600">${p.readyNote}</p>
                             </div>
                         `).join('')}
+                        ${marketDB.promotions.length > 0 ? marketDB.promotions.slice(0, 10).map(pr => `
+                            <div class="bg-[#F3F3F3] p-3 rounded-2xl text-xs flex justify-between items-center gap-2">
+                                <div class="min-w-0"><b>${pr.planLabel}</b> <span class="text-[10px] text-neutral-600">(${pr.listingCode || 'Toko'})</span></div>
+                                <span class="text-[10px] font-black text-[#FF7900] shrink-0">Billing OFF</span>
+                            </div>
+                        `).join('') : ''}
                     `;
                 } else {
                     body.innerHTML = `
@@ -4285,6 +4381,64 @@
                 window.renderAdminMarketPanel(document.getElementById('main-content'));
             };
 
+            window.__mktAdminEditCategory = function (slug) {
+                const cat = marketDB.categories.find(c => c.slug === slug);
+                if (!cat) return;
+                const nextName = (prompt('Nama kategori:', cat.name) || '').trim();
+                if (!nextName) return;
+                const nextSubsRaw = prompt('Subkategori (pisahkan koma):', (cat.subcategories || []).join(', '));
+                cat.name = nextName;
+                if (nextSubsRaw !== null) {
+                    const parsedSubs = String(nextSubsRaw).split(',').map(s => s.trim()).filter(Boolean);
+                    if (parsedSubs.length > 0) cat.subcategories = parsedSubs;
+                }
+                saveMarketDB(`Kategori "${cat.name}" diperbarui.`);
+                window.renderAdminMarketPanel(document.getElementById('main-content'));
+            };
+
+            window.__mktAdminToggleCategory = function (slug) {
+                const cat = marketDB.categories.find(c => c.slug === slug);
+                if (!cat) return;
+                cat.active = cat.active === false ? true : false;
+                saveMarketDB(`Kategori "${cat.name}" ${cat.active ? 'diaktifkan' : 'dinonaktifkan'}.`);
+                window.renderAdminMarketPanel(document.getElementById('main-content'));
+            };
+
+            window.__mktAdminDeleteCategory = function (slug) {
+                const cat = marketDB.categories.find(c => c.slug === slug);
+                if (!cat || Number(cat.id) <= 9) return;
+                if (!confirm(`Hapus kategori "${cat.name}"?`)) return;
+                marketDB.categories = marketDB.categories.filter(c => c.slug !== slug);
+                if (marketFilterState.category === slug) marketFilterState.category = 'all';
+                saveMarketDB(`Kategori "${cat.name}" dihapus.`);
+                window.renderAdminMarketPanel(document.getElementById('main-content'));
+            };
+
+            window.__mktAdminPreparePromo = function () {
+                const code = String(document.getElementById('adm-promo-listing')?.value || '').trim();
+                const planCode = String(document.getElementById('adm-promo-plan')?.value || 'featured_3d').trim();
+                const plan = marketDB.promoPlans.find(p => p.code === planCode) || marketDB.promoPlans[0];
+                if (!plan) return;
+                const listing = marketDB.listings.find(x => x.listingCode === code);
+                if (listing && planCode !== 'premium_store_30d') {
+                    listing.isFeatured = true;
+                    listing.featuredPlan = plan.code;
+                }
+                marketDB.promotions.unshift({
+                    id: Date.now(),
+                    listingCode: listing ? listing.listingCode : '',
+                    ownerAccountId: listing ? listing.ownerAccountId : getCurrentAccountKey(),
+                    planCode: plan.code,
+                    planLabel: plan.label,
+                    durationDays: plan.days,
+                    status: 'draft_prepared',
+                    billingEnabled: false,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
+                saveMarketDB(`Struktur ${plan.label} disiapkan (billing nonaktif).`);
+                window.renderAdminMarketPanel(document.getElementById('main-content'));
+            };
+
             window.__mktAdminModerate = function (listingCode, action) {
                 const item = marketDB.listings.find(x => x.listingCode === listingCode);
                 if (!item) return;
@@ -4319,7 +4473,7 @@
             };
 
             window.__mktAdminResolveReport = function (reportId) {
-                const rep = marketDB.reports.find(r => r.id === reportId);
+                const rep = marketDB.reports.find(r => String(r.id) === String(reportId));
                 if (!rep) return;
                 rep.status = 'resolved';
                 saveMarketDB(`Laporan ${rep.listingCode} ditindaklanjuti.`);
