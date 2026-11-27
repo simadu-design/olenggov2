@@ -66,21 +66,19 @@
   .oleng-card-orange { background: #FFFFFF; border: 2px solid #FF7900; border-radius: 22px; padding: 12px; box-shadow: 0 4px 14px rgba(255,121,0,0.10); }
   .oleng-sq-ico { width: 34px; height: 34px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; }
 </style>
-<style id="oleng-ojek-clean-css">
-  .oleng-ojek-compact-wrap #ojek-map,
-  .oleng-ojek-compact-wrap [id^="route-outside-panel-"] {
-    display: none !important;
+<style id="oleng-live-map-both-css">
+  .oleng-map-clean #ojek-map,
+  .oleng-map-clean #checkout-map {
+    display: block !important;
+    width: 100% !important;
+    border-radius: 1.25rem;
+    z-index: 1 !important;
   }
-</style>
-<style id="oleng-ojek-map-only-css">
-  .oleng-ojek-map-only #ojek-map,
-  .oleng-ojek-map-only [id^="route-outside-panel-"],
-  .oleng-ojek-map-only #ojek-from,
-  .oleng-ojek-map-only #ojek-to {
-    display: none !important;
-  }
-  .oleng-ojek-map-only label[for="ojek-from"],
-  .oleng-ojek-map-only label[for="ojek-to"] {
+  .oleng-map-clean [id^="route-outside-panel-"],
+  .oleng-map-clean #ojek-from,
+  .oleng-map-clean #ojek-to,
+  .oleng-map-clean #cart-pickup-label,
+  .oleng-map-clean #cart-dest-label {
     display: none !important;
   }
 </style>
@@ -4018,160 +4016,146 @@
   }
 })();
 </script>
-<script id="oleng-ojek-clean-v1">
+<script id="oleng-live-map-both-v1">
 (function () {
-  function simplifyOjekScreen() {
-    if (typeof currentSubTab === "undefined" || currentSubTab !== "ojek") return;
-    const main = document.getElementById("main-content");
-    if (!main) return;
-    const root = main.firstElementChild;
-    if (!root) return;
-    root.classList.add("oleng-ojek-compact-wrap");
+  function hideTextCoordBoxes(scopeEl) {
+    if (!scopeEl) return;
+    ["ojek-from", "ojek-to", "cart-pickup-label", "cart-dest-label"].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add("hidden");
+      if (el.parentElement && el.parentElement.parentElement) {
+        const box = el.parentElement;
+        const txt = String(box.textContent || "").toUpperCase();
+        if (txt.includes("TITIK AWAL") || txt.includes("TITIK TUJUAN") || txt.includes("TITIK JEMPUT")) {
+          box.classList.add("hidden");
+        }
+      }
+    });
+  }
 
-    const fromInput = document.getElementById("ojek-from");
-    if (fromInput && fromInput.parentElement && !document.getElementById("ojek-open-map-pick-btn")) {
-      const actionBar = document.createElement("div");
-      actionBar.id = "ojek-open-map-pick-btn";
-      actionBar.className = "flex items-center justify-between gap-2 mt-2 mb-1";
-      actionBar.innerHTML =
-        '<span class="text-[10px] font-bold text-neutral-600 truncate">Atur jemput &amp; tujuan lewat peta layar penuh</span>' +
-        '<div class="flex gap-1.5 shrink-0">' +
-          '<button type="button" id="ojek-btn-pick-map" class="px-3 py-1.5 bg-[#171717] hover:bg-[#292929] text-[#FF9800] rounded-xl text-[10px] font-black cursor-pointer flex items-center gap-1">' +
-            '<i class="fa-solid fa-map-location-dot"></i> Pilih di Peta' +
-          '</button>' +
-          '<button type="button" id="ojek-btn-gps-now" class="px-2.5 py-1.5 bg-[#FF7900] hover:bg-[#FF9800] text-white rounded-xl text-[10px] font-black cursor-pointer flex items-center gap-1">' +
-            '<i class="fa-solid fa-crosshairs"></i> GPS' +
-          '</button>' +
+  function refreshAllRouteFares() {
+    if (typeof calculateDistance !== "function" || typeof calculateShippingCost !== "function") return;
+    if (typeof userCurrentLatLng === "undefined" || typeof destLatLng === "undefined") return;
+
+    const oDist = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]);
+    const oFare = calculateShippingCost(oDist, "ojek");
+    const oDistEl = document.getElementById("ojek-dist-label");
+    const oFareEl = document.getElementById("ojek-fare-label");
+    if (oDistEl) oDistEl.innerText = "Estimasi Tarif (" + oDist + " km):";
+    if (oFareEl) oFareEl.innerText = "Rp " + Number(oFare || 0).toLocaleString("id-ID");
+
+    const oSum = document.getElementById("ojek-live-map-summary");
+    if (oSum) {
+      const pT = (typeof savedOjekRouteDraft !== "undefined" && savedOjekRouteDraft.fromText) || (userCurrentLatLng[0] + ", " + userCurrentLatLng[1]);
+      const dT = (typeof savedOjekRouteDraft !== "undefined" && savedOjekRouteDraft.toText) || (destLatLng[0] + ", " + destLatLng[1]);
+      oSum.textContent = "Jarak " + oDist + " km • Jemput: " + pT + " -> Tujuan: " + dT;
+    }
+
+    const cartModal = document.getElementById("modal-cart");
+    if (cartModal && !cartModal.classList.contains("hidden") && typeof db !== "undefined") {
+      const mrc = db.activeMerchant || (Array.isArray(db.merchants) ? db.merchants[0] : null);
+      if (mrc && typeof mrc.lat === "number" && typeof mrc.lng === "number") {
+        const cDist = calculateDistance(mrc.lat, mrc.lng, destLatLng[0], destLatLng[1]);
+        const cOngkir = calculateShippingCost(cDist, "food");
+        const subtotal = Array.isArray(db.cart) ? db.cart.reduce((s, item) => s + Number(item.price || 0), 0) : 0;
+        const lbl = document.getElementById("cart-distance-label");
+        const ongEl = document.getElementById("cart-ongkir");
+        const totEl = document.getElementById("cart-total");
+        if (lbl) lbl.innerText = "Ongkos Kirim (" + cDist + " km)";
+        if (ongEl) ongEl.innerText = "Rp " + Number(cOngkir || 0).toLocaleString("id-ID");
+        if (totEl) totEl.innerText = "Rp " + Number(subtotal + cOngkir).toLocaleString("id-ID");
+      }
+    }
+  }
+
+  function mountMapBar(mapId, contextMode) {
+    const mapEl = document.getElementById(mapId);
+    if (!mapEl || !mapEl.parentElement) return;
+    const parent = mapEl.parentElement;
+    parent.classList.add("oleng-map-clean");
+    hideTextCoordBoxes(parent);
+
+    const barId = "live-map-bar-" + mapId;
+    if (!document.getElementById(barId)) {
+      const bar = document.createElement("div");
+      bar.id = barId;
+      bar.className = "flex items-center justify-between gap-1.5 flex-wrap mb-2";
+      const satLabel = (typeof mapLayerMode !== "undefined" && mapLayerMode === "satellite") ? "Peta Jalan" : "Satelit";
+      bar.innerHTML =
+        '<span class="text-[11px] font-black text-[#171717]">Peta Rute &amp; Lokasi</span>' +
+        '<div class="flex items-center gap-1.5">' +
+          '<button type="button" data-act="fs" class="px-2.5 py-1 bg-[#171717] hover:bg-[#292929] text-[#FF9800] rounded-xl text-[10px] font-black cursor-pointer flex items-center gap-1"><i class="fa-solid fa-expand"></i> Pilih di Peta</button>' +
+          '<button type="button" data-act="gps" class="px-2.5 py-1 bg-[#FF7900] hover:bg-[#FF9800] text-white rounded-xl text-[10px] font-black cursor-pointer flex items-center gap-1"><i class="fa-solid fa-crosshairs"></i> GPS</button>' +
+          '<button type="button" data-act="sat" class="px-2.5 py-1 bg-[#292929] text-white rounded-xl text-[10px] font-extrabold cursor-pointer flex items-center gap-1"><i class="fa-solid fa-layer-group text-[#FF9800]"></i> <span>' + satLabel + '</span></button>' +
         '</div>';
-      fromInput.insertAdjacentElement("afterend", actionBar);
+      parent.insertBefore(bar, mapEl);
 
-      actionBar.querySelector("#ojek-btn-pick-map")?.addEventListener("click", (e) => {
+      bar.querySelector('[data-act="fs"]')?.addEventListener("click", (e) => {
         e.preventDefault();
-        if (typeof persistOjekRouteDraft === "function") persistOjekRouteDraft();
-        if (typeof openFullscreenMap === "function") openFullscreenMap("ojek");
+        if (contextMode === "ojek" && typeof persistOjekRouteDraft === "function") persistOjekRouteDraft();
+        if (typeof openFullscreenMap === "function") openFullscreenMap(contextMode);
       });
 
-      actionBar.querySelector("#ojek-btn-gps-now")?.addEventListener("click", (e) => {
+      bar.querySelector('[data-act="gps"]')?.addEventListener("click", (e) => {
         e.preventDefault();
-        if (typeof useCurrentGPSLocation === "function") useCurrentGPSLocation("ojek");
+        if (typeof useCurrentGPSLocation === "function") useCurrentGPSLocation(contextMode === "ojek" ? "ojek" : "cart");
+      });
+
+      bar.querySelector('[data-act="sat"]')?.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (typeof toggleMapLayerMode === "function") toggleMapLayerMode();
       });
     }
 
-    const oldMapLabel = Array.from(root.querySelectorAll("span")).find(sp =>
-      String(sp.textContent || "").toUpperCase().includes("KLIK PETA TITIK AWAL")
-    );
-    if (oldMapLabel && oldMapLabel.parentElement) {
-      oldMapLabel.parentElement.classList.add("hidden");
+    if (contextMode === "ojek" && !document.getElementById("ojek-live-map-summary")) {
+      const sum = document.createElement("p");
+      sum.id = "ojek-live-map-summary";
+      sum.className = "text-[10px] font-semibold text-neutral-600 mt-1.5 truncate";
+      mapEl.insertAdjacentElement("afterend", sum);
     }
 
-    if (typeof updateOjekFareUI === "function") updateOjekFareUI();
+    setTimeout(() => {
+      try {
+        if (contextMode === "ojek" && typeof ojekMapInstance !== "undefined" && ojekMapInstance) ojekMapInstance.invalidateSize();
+        if (contextMode === "checkout" && typeof checkoutMapInstance !== "undefined" && checkoutMapInstance) checkoutMapInstance.invalidateSize();
+      } catch (err) {}
+      refreshAllRouteFares();
+    }, 180);
   }
 
   const origOjek = window.renderCustomerOjek;
   if (typeof origOjek === "function") {
     window.renderCustomerOjek = function (c, ...rest) {
       origOjek(c, ...rest);
-      setTimeout(simplifyOjekScreen, 50);
+      setTimeout(() => mountMapBar("ojek-map", "ojek"), 70);
     };
   }
 
-  const origDash = window.renderDashboardContent;
-  if (typeof origDash === "function") {
-    window.renderDashboardContent = function (tab, rec = true) {
-      origDash(tab, rec);
-      if (tab === "ojek") setTimeout(simplifyOjekScreen, 80);
+  const origOpenCart = window.openCartModal;
+  if (typeof origOpenCart === "function") {
+    window.openCartModal = function () {
+      origOpenCart.apply(this, arguments);
+      setTimeout(() => mountMapBar("checkout-map", "checkout"), 180);
     };
   }
 
-  setTimeout(simplifyOjekScreen, 70);
-})();
-</script>
-<script id="oleng-ojek-map-only-v1">
-(function () {
-  function hideOuterRouteBoxes(root) {
-    if (!root) return;
-    const fromEl = document.getElementById("ojek-from");
-    const toEl = document.getElementById("ojek-to");
-    [fromEl, toEl].forEach(inp => {
-      if (!inp) return;
-      inp.classList.add("hidden");
-      if (inp.parentElement) {
-        const lbl = inp.parentElement.querySelector("label");
-        if (lbl) lbl.classList.add("hidden");
-        const txt = String(inp.parentElement.textContent || "").toUpperCase();
-        if (txt.includes("TITIK AWAL") || txt.includes("TITIK TUJUAN")) {
-          Array.from(inp.parentElement.children).forEach(ch => {
-            if (ch !== inp && ch.id !== "ojek-map-only-bar") ch.classList.add("hidden");
-          });
-        }
-      }
-    });
-  }
-
-  function refreshFareAndSummary() {
-    if (typeof calculateDistance !== "function" || typeof calculateShippingCost !== "function") return;
-    if (typeof userCurrentLatLng === "undefined" || typeof destLatLng === "undefined") return;
-    const dist = calculateDistance(userCurrentLatLng[0], userCurrentLatLng[1], destLatLng[0], destLatLng[1]);
-    const fare = calculateShippingCost(dist, "ojek");
-    const distEl = document.getElementById("ojek-dist-label");
-    const fareEl = document.getElementById("ojek-fare-label");
-    if (distEl) distEl.innerText = "Estimasi Tarif (" + dist + " km):";
-    if (fareEl) fareEl.innerText = "Rp " + Number(fare || 0).toLocaleString("id-ID");
-
-    const sumEl = document.getElementById("ojek-map-only-summary");
-    if (sumEl && typeof savedOjekRouteDraft !== "undefined") {
-      const pTxt = savedOjekRouteDraft.fromText || (userCurrentLatLng[0] + ", " + userCurrentLatLng[1]);
-      const dTxt = savedOjekRouteDraft.toText || (destLatLng[0] + ", " + destLatLng[1]);
-      sumEl.textContent = "Jemput: " + pTxt + "  ->  Tujuan: " + dTxt;
-    }
-  }
-
-  function applySimpleOjekMapFlow() {
-    if (typeof currentSubTab === "undefined" || currentSubTab !== "ojek") return;
-    const main = document.getElementById("main-content");
-    if (!main) return;
-    const root = main.firstElementChild;
-    if (!root) return;
-    root.classList.add("oleng-ojek-map-only");
-    hideOuterRouteBoxes(root);
-
-    const fareBox = document.getElementById("ojek-fare-label")?.parentElement;
-    if (fareBox && fareBox.parentElement && !document.getElementById("ojek-map-only-bar")) {
-      const wrap = document.createElement("div");
-      wrap.id = "ojek-map-only-bar";
-      wrap.className = "p-3 rounded-2xl bg-[#F3F3F3] border border-neutral-200 space-y-2";
-      wrap.innerHTML =
-        '<div class="flex items-center justify-between gap-2">' +
-          '<span class="text-[11px] font-black text-[#171717]">Lokasi Jemput &amp; Tujuan</span>' +
-          '<div class="flex items-center gap-1.5">' +
-            '<button type="button" id="omo-btn-map" class="px-3 py-1.5 bg-[#171717] hover:bg-[#292929] text-[#FF9800] rounded-xl text-[10px] font-black cursor-pointer flex items-center gap-1"><i class="fa-solid fa-map-location-dot"></i> Pilih di Peta</button>' +
-            '<button type="button" id="omo-btn-gps" class="px-2.5 py-1.5 bg-[#FF7900] hover:bg-[#FF9800] text-white rounded-xl text-[10px] font-black cursor-pointer flex items-center gap-1"><i class="fa-solid fa-crosshairs"></i> GPS</button>' +
-          '</div>' +
-        '</div>' +
-        '<p id="ojek-map-only-summary" class="text-[10px] font-semibold text-neutral-600 truncate"></p>';
-      fareBox.parentElement.insertBefore(wrap, fareBox);
-
-      wrap.querySelector("#omo-btn-map")?.addEventListener("click", (e) => {
-        e.preventDefault();
-        if (typeof persistOjekRouteDraft === "function") persistOjekRouteDraft();
-        if (typeof openFullscreenMap === "function") openFullscreenMap("ojek");
-      });
-
-      wrap.querySelector("#omo-btn-gps")?.addEventListener("click", (e) => {
-        e.preventDefault();
-        if (typeof useCurrentGPSLocation === "function") useCurrentGPSLocation("ojek");
-      });
-    }
-
-    refreshFareAndSummary();
+  const origUpdateCart = window.updateCartUI;
+  if (typeof origUpdateCart === "function") {
+    window.updateCartUI = function () {
+      origUpdateCart.apply(this, arguments);
+      setTimeout(() => {
+        mountMapBar("checkout-map", "checkout");
+        refreshAllRouteFares();
+      }, 90);
+    };
   }
 
   const origCloseFs = window.closeFullscreenMap;
   if (typeof origCloseFs === "function") {
     window.closeFullscreenMap = function () {
-      const wasOjek = (typeof fsReturnContext !== "undefined" && fsReturnContext === "ojek") ||
-        (typeof currentSubTab !== "undefined" && currentSubTab === "ojek");
-      if (wasOjek && typeof savedOjekRouteDraft !== "undefined") {
+      const prevCtx = typeof fsReturnContext !== "undefined" ? fsReturnContext : null;
+      if (prevCtx === "ojek" && typeof savedOjekRouteDraft !== "undefined") {
         if (Array.isArray(userCurrentLatLng) && userCurrentLatLng.length === 2) {
           savedOjekRouteDraft.pickupLatLng = [Number(userCurrentLatLng[0]), Number(userCurrentLatLng[1])];
           if (!savedOjekRouteDraft.fromText) savedOjekRouteDraft.fromText = userCurrentLatLng[0] + ", " + userCurrentLatLng[1];
@@ -4182,12 +4166,15 @@
         }
       }
       origCloseFs();
-      if (wasOjek) {
-        setTimeout(() => {
-          applySimpleOjekMapFlow();
-          refreshFareAndSummary();
-        }, 120);
-      }
+      setTimeout(() => {
+        if (prevCtx === "ojek" || (typeof currentSubTab !== "undefined" && currentSubTab === "ojek")) {
+          mountMapBar("ojek-map", "ojek");
+        }
+        if (prevCtx === "checkout" || !document.getElementById("modal-cart")?.classList.contains("hidden")) {
+          mountMapBar("checkout-map", "checkout");
+        }
+        refreshAllRouteFares();
+      }, 150);
     };
   }
 
@@ -4211,23 +4198,10 @@
     };
   }
 
-  const origOjek = window.renderCustomerOjek;
-  if (typeof origOjek === "function") {
-    window.renderCustomerOjek = function (c, ...rest) {
-      origOjek(c, ...rest);
-      setTimeout(applySimpleOjekMapFlow, 50);
-    };
-  }
-
-  const origDash = window.renderDashboardContent;
-  if (typeof origDash === "function") {
-    window.renderDashboardContent = function (tab, rec = true) {
-      origDash(tab, rec);
-      if (tab === "ojek") setTimeout(applySimpleOjekMapFlow, 80);
-    };
-  }
-
-  setTimeout(applySimpleOjekMapFlow, 70);
+  setTimeout(() => {
+    if (typeof currentSubTab !== "undefined" && currentSubTab === "ojek") mountMapBar("ojek-map", "ojek");
+    refreshAllRouteFares();
+  }, 90);
 })();
 </script>
 </body>
