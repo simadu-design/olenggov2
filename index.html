@@ -1,3 +1,40 @@
+<style id="oleng-map-zindex-fix-css">
+  #main-content .leaflet-container {
+    position: relative !important;
+    z-index: 1 !important;
+    overflow: hidden !important;
+  }
+
+  #main-content .leaflet-container .leaflet-pane,
+  #main-content .leaflet-container .leaflet-tile-pane,
+  #main-content .leaflet-container .leaflet-overlay-pane,
+  #main-content .leaflet-container .leaflet-shadow-pane,
+  #main-content .leaflet-container .leaflet-marker-pane,
+  #main-content .leaflet-container .leaflet-tooltip-pane,
+  #main-content .leaflet-container .leaflet-popup-pane {
+    z-index: 1 !important;
+  }
+
+  #main-content .leaflet-container .leaflet-top,
+  #main-content .leaflet-container .leaflet-bottom {
+    z-index: 2 !important;
+  }
+
+  nav.fixed.bottom-0,
+  [class*="bottom-0"][class*="fixed"],
+  #bottom-nav,
+  .bottom-nav {
+    z-index: 40 !important;
+  }
+
+  #modal-fullscreen-map {
+    z-index: 90 !important;
+  }
+
+  #modal-fullscreen-map .leaflet-container {
+    z-index: 1 !important;
+  }
+</style>
 <style id="oleng-orange-premium-tokens">
   :root {
     --op-orange: #F58220;
@@ -5005,6 +5042,43 @@
   } else {
     setTimeout(applyOrangePremiumPolish, 80);
   }
+})();
+</script>
+<script id="oleng-map-zindex-fix-v1">
+(function () {
+  function refreshMapsSafely() {
+    setTimeout(() => {
+      try {
+        if (typeof homeMapInstance !== "undefined" && homeMapInstance) homeMapInstance.invalidateSize();
+        if (typeof ojekMapInstance !== "undefined" && ojekMapInstance) ojekMapInstance.invalidateSize();
+        if (typeof checkoutMapInstance !== "undefined" && checkoutMapInstance) checkoutMapInstance.invalidateSize();
+        if (typeof fsMapInstance !== "undefined" && fsMapInstance) fsMapInstance.invalidateSize();
+      } catch (e) {}
+    }, 100);
+  }
+
+  const origDash = window.renderDashboardContent;
+  if (typeof origDash === "function") {
+    window.renderDashboardContent = function () {
+      const r = origDash.apply(this, arguments);
+      refreshMapsSafely();
+      return r;
+    };
+  }
+
+  for (const fnName of ["renderCustomerHome", "renderAdminDash", "renderCustomerOjek", "openCartModal", "openFullscreenMap"]) {
+    const fn = window[fnName];
+    if (typeof fn === "function") {
+      window[fnName] = function () {
+        const r = fn.apply(this, arguments);
+        refreshMapsSafely();
+        return r;
+      };
+    }
+  }
+
+  window.addEventListener("scroll", refreshMapsSafely, { passive: true });
+  setTimeout(refreshMapsSafely, 120);
 })();
 </script>
 </body>
