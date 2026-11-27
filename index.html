@@ -4411,11 +4411,11 @@
   }
 })();
 </script>
-<script id="oleng-admin-banner-gallery-v3">
+<script id="oleng-admin-banner-gallery-v4">
 (function () {
   const BANNER_KEY = "oleng_global_main_banner_v1";
 
-  function isAdminAccountActive() {
+  function isStrictAdmin() {
     if (typeof currentUser === "undefined" || !currentUser) return false;
     const digits = String(currentUser.phone || "").replace(/D/g, "");
     const norm = typeof normalizePhone === "function"
@@ -4473,7 +4473,7 @@
   }
 
   async function saveBannerPermanent(dataUrl) {
-    if (!dataUrl) return;
+    if (!isStrictAdmin() || !dataUrl) return;
     localStorage.setItem(BANNER_KEY, dataUrl);
     if (typeof db !== "undefined" && db) {
       db.mainBanner = dataUrl;
@@ -4511,6 +4511,10 @@
       document.body.appendChild(input);
 
       input.addEventListener("change", function () {
+        if (!isStrictAdmin()) {
+          input.value = "";
+          return;
+        }
         const file = input.files && input.files[0];
         if (!file) return;
         compressImageFile(file, async function (compressed) {
@@ -4522,17 +4526,14 @@
     return input;
   }
 
-  function decorateAdminBanner() {
+  function syncAdminOnlyBannerControl() {
     const saved = getSavedBannerUrl();
     applyBannerToDom(saved);
 
+    document.querySelectorAll(".oleng-admin-banner-pill").forEach(el => el.remove());
+
     const main = document.getElementById("main-content");
     if (!main) return;
-
-    // Bersihkan semua pill lama agar tidak pernah double
-    main.querySelectorAll(".oleng-admin-banner-pill").forEach(el => el.remove());
-
-    if (!isAdminAccountActive()) return;
 
     const bannerImgs = Array.from(main.querySelectorAll("img")).filter(img => {
       const altTxt = String(img.getAttribute("alt") || "").toLowerCase();
@@ -4546,8 +4547,13 @@
     targetImg.dataset.olengHomeBanner = "1";
     const box = targetImg.parentElement;
     if (!box) return;
-    box.style.cursor = "pointer";
 
+    if (!isStrictAdmin()) {
+      box.style.cursor = "default";
+      return;
+    }
+
+    box.style.cursor = "pointer";
     const pill = document.createElement("button");
     pill.type = "button";
     pill.className = "oleng-admin-banner-pill mt-1.5 w-full py-1.5 px-3 rounded-xl bg-[#171717] text-[#FF9800] text-[10px] font-black flex items-center justify-center gap-1.5 cursor-pointer border border-[#FF7900]/50";
@@ -4556,10 +4562,13 @@
   }
 
   document.addEventListener("click", function (ev) {
-    if (!isAdminAccountActive()) return;
     const pill = ev.target && ev.target.closest ? ev.target.closest(".oleng-admin-banner-pill") : null;
     const bannerImg = ev.target && ev.target.closest ? ev.target.closest('img[data-oleng-home-banner="1"], img[alt*="Banner"]') : null;
     if (!pill && !bannerImg) return;
+    if (!isStrictAdmin()) {
+      if (pill) pill.remove();
+      return;
+    }
     ev.preventDefault();
     ev.stopPropagation();
     ensureBannerGalleryPicker().click();
@@ -4583,7 +4592,7 @@
   if (typeof origDash === "function") {
     window.renderDashboardContent = function () {
       const res = origDash.apply(this, arguments);
-      setTimeout(decorateAdminBanner, 90);
+      setTimeout(syncAdminOnlyBannerControl, 90);
       return res;
     };
   }
@@ -4593,13 +4602,13 @@
     if (typeof fn === "function") {
       window[fnName] = function () {
         const res = fn.apply(this, arguments);
-        setTimeout(decorateAdminBanner, 90);
+        setTimeout(syncAdminOnlyBannerControl, 90);
         return res;
       };
     }
   }
 
-  setTimeout(decorateAdminBanner, 120);
+  setTimeout(syncAdminOnlyBannerControl, 120);
 })();
 </script>
 </body>
