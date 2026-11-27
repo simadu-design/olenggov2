@@ -933,13 +933,12 @@
         }
 
         window.addEventListener('popstate', function () {
+            if (isHandlingHardwareBack) return;
             isHandlingHardwareBack = true;
             handleHardwareBackAction();
-            armBackNavigationTrap();
-            setTimeout(() => { isHandlingHardwareBack = false; }, 80);
+            setTimeout(() => { isHandlingHardwareBack = false; }, 150);
         });
 
-        armBackNavigationTrap();
         armBackNavigationTrap();
 
         function openFullGoogleMapsForCoords(lat = null, lng = null, labelText = '') {
@@ -1145,7 +1144,9 @@
                 return lastSupabaseStatus;
             }
             try {
-                const { error } = await supabaseClient.from('app_config').select('id').eq('id', 1).maybeSingle();
+                const queryPromise = supabaseClient.from('app_config').select('id').eq('id', 1).maybeSingle();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500));
+                const { error } = await Promise.race([queryPromise, timeoutPromise]);
                 if (error) {
                     lastSupabaseStatus = { ok: false, label: 'Supabase: Lokal Aktif', detail: error.message };
                     if (showNotify) showToast('Mode lokal aktif.', 'info');
@@ -1864,7 +1865,7 @@
         document.addEventListener("DOMContentLoaded", async function() {
             try {
                 mountStaticBrandFooters(); getSyncedMainBanner(); toggleRegisterRoleFields(); requestBackgroundNotificationPermission();
-                startLiveHighAccuracyGPSWatcher(); updateSupabaseBadgeUI(false); subscribeRealtimeUpdates(); flushOfflineSyncQueue();
+                startLiveHighAccuracyGPSWatcher(); subscribeRealtimeUpdates(); flushOfflineSyncQueue();
                 const savedSession = localStorage.getItem('oleng_user_session');
                 if (savedSession) {
                     const parsedSession = JSON.parse(savedSession);
@@ -1875,9 +1876,11 @@
                         enterDashboard(true);
                     }
                 }
-                await pullInitialFromSupabase(false);
+                updateSupabaseBadgeUI(false).catch(() => {});
+                pullInitialFromSupabase(false).then(() => {
+                    setTimeout(() => checkAndShowIncomingOrderPopup(true), 300);
+                }).catch(() => {});
                 syncAllToSupabase().catch(() => {});
-                setTimeout(() => checkAndShowIncomingOrderPopup(true), 300);
             } catch (e) { console.warn('Init error:', e); }
             finally { const splash = document.getElementById('oleng-splash-screen'); if (splash) { splash.classList.add('opacity-0'); setTimeout(() => { splash.style.display = 'none'; }, 400); } }
             setInterval(() => { processDriverResponseTimeouts(); flushOfflineSyncQueue(); if (!document.hidden && !isUserCurrentlyTypingOrEditing()) pullInitialFromSupabase(false); }, 6000);
@@ -1933,7 +1936,7 @@
                 const rawPhone = document.getElementById('login-phone').value.trim(), phone = normalizePhone(rawPhone), password = document.getElementById('login-password').value.trim(), role = document.getElementById('login-role').value;
                 if (phone.length < 9) return showToast('Masukkan nomor HP yang valid!', 'error');
                 if (role === 'admin' && phone !== '085624736602') return showToast('Login Admin wajib menggunakan Nomor HP 085624736602!', 'error');
-                try { await pullInitialFromSupabase(false); } catch (pullErr) {}
+                pullInitialFromSupabase(false).catch(() => {});
                 if (!Array.isArray(db.users)) db.users = [];
                 let foundUser = db.users.find(u => normalizePhone(u.phone) === phone && u.role === role);
                 if (!foundUser && phone === '085624736602' && role === 'admin') {
@@ -2383,11 +2386,145 @@
         let tempStoreBanner = null, tempStorePhoto = null, tempNewFoodPhoto = null, editingFoodId = null, tempUserProfilePhoto = null;
 
         function renderMerchantManage(container) {
-            const myPhone = normalizePhone(currentUser.phone), myAccId = String(currentUser.accountId || '').toUpperCase();
-            let merchant = db.merchants.find(m => String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID && ((myAccId && String(m.accountId || '').toUpperCase() === myAccId) || (myPhone && normalizePhone(m.whatsapp) === myPhone)));
-            if (!merchant) { merchant = { id: currentUser.id || Date.now(), accountId: myAccId || generateAutoAccountIdFromPhone(myPhone, 'merchant'), name: currentUser.shopName || currentUser.name || '', ownerName: currentUser.ownerName || currentUser.name || '', ktp: currentUser.ktp || '', subtitle: '', category: 'Kuliner', description: '', status: 'Buka', banner: './olengorange2.png', image: currentUser.photo || './olengorange2.png', rating: 5.0, ratingCount: 0, lat: typeof currentUser.lat === 'number' ? currentUser.lat : -7.1240, lng: typeof currentUser.lng === 'number' ? currentUser.lng : 106.8460, address: currentUser.address && currentUser.address !== 'Kecamatan Lengkong, Sukabumi' ? currentUser.address : 'Kecamatan Lengkong, Sukabumi', operationalHours: '08:00 - 21:00 WIB', whatsapp: myPhone, balance: Number(currentUser.balance || 0) }; db.merchants.push(merchant); localStorage.setItem('oleng_go_db', JSON.stringify(db)); }
-            const foods = db.foods.filter(f => Number(f.merchantId) === Number(merchant.id)), isOpen = merchant.status === 'Buka';
-            container.innerHTML = `<div class="p-4 space-y-5 pb-28 bg-white min-h-full"><div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden shadow-lg border-2 border-[#FF7900]"><img src="${merchant.banner || './olengorange2.png'}" class="w-full h-36 object-cover opacity-85" alt="Banner Toko"><div class="p-4 pt-10 bg-gradient-to-t from-[#171717] via-[#292929]/95 to-[#171717]/80 relative flex items-end justify-between"><div class="flex items-center space-x-3"><img src="${merchant.image || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white" alt="Profil Toko"><div><span class="text-[10px] text-[#FF9800] font-extrabold uppercase block">PROFIL TOKO (${merchant.whatsapp || currentUser.phone})</span><h2 class="text-base font-black">${merchant.name || 'Nama Toko Belum Diisi'}</h2><p class="text-[11px] text-neutral-300"><i class="fa-solid fa-star text-[#FF7900]"></i> ${merchant.rating || 5.0} • ${merchant.operationalHours || 'Atur Jam Buka'}</p></div></div><button onclick="toggleMerchantStatus(${merchant.id})" class="px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer ${isOpen ? 'bg-[#FF7900] text-white' : 'bg-[#292929] text-neutral-300'}">${merchant.status}</button></div></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><h3 class="font-extrabold text-xs text-[#171717] uppercase border-b pb-2">Pengaturan Toko</h3><input type="text" id="edit-m-name" value="${merchant.name || ''}" placeholder="Nama Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-bold"><input type="text" id="edit-m-address" value="${merchant.address || ''}" placeholder="Alamat Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><input type="text" id="edit-m-hours" value="${merchant.operationalHours || ''}" placeholder="Jam Operasional" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold"><div class="grid grid-cols-2 gap-3 pt-1"><div><label class="text-[10px] font-extrabold uppercase block mb-1">Foto Toko</label><input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-m-photo', 'photo')"><img id="preview-m-photo" src="${tempStorePhoto || merchant.image || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover mt-2 border"></div><div><label class="text-[10px] font-extrabold uppercase block mb-1">Banner Toko</label><input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-m-banner', 'banner')"><img id="preview-m-banner" src="${tempStoreBanner || merchant.banner || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover mt-2 border"></div></div><button onclick="saveMerchantSettings(${merchant.id})" class="w-full py-3.5 bg-[#FF7900] text-white font-extrabold rounded-2xl text-xs cursor-pointer border-b-2 border-[#171717]">Simpan Perubahan Toko</button></div><div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3"><div class="flex justify-between items-center border-b pb-2"><h3 class="font-extrabold text-xs text-[#171717] uppercase">Daftar Menu</h3><button onclick="openMerchantAddMenuModal(${merchant.id})" class="px-3 py-1.5 bg-[#FF7900] text-white rounded-xl text-[11px] font-extrabold cursor-pointer">+ Tambah Menu</button></div>${foods.map(f => `<div class="flex items-center justify-between p-2.5 bg-[#F3F3F3] rounded-2xl"><div class="flex items-center space-x-3"><img src="${f.image || './olengorange2.png'}" class="w-12 h-12 rounded-xl object-cover bg-[#171717]"><div><h4 class="font-bold text-xs">${f.name}</h4><span class="text-xs font-black text-[#FF7900]">Rp ${f.price.toLocaleString()}</span></div></div><button onclick="deleteMenuFood(${f.id})" class="text-rose-600 p-2 cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button></div>`).join('')}</div>${getSimaduBrandFooterHTML()}</div>`;
+            const myPhone = normalizePhone(currentUser.phone);
+            const myAccId = String(currentUser.accountId || '').toUpperCase();
+            let merchant = db.merchants.find(m =>
+                String(m.accountId || '').toUpperCase() !== ADMIN_OWN_STORE_ID && (
+                    (myAccId && String(m.accountId || '').toUpperCase() === myAccId) ||
+                    (myPhone && normalizePhone(m.whatsapp) === myPhone)
+                )
+            );
+
+            if (!merchant) {
+                merchant = {
+                    id: currentUser.id || Date.now(),
+                    accountId: myAccId || generateAutoAccountIdFromPhone(myPhone, 'merchant'),
+                    name: currentUser.shopName || currentUser.name || '',
+                    ownerName: currentUser.ownerName || currentUser.name || '',
+                    ktp: currentUser.ktp || '',
+                    subtitle: '',
+                    category: 'Kuliner & Oleh-Oleh',
+                    description: '',
+                    status: 'Buka',
+                    banner: './olengorange2.png',
+                    image: currentUser.photo || './olengorange2.png',
+                    rating: 5.0,
+                    ratingCount: 0,
+                    lat: typeof currentUser.lat === 'number' ? currentUser.lat : -7.1240,
+                    lng: typeof currentUser.lng === 'number' ? currentUser.lng : 106.8460,
+                    address: currentUser.address && currentUser.address !== 'Kecamatan Lengkong, Sukabumi'
+                        ? currentUser.address
+                        : 'Jl. Raya Lengkong, Sukabumi',
+                    operationalHours: '08:00 - 21:00 WIB',
+                    whatsapp: myPhone || ADMIN_MAIN_WA,
+                    balance: Number(currentUser.balance || 0)
+                };
+                db.merchants.push(merchant);
+                localStorage.setItem('oleng_go_db', JSON.stringify(db));
+            }
+
+            const foods = (db.foods || []).filter(f => Number(f.merchantId) === Number(merchant.id));
+            const isOpen = merchant.status === 'Buka';
+            const storeOrders = (db.orders || []).filter(o =>
+                o.type === 'food' &&
+                (
+                    (merchant.name && normalizeMatchKey(o.merchant) === normalizeMatchKey(merchant.name)) ||
+                    (currentUser.shopName && normalizeMatchKey(o.merchant) === normalizeMatchKey(currentUser.shopName))
+                )
+            );
+            const newOrdersCount = storeOrders.filter(o =>
+                ['searching_driver', 'driver_assigned', 'merchant_confirmation'].includes(normalizeOrderStatusCode(o.status))
+            ).length;
+            const processingOrdersCount = storeOrders.filter(o =>
+                ['merchant_accepted', 'preparing', 'driver_arriving', 'picked_up', 'delivering'].includes(normalizeOrderStatusCode(o.status))
+            ).length;
+            const completedOrders = storeOrders.filter(o => normalizeOrderStatusCode(o.status) === 'completed');
+            const totalOmzet = completedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+
+            container.innerHTML = `
+                <div class="p-4 space-y-5 pb-28 bg-white min-h-full">
+                    <div class="relative bg-[#171717] text-white rounded-3xl overflow-hidden shadow-lg border-2 border-[#FF7900]">
+                        <img src="${tempStoreBanner || merchant.banner || './olengorange2.png'}" class="w-full h-36 object-cover opacity-85" alt="Banner Toko">
+                        <div class="p-4 pt-10 bg-gradient-to-t from-[#171717] via-[#292929]/95 to-[#171717]/80 relative flex items-end justify-between gap-2">
+                            <div class="flex items-center space-x-3 min-w-0">
+                                <img src="${tempStorePhoto || merchant.image || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover border-2 border-[#FF7900] -mt-12 bg-white shrink-0" alt="Profil Toko">
+                                <div class="min-w-0">
+                                    <span class="text-[10px] text-[#FF9800] font-extrabold uppercase block truncate">KELOLA TOKO (${merchant.whatsapp || currentUser.phone})</span>
+                                    <h2 class="text-base font-black truncate">${merchant.name || 'Nama Toko Belum Diisi'}</h2>
+                                    <p class="text-[11px] text-neutral-300 truncate"><i class="fa-solid fa-star text-[#FF7900]"></i> ${merchant.rating || 5.0} • ${merchant.operationalHours || '08:00 - 21:00 WIB'}</p>
+                                </div>
+                            </div>
+                            <button onclick="toggleMerchantStatus(${merchant.id})" class="px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer shrink-0 ${isOpen ? 'bg-[#FF7900] text-white' : 'bg-[#292929] text-neutral-300'}">${merchant.status}</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#F3F3F3] p-4 rounded-3xl border-2 border-neutral-200 space-y-2.5">
+                        <h3 class="font-black text-xs text-[#171717] uppercase">Dashboard Penjualan Toko</h3>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Produk</span><b class="text-sm font-black">${foods.length}</b></div>
+                            <div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Pesanan</span><b class="text-sm font-black">${storeOrders.length}</b></div>
+                            <div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Baru</span><b class="text-sm font-black text-[#FF7900]">${newOrdersCount}</b></div>
+                            <div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Diproses</span><b class="text-sm font-black">${processingOrdersCount}</b></div>
+                            <div class="bg-white p-2.5 rounded-2xl"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Selesai</span><b class="text-sm font-black">${completedOrders.length}</b></div>
+                            <div class="bg-white p-2.5 rounded-2xl border border-[#FF7900]"><span class="text-[9px] font-bold text-neutral-500 uppercase block">Omzet</span><b class="text-xs font-black text-[#FF7900]">Rp ${totalOmzet.toLocaleString()}</b></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3">
+                        <h3 class="font-extrabold text-xs text-[#171717] uppercase border-b pb-2">Profil Toko</h3>
+                        <input type="text" id="edit-m-name" value="${merchant.name || ''}" placeholder="Nama Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-bold">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="edit-m-category" value="${merchant.category || 'Kuliner & Oleh-Oleh'}" placeholder="Kategori Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold">
+                            <input type="tel" id="edit-m-wa" value="${merchant.whatsapp || currentUser.phone || ''}" placeholder="Nomor WA Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold">
+                        </div>
+                        <input type="text" id="edit-m-desc" value="${merchant.description || ''}" placeholder="Deskripsi toko..." class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold">
+                        <input type="text" id="edit-m-address" value="${merchant.address || ''}" placeholder="Alamat Toko" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold">
+                        <input type="text" id="edit-m-hours" value="${merchant.operationalHours || ''}" placeholder="Jam Operasional" class="w-full p-2.5 border-2 border-neutral-200 rounded-2xl text-xs font-semibold">
+                        <div class="grid grid-cols-2 gap-3 pt-1">
+                            <div>
+                                <label class="text-[10px] font-extrabold uppercase block mb-1">Logo Toko</label>
+                                <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-m-photo', 'photo')">
+                                <img id="preview-m-photo" src="${tempStorePhoto || merchant.image || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover mt-2 border">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-extrabold uppercase block mb-1">Banner Toko</label>
+                                <input type="file" accept="image/*" class="w-full text-[10px]" onchange="previewGalleryImage(event, 'preview-m-banner', 'banner')">
+                                <img id="preview-m-banner" src="${tempStoreBanner || merchant.banner || './olengorange2.png'}" class="w-16 h-16 rounded-2xl object-cover mt-2 border">
+                            </div>
+                        </div>
+                        <button onclick="saveMerchantSettings(${merchant.id})" class="w-full py-3.5 bg-[#FF7900] text-white font-extrabold rounded-2xl text-xs cursor-pointer border-b-2 border-[#171717]">Simpan Perubahan Toko</button>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-3">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="font-extrabold text-xs text-[#171717] uppercase">Kelola Produk Toko</h3>
+                            <button onclick="openMerchantAddMenuModal(${merchant.id})" class="px-3 py-1.5 bg-[#FF7900] text-white rounded-xl text-[11px] font-extrabold cursor-pointer">+ Tambah Produk</button>
+                        </div>
+                        ${foods.map(f => {
+                            const stokVal = Number(f.stock ?? 20);
+                            const isAvail = stokVal > 0 && f.available !== false;
+                            return `
+                                <div class="flex items-center justify-between gap-2 p-2.5 bg-[#F3F3F3] rounded-2xl">
+                                    <div class="flex items-center space-x-3 min-w-0">
+                                        <img src="${f.image || './olengorange2.png'}" class="w-12 h-12 rounded-xl object-cover bg-[#171717] shrink-0">
+                                        <div class="min-w-0">
+                                            <h4 class="font-bold text-xs truncate">${f.name}</h4>
+                                            <span class="text-xs font-black text-[#FF7900]">Rp ${Number(f.price || 0).toLocaleString()}</span>
+                                            <span class="text-[10px] font-bold ml-1.5 px-1.5 py-0.5 rounded ${isAvail ? 'bg-white' : 'bg-rose-100 text-rose-800'}">${isAvail ? 'Tersedia (' + stokVal + ')' : 'Habis'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1 shrink-0">
+                                        <button onclick="openEditFoodModal(${f.id})" class="px-2 py-1 bg-[#171717] text-white rounded-lg text-[10px] font-bold cursor-pointer">Edit</button>
+                                        <button onclick="deleteMenuFood(${f.id})" class="text-rose-600 p-2 cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    ${getSimaduBrandFooterHTML()}
+                </div>
+            `;
         }
 
         function renderAdminOwnStoreManage(container) {
@@ -2420,13 +2557,29 @@
         }
 
         function saveMerchantSettings(merchantId) {
-            const m = db.merchants.find(x => x.id === merchantId); if (!m) return;
-            const newName = (document.getElementById('edit-m-name')?.value || '').trim(); if (!newName) return showToast('Nama toko wajib diisi!', 'error');
-            m.name = newName; m.address = (document.getElementById('edit-m-address')?.value || '').trim(); m.operationalHours = (document.getElementById('edit-m-hours')?.value || '').trim();
-            if (tempStorePhoto) m.image = tempStorePhoto; if (tempStoreBanner) m.banner = tempStoreBanner;
-            if (currentUser && currentUser.role === 'merchant') { currentUser.shopName = newName; const uIdx = db.users.findIndex(u => u.id === currentUser.id); if (uIdx !== -1) db.users[uIdx].shopName = newName; localStorage.setItem('oleng_user_session', JSON.stringify(currentUser)); }
-            tempStorePhoto = null; tempStoreBanner = null; hasPendingMediaSelection = false;
-            saveDB('Profil & foto toko berhasil disimpan!'); renderMerchantManage(document.getElementById('main-content'));
+            const m = db.merchants.find(x => x.id === merchantId);
+            if (!m) return;
+            const newName = (document.getElementById('edit-m-name')?.value || '').trim();
+            if (!newName) return showToast('Nama toko wajib diisi!', 'error');
+            m.name = newName;
+            m.category = (document.getElementById('edit-m-category')?.value || m.category || 'Kuliner & Oleh-Oleh').trim();
+            m.whatsapp = normalizePhone(document.getElementById('edit-m-wa')?.value || m.whatsapp || currentUser.phone || ADMIN_MAIN_WA) || ADMIN_MAIN_WA;
+            m.description = (document.getElementById('edit-m-desc')?.value || '').trim();
+            m.address = (document.getElementById('edit-m-address')?.value || '').trim();
+            m.operationalHours = (document.getElementById('edit-m-hours')?.value || '').trim();
+            if (tempStorePhoto) m.image = tempStorePhoto;
+            if (tempStoreBanner) m.banner = tempStoreBanner;
+            if (currentUser && currentUser.role === 'merchant') {
+                currentUser.shopName = newName;
+                const uIdx = db.users.findIndex(u => u.id === currentUser.id);
+                if (uIdx !== -1) db.users[uIdx].shopName = newName;
+                localStorage.setItem('oleng_user_session', JSON.stringify(currentUser));
+            }
+            tempStorePhoto = null;
+            tempStoreBanner = null;
+            hasPendingMediaSelection = false;
+            saveDB('Profil & foto toko berhasil disimpan!');
+            renderMerchantManage(document.getElementById('main-content'));
         }
 
         function openMerchantAddMenuModal(merchantId) {
