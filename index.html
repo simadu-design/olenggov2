@@ -5950,5 +5950,49 @@
   window.addEventListener("online", () => setTimeout(runProductionHealthAndSync, 300));
 })();
 </script>
+<script id="oleng-stop-screen-flicker-v1">
+(function () {
+  // Cegah re-render beruntun dalam waktu singkat yang memicu kedipan layar
+  if (typeof window.renderDashboardContent === "function" && !window.__olengRenderGuardApplied) {
+    window.__olengRenderGuardApplied = true;
+    const rawRender = window.renderDashboardContent;
+    let lastRenderAt = 0;
+    let queuedTimer = null;
+    let lastArgs = null;
+
+    window.renderDashboardContent = function () {
+      lastArgs = arguments;
+      const now = Date.now();
+      const elapsed = now - lastRenderAt;
+
+      // Jangan ganggu pengguna yang sedang mengetik di input/textarea
+      const active = document.activeElement;
+      const typingNow = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
+
+      if (typingNow && elapsed < 2500) {
+        return;
+      }
+
+      if (elapsed < 220) {
+        if (!queuedTimer) {
+          queuedTimer = setTimeout(() => {
+            queuedTimer = null;
+            lastRenderAt = Date.now();
+            rawRender.apply(window, lastArgs || []);
+          }, 240 - elapsed);
+        }
+        return;
+      }
+
+      if (queuedTimer) {
+        clearTimeout(queuedTimer);
+        queuedTimer = null;
+      }
+      lastRenderAt = now;
+      return rawRender.apply(this, arguments);
+    };
+  }
+})();
+</script>
 </body>
 </html>
