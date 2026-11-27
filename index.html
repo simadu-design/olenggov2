@@ -5176,5 +5176,212 @@
   setTimeout(forceStatusLabelContrast, 350);
 })();
 </script>
+<script id="oleng-order-popup-alarm-v1">
+(function () {
+  const NOTIFIED_KEY = "oleng_notified_order_keys_v1";
+  let audioCtx = null;
+
+  function normPhone(val) {
+    const d = String(val || "").replace(/D/g, "");
+    if (!d) return "";
+    if (d.startsWith("62")) return "0" + d.slice(2);
+    return d;
+  }
+
+  function isAlarmActive() {
+    if (typeof alarmEnabled !== "undefined") return Boolean(alarmEnabled);
+    try {
+      const cfg = JSON.parse(localStorage.getItem("oleng_admin_suite_settings_v1") || "{}") || {};
+      if (typeof cfg.alarmOrder === "boolean") return cfg.alarmOrder;
+    } catch (e) {}
+    return true;
+  }
+
+  function playOrderAlarmBeep() {
+    if (!isAlarmActive()) return;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
+      const now = audioCtx.currentTime;
+      [0, 0.22, 0.44].forEach((offset, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = idx % 2 === 0 ? "triangle" : "sine";
+        osc.frequency.setValueAtTime(880, now + offset);
+        osc.frequency.exponentialRampToValueAtTime(1174, now + offset + 0.14);
+        gain.gain.setValueAtTime(0.001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + offset + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0008, now + offset + 0.18);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.19);
+      });
+    } catch (e) {}
+  }
+
+  // Buka kunci AudioContext pada interaksi pertama pengguna
+  document.addEventListener("pointerdown", function () {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx && !audioCtx) audioCtx = new Ctx();
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+    } catch (e) {}
+  }, { passive: true });
+
+  function getNotifiedSet() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(NOTIFIED_KEY) || "[]");
+      return new Set(Array.isArray(arr) ? arr.slice(-120) : []);
+    } catch (e) {
+      return new Set();
+    }
+  }
+
+  function markNotified(key) {
+    const s = getNotifiedSet();
+    s.add(key);
+    localStorage.setItem(NOTIFIED_KEY, JSON.stringify(Array.from(s).slice(-120)));
+  }
+
+  function isOrderIntendedForCurrentPartner(order) {
+    if (!order || typeof currentUser === "undefined" || !currentUser) return false;
+    const myPhone = normPhone(currentUser.phone);
+    const myId = String(currentUser.id || "");
+    const role = String(currentUser.role || "");
+    const activeView = (typeof adminViewMode !== "undefined" && adminViewMode) ? String(adminViewMode) : role;
+
+    const status = String(order.status || order.state || "").toLowerCase();
+    const isNewOrPending = ["pending", "baru", "menunggu", "searching", "new", "created"].some(k => status.includes(k));
+
+    const orderMerchantPhone = normPhone(order.merchantPhone || order.merchant_phone || order.storePhone || order.store_phone || "");
+    const orderMerchantId = String(order.merchantId || order.merchant_id || order.storeId || order.store_id || "");
+
+    const orderDriverPhone = normPhone(order.driverPhone || order.driver_phone || "");
+    const orderDriverId = String(order.driverId || order.driver_id || "");
+
+    // Target Toko: hanya toko terkait
+    const ownsMerchant =
+      (orderMerchantPhone && myPhone && orderMerchantPhone === myPhone) ||
+      (orderMerchantId && myId && orderMerchantId === myId);
+
+    if (ownsMerchant && (role === "merchant" || activeView === "merchant" || role === "admin")) {
+      return true;
+    }
+
+    // Target Driver: jika order sudah ditugaskan ke driver ini atau order baru mencari driver saat driver online
+    const assignedToMe =
+      (orderDriverPhone && myPhone && orderDriverPhone === myPhone) ||
+      (orderDriverId && myId && orderDriverId === myId);
+
+    if (assignedToMe) return true;
+
+    const isDriverContext = role === "driver" || activeView === "driver";
+    if (isDriverContext && isNewOrPending && !orderDriverId && !orderDriverPhone) {
+      let isOnline = true;
+      if (typeof db !== "undefined" && db && Array.isArray(db.drivers)) {
+        const drv = db.drivers.find(d => normPhone(d.phone) === myPhone || String(d.id) === myId);
+        if (drv && typeof drv.isOnline === "boolean") isOnline = drv.isOnline;
+        else if (drv && typeof drv.online === "boolean") isOnline = drv.online;
+      }
+      return isOnline;
+    }
+
+    return false;
+  }
+
+  function showOrderPopupCard(order) {
+    const existing = document.getElementById("oleng-incoming-order-popup");
+    if (existing) existing.remove();
+
+    const orderId = order.id || order.order_id || "ORDER";
+    const custName = order.customerName || order.customer_name || order.buyerName || "Konsumen";
+    const totalNum = Number(order.total || order.totalPrice || order.total_price || order.fare || 0);
+    const totalTxt = totalNum > 0 ? "Rp " + totalNum.toLocaleString("id-ID") : "Sesuai pesanan";
+    const summary = order.pickup || order.pickup_address || order.itemSummary || order.items_summary || order.type || "Pesanan baru masuk";
+    const statusTxt = order.status || "Baru";
+
+    const popup = document.createElement("div");
+    popup.id = "oleng-incoming-order-popup";
+    popup.className = "fixed top-4 left-3 right-3 z-[120] bg-[#191919] text-white border-2 border-[#F58220] rounded-2xl p-4 space-y-2.5";
+    popup.innerHTML =
+      '<div class="flex items-start justify-between gap-2">' +
+        '<div>' +
+          '<span class="inline-block px-2 py-0.5 rounded-lg bg-[#F58220] text-white text-[10px] font-black uppercase">NOTIFIKASI PESANAN • ' + String(statusTxt) + '</span>' +
+          '<h3 class="text-sm font-black text-white mt-1">Order #' + String(orderId) + '</h3>' +
+        '</div>' +
+        '<button type="button" id="oleng-close-order-popup" class="px-2.5 py-1 rounded-xl bg-[#2A2A2A] text-white text-xs font-bold cursor-pointer">Tutup</button>' +
+      '</div>' +
+      '<div class="text-xs text-neutral-200 space-y-1">' +
+        '<div><span class="text-neutral-400">Konsumen:</span> <b>' + String(custName) + '</b></div>' +
+        '<div><span class="text-neutral-400">Detail:</span> <b>' + String(summary) + '</b></div>' +
+        '<div><span class="text-neutral-400">Total:</span> <b class="text-[#F58220]">' + totalTxt + '</b></div>' +
+      '</div>' +
+      '<div class="flex gap-2 pt-1">' +
+        '<button type="button" id="oleng-open-order-tab" class="flex-1 py-2 rounded-xl bg-[#F58220] text-white text-xs font-black cursor-pointer">Lihat Pesanan</button>' +
+      '</div>';
+
+    document.body.appendChild(popup);
+
+    popup.querySelector("#oleng-close-order-popup")?.addEventListener("click", () => popup.remove());
+    popup.querySelector("#oleng-open-order-tab")?.addEventListener("click", () => {
+      popup.remove();
+      if (typeof renderDashboardContent === "function") {
+        renderDashboardContent("orders", true);
+      }
+    });
+
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification("OLENGGO • Pesanan Masuk", {
+          body: "Order #" + orderId + " dari " + custName + " (" + totalTxt + ")"
+        });
+      } catch (e) {}
+    }
+
+    playOrderAlarmBeep();
+  }
+
+  window.olengTriggerPartnerOrderAlert = function (order) {
+    if (!order || !isOrderIntendedForCurrentPartner(order)) return;
+    const oid = String(order.id || order.order_id || "");
+    const st = String(order.status || order.state || "new");
+    const dedupKey = oid + "::" + st;
+    const seen = getNotifiedSet();
+    if (oid && seen.has(dedupKey)) return;
+    if (oid) markNotified(dedupKey);
+    showOrderPopupCard(order);
+  };
+
+  // Kaitkan ke channel realtime jika tersedia
+  function hookOrdersRealtime() {
+    if (typeof supabaseClient === "undefined" || !supabaseClient || typeof supabaseClient.channel !== "function") return;
+    try {
+      const chName = "oleng-partner-order-alert";
+      const existing = typeof supabaseClient.getChannels === "function"
+        ? supabaseClient.getChannels().find(c => c.topic === "realtime:" + chName)
+        : null;
+      if (existing && typeof supabaseClient.removeChannel === "function") {
+        supabaseClient.removeChannel(existing);
+      }
+      supabaseClient
+        .channel(chName)
+        .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, payload => {
+          const row = (payload && payload.new) ? payload.new : null;
+          if (row && typeof window.olengTriggerPartnerOrderAlert === "function") {
+            window.olengTriggerPartnerOrderAlert(row);
+          }
+        })
+        .subscribe();
+    } catch (e) {}
+  }
+
+  setTimeout(hookOrdersRealtime, 500);
+})();
+</script>
 </body>
 </html>
