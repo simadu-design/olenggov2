@@ -4657,5 +4657,169 @@
   scheduleBannerSync();
 })();
 </script>
+<script id="oleng-realtime-sync-hardening-v1">
+(function () {
+  const SYNC_TIME_KEY = "oleng_last_sync_at";
+  const PENDING_SYNC_KEY = "oleng_pending_sync_v1";
+  const BANNER_URL_KEY = "oleng_global_main_banner_v1";
+
+  const syncState = {
+    online: typeof navigator !== "undefined" ? Boolean(navigator.onLine) : true,
+    supabaseReachable: false,
+    realtimeSubscribed: false,
+    pendingSync: localStorage.getItem(PENDING_SYNC_KEY) === "1",
+    lastSyncAt: localStorage.getItem(SYNC_TIME_KEY) || "",
+    lastError: ""
+  };
+
+  window.olengSyncDiagnostics = syncState;
+
+  function markSyncedNow() {
+    const nowStr = new Date().toLocaleString("id-ID");
+    syncState.lastSyncAt = nowStr;
+    syncState.pendingSync = false;
+    syncState.lastError = "";
+    localStorage.setItem(SYNC_TIME_KEY, nowStr);
+    localStorage.removeItem(PENDING_SYNC_KEY);
+  }
+
+  function markPendingSync(errMsg) {
+    syncState.pendingSync = true;
+    if (errMsg) syncState.lastError = String(errMsg);
+    localStorage.setItem(PENDING_SYNC_KEY, "1");
+  }
+
+  async function probeSupabaseConnection() {
+    syncState.online = typeof navigator !== "undefined" ? Boolean(navigator.onLine) : true;
+    if (!syncState.online || typeof supabaseClient === "undefined" || !supabaseClient) {
+      syncState.supabaseReachable = false;
+      return false;
+    }
+    try {
+      const { error } = await supabaseClient.from("app_config").select("key").limit(1);
+      if (error) {
+        syncState.supabaseReachable = false;
+        syncState.lastError = error.message || "Gagal mengakses tabel app_config";
+        return false;
+      }
+      syncState.supabaseReachable = true;
+      syncState.lastError = "";
+      return true;
+    } catch (e) {
+      syncState.supabaseReachable = false;
+      syncState.lastError = (e && e.message) ? e.message : "Koneksi database gagal";
+      return false;
+    }
+  }
+
+  async function runSafeInitialAndPendingSync() {
+    const ok = await probeSupabaseConnection();
+    if (!ok) {
+      if (!syncState.online) markPendingSync("Perangkat offline");
+      return;
+    }
+
+    if (typeof syncAllToSupabase === "function") {
+      try {
+        const res = await syncAllToSupabase();
+        if (res && res.ok) {
+          markSyncedNow();
+        } else if (res && res.error) {
+          markPendingSync(res.error.message || res.error);
+        }
+      } catch (e) {
+        markPendingSync((e && e.message) ? e.message : "Sinkronisasi tertunda");
+      }
+    }
+  }
+
+  function refreshCurrentViewAfterRealtime() {
+    try {
+      if (typeof currentUser !== "undefined" && currentUser && typeof renderDashboardContent === "function") {
+        const tab = (typeof currentSubTab !== "undefined" && currentSubTab) ? currentSubTab : "home";
+        renderDashboardContent(tab, false);
+      }
+    } catch (e) {}
+  }
+
+  function attachRealtimeListeners() {
+    if (typeof supabaseClient === "undefined" || !supabaseClient || typeof supabaseClient.channel !== "function") {
+      syncState.realtimeSubscribed = false;
+      return;
+    }
+
+    try {
+      const chName = "oleng-go-realtime-sync";
+      const existing = typeof supabaseClient.getChannels === "function"
+        ? supabaseClient.getChannels().find(c => c.topic === "realtime:" + chName)
+        : null;
+      if (existing && typeof supabaseClient.removeChannel === "function") {
+        supabaseClient.removeChannel(existing);
+      }
+
+      const tables = ["app_config", "accounts", "merchants", "drivers", "orders", "foods", "chats", "market_categories", "market_listings"];
+      let ch = supabaseClient.channel(chName);
+      tables.forEach(tbl => {
+        ch = ch.on("postgres_changes", { event: "*", schema: "public", table: tbl }, payload => {
+          if (tbl === "app_config" && payload && payload.new && payload.new.value) {
+            const val = payload.new.value;
+            const bUrl = (typeof val === "object" && val.mainBanner) ? val.mainBanner : (typeof val === "string" ? val : "");
+            if (bUrl) {
+              localStorage.setItem(BANNER_URL_KEY, bUrl);
+              if (typeof db !== "undefined" && db) db.mainBanner = bUrl;
+            }
+          }
+          markSyncedNow();
+          refreshCurrentViewAfterRealtime();
+        });
+      });
+
+      ch.subscribe(status => {
+        syncState.realtimeSubscribed = status === "SUBSCRIBED";
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          syncState.realtimeSubscribed = false;
+        }
+      });
+    } catch (e) {
+      syncState.realtimeSubscribed = false;
+    }
+  }
+
+  window.addEventListener("online", async () => {
+    syncState.online = true;
+    attachRealtimeListeners();
+    await runSafeInitialAndPendingSync();
+    refreshCurrentViewAfterRealtime();
+  });
+
+  window.addEventListener("offline", () => {
+    syncState.online = false;
+    syncState.supabaseReachable = false;
+    syncState.realtimeSubscribed = false;
+    markPendingSync("Koneksi terputus (offline)");
+    refreshCurrentViewAfterRealtime();
+  });
+
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState === "visible") {
+      await probeSupabaseConnection();
+      if (syncState.online && !syncState.realtimeSubscribed) {
+        attachRealtimeListeners();
+      }
+      if (syncState.online && syncState.pendingSync) {
+        await runSafeInitialAndPendingSync();
+      }
+    }
+  });
+
+  setTimeout(async () => {
+    await probeSupabaseConnection();
+    attachRealtimeListeners();
+    if (syncState.online) {
+      await runSafeInitialAndPendingSync();
+    }
+  }, 400);
+})();
+</script>
 </body>
 </html>
