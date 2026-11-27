@@ -4411,7 +4411,7 @@
   }
 })();
 </script>
-<script id="oleng-banner-admin-only-v6">
+<script id="oleng-banner-vs-store-cover-v7">
 (function () {
   const BANNER_KEY = "oleng_global_main_banner_v1";
 
@@ -4433,11 +4433,38 @@
     return String(currentUser.role || "customer");
   }
 
-  function canEditBannerRightNow() {
-    return isAdminAccount() && activeRoleNow() === "admin";
+  function canEditHomeBannerNow() {
+    if (!isAdminAccount() || activeRoleNow() !== "admin") return false;
+    const tab = typeof currentSubTab !== "undefined" ? currentSubTab : "home";
+    return tab === "home" || tab === "admin-dash";
   }
 
-  function getSavedBannerUrl() {
+  function isStoreCoverElement(img) {
+    if (!img) return false;
+    if (img.closest('[data-store-cover-box="1"], #view-merchant-detail, [id*="merchant-cover"], [id*="store-cover"]')) {
+      return true;
+    }
+    const parent = img.parentElement;
+    if (parent && String(parent.textContent || "").includes("Ubah Sampul")) {
+      parent.setAttribute("data-store-cover-box", "1");
+      return true;
+    }
+    const altTxt = String(img.getAttribute("alt") || "").toLowerCase();
+    if (altTxt.includes("sampul") || altTxt.includes("toko") || altTxt.includes("store") || altTxt.includes("logo")) {
+      return true;
+    }
+    return false;
+  }
+
+  function isHomeBannerElement(img) {
+    if (!img || isStoreCoverElement(img)) return false;
+    const altTxt = String(img.getAttribute("alt") || "").toLowerCase();
+    if (altTxt.includes("banner")) return true;
+    if (img.dataset && img.dataset.olengHomeBanner === "1") return true;
+    return false;
+  }
+
+  function getSavedHomeBannerUrl() {
     const loc = localStorage.getItem(BANNER_KEY);
     if (loc && loc.trim()) return loc.trim();
     if (typeof db !== "undefined" && db && typeof db.mainBanner === "string" && db.mainBanner.trim()) {
@@ -4446,14 +4473,15 @@
     return "./olengorange2.png";
   }
 
-  function applyBannerImageSrc(url) {
+  function applyHomeBannerOnly(url) {
     if (!url) return;
     document.querySelectorAll("#main-content img").forEach(img => {
-      const altTxt = String(img.getAttribute("alt") || "").toLowerCase();
-      const clsTxt = String(img.className || "").toLowerCase();
-      if (altTxt.includes("banner") || (clsTxt.includes("h-32") && clsTxt.includes("object-cover"))) {
-        img.src = url;
+      if (isStoreCoverElement(img)) return;
+      if (isHomeBannerElement(img)) {
         img.dataset.olengHomeBanner = "1";
+        if (img.getAttribute("src") !== url) {
+          img.src = url;
+        }
       }
     });
   }
@@ -4462,16 +4490,16 @@
     document.querySelectorAll(".oleng-admin-banner-pill").forEach(el => el.remove());
   }
 
-  function compressImageFile(file, done) {
+  function compressBannerFile(file, done) {
     const reader = new FileReader();
     reader.onload = function (ev) {
       const rawUrl = String(ev.target && ev.target.result ? ev.target.result : "");
       const img = new Image();
       img.onload = function () {
-        const maxWidth = 960;
-        const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
-        const w = Math.max(1, Math.round(img.width * ratio));
-        const hPx = Math.max(1, Math.round(img.height * ratio));
+        const maxW = 960;
+        const scale = img.width > maxW ? maxW / img.width : 1;
+        const w = Math.max(1, Math.round(img.width * scale));
+        const hPx = Math.max(1, Math.round(img.height * scale));
         const canvas = document.createElement("canvas");
         canvas.width = w;
         canvas.height = hPx;
@@ -4489,15 +4517,15 @@
     reader.readAsDataURL(file);
   }
 
-  async function saveBannerPermanent(dataUrl) {
-    if (!canEditBannerRightNow() || !dataUrl) return;
+  async function saveHomeBannerPermanently(dataUrl) {
+    if (!canEditHomeBannerNow() || !dataUrl) return;
     localStorage.setItem(BANNER_KEY, dataUrl);
     if (typeof db !== "undefined" && db) {
       db.mainBanner = dataUrl;
       if (db.config && typeof db.config === "object") db.config.mainBanner = dataUrl;
       localStorage.setItem("oleng_go_db", JSON.stringify(db));
     }
-    applyBannerImageSrc(dataUrl);
+    applyHomeBannerOnly(dataUrl);
 
     if (typeof supabaseClient !== "undefined" && supabaseClient && navigator.onLine && typeof syncAllToSupabase === "function") {
       try {
@@ -4505,7 +4533,7 @@
         if (res && res.ok) {
           localStorage.setItem("oleng_last_sync_at", new Date().toLocaleString("id-ID"));
           if (typeof showToast === "function") {
-            showToast("Banner tersimpan permanen & tersinkron ke semua perangkat!", "success");
+            showToast("Banner beranda tersimpan permanen & tersinkron ke semua perangkat!", "success");
           }
           return;
         }
@@ -4513,61 +4541,50 @@
     }
 
     if (typeof showToast === "function") {
-      showToast("Banner tersimpan permanen di perangkat!", "success");
+      showToast("Banner beranda tersimpan permanen!", "success");
     }
   }
 
-  function ensureBannerGalleryPicker() {
-    let input = document.getElementById("oleng-banner-gallery-picker");
-    if (!input) {
-      input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.id = "oleng-banner-gallery-picker";
-      input.style.display = "none";
-      document.body.appendChild(input);
+  function ensureBannerInput() {
+    let inp = document.getElementById("oleng-home-banner-file");
+    if (!inp) {
+      inp = document.createElement("input");
+      inp.type = "file";
+      inp.accept = "image/*";
+      inp.id = "oleng-home-banner-file";
+      inp.style.display = "none";
+      document.body.appendChild(inp);
 
-      input.addEventListener("change", function () {
-        if (!canEditBannerRightNow()) {
-          input.value = "";
+      inp.addEventListener("change", function () {
+        if (!canEditHomeBannerNow()) {
+          inp.value = "";
           return;
         }
-        const file = input.files && input.files[0];
+        const file = inp.files && inp.files[0];
         if (!file) return;
-        compressImageFile(file, async function (compressed) {
-          await saveBannerPermanent(compressed);
-          input.value = "";
+        compressBannerFile(file, async function (compressed) {
+          await saveHomeBannerPermanently(compressed);
+          inp.value = "";
         });
       });
     }
-    return input;
+    return inp;
   }
 
-  function refreshBannerControl() {
-    applyBannerImageSrc(getSavedBannerUrl());
+  function syncBannerWithoutTouchingStoreCover() {
+    const saved = getSavedHomeBannerUrl();
+    applyHomeBannerOnly(saved);
     removeAllBannerEditPills();
+
+    if (!canEditHomeBannerNow()) return;
 
     const main = document.getElementById("main-content");
     if (!main) return;
 
-    const bannerImgs = Array.from(main.querySelectorAll("img")).filter(img => {
-      const altTxt = String(img.getAttribute("alt") || "").toLowerCase();
-      const clsTxt = String(img.className || "").toLowerCase();
-      return altTxt.includes("banner") || (clsTxt.includes("h-32") && clsTxt.includes("object-cover"));
-    });
+    const bannerImg = Array.from(main.querySelectorAll("img")).find(img => isHomeBannerElement(img));
+    if (!bannerImg || !bannerImg.parentElement) return;
 
-    if (bannerImgs.length === 0) return;
-
-    const targetImg = bannerImgs[0];
-    targetImg.dataset.olengHomeBanner = "1";
-    const box = targetImg.parentElement;
-    if (!box) return;
-
-    if (!canEditBannerRightNow()) {
-      box.style.cursor = "default";
-      return;
-    }
-
+    const box = bannerImg.parentElement;
     box.style.cursor = "pointer";
     const pill = document.createElement("button");
     pill.type = "button";
@@ -4577,30 +4594,42 @@
   }
 
   document.addEventListener("click", function (ev) {
-    const pill = ev.target && ev.target.closest ? ev.target.closest(".oleng-admin-banner-pill") : null;
-    const bannerImg = ev.target && ev.target.closest ? ev.target.closest('img[data-oleng-home-banner="1"], img[alt*="Banner"]') : null;
+    const target = ev.target && ev.target.closest ? ev.target : null;
+    if (!target) return;
+    if (target.closest('[data-store-cover-box="1"], [id*="merchant-cover"], [id*="store-cover"]')) return;
+
+    const pill = target.closest(".oleng-admin-banner-pill");
+    const bannerImg = target.closest('img[data-oleng-home-banner="1"], img[alt*="Banner"]');
     if (!pill && !bannerImg) return;
-    if (!canEditBannerRightNow()) {
+
+    if (!canEditHomeBannerNow()) {
       removeAllBannerEditPills();
       return;
     }
+
     ev.preventDefault();
     ev.stopPropagation();
-    ensureBannerGalleryPicker().click();
+    ensureBannerInput().click();
   }, true);
 
   if (typeof window.getSyncedMainBanner === "function") {
-    const origGetter = window.getSyncedMainBanner;
+    const origGet = window.getSyncedMainBanner;
     window.getSyncedMainBanner = function () {
       const loc = localStorage.getItem(BANNER_KEY);
       if (loc && loc.trim()) return loc.trim();
       if (typeof db !== "undefined" && db && typeof db.mainBanner === "string" && db.mainBanner.trim()) {
         return db.mainBanner.trim();
       }
-      return origGetter.apply(this, arguments);
+      return origGet.apply(this, arguments);
     };
   } else {
-    window.getSyncedMainBanner = getSavedBannerUrl;
+    window.getSyncedMainBanner = getSavedHomeBannerUrl;
+  }
+
+  let syncTimer = null;
+  function scheduleBannerSync() {
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncBannerWithoutTouchingStoreCover, 100);
   }
 
   const origDash = window.renderDashboardContent;
@@ -4608,7 +4637,7 @@
     window.renderDashboardContent = function () {
       removeAllBannerEditPills();
       const res = origDash.apply(this, arguments);
-      setTimeout(refreshBannerControl, 90);
+      scheduleBannerSync();
       return res;
     };
   }
@@ -4619,13 +4648,13 @@
       window[fnName] = function () {
         removeAllBannerEditPills();
         const res = fn.apply(this, arguments);
-        setTimeout(refreshBannerControl, 90);
+        scheduleBannerSync();
         return res;
       };
     }
   }
 
-  setTimeout(refreshBannerControl, 120);
+  scheduleBannerSync();
 })();
 </script>
 </body>
