@@ -5811,5 +5811,76 @@
   });
 })();
 </script>
+<script id="oleng-mass-scale-guard-v1">
+(function () {
+  const ACTION_GUARD_KEY = "oleng_action_idempotency_v1";
+  const SYNC_TIME_KEY = "oleng_last_sync_at";
+
+  function getActionSet() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(ACTION_GUARD_KEY) || "[]");
+      return new Set(Array.isArray(arr) ? arr.slice(-250) : []);
+    } catch (e) {
+      return new Set();
+    }
+  }
+
+  function seenOrMarkAction(actionKey, ttlMs = 8000) {
+    if (!actionKey) return false;
+    const now = Date.now();
+    const s = getActionSet();
+    const clean = Array.from(s).filter(entry => {
+      const parts = String(entry).split("|");
+      const ts = Number(parts[1] || 0);
+      return ts > 0 && now - ts < ttlMs;
+    });
+    const exists = clean.some(entry => String(entry).startsWith(actionKey + "|"));
+    if (exists) {
+      localStorage.setItem(ACTION_GUARD_KEY, JSON.stringify(clean.slice(-250)));
+      return true;
+    }
+    clean.push(actionKey + "|" + now);
+    localStorage.setItem(ACTION_GUARD_KEY, JSON.stringify(clean.slice(-250)));
+    return false;
+  }
+
+  window.olengIsDuplicateAction = seenOrMarkAction;
+
+  async function refreshCoreSnapshotsOnReconnect() {
+    if (typeof supabaseClient === "undefined" || !supabaseClient || !navigator.onLine) return;
+    try {
+      const { error } = await supabaseClient.from("app_config").select("key").limit(1);
+      if (error) {
+        if (window.olengSyncDiagnostics) {
+          window.olengSyncDiagnostics.supabaseReachable = false;
+          window.olengSyncDiagnostics.lastError = error.message || "Gagal memuat app_config";
+        }
+        return;
+      }
+      if (typeof syncAllToSupabase === "function") {
+        await syncAllToSupabase();
+      }
+      const nowStr = new Date().toLocaleString("id-ID");
+      localStorage.setItem(SYNC_TIME_KEY, nowStr);
+      if (window.olengSyncDiagnostics) {
+        window.olengSyncDiagnostics.supabaseReachable = true;
+        window.olengSyncDiagnostics.pendingSync = false;
+        window.olengSyncDiagnostics.lastSyncAt = nowStr;
+        window.olengSyncDiagnostics.lastError = "";
+      }
+    } catch (e) {}
+  }
+
+  window.addEventListener("online", () => {
+    setTimeout(refreshCoreSnapshotsOnReconnect, 250);
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && navigator.onLine) {
+      setTimeout(refreshCoreSnapshotsOnReconnect, 250);
+    }
+  });
+})();
+</script>
 </body>
 </html>
