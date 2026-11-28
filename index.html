@@ -3643,17 +3643,27 @@ function renderKonsumenGrid2x2() {
 
 function wireKonsumenGrid2x2(root) {
   if (!root) return;
-  root.querySelectorAll("[data-kmenu]").forEach(el => {
-    el.addEventListener("click", () => {
-      const k = el.getAttribute("data-kmenu");
-      if (typeof renderDashboardContent !== "function") return;
-      if (k === "ojek") renderDashboardContent("ojek", true);
-      else if (k === "history") renderDashboardContent("history", true);
-      else renderDashboardContent("food", true);
-    });
-  });
+  var cards = root.querySelectorAll("[data-kmenu]");
+  for (var i = 0; i < cards.length; i++) {
+    (function(el) {
+      el.onclick = function(ev) {
+        if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+        var k = el.getAttribute("data-kmenu");
+        if (typeof renderDashboardContent !== "function") return;
+        if (k === "ojek") {
+          renderDashboardContent("ojek", true);
+        } else if (k === "history") {
+          renderDashboardContent("history", true);
+        } else if (k === "market") {
+          if (typeof searchQuery !== "undefined") searchQuery = "";
+          renderDashboardContent("food", true);
+        } else {
+          renderDashboardContent("food", true);
+        }
+      };
+    })(cards[i]);
+  }
 }
-
 function renderKonsumenAppMenu(c) {
   if (!c) return;
   const ftr = typeof getSimaduBrandFooterHTML === "function" ? getSimaduBrandFooterHTML() : "";
@@ -3765,6 +3775,7 @@ function renderCustomerHomeView(c) {
       if (id && typeof openIncomingOrderModal === "function") openIncomingOrderModal(id, true);
     }));
     startHomeMap();
+  setTimeout(function(){ if (typeof startHomeMap === 'function') startHomeMap(); }, 200);
   }
 
   function renderAdminHomeView(c) {
