@@ -1,3 +1,4 @@
+<style id="oleng-2x2-clean">.oleng-2x2-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0}.oleng-2x2-item{background:#ffffff;border:1.5px solid #e5e7eb;border-radius:18px;padding:14px 10px;min-height:102px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 8px rgba(23,23,23,0.06);cursor:pointer}.oleng-2x2-ico{width:44px;height:44px;border-radius:9999px;background:#F58220;color:#ffffff;display:flex;align-items:center;justify-content:center;font-size:18px}.oleng-2x2-txt{font-size:12px;font-weight:800;color:#171717;text-align:center}</style>
 
 <style id="oleng-anti-flicker-style">
   .animate-pulse, .animate-bounce { animation: none !important; }
@@ -6362,5 +6363,61 @@ function getAccountOrders() { const delOrderSet = new Set([...(window.deletedOrd
   setInterval(scrubDbAndStorage, 2500);
 })();
 </script>
+
+<script id="oleng-2x2-dom-hook">
+(function() {
+  function build2x2For(gridEl) {
+    if (!gridEl || gridEl.getAttribute("data-oleng-2x2-done") === "1") return;
+    gridEl.setAttribute("data-oleng-2x2-done", "1");
+    gridEl.className = "oleng-2x2-wrap";
+    gridEl.innerHTML =
+      '<button type="button" class="oleng-2x2-item" data-tab="ojek"><span class="oleng-2x2-ico"><i class="fa-solid fa-motorcycle"></i></span><span class="oleng-2x2-txt">Pesan Ojek</span></button>' +
+      '<button type="button" class="oleng-2x2-item" data-tab="food"><span class="oleng-2x2-ico"><i class="fa-solid fa-utensils"></i></span><span class="oleng-2x2-txt">Pesan Makanan</span></button>' +
+      '<button type="button" class="oleng-2x2-item" data-tab="market"><span class="oleng-2x2-ico"><i class="fa-solid fa-bag-shopping"></i></span><span class="oleng-2x2-txt">OLENG MARKET</span></button>' +
+      '<button type="button" class="oleng-2x2-item" data-tab="history"><span class="oleng-2x2-ico"><i class="fa-solid fa-clock-rotate-left"></i></span><span class="oleng-2x2-txt">Riwayat</span></button>';
+
+    gridEl.querySelectorAll("[data-tab]").forEach(function(btn) {
+      btn.addEventListener("click", function(ev) {
+        if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+        var tab = btn.getAttribute("data-tab");
+        if (typeof renderDashboardContent !== "function") return;
+        if (tab === "history") renderDashboardContent("history", true);
+        else if (tab === "ojek") renderDashboardContent("ojek", true);
+        else renderDashboardContent("food", true);
+      });
+    });
+  }
+
+  function cleanBottomNav() {
+    document.querySelectorAll("nav button, footer button, [id*=nav] button").forEach(function(b) {
+      var t = (b.textContent || "").trim().toLowerCase();
+      if (t === "ojek" || t === "pesanan") {
+        b.style.display = "none";
+      }
+    });
+  }
+
+  function scanAndApply() {
+    document.querySelectorAll("div").forEach(function(d) {
+      var txt = (d.textContent || "");
+      if (d.children.length === 3 && txt.indexOf("Pesan Ojek") !== -1 && txt.indexOf("Pesan Makanan") !== -1 && txt.indexOf("OLENG MARKET") !== -1) {
+        build2x2For(d);
+      }
+    });
+    cleanBottomNav();
+  }
+
+  var obs = new MutationObserver(function() { scanAndApply(); });
+  if (document.documentElement) {
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scanAndApply);
+  } else {
+    scanAndApply();
+  }
+})();
+</script>
+
 </body>
 </html>
