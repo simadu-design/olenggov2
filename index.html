@@ -6106,5 +6106,148 @@
   window.addEventListener("online", () => setTimeout(attachAccountsDeleteListener, 500));
 })();
 </script>
+<script id="oleng-prevent-deleted-resurrect-v1">
+(function () {
+  if (window.__olengPreventDeletedResurrectV1) return;
+  window.__olengPreventDeletedResurrectV1 = true;
+
+  const TOMBSTONE_KEY = "oleng_deleted_accounts_v1";
+
+  function digitsOnly(v) {
+    return String(v || "").replace(/D/g, "");
+  }
+
+  function isAdminMain(v) {
+    const d = digitsOnly(v);
+    return d === "085624736602" || d === "6285624736602";
+  }
+
+  function loadTombstones() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(TOMBSTONE_KEY) || "{}");
+      return {
+        ids: Array.isArray(raw.ids) ? raw.ids.map(String) : [],
+        phones: Array.isArray(raw.phones) ? raw.phones.map(digitsOnly).filter(Boolean) : []
+      };
+    } catch (e) {
+      return { ids: [], phones: [] };
+    }
+  }
+
+  function saveTombstone(id, phone) {
+    if (isAdminMain(phone) || isAdminMain(id)) return;
+    const t = loadTombstones();
+    const sId = String(id || "").trim();
+    const sPhone = digitsOnly(phone);
+    if (sId && !t.ids.includes(sId)) t.ids.push(sId);
+    if (sPhone && !t.phones.includes(sPhone)) t.phones.push(sPhone);
+    try {
+      localStorage.setItem(TOMBSTONE_KEY, JSON.stringify(t));
+    } catch (e) {}
+  }
+
+  function filterDeletedAccountsArray(arr) {
+    if (!Array.isArray(arr)) return arr;
+    const t = loadTombstones();
+    return arr.filter((u) => {
+      if (!u) return false;
+      if (isAdminMain(u.phone) || isAdminMain(u.id)) return true;
+      const uId = String(u.id || "").trim();
+      const uPhone = digitsOnly(u.phone);
+      if (uId && t.ids.includes(uId)) return false;
+      if (uPhone && t.phones.includes(uPhone)) return false;
+      return true;
+    });
+  }
+
+  function scrubDbAndStorage() {
+    try {
+      if (typeof db !== "undefined" && db && Array.isArray(db.accounts)) {
+        db.accounts = filterDeletedAccountsArray(db.accounts);
+      }
+      const raw = localStorage.getItem("oleng_go_db");
+      if (raw) {
+        const obj = JSON.parse(raw);
+        if (obj && Array.isArray(obj.accounts)) {
+          obj.accounts = filterDeletedAccountsArray(obj.accounts);
+          localStorage.setItem("oleng_go_db", JSON.stringify(obj));
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Bungkus pullInitialFromSupabase agar hasil tarik data selalu menyaring akun terhapus
+  if (typeof window.pullInitialFromSupabase === "function") {
+    const origPull = window.pullInitialFromSupabase;
+    window.pullInitialFromSupabase = async function () {
+      const res = await origPull.apply(this, arguments);
+      scrubDbAndStorage();
+      return res;
+    };
+  }
+
+  // Bungkus saveDB agar akun yang sudah dihapus tidak tersimpan ulang ke cache lokal
+  if (typeof window.saveDB === "function") {
+    const origSave = window.saveDB;
+    window.saveDB = function () {
+      scrubDbAndStorage();
+      return origSave.apply(this, arguments);
+    };
+  }
+
+  // Perkuat penghapusan user agar mencatat tombstone dan menghapus di Supabase
+  const prevDeleteFn = window.olengDeleteUserEverywhere;
+  window.olengDeleteUserEverywhere = async function (accountId, accountPhone) {
+    let targetPhone = accountPhone;
+    try {
+      if (!targetPhone && typeof db !== "undefined" && db && Array.isArray(db.accounts)) {
+        const found = db.accounts.find((u) => String(u && u.id) === String(accountId));
+        if (found) targetPhone = found.phone;
+      }
+    } catch (e) {}
+
+    if (isAdminMain(accountId) || isAdminMain(targetPhone)) {
+      if (typeof showToast === "function") showToast("Akun admin utama tidak dapat dihapus.", "error");
+      return false;
+    }
+
+    saveTombstone(accountId, targetPhone);
+
+    if (typeof supabaseClient !== "undefined" && supabaseClient && navigator.onLine) {
+      try {
+        if (accountId) {
+          await supabaseClient.from("accounts").delete().eq("id", accountId);
+        }
+        const d = digitsOnly(targetPhone);
+        if (targetPhone) {
+          await supabaseClient.from("accounts").delete().eq("phone", targetPhone);
+        }
+        if (d.startsWith("62")) {
+          await supabaseClient.from("accounts").delete().eq("phone", "0" + d.slice(2));
+        } else if (d.startsWith("0")) {
+          await supabaseClient.from("accounts").delete().eq("phone", "62" + d.slice(1));
+        }
+      } catch (e) {}
+    }
+
+    scrubDbAndStorage();
+    if (typeof prevDeleteFn === "function") {
+      try { await prevDeleteFn(accountId, targetPhone); } catch (e) {}
+    }
+    if (typeof renderDashboardContent === "function") {
+      setTimeout(() => {
+        try {
+          const tab = (typeof currentSubTab !== "undefined" && currentSubTab) ? currentSubTab : undefined;
+          renderDashboardContent(tab, false);
+        } catch (e) {}
+      }, 120);
+    }
+    return true;
+  };
+
+  scrubDbAndStorage();
+  setInterval(scrubDbAndStorage, 2500);
+})();
+</script>
 </body>
 </html>
