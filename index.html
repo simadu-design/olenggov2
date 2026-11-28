@@ -1,4 +1,3 @@
-<style id="oleng-k-grid">.k-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.k-card{background:#fff;border:1.5px solid #e5e7eb;border-radius:18px;padding:14px 10px;min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 8px rgba(23,23,23,.06);cursor:pointer}.k-ico{width:44px;height:44px;border-radius:9999px;background:#F58220;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px}.k-lbl{font-size:12px;font-weight:800;color:#171717;text-align:center}</style>
 
 <style id="oleng-anti-flicker-style">
   .animate-pulse, .animate-bounce { animation: none !important; }
@@ -2161,7 +2160,7 @@
             if (activeRole === 'admin') nav.innerHTML = `<button onclick="renderDashboardContent('admin-dash')" class="flex flex-col items-center py-1 px-1.5 text-[#FF7900] font-extrabold cursor-pointer"><i class="fa-solid fa-chart-pie text-sm"></i><span class="text-[9px] mt-1">Monitor</span></button><button onclick="renderDashboardContent('admin-users')" class="flex flex-col items-center py-1 px-1.5 text-[#171717] hover:text-[#FF7900] font-bold cursor-pointer"><i class="fa-solid fa-users text-sm"></i><span class="text-[9px] mt-1">User</span></button>${homeBtn}<button onclick="renderDashboardContent('admin-own-store')" class="flex flex-col items-center py-1 px-1.5 text-[#171717] hover:text-[#FF7900] font-bold cursor-pointer"><i class="fa-solid fa-store text-sm"></i><span class="text-[9px] mt-1">Toko</span></button><button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-1.5 text-[#171717] hover:text-[#FF7900] font-bold cursor-pointer"><i class="fa-solid fa-receipt text-sm"></i><span class="text-[9px] mt-1">Riwayat</span></button>`;
             else if (activeRole === 'merchant') nav.innerHTML = `<button onclick="renderDashboardContent('merchant-manage')" class="flex flex-col items-center py-1 px-3 text-[#FF7900] font-extrabold cursor-pointer"><i class="fa-solid fa-store text-base"></i><span class="text-[9px] mt-1">Kelola Toko</span></button><button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-3 text-[#171717] hover:text-[#FF7900] font-bold cursor-pointer"><i class="fa-solid fa-receipt text-base"></i><span class="text-[9px] mt-1">Riwayat</span></button>${homeBtn}<button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-[#171717] hover:text-[#FF7900] font-bold cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1">Profil</span></button>`;
             else if (activeRole === 'driver') nav.innerHTML = `<button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-3 text-[#FF7900] font-extrabold cursor-pointer"><i class="fa-solid fa-receipt text-base"></i><span class="text-[9px] mt-1">Riwayat</span></button>${homeBtn}<button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-3 text-[#171717] hover:text-[#FF7900] font-bold cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1">Profil</span></button>`;
-            else { nav.innerHTML = '<div class="grid grid-cols-2 w-full items-center"><button type="button" data-bnav="home" class="flex flex-col items-center py-1.5 px-2 text-[#F58220] font-extrabold cursor-pointer"><i class="fa-solid fa-house text-base"></i><span class="text-[10px] mt-1">Beranda</span></button><button type="button" data-bnav="app-menu" class="flex flex-col items-center py-1.5 px-2 text-[#171717] font-extrabold cursor-pointer border-l border-neutral-200"><i class="fa-solid fa-border-all text-base"></i><span class="text-[10px] mt-1">Menu Aplikasi</span></button></div>'; var nb = nav.querySelectorAll("[data-bnav]"); for (var i = 0; i < nb.length; i++) { (function(el){ el.addEventListener("click", function(){ if (typeof renderDashboardContent === "function") renderDashboardContent(el.getAttribute("data-bnav"), true); }); })(nb[i]); } }
+            else nav.innerHTML = `<button onclick="renderDashboardContent('food')" class="flex flex-col items-center py-1 px-2 text-[#171717] hover:text-[#FF7900] cursor-pointer"><i class="fa-solid fa-utensils text-base"></i><span class="text-[9px] mt-1 font-extrabold">Pesanan</span></button><button onclick="renderDashboardContent('history')" class="flex flex-col items-center py-1 px-2 text-[#171717] hover:text-[#FF7900] cursor-pointer"><i class="fa-solid fa-receipt text-base"></i><span class="text-[9px] mt-1 font-extrabold">Riwayat</span></button>${homeBtn}<button onclick="renderDashboardContent('ojek')" class="flex flex-col items-center py-1 px-2 text-[#171717] hover:text-[#FF7900] cursor-pointer"><i class="fa-solid fa-motorcycle text-base"></i><span class="text-[9px] mt-1 font-extrabold">Ojek</span></button><button onclick="renderDashboardContent('profile')" class="flex flex-col items-center py-1 px-2 text-[#171717] hover:text-[#FF7900] cursor-pointer"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] mt-1 font-extrabold">Profil</span></button>`;
         }
 
         
@@ -2187,8 +2186,7 @@ function renderDashboardContent(tab, recordHistory = true) {
             ensureRoleListsSyncedFromUsers();
             if (recordHistory && currentSubTab !== tab) { if (tabNavigationHistory[tabNavigationHistory.length - 1] !== tab) { tabNavigationHistory.push(tab); if (tabNavigationHistory.length > 30) tabNavigationHistory.shift(); } pushAppNavigationState('tab-' + tab); }
             currentSubTab = tab; localStorage.setItem('oleng_last_tab', tab); document.getElementById('view-merchant-detail').classList.add('hidden');
-            const mapTabs = { home: renderCustomerHome, food: renderCustomerFood, ojek: renderCustomerOjek, history: renderOrderHistory, profile: renderProfile,
-    'app-menu': renderKonsumenAppMenu, 'merchant-manage': renderMerchantManage, 'admin-own-store': renderAdminOwnStoreManage, 'merchant-orders': renderOrderHistory, 'driver-orders': renderOrderHistory, 'admin-dash': renderAdminDash, 'admin-users': renderAdminUsers, 'admin-stores': renderAdminStores, 'admin-drivers': renderAdminDrivers, 'admin-orders': renderOrderHistory, 'admin-banner': renderAdminBanner };
+            const mapTabs = { home: renderCustomerHome, food: renderCustomerFood, ojek: renderCustomerOjek, history: renderOrderHistory, profile: renderProfile, 'merchant-manage': renderMerchantManage, 'admin-own-store': renderAdminOwnStoreManage, 'merchant-orders': renderOrderHistory, 'driver-orders': renderOrderHistory, 'admin-dash': renderAdminDash, 'admin-users': renderAdminUsers, 'admin-stores': renderAdminStores, 'admin-drivers': renderAdminDrivers, 'admin-orders': renderOrderHistory, 'admin-banner': renderAdminBanner };
             (mapTabs[tab] || renderCustomerHome)(document.getElementById('main-content'));
             const activeRole = (currentUser?.role === 'admin' && adminViewMode) ? adminViewMode : currentUser?.role;
             if (activeRole === 'driver' && document.getElementById('modal-incoming-order')?.classList.contains('hidden')) {
@@ -3556,69 +3554,7 @@ function getAccountOrders() { const delOrderSet = new Set([...(window.deletedOrd
     if (typeof initHomeMap === "function") setTimeout(initHomeMap, 120);
   }
 
-  
-function kGridHTML() {
-  return '<div class="k-grid" id="k-grid-2x2">'
-    + '<button type="button" class="k-card" id="k-btn-ojek"><span class="k-ico"><i class="fa-solid fa-motorcycle"></i></span><span class="k-lbl">Pesan Ojek</span></button>'
-    + '<button type="button" class="k-card" id="k-btn-food"><span class="k-ico"><i class="fa-solid fa-utensils"></i></span><span class="k-lbl">Pesan Makanan</span></button>'
-    + '<button type="button" class="k-card" id="k-btn-market"><span class="k-ico"><i class="fa-solid fa-bag-shopping"></i></span><span class="k-lbl">OLENG MARKET</span></button>'
-    + '<button type="button" class="k-card" id="k-btn-history"><span class="k-ico"><i class="fa-solid fa-clock-rotate-left"></i></span><span class="k-lbl">Riwayat</span></button>'
-    + '</div>';
-}
-
-function kBindGrid(root) {
-  if (!root || typeof renderDashboardContent !== "function") return;
-  var b1 = root.querySelector("#k-btn-ojek");
-  var b2 = root.querySelector("#k-btn-food");
-  var b3 = root.querySelector("#k-btn-market");
-  var b4 = root.querySelector("#k-btn-history");
-  if (b1) b1.addEventListener("click", function() { renderDashboardContent("ojek", true); });
-  if (b2) b2.addEventListener("click", function() { renderDashboardContent("food", true); });
-  if (b3) b3.addEventListener("click", function() { renderDashboardContent("food", true); });
-  if (b4) b4.addEventListener("click", function() { renderDashboardContent("history", true); });
-}
-
-
-(function() {
-  if (window.__olengConsumerDelegatorBound) return;
-  window.__olengConsumerDelegatorBound = true;
-  document.addEventListener("click", function(ev) {
-    var target = ev.target;
-    if (!target || typeof target.closest !== "function") return;
-
-    var gridBtn = target.closest("#k-btn-ojek, #k-btn-food, #k-btn-market, #k-btn-history, [data-kmenu], [data-go]");
-    if (gridBtn) {
-      if (typeof ev.preventDefault === "function") ev.preventDefault();
-      if (typeof ev.stopPropagation === "function") ev.stopPropagation();
-      var id = gridBtn.id || "";
-      var key = gridBtn.getAttribute("data-kmenu") || gridBtn.getAttribute("data-go") || "";
-      if (typeof renderDashboardContent !== "function") return;
-      if (id === "k-btn-ojek" || key === "ojek") {
-        renderDashboardContent("ojek", true);
-      } else if (id === "k-btn-history" || key === "history") {
-        renderDashboardContent("history", true);
-      } else {
-        if (typeof searchQuery !== "undefined" && (id === "k-btn-market" || key === "market")) {
-          searchQuery = "";
-        }
-        renderDashboardContent("food", true);
-      }
-      return;
-    }
-
-    var navBtn = target.closest("[data-bnav]");
-    if (navBtn) {
-      if (typeof ev.preventDefault === "function") ev.preventDefault();
-      if (typeof ev.stopPropagation === "function") ev.stopPropagation();
-      var tab = navBtn.getAttribute("data-bnav");
-      if (tab && typeof renderDashboardContent === "function") {
-        renderDashboardContent(tab, true);
-      }
-    }
-  }, true);
-})();
-
-function renderCustomerHomeView(c) {
+  function renderCustomerHomeView(c) {
     const banner = typeof getSyncedMainBanner === "function" ? getSyncedMainBanner() : "./olengorange2.png";
     const orders = typeof getAccountOrders === "function" ? getAccountOrders() : [];
     const active = orders.filter(o => !["completed", "cancelled"].includes(typeof normalizeOrderStatusCode === "function" ? normalizeOrderStatusCode(o.status) : String(o.status || "")));
@@ -3632,7 +3568,7 @@ function renderCustomerHomeView(c) {
           '<input type="text" id="fn-cust-q" placeholder="Cari layanan, kuliner, atau barang di Lengkong..." class="w-full text-xs font-semibold bg-transparent focus:outline-none">' +
         '</div>' +
         '<div class="rounded-3xl overflow-hidden border-2 border-[#FF7900] shadow bg-white"><img src="' + banner + '" class="w-full h-32 object-cover" alt="Banner OLENG GO"></div>' +
-        kGridHTML() +
+        threeServicesGrid("customer") +
         mapCardBox("Peta dan Lokasi Terkini", "Lihat Peta &gt;", "fn-cust-fs") +
         '<div class="oleng-card space-y-2">' +
           '<div class="flex items-center justify-between"><div class="flex items-center gap-2"><i class="fa-solid fa-gear text-[#FF7900] text-xs"></i><h3 class="text-xs font-black text-[#171717]">Pesanan Aktif</h3></div><button type="button" id="fn-cust-all-ord" class="text-[11px] font-black text-[#FF7900] cursor-pointer">Lihat Semua &gt;</button></div>' +
@@ -3647,7 +3583,6 @@ function renderCustomerHomeView(c) {
       '</div>';
 
     wireHomeButtons(c);
-  kBindGrid(c);
     c.querySelector("#fn-cust-q")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
