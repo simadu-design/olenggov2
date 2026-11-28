@@ -3578,6 +3578,46 @@ function kBindGrid(root) {
   if (b4) b4.addEventListener("click", function() { renderDashboardContent("history", true); });
 }
 
+
+(function() {
+  if (window.__olengConsumerDelegatorBound) return;
+  window.__olengConsumerDelegatorBound = true;
+  document.addEventListener("click", function(ev) {
+    var target = ev.target;
+    if (!target || typeof target.closest !== "function") return;
+
+    var gridBtn = target.closest("#k-btn-ojek, #k-btn-food, #k-btn-market, #k-btn-history, [data-kmenu], [data-go]");
+    if (gridBtn) {
+      if (typeof ev.preventDefault === "function") ev.preventDefault();
+      if (typeof ev.stopPropagation === "function") ev.stopPropagation();
+      var id = gridBtn.id || "";
+      var key = gridBtn.getAttribute("data-kmenu") || gridBtn.getAttribute("data-go") || "";
+      if (typeof renderDashboardContent !== "function") return;
+      if (id === "k-btn-ojek" || key === "ojek") {
+        renderDashboardContent("ojek", true);
+      } else if (id === "k-btn-history" || key === "history") {
+        renderDashboardContent("history", true);
+      } else {
+        if (typeof searchQuery !== "undefined" && (id === "k-btn-market" || key === "market")) {
+          searchQuery = "";
+        }
+        renderDashboardContent("food", true);
+      }
+      return;
+    }
+
+    var navBtn = target.closest("[data-bnav]");
+    if (navBtn) {
+      if (typeof ev.preventDefault === "function") ev.preventDefault();
+      if (typeof ev.stopPropagation === "function") ev.stopPropagation();
+      var tab = navBtn.getAttribute("data-bnav");
+      if (tab && typeof renderDashboardContent === "function") {
+        renderDashboardContent(tab, true);
+      }
+    }
+  }, true);
+})();
+
 function renderCustomerHomeView(c) {
     const banner = typeof getSyncedMainBanner === "function" ? getSyncedMainBanner() : "./olengorange2.png";
     const orders = typeof getAccountOrders === "function" ? getAccountOrders() : [];
