@@ -1750,7 +1750,13 @@
                         const localMatch = localUsersBackup.find(lu => (cleanPhone && normalizePhone(lu.phone) === cleanPhone && lu.role === r.role) || String(lu.accountId || '').toUpperCase() === accUpper);
                         return { id: r.id || (idx + 1), accountId: accUpper, name: r.name || localMatch?.name || 'Pengguna', phone: cleanPhone, role: r.role || localMatch?.role || 'customer', status: r.status || 'Aktif', address: r.address || localMatch?.address || 'Kecamatan Lengkong, Sukabumi', password: (r.password_hash && String(r.password_hash).trim()) ? String(r.password_hash).trim() : (localMatch?.password || '123'), photo: (r.photo_url && String(r.photo_url).trim()) ? String(r.photo_url).trim() : (localMatch?.photo || './olengorange2.png'), balance: r.role !== 'customer' ? Math.max(Number(r.balance || 0), Number(localMatch?.balance || 0)) : undefined, ktp: r.ktp || localMatch?.ktp || null, plate: r.plate || localMatch?.plate || null, bikeType: r.bike_type || localMatch?.bikeType || null, ownerName: r.owner_name || localMatch?.ownerName || null, shopName: r.shop_name || localMatch?.shopName || null };
                     });
-                    const mergedUsers = mergeByKey(localUsersBackup, mappedRemoteUsers, u => `${normalizePhone(u.phone)}_${u.role}`);
+                    const remoteKeys = new Set(mappedRemoteUsers.map(u => `${normalizePhone(u.phone)}_${u.role}`));
+      const filteredLocalUsers = localUsersBackup.filter(u => {
+        const key = `${normalizePhone(u.phone)}_${u.role}`;
+        const isAdminAccount = u.role === 'admin' || normalizePhone(u.phone) === '085624736602';
+        return isAdminAccount || remoteKeys.has(key);
+      });
+      const mergedUsers = mergeByKey(filteredLocalUsers, mappedRemoteUsers, u => `${normalizePhone(u.phone)}_${u.role}`);
                     if (!mergedUsers.some(u => normalizePhone(u.phone) === '085624736602' && u.role === 'admin')) mergedUsers.push({ ...DEFAULT_ADMIN_ACCOUNT });
                     if (mergedUsers.length !== db.users.length) hasChanges = true;
                     db.users = mergedUsers;
