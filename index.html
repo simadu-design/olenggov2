@@ -6501,5 +6501,66 @@ function getAccountOrders() { const delOrderSet = new Set([...(window.deletedOrd
 })();
 </script>
 
+
+<script id="oleng-2x2-real-action">
+(function() {
+  function runAction(kind) {
+    if (typeof renderDashboardContent === "function") {
+      var candidates = [];
+      if (kind === "ojek") candidates = ["ojek", "ride", "transport"];
+      else if (kind === "history") candidates = ["history", "riwayat", "orders"];
+      else if (kind === "market") candidates = ["market", "shop", "store", "food"];
+      else candidates = ["food", "kuliner", "market"];
+
+      for (var i = 0; i < candidates.length; i++) {
+        try {
+          var before = document.body.innerHTML.length;
+          renderDashboardContent(candidates[i], true);
+          var after = document.body.innerHTML.length;
+          if (after !== before || candidates[i] === candidates[candidates.length - 1]) {
+            return true;
+          }
+        } catch (e) {}
+      }
+    }
+    return false;
+  }
+
+  function attachClicks() {
+    var items = document.querySelectorAll(".oleng-2x2-item, #k-btn-ojek, #k-btn-food, #k-btn-market, #k-btn-history");
+    for (var i = 0; i < items.length; i++) {
+      (function(el) {
+        if (el.getAttribute("data-real-click") === "1") return;
+        el.setAttribute("data-real-click", "1");
+        el.style.pointerEvents = "auto";
+        el.style.touchAction = "manipulation";
+        el.style.position = "relative";
+        el.style.zIndex = "20";
+
+        var txt = (el.textContent || "").toLowerCase();
+        var kind = "food";
+        if (el.id === "k-btn-ojek" || txt.indexOf("ojek") !== -1) kind = "ojek";
+        else if (el.id === "k-btn-history" || txt.indexOf("riwayat") !== -1) kind = "history";
+        else if (el.id === "k-btn-market" || txt.indexOf("market") !== -1) kind = "market";
+
+        var fire = function(ev) {
+          if (ev) {
+            if (ev.preventDefault) ev.preventDefault();
+            if (ev.stopPropagation) ev.stopPropagation();
+          }
+          runAction(kind);
+        };
+
+        el.addEventListener("click", fire, true);
+        el.addEventListener("touchend", fire, { passive: false });
+      })(items[i]);
+    }
+  }
+
+  setInterval(attachClicks, 250);
+  attachClicks();
+})();
+</script>
+
 </body>
 </html>
