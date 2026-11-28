@@ -3735,7 +3735,7 @@ function renderCustomerHomeView(c) {
           '<input type="text" id="fn-cust-q" placeholder="Cari layanan, kuliner, atau barang di Lengkong..." class="w-full text-xs font-semibold bg-transparent focus:outline-none">' +
         '</div>' +
         '<div class="rounded-3xl overflow-hidden border-2 border-[#FF7900] shadow bg-white"><img src="' + banner + '" class="w-full h-32 object-cover" alt="Banner OLENG GO"></div>' +
-        threeServicesGrid("customer") +
+        renderKonsumenGrid2x2() +
         mapCardBox("Peta dan Lokasi Terkini", "Lihat Peta &gt;", "fn-cust-fs") +
         '<div class="oleng-card space-y-2">' +
           '<div class="flex items-center justify-between"><div class="flex items-center gap-2"><i class="fa-solid fa-gear text-[#FF7900] text-xs"></i><h3 class="text-xs font-black text-[#171717]">Pesanan Aktif</h3></div><button type="button" id="fn-cust-all-ord" class="text-[11px] font-black text-[#FF7900] cursor-pointer">Lihat Semua &gt;</button></div>' +
@@ -3750,6 +3750,7 @@ function renderCustomerHomeView(c) {
       '</div>';
 
     wireHomeButtons(c);
+  wireKonsumenGrid2x2(c);
     c.querySelector("#fn-cust-q")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
