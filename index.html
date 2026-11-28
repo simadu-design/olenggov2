@@ -2179,7 +2179,90 @@
             const ownStoreKey = role === 'admin' ? normalizeMatchKey(getAdminOwnStore()?.name) : '';
             return (db.notifications || []).filter(n => { const tKey = normalizeMatchKey(n.targetUser); return n.targetUser === 'ALL' || names.has(tKey) || (ownStoreKey && tKey === ownStoreKey); });
         }
-        function getAccountOrders() { return (db.orders || []).filter(o => isOrderTargetedToCurrentUser(o)); }
+        
+window.deletedOrderIds = window.deletedOrderIds || [];
+function persistOlengDbState() {
+  try {
+    if (typeof db !== 'undefined' && db) {
+      db.deletedOrderIds = Array.from(new Set([...(db.deletedOrderIds || []), ...(window.deletedOrderIds || [])].map(String)));
+      localStorage.setItem('oleng_go_db', JSON.stringify(db));
+    }
+  } catch (_) {}
+}
+window.deleteOrderHistory = function(orderId) {
+  if (!orderId || typeof db === 'undefined' || !db) return;
+  const idStr = String(orderId);
+  window.deletedOrderIds = Array.from(new Set([...(window.deletedOrderIds || []), idStr]));
+  db.orders = (db.orders || []).filter(o => String(o.id) !== idStr && String(o.orderId || '') !== idStr);
+  persistOlengDbState();
+  if (typeof showToast === 'function') showToast('Riwayat order dihapus.', 'success');
+  if (typeof renderOrderHistory === 'function') {
+    const el = document.getElementById('main-content');
+    if (el) renderOrderHistory(el);
+  }
+  if (typeof renderDashboardContent === 'function' && typeof currentSubTab !== 'undefined') {
+    renderDashboardContent(currentSubTab, false);
+  }
+};
+window.clearFinishedOrderHistory = function() {
+  if (typeof db === 'undefined' || !db) return;
+  const targetOrders = typeof getAccountOrders === 'function' ? getAccountOrders() : (db.orders || []);
+  const removableIds = targetOrders
+    .filter(o => {
+      const st = typeof normalizeOrderStatusCode === 'function' ? normalizeOrderStatusCode(o.status) : String(o.status || '').toLowerCase();
+      return st === 'completed' || st === 'cancelled' || st === 'selesai' || st === 'batal';
+    })
+    .map(o => String(o.id));
+  if (!removableIds.length) {
+    if (typeof showToast === 'function') showToast('Tidak ada riwayat selesai/batal untuk dihapus.', 'info');
+    return;
+  }
+  const remSet = new Set(removableIds);
+  window.deletedOrderIds = Array.from(new Set([...(window.deletedOrderIds || []), ...removableIds]));
+  db.orders = (db.orders || []).filter(o => !remSet.has(String(o.id)));
+  persistOlengDbState();
+  if (typeof showToast === 'function') showToast('Riwayat selesai/batal dibersihkan.', 'success');
+  if (typeof renderOrderHistory === 'function') {
+    const el = document.getElementById('main-content');
+    if (el) renderOrderHistory(el);
+  }
+};
+window.clearActiveChatHistory = function(targetOverride) {
+  if (typeof db === 'undefined' || !db) return;
+  const target = targetOverride || (typeof activeChatTarget !== 'undefined' ? activeChatTarget : '');
+  const me = typeof currentUser !== 'undefined' && currentUser ? currentUser.name : '';
+  const activeRole = typeof currentUser !== 'undefined' && currentUser ? currentUser.role : '';
+  const norm = typeof normalizeMatchKey === 'function' ? normalizeMatchKey : (v => String(v || '').trim().toLowerCase());
+  const tKey = norm(target);
+  const mKey = norm(me);
+  if (!tKey) {
+    if (typeof showToast === 'function') showToast('Pilih percakapan chat terlebih dahulu.', 'info');
+    return;
+  }
+  const toRemove = (db.chats || []).filter(c => {
+    const f = norm(c.from);
+    const t = norm(c.to);
+    if (activeRole === 'admin') {
+      return (['admin simadu', 'admin'].includes(f) && t === tKey) || (f === tKey && ['admin simadu', 'admin'].includes(t));
+    }
+    return (f === mKey && t === tKey) || (f === tKey && t === mKey);
+  });
+  const removedIds = toRemove.map(c => String(c.id)).filter(Boolean);
+  if (typeof deletedChatIds !== 'undefined' && Array.isArray(deletedChatIds)) {
+    removedIds.forEach(id => { if (!deletedChatIds.includes(id)) deletedChatIds.push(id); });
+  }
+  const remIdSet = new Set(removedIds);
+  db.chats = (db.chats || []).filter(c => !remIdSet.has(String(c.id)) && !toRemove.includes(c));
+  persistOlengDbState();
+  if (typeof showToast === 'function') showToast('Riwayat chat dibersihkan.', 'success');
+  if (typeof renderChatMessages === 'function') renderChatMessages();
+  if (typeof renderDashboardContent === 'function' && typeof currentSubTab !== 'undefined') {
+    renderDashboardContent(currentSubTab, false);
+  }
+};
+
+function getAccountOrders() { const delOrderSet = new Set([...(window.deletedOrderIds || []), ...((db && db.deletedOrderIds) || [])].map(String));
+  return (db.orders || []).filter(o => !delOrderSet.has(String(o.id)) && !delOrderSet.has(String(o.orderId || '')) && isOrderTargetedToCurrentUser(o)); }
         function getAccountMutations() {
             const role = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
             if (role === 'admin') return db.walletMutations || [];
@@ -2491,7 +2574,7 @@
         function renderOrderHistory(container) {
             processDriverResponseTimeouts(); markAllNotifsAsRead();
             const myOrders = getAccountOrders(), myNotifs = getAccountNotifs(), myMutations = getAccountMutations(), activeRole = (currentUser.role === 'admin' && adminViewMode) ? adminViewMode : currentUser.role;
-            container.innerHTML = `<div class="p-4 space-y-5 pb-28 bg-white min-h-full"><div class="flex justify-between items-center"><h2 class="font-extrabold text-base text-[#171717]">Riwayat & Mutasi (${currentUser.name})</h2><button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${alarmEnabled ? 'bg-[#FF7900] text-white' : 'bg-[#F3F3F3] text-[#171717]'}">Alarm: ${alarmEnabled ? 'ON' : 'OFF'}</button></div><div class="space-y-3"><h3 class="text-xs font-black text-[#171717] uppercase">Daftar Pesanan Real Akun Anda</h3>${myOrders.length > 0 ? myOrders.map(o => { const isOjekRow = o.type === 'ojek' || String(o.merchant || '').toLowerCase().includes('ojek'), st = normalizeOrderStatusCode(o.status), canCustomerCancel = activeRole === 'customer' && !['picked_up', 'delivering', 'completed', 'cancelled'].includes(st); return `<div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-2"><div class="flex justify-between items-center gap-2"><span class="text-[10px] bg-[#171717] text-[#FF9800] font-extrabold px-2.5 py-0.5 rounded-md uppercase">${o.id}</span><span class="text-[10px] bg-[#F3F3F3] text-[#FF7900] font-extrabold px-2.5 py-0.5 rounded-md">${getOrderStatusLabel(st)} (${st})</span></div><h4 class="font-bold text-xs text-[#171717]">${o.merchant} • Pemesan: ${o.customer}</h4><p class="text-[11px] text-neutral-700 font-semibold">${o.items}</p><p class="text-[10px] text-neutral-600"><i class="fa-solid fa-motorcycle text-[#FF7900]"></i> Driver: <b>${o.driver || 'Mencari driver aktif'}</b></p>${o.rating ? `<p class="text-[11px] font-bold text-[#FF7900]"><i class="fa-solid fa-star"></i> Rating: ${o.rating}/5 ${o.reviewText ? `— "${o.reviewText}"` : ''}</p>` : ''}<div class="text-xs font-black text-[#171717] pt-2 border-t border-neutral-100 flex justify-between items-center flex-wrap gap-2"><span>Rp ${o.total.toLocaleString()}</span><div class="flex gap-1.5 flex-wrap">${isOjekRow ? `<button type="button" onclick="openPickupGoogleMapsNavigation(db.orders.find(x => x.id === '${o.id}'), userCurrentLatLng?.[0], userCurrentLatLng?.[1], '${String(o.pickup || '').replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-[#171717] text-white rounded-lg text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-location-dot text-[#FF9800]"></i> Maps Jemput</button>` : ''}<button type="button" onclick="openGoogleMapsNavigation(db.orders.find(x => x.id === '${o.id}'), '${String(o.merchant || '').replace(/'/g, "\\'")}', destLatLng?.[0], destLatLng?.[1], '${String(o.dest || o.items || '').replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-lg text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-diamond-turn-right"></i> Google Maps</button>${canCustomerCancel ? `<button onclick="customerCancelOrderWithReason('${o.id}')" class="px-2.5 py-1 bg-rose-100 text-rose-800 rounded-lg text-[10px] font-bold cursor-pointer">BATALKAN PESANAN</button>` : ''}${st === 'completed' ? `<button type="button" onclick="openDigitalReceiptModal('${o.id}')" class="px-2.5 py-1 bg-[#171717] text-[#FF9800] rounded-lg text-[10px] font-black cursor-pointer"><i class="fa-solid fa-receipt"></i> Struk</button>` : ''}${st === 'completed' && activeRole === 'customer' ? `<button onclick="openRatingModal('${o.id}')" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-lg text-[10px] font-black cursor-pointer"><i class="fa-solid fa-star"></i> ${o.rating ? 'Ubah Rating' : 'Beri Rating'}</button>` : ''}${(activeRole === 'driver' || activeRole === 'merchant' || activeRole === 'admin') ? `<button onclick="triggerIncomingOrderPopupForOrder(db.orders.find(x => x.id === '${o.id}'), true)" class="px-2.5 py-1 bg-[#171717] text-[#FF9800] rounded-lg text-[10px] font-black cursor-pointer">Pop-Up</button><button onclick="openIncomingOrderModal('${o.id}', true)" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-lg text-[10px] font-black cursor-pointer">Cek & Proses</button>` : ''}</div></div></div>`; }).join('') : `<p class="text-xs text-neutral-600 bg-white p-4 rounded-2xl border-2 border-neutral-200 text-center">Belum ada riwayat pesanan untuk akun ${currentUser.name}.</p>`}</div>${myMutations.length > 0 ? `<div class="space-y-2.5"><h3 class="text-xs font-black text-[#171717] uppercase">Mutasi Saldo</h3>${myMutations.map(mut => `<div class="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 text-xs"><div class="flex justify-between font-extrabold"><span>${mut.label}</span><span class="text-[10px] text-neutral-500">${mut.time}</span></div><p class="text-[11px] font-bold text-[#FF7900] mt-1">Rp ${Number(mut.netAmount || mut.amount || 0).toLocaleString()}</p></div>`).join('')}</div>` : ''}<div class="space-y-3"><h3 class="text-xs font-black text-[#171717] uppercase">Notifikasi Akun</h3>${myNotifs.length > 0 ? myNotifs.map(n => `<div class="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 space-y-1"><div class="flex justify-between text-xs font-extrabold"><span>${n.title}</span><span class="text-[10px] text-neutral-500">${n.time}</span></div><p class="text-[11px] text-neutral-700">${n.desc}</p></div>`).join('') : '<p class="text-xs text-neutral-600 bg-white p-4 rounded-2xl border-2 border-neutral-200 text-center">Belum ada notifikasi.</p>'}</div>${getSimaduBrandFooterHTML()}</div>`;
+            container.innerHTML = `<div class="p-4 space-y-5 pb-28 bg-white min-h-full"><div class="flex justify-between items-center"><h2 class="font-extrabold text-base text-[#171717]">Riwayat & Mutasi (${currentUser.name})</h2><button onclick="toggleNotificationAlarm()" class="px-2.5 py-1 rounded-xl text-[10px] font-black cursor-pointer ${alarmEnabled ? 'bg-[#FF7900] text-white' : 'bg-[#F3F3F3] text-[#171717]'}">Alarm: ${alarmEnabled ? 'ON' : 'OFF'}</button></div><div class="space-y-3"><h3 class="text-xs font-black text-[#171717] uppercase">Daftar Pesanan Real Akun Anda</h3>${myOrders.length > 0 ? myOrders.map(o => { const isOjekRow = o.type === 'ojek' || String(o.merchant || '').toLowerCase().includes('ojek'), st = normalizeOrderStatusCode(o.status), canCustomerCancel = activeRole === 'customer' && !['picked_up', 'delivering', 'completed', 'cancelled'].includes(st); return `<div class="bg-white p-4 rounded-3xl border-2 border-neutral-200 space-y-2"><div class="flex justify-between items-center gap-2"><span class="text-[10px] bg-[#171717] text-[#FF9800] font-extrabold px-2.5 py-0.5 rounded-md uppercase">${o.id}</span><span class="text-[10px] bg-[#F3F3F3] text-[#FF7900] font-extrabold px-2.5 py-0.5 rounded-md">${getOrderStatusLabel(st)} (${st})</span></div><h4 class="font-bold text-xs text-[#171717]">${o.merchant} • Pemesan: ${o.customer}</h4><p class="text-[11px] text-neutral-700 font-semibold">${o.items}</p><p class="text-[10px] text-neutral-600"><i class="fa-solid fa-motorcycle text-[#FF7900]"></i> Driver: <b>${o.driver || 'Mencari driver aktif'}</b></p>${o.rating ? `<p class="text-[11px] font-bold text-[#FF7900]"><i class="fa-solid fa-star"></i> Rating: ${o.rating}/5 ${o.reviewText ? `— "${o.reviewText}"` : ''}</p>` : ''}<div class="text-xs font-black text-[#171717] pt-2 border-t border-neutral-100 flex justify-between items-center flex-wrap gap-2"><span>Rp ${o.total.toLocaleString()}</span><div class="flex gap-1.5 flex-wrap">${isOjekRow ? `<button type="button" onclick="openPickupGoogleMapsNavigation(db.orders.find(x => x.id === '${o.id}'), userCurrentLatLng?.[0], userCurrentLatLng?.[1], '${String(o.pickup || '').replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-[#171717] text-white rounded-lg text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-location-dot text-[#FF9800]"></i> Maps Jemput</button>` : ''}<button type="button" onclick="openGoogleMapsNavigation(db.orders.find(x => x.id === '${o.id}'), '${String(o.merchant || '').replace(/'/g, "\\'")}', destLatLng?.[0], destLatLng?.[1], '${String(o.dest || o.items || '').replace(/'/g, "\\'")}')" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-lg text-[10px] font-bold cursor-pointer"><i class="fa-solid fa-diamond-turn-right"></i> Google Maps</button>${canCustomerCancel ? `<button onclick="customerCancelOrderWithReason('${o.id}')" class="px-2.5 py-1 bg-rose-100 text-rose-800 rounded-lg text-[10px] font-bold cursor-pointer">BATALKAN PESANAN</button>` : ''}${st === 'completed' ? `<button type="button" onclick="openDigitalReceiptModal('${o.id}')" class="px-2.5 py-1 bg-[#171717] text-[#FF9800] rounded-lg text-[10px] font-black cursor-pointer"><i class="fa-solid fa-receipt"></i> Struk</button>` : ''}${st === 'completed' && activeRole === 'customer' ? `<button onclick="openRatingModal('${o.id}')" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-lg text-[10px] font-black cursor-pointer"><i class="fa-solid fa-star"></i> ${o.rating ? 'Ubah Rating' : 'Beri Rating'}</button>` : ''}${(activeRole === 'driver' || activeRole === 'merchant' || activeRole === 'admin') ? `<button onclick="triggerIncomingOrderPopupForOrder(db.orders.find(x => x.id === '${o.id}'), true)" class="px-2.5 py-1 bg-[#171717] text-[#FF9800] rounded-lg text-[10px] font-black cursor-pointer">Pop-Up</button><button onclick="openIncomingOrderModal('${o.id}', true)" class="px-2.5 py-1 bg-[#FF7900] text-white rounded-lg text-[10px] font-black cursor-pointer">Cek & Proses</button>` : ''}</div></div></div>`; }).join('') : `<p class="text-xs text-neutral-600 bg-white p-4 rounded-2xl border-2 border-neutral-200 text-center">Belum ada riwayat pesanan untuk akun ${currentUser.name}.</p>`}</div>${myMutations.length > 0 ? `<div class="space-y-2.5"><h3 class="text-xs font-black text-[#171717] uppercase">Mutasi Saldo</h3>${myMutations.map(mut => `<div class="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 text-xs"><div class="flex justify-between font-extrabold"><span>${mut.label}</span><span class="text-[10px] text-neutral-500">${mut.time}</span></div><p class="text-[11px] font-bold text-[#FF7900] mt-1">Rp ${Number(mut.netAmount || mut.amount || 0).toLocaleString()}</p></div>`).join('')}</div>` : ''}<div class="space-y-3"><h3 class="text-xs font-black text-[#171717] uppercase">Notifikasi Akun</h3>${myNotifs.length > 0 ? myNotifs.map(n => `<div class="bg-white p-3.5 rounded-2xl border-2 border-neutral-200 space-y-1"><div class="flex justify-between text-xs font-extrabold"><span>${n.title}</span><div class="flex items-center gap-2"><span class="text-[10px] text-neutral-500">${n.time}</span><button type="button" onclick="deleteNotifItem('${encodeURIComponent(String(n.id || n.key || ((n.title || '') + '|' + (n.time || '') + '|' + (n.desc || ''))))}')" class="text-[10px] font-bold text-rose-700 hover:underline cursor-pointer">Hapus</button></div></div><p class="text-[11px] text-neutral-700">${n.desc}</p></div>`).join('') : '<p class="text-xs text-neutral-600 bg-white p-4 rounded-2xl border-2 border-neutral-200 text-center">Belum ada notifikasi.</p>'}</div>${getSimaduBrandFooterHTML()}</div>`;
         }
 
         let tempStoreBanner = null, tempStorePhoto = null, tempNewFoodPhoto = null, editingFoodId = null, tempUserProfilePhoto = null, activeDirectStoreId = null;
@@ -2954,7 +3037,7 @@
             const container = document.getElementById('chat-messages');
             let streamEl = document.getElementById('chat-messages-stream');
             if (!streamEl) { container.innerHTML = `<div id="chat-messages-stream" class="space-y-2.5"></div><div id="chat-simadu-footer-slot" class="pt-4 pb-2">${getSimaduBrandFooterHTML()}</div>`; streamEl = document.getElementById('chat-messages-stream'); }
-            streamEl.innerHTML = msgs.map(c => { const isMine = normalizeMatchKey(c.from) === me || (activeRole === 'admin' && ['admin simadu', 'admin'].includes(normalizeMatchKey(c.from))); const bodyHtml = String(c.text || '').startsWith('data:image') ? `<img src="${c.text}" class="w-44 max-h-48 object-cover rounded-xl mt-1 border" alt="Foto Chat">` : `<p class="mt-0.5 break-words">${c.text}</p>`; return `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${isMine ? 'bg-[#FF7900] text-white ml-auto' : 'bg-white border-2 border-neutral-200 text-[#171717] mr-auto'}"><b>${c.from}</b>${bodyHtml}<span class="text-[9px] opacity-75 block mt-1">${c.time}</span></div>`; }).join('') || `<p class="text-xs text-neutral-500 text-center py-6">Mulai obrolan privat dengan ${activeChatTarget}...</p>`;
+            streamEl.innerHTML = msgs.map(c => { const isMine = normalizeMatchKey(c.from) === me || (activeRole === 'admin' && ['admin simadu', 'admin'].includes(normalizeMatchKey(c.from))); const bodyHtml = String(c.text || '').startsWith('data:image') ? `<img src="${c.text}" class="w-44 max-h-48 object-cover rounded-xl mt-1 border" alt="Foto Chat">` : `<p class="mt-0.5 break-words">${c.text}</p>`; return `<div class="p-3 rounded-2xl text-xs max-w-[80%] ${isMine ? 'bg-[#FF7900] text-white ml-auto' : 'bg-white border-2 border-neutral-200 text-[#171717] mr-auto'}"><b>${c.from}</b>${bodyHtml}<span class="text-[9px] opacity-75 block mt-1">${c.time}</span></div>`; }).join('') || `<p class="text-xs text-neutral-500 text-center py-6">Mulai obrolan privat dengan ${activeChatTarget}... <button type="button" onclick="clearActiveChatHistory()" class="ml-2 px-2 py-0.5 bg-rose-100 text-rose-800 rounded-lg text-[10px] font-bold cursor-pointer">Hapus Chat</button></p>`;
             container.scrollTop = container.scrollHeight;
         }
 
