@@ -6431,60 +6431,82 @@ function getAccountOrders() { const delOrderSet = new Set([...(window.deletedOrd
 
 
 
-<script id="oleng-2x2-clean-click">
+
+
+
+<script id="oleng-2x2-native-trigger">
 (function() {
-  function openPanel(kind) {
-    if (typeof renderDashboardContent === "function") {
-      if (kind === "ojek") {
-        renderDashboardContent("ojek", true);
-        return;
+  function clickMatchingOriginalButton(keywords) {
+    var nodes = document.querySelectorAll("button, a, [role=button], div");
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (!el || (el.closest && el.closest(".oleng-2x2-wrap"))) continue;
+      if (el.children && el.children.length > 3) continue;
+      var txt = (el.textContent || "").trim().toLowerCase();
+      if (!txt || txt.length > 35) continue;
+      for (var k = 0; k < keywords.length; k++) {
+        if (txt === keywords[k] || txt.indexOf(keywords[k]) !== -1) {
+          var prevDisplay = el.style.display;
+          var prevVisibility = el.style.visibility;
+          if (prevDisplay === "none") el.style.display = "block";
+          if (prevVisibility === "hidden") el.style.visibility = "visible";
+          try {
+            if (typeof el.click === "function") el.click();
+          } finally {
+            if (prevDisplay === "none") el.style.display = prevDisplay;
+            if (prevVisibility === "hidden") el.style.visibility = prevVisibility;
+          }
+          return true;
+        }
       }
-      if (kind === "history") {
-        renderDashboardContent("history", true);
-        return;
-      }
-      if (kind === "market") {
-        try { if (typeof searchQuery !== "undefined") searchQuery = ""; } catch (e) {}
-        renderDashboardContent("food", true);
-        return;
-      }
-      renderDashboardContent("food", true);
     }
+    return false;
   }
 
-  function wireTiles() {
+  function activateTile(kind) {
+    if (kind === "ojek") {
+      if (clickMatchingOriginalButton(["ojek", "pesan ojek"])) return;
+      if (typeof renderDashboardContent === "function") renderDashboardContent("ojek", true);
+      return;
+    }
+    if (kind === "history") {
+      if (clickMatchingOriginalButton(["riwayat"])) return;
+      if (typeof renderDashboardContent === "function") renderDashboardContent("history", true);
+      return;
+    }
+    if (kind === "market") {
+      if (clickMatchingOriginalButton(["oleng market", "market", "toko"])) return;
+      if (typeof renderDashboardContent === "function") renderDashboardContent("food", true);
+      return;
+    }
+    if (clickMatchingOriginalButton(["pesan makanan", "makanan", "pesanan"])) return;
+    if (typeof renderDashboardContent === "function") renderDashboardContent("food", true);
+  }
+
+  function wireAllTiles() {
     var tiles = document.querySelectorAll(".oleng-2x2-item");
     for (var i = 0; i < tiles.length; i++) {
       var t = tiles[i];
-      if (t.getAttribute("data-wired-2x2") === "1") continue;
-      t.setAttribute("data-wired-2x2", "1");
-      t.style.cursor = "pointer";
-      t.style.pointerEvents = "auto";
-
+      if (t.getAttribute("data-native-2x2") === "1") continue;
+      t.setAttribute("data-native-2x2", "1");
       var label = (t.textContent || "").toLowerCase();
       var kind = "food";
       if (label.indexOf("ojek") !== -1) kind = "ojek";
       else if (label.indexOf("riwayat") !== -1) kind = "history";
       else if (label.indexOf("market") !== -1) kind = "market";
 
-      (function(el, targetKind) {
-        el.addEventListener("click", function(ev) {
-          if (ev) {
-            if (typeof ev.preventDefault === "function") ev.preventDefault();
-            if (typeof ev.stopPropagation === "function") ev.stopPropagation();
-          }
-          openPanel(targetKind);
-        });
+      (function(el, k) {
+        el.onclick = function(ev) {
+          if (ev && ev.preventDefault) ev.preventDefault();
+          if (ev && ev.stopPropagation) ev.stopPropagation();
+          activateTile(k);
+        };
       })(t, kind);
     }
   }
 
-  setInterval(wireTiles, 400);
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", wireTiles);
-  } else {
-    wireTiles();
-  }
+  setInterval(wireAllTiles, 400);
+  wireAllTiles();
 })();
 </script>
 
